@@ -338,4 +338,11 @@ describe('Nosskey', () => {
       expect(await Nosskey.isPasskeySupported()).toBe(false)
     })
   })
+
+  describe('clear', () => {
+    it('should be callable without errors', () => {
+      const nosskey = new Nosskey(options)
+      expect(() => nosskey.clear()).not.toThrow()
+    })
+  })
 }) 
