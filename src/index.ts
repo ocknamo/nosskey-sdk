@@ -3,6 +3,6 @@
  * @packageDocumentation
  */
 
-export * from './types'
-export * from './nosskey'
-export * from './test-utils' 
+export * from './types.js'
+export * from './nosskey.js'
+export * from './test-utils.js'

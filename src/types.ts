@@ -7,11 +7,11 @@
  * Options for Nosskey instance
  */
 export interface NosskeyOptions {
-  /** Stable user identifier (e.g., email) */
+  /** Stable user identifier (e.g., username) */
   userId: string
-  /** App namespace to isolate derived keys */
+  /** App namespace to isolate derived keys. e.g. window.location.hostname */
   appNamespace: string
-  /** Optional salt to further scope the derivation */
+  /** Optional salt to further scope the derivation. e.g. nosskey-v1 */
   salt?: string
   /** WebAuthn options override */
   webAuthnOptions?: CredentialRequestOptions
