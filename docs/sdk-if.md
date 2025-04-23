@@ -60,7 +60,7 @@ registerPasskey(options: {
   /** Default: current domain */
   rpID?: string;
   
-  /** Display name of app/site */
+  /** Display name of app/site, default: current domain */
   rpName?: string;
   
   /** Stable ID per user (required by WebAuthn) */
@@ -69,7 +69,7 @@ registerPasskey(options: {
   /** Optional (fallback = userID) */
   userDisplayName?: string;
   
-  /** Optional, default = fixed or random */
+  /** Optional, default = random 32 bytes */
   challenge?: Uint8Array;
 }): Promise<{
   /** Whether the registration was successful */
@@ -92,22 +92,15 @@ Derives a Nostr key pair using the registered passkey (Login flow). This method 
 deriveKey(): Promise<NosskeyDerivedKey>
 ```
 
-#### generateChallenge()
+#### deriveChallenge()
 Utility method to create deterministic challenge buffer from userId + namespace + salt.
 
 ```typescript
-static generateChallenge(
+static deriveChallenge(
   userId: string,
   namespace: string,
   salt?: string
 ): Promise<Uint8Array>
-```
-
-#### deriveKeyFromSignature()
-Utility method to import an existing raw signature and derive Nostr keys.
-
-```typescript
-static deriveKeyFromSignature(signature: Uint8Array): NosskeyDerivedKey
 ```
 
 #### toHex()
@@ -115,6 +108,13 @@ Utility method to convert Nostr keys to hex string.
 
 ```typescript
 static toHex(buf: Uint8Array): string
+```
+
+#### isPasskeySupported()
+Checks if the browser supports Passkey authentication.
+
+```typescript
+static isPasskeySupported(): Promise<boolean>
 ```
 
 ## Testing Utilities
