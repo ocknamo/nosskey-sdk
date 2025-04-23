@@ -1,0 +1,32 @@
+{
+  "name": "nosskey-sdk",
+  "version": "0.0.0",
+  "description": "SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey",
+  "main": "index.js",
+  "engines": {
+    "node": "22.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ocknamo/nosskey-sdk.git"
+  },
+  "keywords": [
+    "nostr"
+  ],
+  "author": "ocknamo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ocknamo/nosskey-sdk/issues"
+  },
+  "homepage": "https://github.com/ocknamo/nosskey-sdk#readme",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.8.3"
+  },
+  "volta": {
+    "node": "22.15.0"
+  }
+}
