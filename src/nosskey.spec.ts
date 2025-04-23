@@ -162,13 +162,11 @@ describe('Nosskey', () => {
       expect(key.sk).toBeInstanceOf(Uint8Array)
       expect(key.pk).toBeInstanceOf(Uint8Array)
       expect(key.credentialId).toBeInstanceOf(Uint8Array)
-      expect(key.rawSignature).toBeInstanceOf(Uint8Array)
 
       // Verify lengths
       expect(key.sk.length).toBe(32) // Nostr private key is 32 bytes
       expect(key.pk.length).toBe(32) // Nostr public key is 32 bytes
       expect(key.credentialId.length).toBeGreaterThan(0)
-      expect(key.rawSignature.length).toBeGreaterThan(0)
 
       // Verify hex conversion
       const skHex = Nosskey.toHex(key.sk)

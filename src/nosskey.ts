@@ -126,7 +126,7 @@ export class Nosskey {
     // Derive key pair using the common method
     const { sk, pk } = await this.deriveKeyFromSignature(rawSignature)
 
-    return { sk, pk, credentialId, rawSignature }
+    return { sk, pk, credentialId }
   }
 
   /**

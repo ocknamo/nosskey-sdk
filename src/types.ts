@@ -27,14 +27,4 @@ export interface NosskeyDerivedKey {
   pk: Uint8Array
   /** WebAuthn credential ID used for the signature */
   credentialId: Uint8Array
-  /** WebAuthn raw signature for audit/debug */
-  rawSignature: Uint8Array
 }
-
-export interface NosskeyConfig {
-  // TODO: Add configuration options
-}
-
-export interface NosskeyIdentity {
-  // TODO: Add identity properties
-} 
