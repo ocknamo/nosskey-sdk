@@ -8,10 +8,6 @@ import { getPublicKey } from 'rx-nostr-crypto'
 
 /**
  * Nosskey class for managing Passkey-Derived Nostr Identity
- * 
- * Note: This class does not store any sensitive data (private keys, signatures, etc.)
- * as instance properties. All sensitive data is handled as temporary variables
- * within methods and returned to the caller.
  */
 export class Nosskey {
   private options: NosskeyOptions
@@ -21,18 +17,10 @@ export class Nosskey {
    * @param options - Configuration options
    */
   constructor(options: NosskeyOptions) {
-    this.options = options
-  }
-
-  /**
-   * Clear any sensitive data from memory.
-   * Note: This is a no-op in the current implementation as no sensitive data
-   * is stored as instance properties. However, it's provided for future extensibility
-   * and to maintain a consistent API.
-   */
-  clear(): void {
-    // Currently no sensitive data to clear
-    // This method is provided for future extensibility
+    this.options = {
+      ...options,
+      salt: options.salt ?? 'nosskey-v1'
+    }
   }
 
   /**
