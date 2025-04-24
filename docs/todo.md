@@ -1,12 +1,12 @@
 # Nosskey SDK TODOリスト
 
 ## ドキュメント関連
-- [ ] `NosskeyDerivedKey`インターフェースの`rawSignature`プロパティが実装から削除されているかを確認（意図的か漏れか）
+- [x] `NosskeyDerivedKey`インターフェースの`rawSignature`プロパティが実装から削除されているかを確認（意図的か漏れか）
 - [ ] README.mdの充実：使用方法やサンプルコードの追加
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
 
 ## 実装関連
-- [ ] `deriveKeyFromSignature`メソッドの公開/非公開の方針確認（ドキュメントでは公開メソッド、実装ではprivate）
+- [x] `deriveKeyFromSignature`メソッドの公開/非公開の方針確認（ドキュメントでは公開メソッド、実装ではprivate）
 - [ ] APIの一貫性確保：インターフェースと実装間（特に`registerPasskey`の引数）
 - [ ] サンプルアプリケーションの作成：実際の使用例を示すデモアプリ
 

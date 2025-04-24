@@ -155,11 +155,11 @@ static async generateChallenge(
 Imports an existing raw signature and derives Nostr keys.
 
 ```typescript
-static deriveKeyFromSignature(signature: Uint8Array): NosskeyDerivedKey {
+private async deriveKeyFromSignature(signature: Uint8Array): Promise<{ sk: Uint8Array; pk: Uint8Array }> {
   const hash = new Uint8Array(
     Array.from(signature).length === 64
       ? signature
-      : new Uint8Array(crypto.subtle.digestSync("SHA-256", signature))
+      : await crypto.subtle.digest("SHA-256", signature)
   );
   const sk = hash.slice(0, 32);
   
@@ -171,12 +171,7 @@ static deriveKeyFromSignature(signature: Uint8Array): NosskeyDerivedKey {
   // Convert hex strings back to Uint8Array
   const pk = new Uint8Array(pkHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
 
-  return {
-    sk,
-    pk,
-    credentialId: new Uint8Array(),
-    rawSignature: signature,
-  };
+  return { sk, pk };
 }
 ```
 

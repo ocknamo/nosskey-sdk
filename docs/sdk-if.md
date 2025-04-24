@@ -37,9 +37,6 @@ interface NosskeyDerivedKey {
   
   /** WebAuthn credential ID used for the signature */
   credentialId: Uint8Array;
-  
-  /** WebAuthn raw signature for audit/debug */
-  rawSignature: Uint8Array;
 }
 ```
 
