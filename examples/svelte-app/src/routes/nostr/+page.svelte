@@ -1,23 +1,35 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
   import { Nosskey } from 'nosskey-sdk';
+  import type { Event as NostrEvent } from 'nostr-typedef';
+  import { type RxNostr, createRxNostr } from 'rx-nostr';
+  import { seckeySigner, verifier } from 'rx-nostr-crypto';
+  import type { Subscription } from 'rxjs';
   import { onMount } from 'svelte';
   import i18n from '../../lib/i18n/index.js';
-  import { derivedKey, isAuthenticated, nosskeyInstance, userId } from '../../lib/stores/nosskey-store.js';
+  import { type DerivedKey, derivedKey, isAuthenticated, nosskeyInstance, userId } from '../../lib/stores/nosskey-store.js';
+  
+  type StatusType = {
+    success: boolean;
+    message: string;
+  } | null;
+  
   
   // i18nから翻訳関数を取得
   const { t } = i18n;
-  
   // 状態変数
   let publicKeyHex = '';
   let messageValue = '';
   let isSending = false;
-  let status = null;
+  let status: StatusType = null;
   const relays = ['wss://relay.damus.io', 'wss://relay.snort.social'];
+  // RxNostrインスタンス
+  let rxNostr: RxNostr | null = null;
   
   // 入力ハンドラ
-  function handleInput(e) {
-    messageValue = e.target.value;
+  function handleInput(e: Event & { currentTarget: EventTarget & HTMLTextAreaElement }) {
+    const target = e.currentTarget;
+    messageValue = target.value;
   }
   
   // リダイレクト処理（認証されていない場合はログインページへ）
@@ -27,8 +39,22 @@
       return;
     }
     
-    if ($derivedKey?.pk) {
-      publicKeyHex = Nosskey.toHex($derivedKey.pk);
+    const derivedKeyValue = $derivedKey as DerivedKey;
+    
+    if (derivedKeyValue.pk) {
+      publicKeyHex = Nosskey.toHex(derivedKeyValue.pk);
+    }
+
+    // rx-nostrインスタンスの初期化
+    if (derivedKeyValue.sk) {
+      const skHex = Nosskey.toHex(derivedKeyValue.sk);
+      rxNostr = createRxNostr({
+        signer: seckeySigner(skHex),
+        verifier: verifier
+      });
+      
+      // リレーの設定
+      rxNostr.setDefaultRelays(relays);
     }
   });
   
@@ -42,7 +68,17 @@
       return;
     }
     
-    if (!$derivedKey?.sk) {
+    if (!$derivedKey) {
+      status = {
+        success: false,
+        message: $t('secret_key_missing')
+      };
+      return;
+    }
+    
+    const derivedKeyValue = $derivedKey as DerivedKey;
+    
+    if (!derivedKeyValue.sk) {
       status = {
         success: false,
         message: $t('secret_key_missing')
@@ -55,7 +91,7 @@
     
     try {
       // Nostrイベント作成
-      const event = {
+      const nostrEvent: Omit<NostrEvent, 'id' | 'sig'> = {
         kind: 1,
         content: messageValue,
         tags: [],
@@ -64,20 +100,55 @@
       };
       
       // 秘密鍵を16進数形式に変換
-      const skHex = Nosskey.toHex($derivedKey.sk);
+      const skHex = Nosskey.toHex(derivedKeyValue.sk);
       
-      // ここでrx-nostrのimportと初期化を行う予定だが、
-      // ブラウザ環境でのテストが必要なため、実際の実装では調整が必要
+      if (!rxNostr) {
+        // rxNostrがまだ初期化されていない場合は初期化する
+        rxNostr = createRxNostr({
+          signer: seckeySigner(skHex),
+          verifier: verifier
+        });
+        rxNostr.setDefaultRelays(relays);
+      }
       
-      // モックの成功レスポンス（実際の実装では、rx-nostrを使用）
+      // rx-nostrを使用してNostrイベントを送信
+      const sub: Subscription = rxNostr.send({ ...nostrEvent }).subscribe({
+        next: (packet: { type: string }) => {
+          if (packet && packet.type === 'ok') {
+            status = {
+              success: true,
+              message: $t('message_sent')
+            };
+            isSending = false;
+            messageValue = ''; // 送信後にフォームをクリア
+          }
+        },
+        error: (error: unknown) => {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          status = {
+            success: false,
+            message: `${$t('error_occurred')}: ${errorMsg}`
+          };
+          isSending = false;
+        },
+        complete: () => {
+          // 処理完了
+        }
+      });
+      
+      // タイムアウト処理（10秒後にまだ処理中なら失敗とする）
       setTimeout(() => {
-        status = {
-          success: true,
-          message: $t('message_sent')
-        };
-        isSending = false;
-        messageValue = ''; // 送信後にフォームをクリア
-      }, 1000);
+        if (sub && !sub.closed) {
+          sub.unsubscribe();
+          if (isSending) {
+            status = {
+              success: false,
+              message: $t('message_timeout')
+            };
+            isSending = false;
+          }
+        }
+      }, 10000);
       
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
