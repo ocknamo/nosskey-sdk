@@ -9,4 +9,9 @@ export default defineConfig({
       'nosskey-sdk': path.resolve(__dirname, '../../src/index.ts'),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['rx-nostr-crypto'],
+    },
+  },
 });
