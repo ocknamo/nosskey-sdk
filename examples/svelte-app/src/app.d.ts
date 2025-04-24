@@ -20,6 +20,17 @@ declare namespace App {
   interface Locals {
     t: (key: string) => string;
   }
+
+  interface Platform {
+    env: {
+      COUNTER: DurableObjectNamespace;
+    };
+    context: {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      waitUntil(promise: Promise<any>): void;
+    };
+    caches: CacheStorage & { default: Cache };
+  }
 }
 
 // SvelteKitのグローバル型拡張
