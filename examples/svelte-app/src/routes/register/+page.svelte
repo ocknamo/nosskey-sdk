@@ -1,6 +1,10 @@
 <script>
   import { Nosskey } from 'nosskey-sdk';
+  import i18n from '../../lib/i18n/index.js';
   import { nosskeyInstance, userId } from '../../lib/stores/nosskey-store.js';
+  
+  // i18nから翻訳関数を取得
+  const { t } = i18n;
 
   // 状態変数
   let userIdValue = '';
@@ -16,7 +20,7 @@
   // ユーザー登録処理
   async function handleRegister() {
     if (!userIdValue.trim()) {
-      errorMessage = 'ユーザーIDを入力してください';
+      errorMessage = $t('enter_user_id');
       return;
     }
     
@@ -37,16 +41,16 @@
       });
       
       if (result.success) {
-        successMessage = 'Passkeyの登録に成功しました！';
+        successMessage = $t('passkey_register_success');
         // 状態を更新
         userId.set(userIdValue);
         nosskeyInstance.set(nosskey);
       } else {
-        errorMessage = `Passkeyの登録に失敗しました: ${result.error}`;
+        errorMessage = `${$t('passkey_register_failed')}: ${result.error}`;
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      errorMessage = `エラーが発生しました: ${errorMsg}`;
+      errorMessage = `${$t('error_occurred')}: ${errorMsg}`;
     } finally {
       processing = false;
     }
@@ -54,29 +58,28 @@
 </script>
 
 <div class="card">
-  <h2>Passkey新規登録</h2>
+  <h2>{$t('register_title')}</h2>
   
   <p>
-    ユーザーIDを入力して、このデバイスにPasskeyを登録します。
-    登録後は同じIDでログインできるようになります。
+    {$t('register_description')}
   </p>
   
   <form on:submit|preventDefault={handleRegister}>
     <div class="form-group">
-      <label for="userId">ユーザーID:</label>
+      <label for="userId">{$t('user_id')}:</label>
       <input 
         id="userId" 
         type="text" 
         value={userIdValue}
         on:input={handleInput}
         disabled={processing}
-        placeholder="例: alice123"
+        placeholder={$t('user_id_placeholder')}
         required
       />
     </div>
     
     <button type="submit" disabled={processing}>
-      {processing ? '処理中...' : 'Passkey登録'}
+      {processing ? $t('processing') : $t('register_passkey')}
     </button>
   </form>
   
@@ -87,8 +90,8 @@
   {#if successMessage}
     <div class="success">
       <p>{successMessage}</p>
-      <p>登録が完了しました。ログインページへ移動して認証を行ってください。</p>
-      <a href="/login" class="button">ログインページへ</a>
+      <p>{$t('registration_complete')}</p>
+      <a href="/login" class="button">{$t('go_to_login')}</a>
     </div>
   {/if}
 </div>

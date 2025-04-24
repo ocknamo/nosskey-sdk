@@ -1,6 +1,10 @@
 <script>
   import { Nosskey } from 'nosskey-sdk';
   import { onMount } from 'svelte';
+  import i18n from '../lib/i18n/index.js';
+
+  // i18nから翻訳関数を取得
+  const { t } = i18n;
 
   let isPasskeySupported = false;
   let isChecking = true;
@@ -17,38 +21,35 @@
 </script>
 
 <div class="card">
-  <h2>Nosskey SDKサンプルアプリケーション</h2>
+  <h2>{$t('home_title')}</h2>
   <p>
-    このアプリケーションは、Nosskey SDKを使用してPasskeyベースのNostr鍵導出機能をデモするためのものです。
+    {$t('home_description')}
   </p>
 
   <div class="passkey-check">
-    <h3>Passkey対応確認</h3>
+    <h3>{$t('passkey_check_title')}</h3>
     
     {#if isChecking}
-      <p>ブラウザの対応状況を確認中...</p>
+      <p>{$t('checking_browser')}</p>
     {:else if isPasskeySupported}
       <p class="success">
-        このブラウザはPasskeyに対応しています！
-        登録またはログインして機能を試すことができます。
+        {$t('passkey_supported')}
       </p>
       <div class="button-group">
-        <a href="/register" class="button">新規登録</a>
-        <a href="/login" class="button">ログイン</a>
+        <a href="/register" class="button">{$t('register')}</a>
+        <a href="/login" class="button">{$t('login')}</a>
       </div>
     {:else}
       <p class="error">
-        このブラウザはPasskeyに対応していません。
-        Passkey対応ブラウザ（Chrome、Firefox、Safari最新版など）を使用してください。
+        {$t('passkey_not_supported')}
       </p>
     {/if}
   </div>
 
   <div class="about-section">
-    <h3>Nosskey SDKについて</h3>
+    <h3>{$t('about_nosskey_title')}</h3>
     <p>
-      Nosskey SDKは、WebAuthn/Passkey技術を使用してNostr用の鍵ペアを安全に導出するためのライブラリです。
-      これにより、ユーザーは生の秘密鍵を管理する必要なく、生体認証などの安全な方法でNostrアプリケーションにアクセスできます。
+      {$t('about_nosskey_description')}
     </p>
   </div>
 </div>

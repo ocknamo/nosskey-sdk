@@ -2,7 +2,11 @@
   import { goto } from '$app/navigation';
   import { Nosskey } from 'nosskey-sdk';
   import { onMount } from 'svelte';
+  import i18n from '../../lib/i18n/index.js';
   import { derivedKey, isAuthenticated, nosskeyInstance, userId } from '../../lib/stores/nosskey-store.js';
+  
+  // i18nから翻訳関数を取得
+  const { t } = i18n;
   
   // 状態変数
   let publicKeyHex = '';
@@ -33,7 +37,7 @@
     if (!messageValue.trim()) {
       status = {
         success: false,
-        message: 'メッセージを入力してください'
+        message: $t('enter_message')
       };
       return;
     }
@@ -41,7 +45,7 @@
     if (!$derivedKey?.sk) {
       status = {
         success: false,
-        message: '秘密鍵が取得できていません。再度ログインしてください。'
+        message: $t('secret_key_missing')
       };
       return;
     }
@@ -69,7 +73,7 @@
       setTimeout(() => {
         status = {
           success: true,
-          message: 'メッセージを送信しました！（モックレスポンス）'
+          message: $t('message_sent')
         };
         isSending = false;
         messageValue = ''; // 送信後にフォームをクリア
@@ -79,7 +83,7 @@
       const errorMsg = error instanceof Error ? error.message : String(error);
       status = {
         success: false,
-        message: `エラーが発生しました: ${errorMsg}`
+        message: `${$t('error_occurred')}: ${errorMsg}`
       };
       isSending = false;
     }
@@ -96,16 +100,16 @@
 </script>
 
 <div class="card">
-  <h2>Nostr機能</h2>
+  <h2>{$t('nostr_title')}</h2>
   
   <div class="user-info">
-    <h3>ユーザー情報</h3>
-    <p>ユーザーID: <strong>{$userId}</strong></p>
-    <p>公開鍵: <code>{publicKeyHex}</code></p>
+    <h3>{$t('user_info')}</h3>
+    <p>{$t('user_id')}: <strong>{$userId}</strong></p>
+    <p>{$t('derived_pubkey')}: <code>{publicKeyHex}</code></p>
   </div>
   
   <div class="relays">
-    <h3>接続リレー</h3>
+    <h3>{$t('connected_relays')}</h3>
     <ul>
       {#each relays as relay}
         <li>{relay}</li>
@@ -114,24 +118,24 @@
   </div>
   
   <div class="message-form">
-    <h3>メッセージ送信</h3>
-    <p>以下のフォームからNostrメッセージを送信できます。</p>
+    <h3>{$t('message_sending')}</h3>
+    <p>{$t('message_form_description')}</p>
     
     <form on:submit|preventDefault={sendNostrMessage}>
       <div class="form-group">
-        <label for="message">メッセージ:</label>
+        <label for="message">{$t('message')}:</label>
         <textarea
           id="message"
           value={messageValue}
           on:input={handleInput}
           rows="4"
           disabled={isSending}
-          placeholder="送信するメッセージを入力..."
+          placeholder={$t('message_placeholder')}
         ></textarea>
       </div>
       
       <button type="submit" disabled={isSending}>
-        {isSending ? '送信中...' : 'メッセージを送信'}
+        {isSending ? $t('sending_message') : $t('send_message')}
       </button>
     </form>
     
@@ -144,7 +148,7 @@
   
   <div class="actions">
     <button class="secondary" on:click={handleLogout}>
-      ログアウト
+      {$t('logout')}
     </button>
   </div>
 </div>

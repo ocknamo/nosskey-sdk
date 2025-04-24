@@ -1,13 +1,31 @@
-// See https://svelte.dev/docs/kit/types#app.d.ts
-// for information about these interfaces
-declare global {
-	namespace App {
-		// interface Error {}
-		// interface Locals {}
-		// interface PageData {}
-		// interface PageState {}
-		// interface Platform {}
-	}
+// グローバル型定義
+/// <reference types="@sveltejs/kit" />
+
+// 翻訳データの型
+interface TranslationData {
+  [key: string]: string;
 }
 
-export {};
+// インポート可能なモジュールとしてi18nを宣言
+declare module '*/i18n/*.js' {
+  export const t: import('svelte/store').Readable<(key: string) => string>;
+  export const language: import('svelte/store').Readable<string>;
+  export function setLanguage(lang: string): void;
+  export function initLanguage(): void;
+  export const languages: string[];
+}
+
+// グローバルなt関数をAmbient宣言
+declare namespace App {
+  interface Locals {
+    t: (key: string) => string;
+  }
+}
+
+// SvelteKitのグローバル型拡張
+declare namespace svelte.JSX {
+  interface HTMLAttributes<T> {
+    // svelte-headなどのディレクティブ用
+    'on:click_outside'?: (event: CustomEvent<any>) => void;
+  }
+}

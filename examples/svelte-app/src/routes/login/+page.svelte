@@ -1,6 +1,10 @@
 <script>
   import { Nosskey } from 'nosskey-sdk';
+  import i18n from '../../lib/i18n/index.js';
   import { derivedKey, isAuthenticated, nosskeyInstance, userId } from '../../lib/stores/nosskey-store.js';
+  
+  // i18nから翻訳関数を取得
+  const { t } = i18n;
   
   // 状態変数
   let userIdValue = '';
@@ -17,7 +21,7 @@
   // ログイン処理
   async function handleLogin() {
     if (!userIdValue.trim()) {
-      errorMessage = 'ユーザーIDを入力してください';
+      errorMessage = $t('enter_user_id');
       return;
     }
     
@@ -37,7 +41,7 @@
       // 16進数形式の公開鍵を表示用に変換
       publicKeyHex = Nosskey.toHex(derived.pk);
       
-      successMessage = 'ログインに成功しました！';
+      successMessage = $t('login_success');
       
       // 状態を更新
       userId.set(userIdValue);
@@ -47,7 +51,7 @@
       
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      errorMessage = `エラーが発生しました: ${errorMsg}`;
+      errorMessage = `${$t('error_occurred')}: ${errorMsg}`;
     } finally {
       processing = false;
     }
@@ -55,29 +59,28 @@
 </script>
 
 <div class="card">
-  <h2>Passkey認証（ログイン）</h2>
+  <h2>{$t('login_title')}</h2>
   
   <p>
-    登録済みのユーザーIDを入力してPasskey認証を行います。
-    認証が成功すると、Nostr機能を使用できるようになります。
+    {$t('login_description')}
   </p>
   
   <form on:submit|preventDefault={handleLogin}>
     <div class="form-group">
-      <label for="userId">ユーザーID:</label>
+      <label for="userId">{$t('user_id')}:</label>
       <input 
         id="userId" 
         type="text" 
         value={userIdValue}
         on:input={handleInput}
         disabled={processing}
-        placeholder="例: alice123"
+        placeholder={$t('user_id_placeholder')}
         required
       />
     </div>
     
     <button type="submit" disabled={processing}>
-      {processing ? '処理中...' : 'Passkey認証'}
+      {processing ? $t('processing') : $t('passkey_auth')}
     </button>
   </form>
   
@@ -89,10 +92,10 @@
     <div class="success">
       <p>{successMessage}</p>
       {#if publicKeyHex}
-        <p>導出されたノストル公開鍵: <code>{publicKeyHex}</code></p>
+        <p>{$t('derived_pubkey')}: <code>{publicKeyHex}</code></p>
       {/if}
-      <p>Nostr機能を使用して、メッセージを送信してみましょう。</p>
-      <a href="/nostr" class="button">Nostr機能へ</a>
+      <p>{$t('try_nostr_features')}</p>
+      <a href="/nostr" class="button">{$t('go_to_nostr')}</a>
     </div>
   {/if}
 </div>
