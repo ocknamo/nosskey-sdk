@@ -1,74 +1,50 @@
-NIP: TBD Title: Passkey-Derived Nostr Identity (PDNI) Author: Anonymous Status: Draft Created: 2025-04-23
+NIP-XX  
+Passkey-Wrapped Keys (PWK)
+==========================
 
-== Abstract ==
+`draft` `optional`
 
-This NIP proposes a method to deterministically generate a nostr key pair from a WebAuthn-compatible Passkey signature, enabling users to authenticate and derive their private key without storing or exporting it. This design prioritizes user privacy, security, and a passwordless onboarding experience.
+This NIP specifies a **Passkey-Wrapped Key** mechanism that lets Nostr
+clients store the user’s secret key encrypted (“wrapped”) with a key
+derived *inside* a WebAuthn/FIDO2 **passkey** using the PRF extension.
+A successful biometric / PIN gesture unlocks the secret key without the
+user ever seeing or copying it.
 
-== Motivation ==
+---
 
-Current nostr clients rely on explicit management of private keys (e.g., saving a seed or mnemonic). This results in a poor user experience and potential security risks due to:
+## 1 Motivation
 
-User mishandling of private keys
+* `nsec` をコピー&ペーストする運用は  
+  XSS・キーロガー・クリップボード盗み見に弱い。  
+* 既存ブラウザ拡張はローカルストレージや RAM に平文を保持する。  
+* WebAuthn **PRF extension** (Chrome 116+, Safari 18+, Android 14+)  
+  はユーザー検証付きで 32 byte の秘密を返し、  
+  それを HKDF→AES-GCM 鍵として利用できる。  
+* ラップ／アンラップ方式により  
+  **「生体認証 → 投稿」** の 2 ステップ UX が実現する。
 
-Loss of seed leading to account loss
+---
 
-Key theft through phishing or malware
+## 2 Terminology
 
+| Term | Meaning |
+|------|---------|
+| **PRF secret** | 32 byte value from `extensions.prf` |
+| **PWK blob**   | JSON object holding the wrapped secret key |
+| **PWK tag**    | Capability flag `"pwk"` returned by the client |
 
-With Passkey-supported devices becoming ubiquitous, there is a clear opportunity to improve nostr UX by leveraging existing secure hardware-backed credentials (e.g., Secure Enclave, TPM).
+---
 
-== Specification ==
+## 3 PWK Blob Format
 
-=== Identity Derivation Process ===
-
-1. The client requests a Passkey signature using WebAuthn APIs, with a deterministic challenge derived from the user ID and app namespace:
-
-
-
-const challenge = SHA256("user@example.com@myapp.com");
-
-2. The user signs this challenge via WebAuthn (biometric prompt, PIN, etc.).
-
-
-3. The returned signature is hashed via SHA-256, and the first 32 bytes are used as the ed25519 private key (in nostr's format):
-
-
-
-const nostrSk = SHA256(signature).slice(0, 32);
-
-4. The corresponding public key is computed per usual nostr methods.
-
-
-
-=== Constraints ===
-
-The challenge string MUST be deterministic and namespace-isolated (to avoid cross-app collisions).
-
-The signature MUST be derived from the same credential ID (i.e., Passkey instance) across sessions.
-
-Clients SHOULD persist the credential ID for future logins.
-
-
-== Security Considerations ==
-
-The private key is never stored or exported—only re-derived via secure signature.
-
-If the Passkey is lost or deleted, the nostr identity becomes irrecoverable.
-
-Signature variability across authenticators or platforms may break determinism—developers MUST test across major platforms (Android/iOS/macOS/Windows).
-
-Challenge derivation SHOULD use user identifiers that are stable but not globally unique (e.g., email + domain).
-
-
-== Reference Implementation ==
-
-A TypeScript implementation is available at: https://github.com/example/pdni-sdk (TBD)
-
-== Backward Compatibility ==
-
-This NIP is additive and does not conflict with existing nostr key handling.
-
-== Copyright ==
-
-This document is released under the public domain.
+```jsonc
+{
+  "v": 1,                   // format version
+  "alg": "aes-gcm-256",
+  "salt": "<16B-hex>",      // HKDF salt
+  "iv":   "<12B-hex>",      // AES-GCM IV
+  "ct":   "<ciphertext-hex>", // encrypted 32 B `nsec`
+  "tag":  "<16B-hex>"       // AES-GCM auth-tag
+}
+Derived key = HKDF-SHA256(prfSecret, salt, info="nostr-pwk").
 
