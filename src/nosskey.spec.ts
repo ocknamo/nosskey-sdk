@@ -1,341 +1,190 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Nosskey } from './nosskey'
-import { registerDummyPasskey } from './test-utils'
+import { bytesToHex } from '@noble/hashes/utils';
+import { seckeySigner } from 'rx-nostr-crypto';
+/**
+ * Nosskey SDK テスト
+ * @packageDocumentation
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PWKManager } from './nosskey.js';
+import type { NostrEvent, PWKBlob } from './types.js';
 
-// Mock WebAuthn API and window
-vi.stubGlobal('navigator', {
-  credentials: {
-    create: vi.fn(),
-    get: vi.fn(),
-  },
-})
+// rx-nostr-crypto のモック
+vi.mock('rx-nostr-crypto', () => {
+  return {
+    seckeySigner: vi.fn(() => ({
+      signEvent: vi.fn(async (event) => ({
+        ...event,
+        id: 'test-event-id',
+        sig: 'test-signature',
+      })),
+      getPublicKey: vi.fn(async () => 'test-pubkey'),
+    })),
+  };
+});
 
-vi.stubGlobal('window', {
-  location: {
-    hostname: 'localhost',
-  },
-})
+describe('PWKManager', () => {
+  // WebAuthn APIのモック
+  const mockPrfResult = new Uint8Array(32).fill(42).buffer;
+  const mockCredentialId = new Uint8Array(16).fill(1);
+  let originalCrypto: typeof globalThis.crypto;
+  let originalCredentials: typeof globalThis.navigator.credentials;
 
-// Mock crypto.subtle.digest
-vi.stubGlobal('crypto', {
-  subtle: {
-    digest: vi.fn(),
-  },
-  getRandomValues: vi.fn(),
-})
-
-describe('Nosskey', () => {
-  const options = {
-    userId: 'test@example.com',
-    appNamespace: 'test-app',
-  }
-
+  // モックセットアップ
   beforeEach(() => {
-    vi.resetAllMocks()
-    // Default mock for crypto.subtle.digest
-    vi.mocked(crypto.subtle.digest).mockImplementation(async (_, data) => {
-      // Return the input data as hash for testing
-      return new Uint8Array(data as ArrayBuffer)
-    })
-    // Default mock for crypto.getRandomValues
-    vi.mocked(crypto.getRandomValues).mockImplementation((array: ArrayBufferView | null) => {
-      if (!array) return null
-      const typedArray = array as Uint8Array
-      // Fill with predictable values
-      for (let i = 0; i < typedArray.length; i++) {
-        typedArray[i] = i % 256
-      }
-      return array
-    })
-  })
+    originalCrypto = globalThis.crypto;
+    originalCredentials = globalThis.navigator.credentials;
 
-  describe('constructor', () => {
-    it('should create a new instance with options', () => {
-      const nosskey = new Nosskey(options)
-      expect(nosskey).toBeInstanceOf(Nosskey)
-    })
-  })
-
-  describe('registerPasskey', () => {
-    it('should register a new passkey successfully', async () => {
-      const nosskey = new Nosskey(options)
-      const mockCredential = await registerDummyPasskey(options.userId)
-      vi.mocked(navigator.credentials.create).mockResolvedValue(mockCredential)
-
-      const result = await nosskey.registerPasskey({
-        userID: options.userId,
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.credentialID).toBeDefined()
-      expect(result.error).toBeUndefined()
-    })
-
-    it('should handle registration failure', async () => {
-      const nosskey = new Nosskey(options)
-      vi.mocked(navigator.credentials.create).mockRejectedValue(new Error('Registration failed'))
-
-      const result = await nosskey.registerPasskey({
-        userID: options.userId,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Registration failed')
-      expect(result.credentialID).toBeUndefined()
-    })
-
-    it('should use custom rpID and rpName when provided', async () => {
-      const nosskey = new Nosskey(options)
-      const mockCredential = await registerDummyPasskey(options.userId)
-      const createSpy = vi.mocked(navigator.credentials.create)
-      createSpy.mockResolvedValue(mockCredential)
-
-      await nosskey.registerPasskey({
-        userID: options.userId,
-        rpID: 'custom.example.com',
-        rpName: 'Custom App',
-      })
-
-      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
-        publicKey: expect.objectContaining({
-          rp: {
-            id: 'custom.example.com',
-            name: 'Custom App',
+    // PRF出力を含むモックの応答
+    const mockCredential = {
+      id: 'mock-credential-id',
+      rawId: mockCredentialId.buffer,
+      type: 'public-key',
+      getClientExtensionResults: vi.fn(() => ({
+        prf: {
+          results: {
+            first: mockPrfResult,
           },
+        },
+      })),
+    };
+
+    // Navigator Credentialsのモック
+    Object.defineProperty(globalThis.navigator, 'credentials', {
+      value: {
+        create: vi.fn(async () => mockCredential),
+        get: vi.fn(async () => mockCredential),
+      },
+      configurable: true,
+    });
+
+    // Web Crypto APIのモック
+    Object.defineProperty(globalThis, 'crypto', {
+      value: {
+        getRandomValues: vi.fn((arr) => {
+          arr.fill(99);
+          return arr;
         }),
-      }))
-    })
-
-    it('should limit userID to 64 bytes', async () => {
-      const nosskey = new Nosskey(options)
-      const longUserId = 'a'.repeat(100)
-      const mockCredential = await registerDummyPasskey(longUserId)
-      const createSpy = vi.mocked(navigator.credentials.create)
-      createSpy.mockResolvedValue(mockCredential)
-
-      await nosskey.registerPasskey({
-        userID: longUserId,
-      })
-
-      const expectedLength = new TextEncoder().encode('a'.repeat(64)).length
-      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
-        publicKey: expect.objectContaining({
-          user: expect.objectContaining({
-            id: expect.any(Uint8Array),
+        subtle: {
+          importKey: vi.fn(async () => 'mock-key'),
+          deriveKey: vi.fn(async () => 'mock-derived-key'),
+          encrypt: vi.fn(async () => {
+            // 32バイトの暗号文 + 16バイトのタグを返す
+            return new Uint8Array([...new Uint8Array(32).fill(77), ...new Uint8Array(16).fill(88)])
+              .buffer;
           }),
-        }),
-      }))
-      const call = createSpy.mock.calls[0][0] as { publicKey: PublicKeyCredentialCreationOptions }
-      expect(call.publicKey.user.id.byteLength).toBe(expectedLength)
-    })
-
-    it('should use custom challenge when provided', async () => {
-      const nosskey = new Nosskey(options)
-      const mockCredential = await registerDummyPasskey(options.userId)
-      const createSpy = vi.mocked(navigator.credentials.create)
-      createSpy.mockResolvedValue(mockCredential)
-      const customChallenge = new Uint8Array([1, 2, 3, 4])
-
-      await nosskey.registerPasskey({
-        userID: options.userId,
-        challenge: customChallenge,
-      })
-
-      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
-        publicKey: expect.objectContaining({
-          challenge: customChallenge.buffer,
-        }),
-      }))
-    })
-  })
-
-  describe('deriveKey', () => {
-    it('should derive a key pair with correct structure', async () => {
-      const nosskey = new Nosskey(options)
-      const mockCredential = await registerDummyPasskey(options.userId)
-      vi.mocked(navigator.credentials.get).mockResolvedValue(mockCredential)
-
-      const key = await nosskey.deriveKey()
-      
-      // Verify structure
-      expect(key).toBeDefined()
-      expect(key.sk).toBeInstanceOf(Uint8Array)
-      expect(key.pk).toBeInstanceOf(Uint8Array)
-      expect(key.credentialId).toBeInstanceOf(Uint8Array)
-
-      // Verify lengths
-      expect(key.sk.length).toBe(32) // Nostr private key is 32 bytes
-      expect(key.pk.length).toBe(32) // Nostr public key is 32 bytes
-      expect(key.credentialId.length).toBeGreaterThan(0)
-
-      // Verify hex conversion
-      const skHex = Nosskey.toHex(key.sk)
-      const pkHex = Nosskey.toHex(key.pk)
-      expect(skHex).toMatch(/^[0-9a-f]{64}$/)
-      expect(pkHex).toMatch(/^[0-9a-f]{64}$/)
-    })
-
-    it('should handle null response from credential', async () => {
-      const nosskey = new Nosskey(options)
-      const mockCredential = {
-        ...await registerDummyPasskey(options.userId),
-        response: null,
-      }
-      vi.mocked(navigator.credentials.get).mockResolvedValue(mockCredential)
-
-      await expect(nosskey.deriveKey()).rejects.toThrow('No response from credential')
-    })
-
-    it('should use custom webAuthnOptions when provided', async () => {
-      const nosskey = new Nosskey({
-        ...options,
-        webAuthnOptions: {
-          publicKey: {
-            userVerification: 'required',
-          },
-        } as CredentialRequestOptions,
-      })
-      const mockCredential = await registerDummyPasskey(options.userId)
-      const getSpy = vi.mocked(navigator.credentials.get)
-      getSpy.mockResolvedValue(mockCredential)
-
-      await nosskey.deriveKey()
-
-      expect(getSpy).toHaveBeenCalledWith({
-        publicKey: expect.objectContaining({
-          userVerification: 'required',
-          challenge: expect.any(Uint8Array),
-          allowCredentials: undefined,
-          timeout: 60000,
-        }),
-      })
-    })
-
-    it('should hash signature when length is not 64 bytes', async () => {
-      const nosskey = new Nosskey(options)
-      const shortSignature = new Uint8Array(32)
-      for (let i = 0; i < shortSignature.length; i++) {
-        shortSignature[i] = i + 1
-      }
-
-      const mockCredential = {
-        ...await registerDummyPasskey(options.userId),
-        response: {
-          signature: shortSignature,
+          decrypt: vi.fn(async () => {
+            // 復号された32バイトの秘密鍵を返す
+            return new Uint8Array(32).fill(66).buffer;
+          }),
         },
-      }
-      vi.mocked(navigator.credentials.get).mockResolvedValue(mockCredential)
+      },
+      configurable: true,
+    });
+  });
 
-      await nosskey.deriveKey()
+  // クリーンアップ
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'crypto', {
+      value: originalCrypto,
+      configurable: true,
+    });
+    Object.defineProperty(globalThis.navigator, 'credentials', {
+      value: originalCredentials,
+      configurable: true,
+    });
+    vi.clearAllMocks();
+  });
 
-      expect(crypto.subtle.digest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array))
-    })
+  describe('isPrfSupported', () => {
+    it('PRF拡張が利用可能な場合にtrueを返す', async () => {
+      const pwkManager = new PWKManager();
+      const result = await pwkManager.isPrfSupported();
+      expect(result).toBe(true);
+      expect(navigator.credentials.get).toHaveBeenCalled();
+    });
 
-    it('should use signature directly when length is 64 bytes', async () => {
-      const nosskey = new Nosskey(options)
-      const signature64 = new Uint8Array(64)
-      for (let i = 0; i < signature64.length; i++) {
-        signature64[i] = i + 1
-      }
-
-      const mockCredential = {
-        ...await registerDummyPasskey(options.userId),
-        response: {
-          signature: signature64,
+    it('例外発生時にfalseを返す', async () => {
+      // エラーを投げるようにモックを変更
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          get: vi.fn(async () => {
+            throw new Error('Not supported');
+          }),
         },
-      }
-      vi.mocked(navigator.credentials.get).mockResolvedValue(mockCredential)
+        configurable: true,
+      });
 
-      await nosskey.deriveKey()
+      const pwkManager = new PWKManager();
+      const result = await pwkManager.isPrfSupported();
+      expect(result).toBe(false);
+    });
+  });
 
-      // deriveChallenge will call digest, but deriveKeyFromSignature won't
-      expect(crypto.subtle.digest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array))
-    })
-  })
+  describe('create', () => {
+    it('新しいPWKBlobを作成できる', async () => {
+      const pwkManager = new PWKManager();
+      const result = await pwkManager.create();
 
-  describe('deriveChallenge', () => {
-    it('should generate a deterministic challenge', async () => {
-      const challenge1 = await Nosskey.deriveChallenge('user1', 'app1')
-      const challenge2 = await Nosskey.deriveChallenge('user1', 'app1')
-      expect(challenge1).toEqual(challenge2)
-    })
+      // 戻り値の検証
+      expect(result).toHaveProperty('pwkBlob');
+      expect(result).toHaveProperty('credentialId');
+      expect(result).toHaveProperty('publicKey');
+      expect(result.pwkBlob.v).toBe(1);
+      expect(result.pwkBlob.alg).toBe('aes-gcm-256');
+      expect(result.publicKey).toBe('test-pubkey');
 
-    it('should generate different challenges for different inputs', async () => {
-      const challenge1 = await Nosskey.deriveChallenge('user1', 'app1')
-      const challenge2 = await Nosskey.deriveChallenge('user2', 'app1')
-      expect(challenge1).not.toEqual(challenge2)
-    })
+      // APIコールの検証
+      expect(navigator.credentials.create).toHaveBeenCalled();
+      expect(crypto.subtle.encrypt).toHaveBeenCalled();
+      expect(seckeySigner).toHaveBeenCalled();
+    });
 
-    it('should include salt in challenge when provided', async () => {
-      const challenge1 = await Nosskey.deriveChallenge('user1', 'app1')
-      const challenge2 = await Nosskey.deriveChallenge('user1', 'app1', 'salt1')
-      expect(challenge1).not.toEqual(challenge2)
-    })
-  })
+    it('外部から渡された秘密鍵を使用できる', async () => {
+      const pwkManager = new PWKManager();
+      const secretKey = new Uint8Array(32).fill(55);
+      const result = await pwkManager.create({ secretKey });
 
-  describe('toHex', () => {
-    it('should convert buffer to hex string', () => {
-      const buf = new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef])
-      const hex = Nosskey.toHex(buf)
-      expect(hex).toBe('0123456789abcdef')
-    })
+      expect(result).toHaveProperty('pwkBlob');
+      expect(seckeySigner).toHaveBeenCalled();
+      // 注: 実際のseckeySignerの引数を検証するにはもっと複雑なモックが必要
+    });
+  });
 
-    it('should handle empty buffer', () => {
-      const buf = new Uint8Array([])
-      const hex = Nosskey.toHex(buf)
-      expect(hex).toBe('')
-    })
+  describe('signEvent', () => {
+    it('イベントに署名できる', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
 
-    it('should pad single digit numbers with zero', () => {
-      const buf = new Uint8Array([0x01, 0x02, 0x03, 0x04])
-      const hex = Nosskey.toHex(buf)
-      expect(hex).toBe('01020304')
-    })
-  })
+      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, {
+        tags: [['t', 'test']],
+      });
 
-  describe('isPasskeySupported', () => {
-    it('should return true when Passkey is supported', async () => {
-      vi.stubGlobal('window', {
-        PublicKeyCredential: {
-          isUserVerifyingPlatformAuthenticatorAvailable: () => Promise.resolve(true),
-        },
-      })
+      expect(signedEvent).toHaveProperty('id', 'test-event-id');
+      expect(signedEvent).toHaveProperty('sig', 'test-signature');
+      expect(crypto.subtle.decrypt).toHaveBeenCalled();
+    });
+  });
 
-      expect(await Nosskey.isPasskeySupported()).toBe(true)
-    })
+  describe('clearKey', () => {
+    it('秘密鍵のバッファをゼロで埋める', () => {
+      const pwkManager = new PWKManager();
+      const key = new Uint8Array(32).fill(123);
+      pwkManager.clearKey(key);
 
-    it('should return false when window is undefined', async () => {
-      vi.stubGlobal('window', undefined)
-
-      expect(await Nosskey.isPasskeySupported()).toBe(false)
-    })
-
-    it('should return false when PublicKeyCredential is undefined', async () => {
-      vi.stubGlobal('window', {
-        PublicKeyCredential: undefined,
-      })
-
-      expect(await Nosskey.isPasskeySupported()).toBe(false)
-    })
-
-    it('should return false when isUserVerifyingPlatformAuthenticatorAvailable is not a function', async () => {
-      vi.stubGlobal('window', {
-        PublicKeyCredential: {
-          isUserVerifyingPlatformAuthenticatorAvailable: 'not a function',
-        },
-      })
-
-      expect(await Nosskey.isPasskeySupported()).toBe(false)
-    })
-
-    it('should return false when isUserVerifyingPlatformAuthenticatorAvailable throws an error', async () => {
-      vi.stubGlobal('window', {
-        PublicKeyCredential: {
-          isUserVerifyingPlatformAuthenticatorAvailable: () => Promise.reject(new Error('Test error')),
-        },
-      })
-
-      expect(await Nosskey.isPasskeySupported()).toBe(false)
-    })
-  })
-}) 
+      // すべての要素が0になっていることを確認
+      expect(Array.from(key).every((byte) => byte === 0)).toBe(true);
+    });
+  });
+});

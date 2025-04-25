@@ -4,27 +4,89 @@
  */
 
 /**
- * Options for Nosskey instance
+ * Nostr event JSON
  */
-export interface NosskeyOptions {
-  /** Stable user identifier (e.g., username) */
-  userId: string
-  /** App namespace to isolate derived keys. e.g. window.location.hostname */
-  appNamespace: string
-  /** Optional salt to further scope the derivation. e.g. nosskey-v1 */
-  salt?: string
-  /** WebAuthn options override */
-  webAuthnOptions?: CredentialRequestOptions
+export interface NostrEvent {
+  id?: string; // sha256 hash of serialized event
+  pubkey?: string; // hex
+  created_at?: number;
+  kind: number;
+  tags?: string[][];
+  content: string;
+  sig?: string; // hex
 }
 
 /**
- * Derived key pair for Nostr
+ * PWK blob structure (暗号化された秘密鍵の保存形式)
  */
-export interface NosskeyDerivedKey {
-  /** 32-byte nostr private key */
-  sk: Uint8Array
-  /** 32-byte nostr public key */
-  pk: Uint8Array
-  /** WebAuthn credential ID used for the signature */
-  credentialId: Uint8Array
+export interface PWKBlobV1 {
+  v: 1;
+  alg: 'aes-gcm-256';
+  salt: string; // hex(16 B)
+  iv: string; // hex(12 B)
+  ct: string; // hex(32 B)
+  tag: string; // hex(16 B)
+  credentialId?: string; // クレデンシャルIDをhex形式で保存
+}
+export type PWKBlob = PWKBlobV1;
+
+/**
+ * Create options
+ */
+export interface CreateOptions {
+  secretKey?: Uint8Array; // 外部から渡すシークレットキー（省略時は生成）
+  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
+}
+
+/**
+ * Sign options
+ */
+export interface SignOptions {
+  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
+  tags?: string[][]; // 追加のタグ
+}
+
+/**
+ * Creation result
+ */
+export interface CreateResult {
+  pwkBlob: PWKBlob; // 暗号化された秘密鍵
+  credentialId: Uint8Array; // 生成されたクレデンシャルID
+  publicKey: string; // 生成された公開鍵（hex）
+}
+
+/**
+ * SDK public interface
+ */
+export interface PWKManagerLike {
+  /**
+   * PRF拡張機能がサポートされているかチェック
+   */
+  isPrfSupported(): Promise<boolean>;
+
+  /**
+   * パスキーを作成し秘密鍵を暗号化
+   * @param options 作成オプション
+   */
+  create(options?: CreateOptions): Promise<CreateResult>;
+
+  /**
+   * イベントに署名
+   * @param event 署名するNostrイベント
+   * @param pwk 暗号化された秘密鍵
+   * @param credentialId 使用するクレデンシャルID
+   * @param options 署名オプション
+   */
+  signEvent(
+    event: NostrEvent,
+    pwk: PWKBlob,
+    credentialId: Uint8Array,
+    options?: SignOptions
+  ): Promise<NostrEvent>;
+
+  /**
+   * 秘密鍵をメモリから明示的に消去
+   * @param key 消去する秘密鍵
+   */
+  clearKey(key: Uint8Array): void;
 }

@@ -1,7 +1,13 @@
 /**
- * Nosskey SDK
+ * Nosskey SDK - Passkey-Derived Nostr Identity
  * @packageDocumentation
  */
 
-export * from './types.js'
-export * from './nosskey.js'
+// 型定義のエクスポート
+export * from './types.js';
+
+// クラスとユーティリティのエクスポート
+export { PWKManager } from './nosskey.js';
+
+// テスト用ユーティリティのエクスポート
+export { registerDummyPasskey } from './test-utils.js';

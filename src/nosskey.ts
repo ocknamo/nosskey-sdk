@@ -2,207 +2,277 @@
  * Nosskey class for Passkey-Derived Nostr Identity
  * @packageDocumentation
  */
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { seckeySigner } from 'rx-nostr-crypto';
+import type {
+  CreateOptions,
+  CreateResult,
+  NostrEvent,
+  PWKBlob,
+  PWKManagerLike,
+  SignOptions,
+} from './types.js';
 
-import { NosskeyOptions, NosskeyDerivedKey } from './types'
-import { getPublicKey } from 'rx-nostr-crypto'
+/* 定数 */
+const PRF_EVAL_INPUT = new TextEncoder().encode('nostr-pwk');
+const INFO_BYTES = new TextEncoder().encode('nostr-pwk');
+const AES_LENGTH = 256; // bits
 
 /**
- * Nosskey class for managing Passkey-Derived Nostr Identity
+ * WebAuthn PRF 拡張のレスポンス型
  */
-export class Nosskey {
-  private options: NosskeyOptions
+type PRFExtensionResponse = {
+  getClientExtensionResults(): {
+    prf?: {
+      results?: {
+        first?: ArrayBuffer;
+      };
+    };
+  };
+};
 
+/**
+ * Nosskey - Passkey-Wrapped Key for Nostr
+ */
+export class PWKManager implements PWKManagerLike {
   /**
-   * Creates a new Nosskey instance
-   * @param options - Configuration options
+   * PRF拡張機能がサポートされているかチェック
    */
-  constructor(options: NosskeyOptions) {
-    this.options = {
-      ...options,
-      salt: options.salt ?? 'nosskey-v1'
-    }
-  }
-
-  /**
-   * Registers a new passkey for a user (Signup flow)
-   * @param options - Registration options
-   * @returns Promise resolving to registration result
-   */
-  async registerPasskey(options: {
-    rpID?: string;
-    rpName?: string;
-    userID: string;
-    userDisplayName?: string;
-    challenge?: Uint8Array;
-  }): Promise<{
-    success: boolean;
-    error?: string;
-    credentialID?: ArrayBuffer;
-  }> {
+  async isPrfSupported(): Promise<boolean> {
     try {
-      const {
-        rpID = window.location.hostname,
-        rpName = window.location.hostname,
-        userID,
-        userDisplayName = userID,
-        challenge = crypto.getRandomValues(new Uint8Array(32))
-      } = options;
+      const response = await navigator.credentials.get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [],
+          userVerification: 'required',
+          extensions: { prf: { eval: { first: PRF_EVAL_INPUT } } },
+        } as PublicKeyCredentialRequestOptions,
+      });
 
-      // Ensure userID is within 64 bytes
-      const userIdBytes = new TextEncoder().encode(userID).slice(0, 64);
+      if (!response) return false;
 
-      const publicKey: PublicKeyCredentialCreationOptions = {
-        challenge: challenge.buffer,
-        rp: {
-          id: rpID,
-          name: rpName
-        },
-        user: {
-          id: userIdBytes,
-          name: userID,
-          displayName: userDisplayName
-        },
-        pubKeyCredParams: [
-          { alg: -7, type: "public-key" },   // ES256
-          { alg: -8, type: "public-key" },   // EdDSA (optional)
-          { alg: -257, type: "public-key" }  // RS256 (optional fallback)
-        ],
-        authenticatorSelection: {
-          residentKey: "required",
-          userVerification: "preferred"
-        },
-        timeout: 60000,
-        attestation: "none"
+      // 型アサーション
+      const assertion = response as unknown as {
+        getClientExtensionResults: () => {
+          prf?: {
+            results?: {
+              first?: ArrayBuffer;
+            };
+          };
+        };
       };
 
-      const credential = await navigator.credentials.create({ publicKey }) as PublicKeyCredential;
-
-      if (!credential || !credential.rawId) {
-        throw new Error("Credential creation failed or returned null");
-      }
-
-      return {
-        success: true,
-        credentialID: credential.rawId
-      };
-
-    } catch (err) {
-      return {
-        success: false,
-        error: (err instanceof Error) ? err.message : String(err)
-      };
+      const res = assertion.getClientExtensionResults()?.prf?.results?.first;
+      return !!res;
+    } catch {
+      return false;
     }
   }
 
   /**
-   * Derive a nostr key pair using the registered passkey.
-   * Prompts the user for biometric/passkey verification.
-   * @returns Promise resolving to the derived key pair
+   * パスキーを作成し秘密鍵を暗号化
+   * @param options 作成オプション
    */
-  async deriveKey(): Promise<NosskeyDerivedKey> {
-    const challenge = await Nosskey.deriveChallenge(
-      this.options.userId,
-      this.options.appNamespace,
-      this.options.salt
-    )
+  async create(options: CreateOptions = {}): Promise<CreateResult> {
+    // デフォルトオプション
+    const { secretKey, clearMemory = true } = options;
 
-    const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
-      challenge,
-      allowCredentials: undefined,
-      timeout: 60000,
-      userVerification: "required",
-      ...this.options.webAuthnOptions,
+    // パスキーを作成
+    const credentialCreationOptions: CredentialCreationOptions = {
+      publicKey: {
+        rp: { name: 'Nostr PWK' },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(16)),
+          name: 'user@example.com',
+          displayName: 'PWK user',
+        },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }], // ES256
+        authenticatorSelection: {
+          residentKey: 'required',
+          userVerification: 'required',
+        },
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        extensions: { prf: {} }, // PRF拡張を要求
+      } as PublicKeyCredentialCreationOptions,
+    };
+    const cred = (await navigator.credentials.create(
+      credentialCreationOptions
+    )) as PublicKeyCredential;
+
+    const credentialId = new Uint8Array(cred.rawId);
+
+    // PRF秘密を取得
+    const secret = await this.#prfSecret(credentialId);
+
+    // Nostr秘密鍵を生成または使用
+    const nostrSK = secretKey || crypto.getRandomValues(new Uint8Array(32));
+
+    // 秘密鍵HEX文字列を取得
+    const skHex = bytesToHex(nostrSK);
+
+    // rx-nostr-cryptoを使用して公開鍵を取得
+    const signer = seckeySigner(skHex);
+    const publicKey = await signer.getPublicKey();
+
+    // 秘密鍵を暗号化
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const aes = await this.#deriveAesGcmKey(secret, salt);
+
+    const { ciphertext, tag } = await this.#aesGcmEncrypt(aes, iv, nostrSK);
+
+    // 必要に応じて平文の秘密鍵を消去
+    if (clearMemory) {
+      this.clearKey(nostrSK);
+    }
+
+    // 結果を返却
+    return {
+      pwkBlob: {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(salt),
+        iv: bytesToHex(iv),
+        ct: bytesToHex(ciphertext),
+        tag: bytesToHex(tag),
+        credentialId: bytesToHex(credentialId),
+      },
+      credentialId,
+      publicKey,
+    };
+  }
+
+  /**
+   * イベントに署名
+   * @param event 署名するNostrイベント
+   * @param pwk 暗号化された秘密鍵
+   * @param credentialId 使用するクレデンシャルID
+   * @param options 署名オプション
+   */
+  async signEvent(
+    event: NostrEvent,
+    pwk: PWKBlob,
+    credentialId: Uint8Array,
+    options: SignOptions = {}
+  ): Promise<NostrEvent> {
+    const { clearMemory = true, tags } = options;
+
+    // PRF秘密を取得
+    const secret = await this.#prfSecret(credentialId);
+
+    // 秘密鍵を復号
+    const salt = hexToBytes(pwk.salt);
+    const iv = hexToBytes(pwk.iv);
+    const ct = hexToBytes(pwk.ct);
+    const tag = hexToBytes(pwk.tag);
+
+    const aes = await this.#deriveAesGcmKey(secret, salt);
+    const sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+
+    // 秘密鍵HEX文字列を取得
+    const skHex = bytesToHex(sk);
+
+    // rx-nostr-crypto seckeySigner を使用して署名
+    const signer = seckeySigner(skHex, { tags });
+    const signedEvent = await signer.signEvent(event);
+
+    // 必要に応じて平文の秘密鍵を消去
+    if (clearMemory) {
+      this.clearKey(sk);
+    }
+
+    return signedEvent;
+  }
+
+  /**
+   * 秘密鍵をメモリから明示的に消去
+   * @param key 消去する秘密鍵
+   */
+  clearKey(key: Uint8Array): void {
+    key?.fill?.(0);
+  }
+
+  /* 内部ヘルパーメソッド */
+
+  /**
+   * クレデンシャルIDを使用してPRF秘密を取得
+   */
+  async #prfSecret(credentialId: Uint8Array): Promise<Uint8Array> {
+    const response = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type: 'public-key', id: credentialId }],
+        userVerification: 'required',
+        extensions: { prf: { eval: { first: PRF_EVAL_INPUT } } },
+      } as PublicKeyCredentialRequestOptions,
+    });
+
+    if (!response) {
+      throw new Error('Authentication failed');
+    }
+
+    // 型アサーション
+    const assertion = response as unknown as {
+      getClientExtensionResults: () => {
+        prf?: {
+          results?: {
+            first?: ArrayBuffer;
+          };
+        };
+      };
     };
 
-    const assertion = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions,
-    }) as PublicKeyCredential;
-
-    if (!assertion.response) {
-      throw new Error('No response from credential')
+    const secret = assertion.getClientExtensionResults()?.prf?.results?.first;
+    if (!secret) {
+      throw new Error('PRF secret not available');
     }
 
-    const response = assertion.response as AuthenticatorAssertionResponse
-    const rawSignature = new Uint8Array(response.signature)
-    const credentialId = new Uint8Array(assertion.rawId)
-
-    // Derive key pair using the common method
-    const { sk, pk } = await this.deriveKeyFromSignature(rawSignature)
-
-    return { sk, pk, credentialId }
+    return new Uint8Array(secret);
   }
 
   /**
-   * Utility: Create a deterministic challenge buffer from userId + namespace + salt.
-   * The same input will always produce the same output.
-   * @param userId - User identifier
-   * @param namespace - App namespace
-   * @param salt - Optional salt
-   * @returns Promise resolving to the challenge buffer
+   * PRF秘密からAES-GCM鍵を導出
    */
-  static async deriveChallenge(
-    userId: string,
-    namespace: string,
-    salt?: string
+  async #deriveAesGcmKey(secret: Uint8Array, salt: Uint8Array): Promise<CryptoKey> {
+    const keyMaterial = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
+
+    return crypto.subtle.deriveKey(
+      { name: 'HKDF', hash: 'SHA-256', salt, info: INFO_BYTES },
+      keyMaterial,
+      { name: 'AES-GCM', length: AES_LENGTH },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  /**
+   * AES-GCM暗号化
+   */
+  async #aesGcmEncrypt(key: CryptoKey, iv: Uint8Array, plaintext: Uint8Array) {
+    const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+
+    // 認証タグ(16バイト)と暗号文を分離
+    const bytes = new Uint8Array(buf);
+    return {
+      ciphertext: bytes.slice(0, -16),
+      tag: bytes.slice(-16),
+    };
+  }
+
+  /**
+   * AES-GCM復号
+   */
+  async #aesGcmDecrypt(
+    key: CryptoKey,
+    iv: Uint8Array,
+    ct: Uint8Array,
+    tag: Uint8Array
   ): Promise<Uint8Array> {
-    const encoder = new TextEncoder()
-    const base = `${userId}@${namespace}${salt ? ":" + salt : ""}`
-    const hash = await crypto.subtle.digest("SHA-256", encoder.encode(base))
-    return new Uint8Array(hash)
+    const buf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new Uint8Array([...ct, ...tag])
+    );
+    return new Uint8Array(buf);
   }
-
-  /**
-   * Internal utility: Import an existing raw signature and derive nostr keys.
-   * @param signature - Raw signature from WebAuthn
-   * @returns Derived key pair
-   * @private
-   */
-  private async deriveKeyFromSignature(signature: Uint8Array): Promise<{ sk: Uint8Array; pk: Uint8Array }> {
-    const hash = new Uint8Array(
-      Array.from(signature).length === 64
-        ? signature
-        : await crypto.subtle.digest("SHA-256", signature)
-    )
-    const sk = hash.slice(0, 32)
-    
-    // Convert private key to hex string and compute public key using rx-nostr-crypto
-    const skHex = Nosskey.toHex(sk)
-    const pkHex = getPublicKey(skHex)
-    
-    // Convert hex strings back to Uint8Array
-    const pk = new Uint8Array(pkHex.match(/.{1,2}/g)!.map((byte: string) => parseInt(byte, 16)))
-
-    return { sk, pk }
-  }
-
-  /**
-   * Utility: Convert nostr keys to hex string.
-   * @param buf - Buffer to convert
-   * @returns Hex string
-   */
-  static toHex(buf: Uint8Array): string {
-    return Array.from(buf)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-  }
-
-  /**
-   * Checks if the browser supports Passkey
-   * @returns Promise resolving to boolean indicating if Passkey is supported
-   */
-  static async isPasskeySupported(): Promise<boolean> {
-    if (
-      typeof window === 'undefined' ||
-      typeof window.PublicKeyCredential === 'undefined' ||
-      typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function'
-    ) {
-      return false
-    }
-
-    try {
-      return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-    } catch {
-      return false
-    }
-  }
-} 
+}
