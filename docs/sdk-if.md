@@ -1,5 +1,9 @@
 # Passkey-Wrapped Key (PWK) NIP - TypeScript SDK 実装
 
+**NIP-49を採用しないシンプルな実装例**
+
+このSDK実装はNIP-49で規定されているscryptやXChaCha20-Poly1305を使用せず、WebAuthnのPRF拡張から得られる高エントロピー値を直接AES-GCM暗号化に利用するシンプルなアプローチを採用しています。これにより、追加ライブラリの依存なしに標準Web Crypto APIのみで実装可能で、優れたパフォーマンスを実現しています。
+
 ## 概要
 
 このドキュメントでは、Passkey-Wrapped Key (PWK) NIPのTypeScript SDK実装に関するインターフェース設計と重要なメソッドの実装例を紹介します。

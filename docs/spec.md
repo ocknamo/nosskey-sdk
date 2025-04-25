@@ -11,6 +11,7 @@
   - [全体フロー概要](#全体フロー概要)
   - [パスキー登録と秘密鍵生成](#パスキー登録と秘密鍵生成)
   - [秘密鍵のラップ（暗号化保存）](#秘密鍵のラップ暗号化保存)
+  - [NIP-49との互換性](#nip-49との互換性)
   - [署名要求時のアンラップと署名](#署名要求時のアンラップと署名)
 - [WebAuthn経由での署名処理とユーザーエクスペリエンス](#webauthn経由での署名処理とユーザーエクスペリエンス)
 - [JavaScriptとWebAuthn APIによる実装可能性と技術的制限](#javascriptとwebauthn-apiによる実装可能性と技術的制限)
@@ -79,11 +80,37 @@ WebAuthn登録時または直後の認証時に、AuthenticatorのPRF拡張を�
 
 ユーザーが認証（タッチや生体認証）を行うと、レスポンスの`getClientExtensionResults().prf.results.first`に32バイト長程度のハッシュ値が得られます。これはAuthenticator内の秘密鍵と提供したバイト列から計算された高エントロピーなバイト列です。
 
-次にWeb Cryptoの`subtle` APIでこのバイト列を鍵素材としてインポートし、HKDFなどのKDFで対称鍵を導出します。この鍵を使い、先ほど生成したNostr秘密鍵をAES-GCMなどで暗号化（鍵ラップ）します。
+このPRF出力値を用いて、Nostr秘密鍵を暗号化します。暗号化方式としては、Nostrプロトコルで標準化されたNIP-49規格に準拠することで、クライアント間の互換性を高めることができます。
 
-こうして得た暗号化データと必要なメタ情報（IVやsalt）は安全なストレージ（例えばIndexedDB）に保存し、元の平文秘密鍵はメモリから消去します。
+NIP-49に従い、PRF出力値から強力な対称鍵を導出し、それを使って秘密鍵をXChaCha20-Poly1305アルゴリズムで暗号化します。こうして得た暗号化データは標準化されたフォーマット（ncryptsec）でエンコードされ、安全なストレージ（例えばIndexedDB）に保存します。そして元の平文秘密鍵はメモリから速やかに消去します。
 
-**重要点**: 導出に用いたsaltやHKDFの情報（info）は後で再現するため一定にしておき、またAuthenticator側ではユーザー検証（UV）を必須にしておくことで、セキュリティを高めます。
+**重要点**: Authenticator側ではユーザー検証（UV）を必須にし、暗号化の計算負荷パラメータ（LOG_N）は環境に応じて適切な値を選択することでセキュリティを高めます。
+
+### NIP-49との互換性
+
+[NIP-49](https://github.com/nostr-protocol/nips/blob/master/49.md)はNostrプロトコルにおける秘密鍵のパスワード暗号化手法を規定した標準です。WebAuthnパスキーとNIP-49を組み合わせることで、より堅牢なセキュリティとクライアント間の互換性を両立できます。
+
+NIP-49の仕様では次のようなプロセスが定義されています：
+
+1. **パスワードからの鍵導出**:
+   - パスワードはUnicode NFKC形式に正規化される
+   - scryptアルゴリズム（パラメータ: LOG_N, r=8, p=1）で対称鍵を導出
+   - LOG_Nは計算負荷を決定（16=64MiB, 18=256MiB, 20=1GiB, 22=4GiB）
+
+2. **秘密鍵の暗号化**:
+   - XChaCha20-Poly1305アルゴリズムを使用
+   - 24バイトのランダムNONCE生成
+   - 鍵のセキュリティ状態をメタデータとして記録（KEY_SECURITY_BYTE）
+   - 暗号化データをbech32エンコードし「ncryptsec」プレフィックスを付与
+
+WebAuthnパスキーとの統合では、ユーザーが入力するパスワードの代わりに、パスキーから得られるPRF値を使用します。具体的には：
+
+1. WebAuthnのPRF拡張で高エントロピーなバイト列を取得
+2. このPRF値をNIP-49のパスワード代わりとしてscryptに入力
+3. 導出された対称鍵でNostr秘密鍵をXChaCha20-Poly1305暗号化
+4. 標準の「ncryptsec」形式で保存
+
+これにより、パスキーで保護されながらも、他のNostrクライアントとの互換性を維持できます。例えば、パスキーが利用できない環境でも、ncryptsecエンコードされた秘密鍵を別のNIP-49対応クライアントでインポートすることが可能です（その場合は元のPRF値の代わりにユーザーが設定したバックアップパスワードを用いる）。
 
 ### 署名要求時のアンラップと署名
 
@@ -93,11 +120,11 @@ WebAuthn登録時または直後の認証時に、AuthenticatorのPRF拡張を�
 
 この一連の処理により、ユーザーは秘密鍵の存在を意識せず、裏で必要なときだけ復号・利用される形になります。
 
-#### 簡略化した擬似コード例: PRFで導出した対称鍵で秘密鍵をラップ
+#### 簡略化した擬似コード例: WebAuthnパスキーとNIP-49を統合した秘密鍵ラップ
 
 ```javascript
 const credId = /* 登録時に保存したCredential ID */;
-const salt = new Uint8Array([/* 任意の固定バイト列 */]);
+const webAuthnSalt = new Uint8Array([/* 任意の固定バイト列 */]);
 
 // WebAuthnでPRF拡張を使用し、派生キー素材を取得
 const assertion = await navigator.credentials.get({
@@ -105,28 +132,48 @@ const assertion = await navigator.credentials.get({
     challenge: new Uint8Array(32),  // チャレンジ（適当でOK。拡張のみ利用）
     allowCredentials: [{ id: credId, type: "public-key" }],
     userVerification: "required",
-    extensions: { prf: { eval: { first: salt } } }
+    extensions: { prf: { eval: { first: webAuthnSalt } } }
   }
 });
 const prfOutput = assertion.getClientExtensionResults().prf.results.first;
-// HKDFで対称鍵（AES-GCM 256bit）を導出
-const keyMaterial = await crypto.subtle.importKey("raw", prfOutput, "HKDF", false, ["deriveKey"]);
-const aesKey = await crypto.subtle.deriveKey(
-  { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: new TextEncoder().encode("nostr key") },
-  keyMaterial,
-  { name: "AES-GCM", length: 256 },
-  false,
-  ["encrypt", "decrypt"]
+
+// NIP-49: scryptパラメータを設定
+const LOG_N = 18; // 256MiBメモリ使用（環境に応じて16-22の間で調整可能）
+const SALT = crypto.getRandomValues(new Uint8Array(16));
+
+// scryptでSYMMETRIC_KEYを導出（r=8, p=1はNIP-49で固定値）
+const SYMMETRIC_KEY = await scrypt(
+  password=prfOutput, 
+  salt=SALT, 
+  log_n=LOG_N, 
+  r=8, 
+  p=1
 );
-// Nostr秘密鍵をAES-GCMで暗号化（ラップ）
-const iv = crypto.getRandomValues(new Uint8Array(12));
-const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, nostrPrivKeyBytes);
-// --- ciphertextとivを保存、nostrPrivKeyBytesは消去 ---
+
+// NIP-49: XChaCha20-Poly1305で暗号化
+const KEY_SECURITY_BYTE = 0x01; // セキュアに管理された鍵
+const NONCE = crypto.getRandomValues(new Uint8Array(24));
+const CIPHERTEXT = await xchacha20poly1305Encrypt(
+  plaintext=nostrPrivKeyBytes,
+  associated_data=KEY_SECURITY_BYTE,
+  nonce=NONCE,
+  key=SYMMETRIC_KEY
+);
+
+// NIP-49形式でエンコード
+const VERSION_NUMBER = 0x02;
+const CIPHERTEXT_CONCATENATION = concat(
+  VERSION_NUMBER, LOG_N, SALT, NONCE, KEY_SECURITY_BYTE, CIPHERTEXT
+);
+const ENCRYPTED_PRIVATE_KEY = bech32_encode('ncryptsec', CIPHERTEXT_CONCATENATION);
+
+// IndexedDBなどに保存し、平文の秘密鍵は消去
+// この際、webAuthnSaltとcredIdも保存して後で復号できるようにする
 ```
 
-上記のようにしておけば、復号時も同様に`crypto.subtle.decrypt`を呼び出すだけで秘密鍵を得られます。
+上記のようにしておけば、復号時も同様のプロセスで秘密鍵を得られます：WebAuthnのPRF値を取得→scryptで対称鍵を再計算→XChaCha20-Poly1305で復号化→使用後に平文鍵を消去。
 
-**ポイント**: PRF拡張の出力は同じクレデンシャルと入力に対して常に不変なので、ユーザーごとに固定のsalt（例えば文字列"nostr-key-salt"をUTF-8エンコードしたもの等）を用いれば、各ユーザーの秘密鍵を決定論的に復元できます。
+**ポイント**: PRF拡張の出力は同じクレデンシャルと入力に対して常に不変なので、ユーザーごとに固定のwebAuthnSalt（例えば文字列"nostr-key-salt"をUTF-8エンコードしたもの等）を用いれば、各ユーザーの秘密鍵を決定論的に復元できます。NIP-49のSALTはこれとは別で、暗号化のたびに新しく生成されることに注意してください。
 
 この仕組みはまさにパスワードマネージャ等で「パスキーでデータ復号」を行うのと同様であり、BitwardenではこのPRF拡張を用いてマスターパスワードなしでVaultを復号する実験的機能を実装しています ([Login with Passkey, "Use for vault encryption" - Bitwarden Community Forums](https://community.bitwarden.com/t/login-with-passkey-use-for-vault-encryption/50619/62))。
 
@@ -188,3 +235,122 @@ WebAuthnとパスキーを用いることで、従来の秘密鍵管理と比べ
 
 パスキー利用時には、この同期の挙動についてユーザーへの周知（「この鍵は他の自分の端末と共有されます」等）や、場合によってはプラットフォームごとの設定（ブラウザごとのオプトアウトが可能ならそれを案内）が必要です。
 
+### キーロガー対策
+
+WebAuthnは従来のパスワード入力と異なり、キーボード操作を介さない認証方式のため、キーロガー型のマルウェアによる認証情報の盗難リスクが低減されます。特にビデオ録画型のキーロガーでも、生体認証プロセスや物理キー操作を再現することは困難です。
+
+一方で、アンラップしたNostr秘密鍵がメモリに展開されるタイミングでのメモリダンプ攻撃には依然として脆弱です。この対策としては、秘密鍵を利用するコードをシンプルに保ち、平文の秘密鍵がメモリ上に存在する時間を最小限にすることが重要です。
+
+### リプレイ攻撃とチャレンジ管理
+
+WebAuthn認証の一部としてブラウザが送信するチャレンジは、サーバ側で検証される設計になっています。しかし、今回の用途ではNostr署名のためにローカルでWebAuthnを使用するため、チャレンジの検証がありません。
+
+これにより理論上はリプレイ攻撃のリスクがありますが、PRF拡張を用いた鍵導出には影響しません。なぜならPRF値の出力はチャレンジではなく事前に設定したsaltに依存するためです。
+
+### ブラウザ間の差異
+
+WebAuthn APIやその拡張機能のサポート状況はブラウザによって異なります。特にPRF拡張は比較的新しい機能であり、2024-2025年時点でも対応が限定的です。
+
+実装では複数のフォールバック戦略を持ち、例えばPRF拡張が利用できない場合はHMAC-secret拡張を試し、それも利用できない場合はパスワードベースのフォールバックを提供するなど、段階的な対応が必要になります。
+
+## NIP-49との互換性についてのトレードオフ
+
+前述したNIP-49との統合にはメリットがある一方で、以下のようなトレードオフも考慮する必要があります：
+
+### パフォーマンス面でのデメリット
+
+- **計算負荷の増加**: NIP-49のscryptアルゴリズムは意図的に計算コストが高く設計されています。特にLOG_Nパラメータを高く設定すると（20以上）、暗号化/復号に数秒かかる場合があります。これはUXに直接影響します。
+- **メモリ使用量の増加**: scryptはメモリハードな設計で、例えばLOG_N=18で256MiB、LOG_N=20で1GiBのメモリを使用します。リソースが限られたデバイスでは問題になる可能性があります。
+- **処理の複雑化**: WebAuthnによるPRF値取得→scrypt計算→XChaCha20-Poly1305暗号化という多段階の処理が必要になり、シンプルなAES-GCM暗号化と比べると実装が複雑になります。
+- **鍵導出の冗長性**: WebAuthnから得たPRF値はすでに高エントロピー（十分にランダム）なデータであるため、scryptによる追加の鍵導出処理は本質的に冗長です。通常scryptはユーザーが入力する低エントロピーなパスワードを強化するために使用されますが、PRF値自体がすでに暗号学的に強い値であるため、この追加処理は計算コストの増加に見合った明確なセキュリティ上の利点をもたらさない可能性があります。
+
+### 互換性と実装の課題
+
+- **ライブラリ依存**: XChaCha20-Poly1305やscryptのJavaScript実装は標準のWeb Crypto APIに含まれておらず、追加のライブラリが必要になります。これによりバンドルサイズが増加します。
+- **対応環境の制限**: PRF拡張とXChaCha20-Poly1305の両方をサポートする環境は限られています。特にモバイルデバイスや古いブラウザでの動作確保が課題となります。
+- **エラーハンドリングの複雑さ**: 複数の暗号処理ステップがあるため、エラー発生時のデバッグや回復処理が複雑になります。
+
+### 開発とメンテナンスのコスト
+
+- **開発リソースの増加**: NIP-49対応には追加の実装工数が必要になります。
+- **テスト要件の拡大**: 複数の暗号化アルゴリズムとパラメータの組み合わせをテストする必要があります。
+- **将来的な保守**: 複雑な実装は長期的なメンテナンスコストも高くなります。
+
+## 実装アプローチの推奨
+
+上記のトレードオフを考慮し、以下のような段階的な実装アプローチを推奨します：
+
+1. **基本実装（最初のPoC）**: 
+   - WebAuthnのPRF拡張から取得した値を直接鍵材料としてAES-GCMでNostr秘密鍵を暗号化
+   - シンプルで高速、最小限のライブラリ依存で実装可能
+   - ブラウザネイティブのWeb Crypto APIのみで実装可能
+
+2. **オプションとしてのNIP-49対応（将来拡張）**:
+   - 基本実装が安定した後に、オプション機能としてNIP-49対応を追加
+   - ユーザーがクライアント間の互換性を必要とする場合に選択可能にする
+   - パフォーマンスに関する警告や設定オプション（LOG_N値など）を提供
+
+3. **UI/UXの最適化**:
+   - NIP-49対応を選択した場合のパフォーマンス影響を最小化するUI設計
+   - バックグラウンドワーカーでの処理や進捗表示の実装
+   - 暗号化強度とパフォーマンスのバランスをユーザーが選択できる機能
+
+このアプローチにより、まずは基本的なセキュリティと使いやすさを確保しながら、将来的に標準との互換性も提供することができます。特に最初のPoC実装ではNIP-49は採用せず、動作確認後にオプションとして追加することで、開発リスクを低減できます。
+
+#### 簡略化した擬似コード例: PRF拡張とAES-GCMによるシンプルな実装
+
+```javascript
+const credId = /* 登録時に保存したCredential ID */;
+const webAuthnSalt = new Uint8Array([/* 任意の固定バイト列 */]);
+
+// WebAuthnでPRF拡張を使用し、派生キー素材を取得
+const assertion = await navigator.credentials.get({
+  publicKey: {
+    challenge: new Uint8Array(32),  // チャレンジ（適当でOK。拡張のみ利用）
+    allowCredentials: [{ id: credId, type: "public-key" }],
+    userVerification: "required",
+    extensions: { prf: { eval: { first: webAuthnSalt } } }
+  }
+});
+const prfOutput = assertion.getClientExtensionResults().prf.results.first;
+
+// PRF出力値を直接AES-GCMの鍵材料として使用（NIP-49のscryptを省略）
+const aesKey = await crypto.subtle.importKey(
+  "raw",
+  prfOutput,  // PRF値を直接鍵として使用（32バイト/256bit）
+  { name: "AES-GCM", length: 256 },
+  false,
+  ["encrypt", "decrypt"]
+);
+
+// Nostr秘密鍵をAES-GCMで暗号化（シンプルで高速）
+const iv = crypto.getRandomValues(new Uint8Array(12));  // AES-GCM用の初期化ベクトル
+const encryptedPrivKey = await crypto.subtle.encrypt(
+  { name: "AES-GCM", iv },
+  aesKey,
+  nostrPrivKeyBytes
+);
+
+// 暗号化データとIVを保存
+const keyData = {
+  encryptedKey: encryptedPrivKey,
+  iv: iv,
+  // その他のメタデータ（公開鍵情報など）
+};
+
+// IndexedDBなどに保存し、平文の秘密鍵は消去
+await storeEncryptedKey(keyData);
+nostrPrivKeyBytes.fill(0);  // メモリから平文鍵を明示的に消去
+```
+
+この実装では、NIP-49で必要なscryptやXChaCha20-Poly1305の追加ライブラリが不要で、ブラウザ標準のWeb Crypto APIのみで実装可能です。PRF拡張から得られる値は十分に高エントロピーであるため、セキュリティを大きく損なうことなく処理を大幅に簡素化できます。
+
+復号時も同様に、PRF値からAES鍵を再作成し、保存していたIVと暗号化データを用いて復号するだけの単純な処理になります。これにより、特に低スペックデバイスでのパフォーマンスが向上し、ユーザー体験の改善が期待できます。
+
+## まとめ
+
+WebAuthnパスキーを利用したNostr秘密鍵の保護は、ユーザーエクスペリエンスとセキュリティの両方を向上させる有望なアプローチです。直接利用と間接利用（暗号化/復号）の両方の可能性があり、特に間接利用は現実的な実装オプションを提供します。
+
+PRF拡張等の最新機能を活用し、WebAuthnの認証メカニズムとNostrの署名要件を組み合わせることで、一般ユーザーにも扱いやすい高セキュリティソリューションが実現可能です。
+
+NIP-49との統合は標準化と互換性のメリットがある一方、パフォーマンスと実装の複雑さというトレードオフがあります。プロジェクトのフェーズに応じて段階的に実装することで、これらの課題に対処しながら、最終的には柔軟で安全な鍵管理ソリューションを提供できるでしょう。
