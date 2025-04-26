@@ -5,10 +5,11 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { seckeySigner } from 'rx-nostr-crypto';
 import type {
-  CreateOptions,
   CreateResult,
+  KeyOptions,
   NostrEvent,
   PWKBlob,
+  PWKBlobV1,
   PWKManagerLike,
   SignOptions,
 } from './types.js';
@@ -70,13 +71,10 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
-   * パスキーを作成し秘密鍵を暗号化
-   * @param options 作成オプション
+   * パスキーを作成（PRF拡張もリクエスト）
+   * @returns Credentialの識別子を返す
    */
-  async create(options: CreateOptions = {}): Promise<CreateResult> {
-    // デフォルトオプション
-    const { secretKey, clearMemory = true } = options;
-
+  async createPasskey(): Promise<Uint8Array> {
     // パスキーを作成
     const credentialCreationOptions: CredentialCreationOptions = {
       publicKey: {
@@ -99,16 +97,27 @@ export class PWKManager implements PWKManagerLike {
       credentialCreationOptions
     )) as PublicKeyCredential;
 
-    const credentialId = new Uint8Array(cred.rawId);
+    return new Uint8Array(cred.rawId);
+  }
+
+  /**
+   * 既存のNostr秘密鍵をパスキーでラップして保護
+   * @param credentialId 使用するクレデンシャルID
+   * @param secretKey インポートする既存の秘密鍵
+   * @param options オプション
+   */
+  async importNostrKey(
+    credentialId: Uint8Array,
+    secretKey: Uint8Array,
+    options: KeyOptions = {}
+  ): Promise<CreateResult> {
+    const { clearMemory = true } = options;
 
     // PRF秘密を取得
     const secret = await this.#prfSecret(credentialId);
 
-    // Nostr秘密鍵を生成または使用
-    const nostrSK = secretKey || crypto.getRandomValues(new Uint8Array(32));
-
     // 秘密鍵HEX文字列を取得
-    const skHex = bytesToHex(nostrSK);
+    const skHex = bytesToHex(secretKey);
 
     // rx-nostr-cryptoを使用して公開鍵を取得
     const signer = seckeySigner(skHex);
@@ -119,11 +128,11 @@ export class PWKManager implements PWKManagerLike {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const aes = await this.#deriveAesGcmKey(secret, salt);
 
-    const { ciphertext, tag } = await this.#aesGcmEncrypt(aes, iv, nostrSK);
+    const { ciphertext, tag } = await this.#aesGcmEncrypt(aes, iv, secretKey);
 
     // 必要に応じて平文の秘密鍵を消去
     if (clearMemory) {
-      this.clearKey(nostrSK);
+      this.clearKey(secretKey);
     }
 
     // 結果を返却
@@ -143,9 +152,58 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
+   * 新しいNostr秘密鍵を生成してパスキーでラップ
+   * @param credentialId 使用するクレデンシャルID
+   * @param options オプション
+   */
+  async generateNostrKey(
+    credentialId: Uint8Array,
+    options: KeyOptions = {}
+  ): Promise<CreateResult> {
+    // 新しいNostr秘密鍵を生成
+    const nostrSK = crypto.getRandomValues(new Uint8Array(32));
+
+    // importNostrKeyを利用して処理を共通化
+    return this.importNostrKey(credentialId, nostrSK, options);
+  }
+
+  /**
+   * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
+   * @param credentialId 使用するクレデンシャルID
+   */
+  async directPrfToNostrKey(credentialId: Uint8Array): Promise<CreateResult> {
+    // PRF秘密を取得（これが直接シークレットキーになる）
+    const sk = await this.#prfSecret(credentialId);
+
+    // secp256k1の有効範囲チェック
+    // 注: 実用上は確率が非常に低いため省略可能
+    if (sk.every((byte) => byte === 0)) {
+      throw new Error('Invalid PRF output: all zeros');
+    }
+
+    // 秘密鍵HEX文字列を取得
+    const skHex = bytesToHex(sk);
+
+    // rx-nostr-cryptoを使用して公開鍵を取得
+    const signer = seckeySigner(skHex);
+    const publicKey = await signer.getPublicKey();
+
+    // PWKBlobDirectを返却
+    return {
+      pwkBlob: {
+        v: 1,
+        alg: 'prf-direct',
+        credentialId: bytesToHex(credentialId),
+      },
+      credentialId,
+      publicKey,
+    };
+  }
+
+  /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用
    * @param credentialId 使用するクレデンシャルID
    * @param options 署名オプション
    */
@@ -157,17 +215,26 @@ export class PWKManager implements PWKManagerLike {
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags } = options;
 
-    // PRF秘密を取得
-    const secret = await this.#prfSecret(credentialId);
+    // PRF値を取得
+    const prfSecret = await this.#prfSecret(credentialId);
 
-    // 秘密鍵を復号
-    const salt = hexToBytes(pwk.salt);
-    const iv = hexToBytes(pwk.iv);
-    const ct = hexToBytes(pwk.ct);
-    const tag = hexToBytes(pwk.tag);
+    let sk: Uint8Array;
 
-    const aes = await this.#deriveAesGcmKey(secret, salt);
-    const sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+    // PWKの種類によって処理を分岐
+    if (pwk.alg === 'prf-direct') {
+      // PRF値を直接シークレットキーとして使用
+      sk = prfSecret;
+    } else {
+      // PWKBlobV1として扱い、暗号化された秘密鍵を復号
+      const pwkV1 = pwk as PWKBlobV1;
+      const salt = hexToBytes(pwkV1.salt);
+      const iv = hexToBytes(pwkV1.iv);
+      const ct = hexToBytes(pwkV1.ct);
+      const tag = hexToBytes(pwkV1.tag);
+
+      const aes = await this.#deriveAesGcmKey(prfSecret, salt);
+      sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+    }
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);

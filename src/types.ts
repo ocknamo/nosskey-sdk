@@ -28,10 +28,27 @@ export interface PWKBlobV1 {
   tag: string; // hex(16 B)
   credentialId?: string; // クレデンシャルIDをhex形式で保存
 }
-export type PWKBlob = PWKBlobV1;
 
 /**
- * Create options
+ * PWK blob - PRF直接使用方式 (PoC実装)
+ */
+export interface PWKBlobDirect {
+  v: 1;
+  alg: 'prf-direct';
+  credentialId: string; // hex形式
+}
+
+export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
+
+/**
+ * Key options
+ */
+export interface KeyOptions {
+  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
+}
+
+/**
+ * Create options (互換性のため残す)
  */
 export interface CreateOptions {
   secretKey?: Uint8Array; // 外部から渡すシークレットキー（省略時は生成）
@@ -65,10 +82,35 @@ export interface PWKManagerLike {
   isPrfSupported(): Promise<boolean>;
 
   /**
-   * パスキーを作成し秘密鍵を暗号化
-   * @param options 作成オプション
+   * パスキーを作成（PRF拡張もリクエスト）
+   * @returns Credentialの識別子を返す
    */
-  create(options?: CreateOptions): Promise<CreateResult>;
+  createPasskey(): Promise<Uint8Array>;
+
+  /**
+   * 既存のNostr秘密鍵をパスキーでラップして保護
+   * @param credentialId 使用するクレデンシャルID
+   * @param secretKey インポートする既存の秘密鍵
+   * @param options オプション
+   */
+  importNostrKey(
+    credentialId: Uint8Array,
+    secretKey: Uint8Array,
+    options?: KeyOptions
+  ): Promise<CreateResult>;
+
+  /**
+   * 新しいNostr秘密鍵を生成してパスキーでラップ
+   * @param credentialId 使用するクレデンシャルID
+   * @param options オプション
+   */
+  generateNostrKey(credentialId: Uint8Array, options?: KeyOptions): Promise<CreateResult>;
+
+  /**
+   * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
+   * @param credentialId 使用するクレデンシャルID
+   */
+  directPrfToNostrKey(credentialId: Uint8Array): Promise<CreateResult>;
 
   /**
    * イベントに署名

@@ -120,12 +120,25 @@ describe('PWKManager', () => {
     });
   });
 
-  describe('create', () => {
-    it('新しいPWKBlobを作成できる', async () => {
+  describe('createPasskey', () => {
+    it('パスキーを作成してCredentialIDを返す', async () => {
       const pwkManager = new PWKManager();
-      const result = await pwkManager.create();
+      const credentialId = await pwkManager.createPasskey();
 
-      // 戻り値の検証
+      expect(credentialId).toBeInstanceOf(Uint8Array);
+      expect(credentialId.length).toBeGreaterThan(0);
+      expect(navigator.credentials.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('importNostrKey', () => {
+    it('既存のNostr秘密鍵をパスキーでラップできる', async () => {
+      const pwkManager = new PWKManager();
+      const credentialId = new Uint8Array(16).fill(1);
+      const secretKey = new Uint8Array(32).fill(55);
+
+      const result = await pwkManager.importNostrKey(credentialId, secretKey);
+
       expect(result).toHaveProperty('pwkBlob');
       expect(result).toHaveProperty('credentialId');
       expect(result).toHaveProperty('publicKey');
@@ -133,25 +146,69 @@ describe('PWKManager', () => {
       expect(result.pwkBlob.alg).toBe('aes-gcm-256');
       expect(result.publicKey).toBe('test-pubkey');
 
-      // APIコールの検証
-      expect(navigator.credentials.create).toHaveBeenCalled();
       expect(crypto.subtle.encrypt).toHaveBeenCalled();
       expect(seckeySigner).toHaveBeenCalled();
     });
+  });
 
-    it('外部から渡された秘密鍵を使用できる', async () => {
+  describe('generateNostrKey', () => {
+    it('新しいNostr秘密鍵を生成してパスキーでラップできる', async () => {
       const pwkManager = new PWKManager();
-      const secretKey = new Uint8Array(32).fill(55);
-      const result = await pwkManager.create({ secretKey });
+      const credentialId = new Uint8Array(16).fill(1);
+
+      const result = await pwkManager.generateNostrKey(credentialId);
 
       expect(result).toHaveProperty('pwkBlob');
-      expect(seckeySigner).toHaveBeenCalled();
-      // 注: 実際のseckeySignerの引数を検証するにはもっと複雑なモックが必要
+      expect(result.pwkBlob.v).toBe(1);
+      expect(result.pwkBlob.alg).toBe('aes-gcm-256');
+      expect(result.publicKey).toBe('test-pubkey');
+
+      expect(crypto.getRandomValues).toHaveBeenCalled();
+    });
+  });
+
+  describe('directPrfToNostrKey', () => {
+    it('PRF値を直接Nostrシークレットキーとして使用できる', async () => {
+      const pwkManager = new PWKManager();
+      const credentialId = new Uint8Array(16).fill(1);
+
+      const result = await pwkManager.directPrfToNostrKey(credentialId);
+
+      expect(result).toHaveProperty('pwkBlob');
+      expect(result.pwkBlob.v).toBe(1);
+      expect(result.pwkBlob.alg).toBe('prf-direct');
+      expect(result.pwkBlob).toHaveProperty('credentialId');
+      expect(result.publicKey).toBe('test-pubkey');
+    });
+
+    it('PRF値がゼロの場合はエラーを投げる', async () => {
+      const pwkManager = new PWKManager();
+      const credentialId = new Uint8Array(16).fill(1);
+
+      // PRFの結果がすべて0の場合をモック
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          get: vi.fn(async () => ({
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: {
+                  first: new Uint8Array(32).fill(0).buffer,
+                },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await expect(pwkManager.directPrfToNostrKey(credentialId)).rejects.toThrow(
+        'Invalid PRF output'
+      );
     });
   });
 
   describe('signEvent', () => {
-    it('イベントに署名できる', async () => {
+    it('暗号化された秘密鍵を使ってイベントに署名できる', async () => {
       const pwkManager = new PWKManager();
       const mockPwkBlob: PWKBlob = {
         v: 1,
@@ -174,6 +231,27 @@ describe('PWKManager', () => {
       expect(signedEvent).toHaveProperty('id', 'test-event-id');
       expect(signedEvent).toHaveProperty('sig', 'test-signature');
       expect(crypto.subtle.decrypt).toHaveBeenCalled();
+    });
+
+    it('PRF直接使用方式でイベントに署名できる', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const, // const assertion to match the exact type
+        alg: 'prf-direct' as const, // const assertion to match the exact type
+        credentialId: bytesToHex(mockCredentialId),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr with PRF!',
+        tags: [],
+      };
+
+      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      expect(signedEvent).toHaveProperty('id', 'test-event-id');
+      expect(signedEvent).toHaveProperty('sig', 'test-signature');
+      // PRF直接使用では復号処理は行われない
+      expect(crypto.subtle.decrypt).not.toHaveBeenCalled();
     });
   });
 
