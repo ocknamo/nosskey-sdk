@@ -9,7 +9,7 @@
 ### 2.1 技術スタック
 
 - **フロントエンド**: Svelte v5
-- **構成**: シンプルなSPA（コンポーネント切り替え方式）
+- **構成**: シンプルなSPA（2画面切り替え方式）
 - **ビルドツール**: Vite
 - **Nostr関連**: rx-nostr
 - **鍵管理**: Nosskey SDK (`directPrfToNostrKey` メソッド)
@@ -21,99 +21,76 @@
 examples/svelte-app/
 ├── public/
 ├── src/
-│   ├── lib/
-│   │   ├── components/
-│   │   │   ├── Header.svelte     # ヘッダーとナビゲーションメニュー
-│   │   │   ├── Footer.svelte     # フッター情報
-│   │   │   ├── NostrForm.svelte  # Nostrメッセージ投稿フォーム
-│   │   │   └── PasskeyStatus.svelte # Passkey対応状況表示
-│   │   └── stores/
-│   │       ├── app-store.js      # 画面状態管理
-│   │       └── nosskey-store.js  # Nosskey SDK関連の状態管理
-│   ├── views/
-│   │   ├── HomeView.svelte       # ホーム画面
-│   │   ├── RegisterView.svelte   # パスキー登録画面
-│   │   ├── LoginView.svelte      # ログイン画面
-│   │   └── NostrView.svelte      # Nostr投稿画面
-│   ├── App.svelte                # メインアプリコンポーネント
-│   └── main.js                   # エントリーポイント
+│   ├── components/
+│   │   ├── AuthScreen.svelte   # 認証画面
+│   │   └── NostrScreen.svelte  # Nostrメッセージ投稿画面
+│   ├── store/
+│   │   └── appState.ts         # アプリケーション状態管理
+│   ├── App.svelte              # メインアプリコンポーネント
+│   └── main.ts                 # エントリーポイント
 ├── index.html
 ├── package.json
-└── vite.config.js
+└── vite.config.ts
 ```
 
 ## 3. コンポーネント詳細
 
 ### 3.1 状態管理
 
-#### app-store.js
-シンプルな画面遷移管理を行うストア：
-- `currentView` - 現在のビュー名を保持するwritableストア
-- `navigateTo()` - 画面遷移を行う関数
+#### appState.ts
+アプリケーションの状態管理を行うストア：
+- `currentScreen` - 現在の画面を保持するwritableストア（'auth'または'nostr'）
+- `authenticated` - 認証状態を管理
+- `credentialId` - パスキーの認証情報ID
+- `pwkBlob` - パスキー派生のNostr鍵情報
+- `publicKey` - Nostr公開鍵
+- `resetState()` - 全ての状態をリセットする関数
 
-#### nosskey-store.js
-Nosskey SDKとの連携を行う中心的なストア：
-- `pwkManager` - PWKManagerインスタンス
-- `isSupported` - Passkey PRF拡張対応状況
-- `credentialId`, `pwkBlob`, `publicKey` - 認証情報
-- `isAuthenticated` - 認証状態（derivedストア）
-- `checkSupport()` - PRF拡張対応確認
-- `registerDirectPrf()` - Passkey登録とPRF直接利用
-- `loadSavedCredentials()` - 保存済み認証情報読み込み
-- `signNostrEvent()` - Nostrイベント署名
-- `clearCredentials()` - 認証情報クリア
+### 3.2 コンポーネント
 
-### 3.2 ビューコンポーネント
+#### AuthScreen.svelte
+認証画面を担当するコンポーネント：
+- PRF拡張対応確認機能
+- パスキー新規作成機能
+  - `createPasskey()`メソッドで新規パスキー作成
+  - `directPrfToNostrKey()`メソッドでPRFから直接Nostr鍵を導出
+- 既存パスキーでのログイン機能
+- ブラウザ対応状況表示
+- エラーハンドリング
 
-#### HomeView.svelte
-- アプリケーションの目的と特徴の説明
-- PRF拡張対応状況の表示
-- パスキー登録画面への誘導
-
-#### RegisterView.svelte
-- パスキー作成と直接PRF利用の説明
-- パスキー登録処理
-- 登録結果（公開鍵）の表示
-
-#### LoginView.svelte
-- 保存された認証情報の読み込み
-- 自動ログイン処理
-
-#### NostrView.svelte
-- ユーザー情報（公開鍵）の表示
-- メッセージ投稿フォーム
+#### NostrScreen.svelte
+Nostrメッセージ作成・投稿画面を担当するコンポーネント：
+- ユーザー情報（公開鍵）表示
+- イベント種類選択（テキストノート、長文記事など）
+- メッセージ入力フォーム
+- イベント署名機能
+  - パスキーを使用してNostrイベントに署名
+- リレー接続・メッセージ送信機能
 - ログアウト機能
 
-### 3.3 コンポーネント
-
-#### Header.svelte
-- タイトル表示
-- ナビゲーションメニュー（認証状態に応じた表示切替）
-
-#### Footer.svelte
-- アプリケーション情報
-- リポジトリリンク
-
-#### PasskeyStatus.svelte
-- Passkey PRF拡張対応状況表示
-
-#### NostrForm.svelte
-- メッセージ入力フォーム
-- 送信処理（署名と送信）
-- エラー/成功メッセージ表示
+#### App.svelte
+アプリケーションのメインコンポーネント：
+- 状態に応じた画面切り替え（AuthScreen ⇔ NostrScreen）
+- 全体のスタイル定義
 
 ## 4. データフロー
 
-1. アプリ起動時にPRF拡張対応状況を確認（`checkSupport()`）
-2. 保存済み認証情報があれば読み込み（`loadSavedCredentials()`）
-3. パスキー登録時：
-   - パスキー作成（`createPasskey()`）
+1. アプリ起動時にPRF拡張対応状況を確認（`initialize()`）
+2. パスキー登録時：
+   - 新規パスキー作成（`createNew()`）
    - PRF値から直接シークレットキー導出（`directPrfToNostrKey()`）
    - 結果をストアとlocalStorageに保存
+   - Nostr画面へ自動遷移
+3. 既存パスキーでログイン時：
+   - 保存されたcredentialIdを使用して認証（`login()`）
+   - PRF値からNostr鍵を再生成
+   - Nostr画面へ自動遷移
 4. Nostrメッセージ投稿時：
-   - イベント作成
-   - パスキーによる署名（`signNostrEvent()`）
-   - リレーへの送信
+   - イベント作成と署名（`signEvent()`）
+   - リレーへの送信（`publishEvent()`）
+5. ログアウト時：
+   - 状態をリセット（`resetState()`）
+   - 認証画面へ遷移
 
 ## 5. 技術的考慮事項
 
@@ -132,8 +109,8 @@ Nosskey SDKとの連携を行う中心的なストア：
 ### 5.3 制限事項
 
 - WebAuthn PRF拡張は比較的新しい機能で、全てのブラウザや認証器で対応していない
-- デモ実装のため、エラーハンドリングが簡素化されている
-- 複数アカウント管理などの高度な機能は未実装
+- デモ実装のため、リレー接続はシミュレーションのみ
+- エラーハンドリングが基本的な実装にとどまっている
 
 ## 6. 開発・実行方法
 
