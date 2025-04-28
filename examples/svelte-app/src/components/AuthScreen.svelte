@@ -23,6 +23,22 @@
       if (savedIds) {
         storedCredentialIds = JSON.parse(savedIds);
       }
+
+      // ローカルストレージから保存済みのPWKBlobを取得
+      const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
+      if (savedPwkBlob) {
+        // PWKBlobを復元
+        const parsedPwkBlob = JSON.parse(savedPwkBlob);
+
+        // 状態を更新
+        appState.pwkBlob.set(parsedPwkBlob);
+        appState.publicKey.set(parsedPwkBlob.publicKey);
+        appState.authenticated.set(true);
+
+        // PRF拡張対応確認をスキップしてNostr画面に遷移
+        appState.currentScreen.set("nostr");
+        return; // 初期化処理を終了
+      }
     } catch (error) {
       console.error("初期化エラー:", error);
       errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -80,6 +96,13 @@
         );
       }
 
+      // PWKBlobをローカルストレージに保存
+      const pwkBlobToSave = {
+        ...result.pwkBlob,
+        publicKey: result.publicKey, // 公開鍵も一緒に保存
+      };
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
+
       // Nostr画面に遷移
       appState.currentScreen.set("nostr");
     } catch (error) {
@@ -107,6 +130,13 @@
       appState.pwkBlob.set(result.pwkBlob);
       appState.publicKey.set(result.publicKey);
       appState.authenticated.set(true);
+
+      // PWKBlobをローカルストレージに保存
+      const pwkBlobToSave = {
+        ...result.pwkBlob,
+        publicKey: result.publicKey, // 公開鍵も一緒に保存
+      };
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
 
       // Nostr画面に遷移
       appState.currentScreen.set("nostr");
