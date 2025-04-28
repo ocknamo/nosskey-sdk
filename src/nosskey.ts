@@ -11,6 +11,7 @@ import type {
   PWKBlob,
   PWKBlobV1,
   PWKManagerLike,
+  PasskeyCreationOptions,
   SignOptions,
 } from './types.js';
 
@@ -72,25 +73,36 @@ export class PWKManager implements PWKManagerLike {
 
   /**
    * パスキーを作成（PRF拡張もリクエスト）
+   * @param options パスキー作成オプション
    * @returns Credentialの識別子を返す
    */
-  async createPasskey(): Promise<Uint8Array> {
+  async createPasskey(options: PasskeyCreationOptions = {}): Promise<Uint8Array> {
+    // ブラウザ環境とNodeテスト環境の両方に対応
+    const rpName =
+      options.rp?.name || (typeof location !== 'undefined' ? location.host : 'Nostr PWK');
+    const rpId = options.rp?.id;
+    const userName = options.user?.name || 'user@example.com';
+    const userDisplayName = options.user?.displayName || 'PWK user';
+
     // パスキーを作成
     const credentialCreationOptions: CredentialCreationOptions = {
       publicKey: {
-        rp: { name: 'Nostr PWK' },
+        rp: {
+          name: rpName,
+          ...(rpId && { id: rpId }),
+        },
         user: {
           id: crypto.getRandomValues(new Uint8Array(16)),
-          name: 'user@example.com',
-          displayName: 'PWK user',
+          name: userName,
+          displayName: userDisplayName,
         },
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }], // ES256
-        authenticatorSelection: {
+        pubKeyCredParams: options.pubKeyCredParams || [{ type: 'public-key', alg: -7 }], // ES256
+        authenticatorSelection: options.authenticatorSelection || {
           residentKey: 'required',
           userVerification: 'required',
         },
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        extensions: { prf: {} }, // PRF拡張を要求
+        extensions: options.extensions || { prf: {} }, // PRF拡張を要求
       } as PublicKeyCredentialCreationOptions,
     };
     const cred = (await navigator.credentials.create(

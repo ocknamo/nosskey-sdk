@@ -41,6 +41,23 @@ export interface PWKBlobDirect {
 export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
 
 /**
+ * パスキー作成用オプション
+ */
+export interface PasskeyCreationOptions {
+  rp?: {
+    name?: string;
+    id?: string;
+  };
+  user?: {
+    name?: string;
+    displayName?: string;
+  };
+  authenticatorSelection?: AuthenticatorSelectionCriteria;
+  pubKeyCredParams?: PublicKeyCredentialParameters[];
+  extensions?: Record<string, any>;
+}
+
+/**
  * Key options
  */
 export interface KeyOptions {
@@ -83,9 +100,10 @@ export interface PWKManagerLike {
 
   /**
    * パスキーを作成（PRF拡張もリクエスト）
+   * @param options パスキー作成オプション
    * @returns Credentialの識別子を返す
    */
-  createPasskey(): Promise<Uint8Array>;
+  createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>;
 
   /**
    * 既存のNostr秘密鍵をパスキーでラップして保護
