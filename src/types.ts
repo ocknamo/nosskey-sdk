@@ -119,40 +119,40 @@ export interface PWKManagerLike {
 
   /**
    * 既存のNostr秘密鍵をパスキーでラップして保護
-   * @param credentialId 使用するクレデンシャルID
    * @param secretKey インポートする既存の秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */
   importNostrKey(
-    credentialId: Uint8Array,
     secretKey: Uint8Array,
+    credentialId?: Uint8Array,
     options?: KeyOptions
   ): Promise<CreateResult>;
 
   /**
    * 新しいNostr秘密鍵を生成してパスキーでラップ
-   * @param credentialId 使用するクレデンシャルID
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */
-  generateNostrKey(credentialId: Uint8Array, options?: KeyOptions): Promise<CreateResult>;
+  generateNostrKey(credentialId?: Uint8Array, options?: KeyOptions): Promise<CreateResult>;
 
   /**
    * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
-   * @param credentialId 使用するクレデンシャルID
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    */
-  directPrfToNostrKey(credentialId: Uint8Array): Promise<CreateResult>;
+  directPrfToNostrKey(credentialId?: Uint8Array): Promise<CreateResult>;
 
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵
-   * @param credentialId 使用するクレデンシャルID
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
    * @param options 署名オプション
    */
   signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId: Uint8Array,
+    credentialId?: Uint8Array,
     options?: SignOptions
   ): Promise<NostrEvent>;
 
@@ -187,8 +187,8 @@ export interface PWKManagerLike {
   /**
    * 暗号化された秘密鍵をエクスポート
    * @param pwk PWKBlob形式の暗号化された秘密鍵
-   * @param credentialId 使用するクレデンシャルID
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  exportNostrKey(pwk: PWKBlob, credentialId: Uint8Array): Promise<string>;
+  exportNostrKey(pwk: PWKBlob, credentialId?: Uint8Array): Promise<string>;
 }
