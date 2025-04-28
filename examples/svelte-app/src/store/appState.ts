@@ -17,6 +17,33 @@ export const credentialId = writable<Uint8Array | null>(null);
 export const pwkBlob = writable<PWKBlob | null>(null);
 export const publicKey = writable<string | null>(null);
 
+// アプリケーション設定
+export const cacheSecrets = writable<boolean>(true); // 秘密鍵情報をキャッシュするかどうか
+
+// 秘密鍵情報のキャッシュ設定を読み込む
+function loadCacheSecretsSetting() {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('nosskey_cache_secrets');
+    // デフォルトはtrue（キャッシュする）
+    return saved === null ? true : saved === 'true';
+  }
+  return true;
+}
+
+// 初期化
+try {
+  cacheSecrets.set(loadCacheSecretsSetting());
+  
+  // 設定が変更されたら保存
+  cacheSecrets.subscribe(value => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nosskey_cache_secrets', String(value));
+    }
+  });
+} catch (e) {
+  console.error('設定の初期化に失敗しました:', e);
+}
+
 // リセット関数
 export const resetState = () => {
   currentScreen.set('auth');

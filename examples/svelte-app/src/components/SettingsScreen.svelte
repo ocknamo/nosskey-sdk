@@ -3,6 +3,7 @@
     resetState,
     currentScreen,
     defaultRelays,
+    cacheSecrets,
   } from "../store/appState.js";
   import { activeRelays } from "../store/relayStore.js";
   import { i18n, changeLanguage } from "../i18n/i18nStore.js";
@@ -14,10 +15,16 @@
   let relayMessage = $state("");
   let relays = $state<string[]>([]);
   let languageMessage = $state("");
+  let cacheSettingMessage = $state("");
+  let isCaching = $state(true);
 
-  // activeRelaysストアを監視して更新
+  // ストアを監視して更新
   activeRelays.subscribe((value) => {
     relays = value;
+  });
+
+  cacheSecrets.subscribe((value) => {
+    isCaching = value;
   });
 
   // リレーを追加する関数
@@ -77,6 +84,15 @@
     // 3秒後にメッセージをクリア
     setTimeout(() => {
       relayMessage = "";
+    }, 3000);
+  }
+
+  // キャッシュ設定を更新する関数
+  function updateCacheSetting(value: boolean) {
+    cacheSecrets.set(value);
+    cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
+    setTimeout(() => {
+      cacheSettingMessage = "";
     }, 3000);
   }
 
@@ -145,6 +161,44 @@
       {#if relayMessage}
         <div class="result-message">
           {relayMessage}
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>{$i18n.t.settings.cacheSettings.title}</h2>
+    <p>
+      {$i18n.t.settings.cacheSettings.description}
+    </p>
+
+    <div class="cache-settings">
+      <div class="radio-group">
+        <label>
+          <input
+            type="radio"
+            name="cache-setting"
+            value="true"
+            checked={isCaching}
+            onclick={() => updateCacheSetting(true)}
+          />
+          {$i18n.t.settings.cacheSettings.enabled}
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="cache-setting"
+            value="false"
+            checked={!isCaching}
+            onclick={() => updateCacheSetting(false)}
+          />
+          {$i18n.t.settings.cacheSettings.disabled}
+        </label>
+      </div>
+
+      {#if cacheSettingMessage}
+        <div class="result-message">
+          {cacheSettingMessage}
         </div>
       {/if}
     </div>
@@ -243,6 +297,10 @@
     flex-direction: column;
     gap: 10px;
     margin: 15px 0;
+  }
+
+  .cache-settings {
+    margin-top: 15px;
   }
 
   .radio-group label {

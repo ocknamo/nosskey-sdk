@@ -76,6 +76,13 @@ export interface TranslationData {
       clear: string;
       cleared: string;
     };
+    cacheSettings: {
+      title: string;
+      description: string;
+      enabled: string;
+      disabled: string;
+      saved: string;
+    };
     appInfo: {
       title: string;
       version: string;
@@ -168,6 +175,13 @@ export const ja: TranslationData = {
       clear: '認証情報をクリア',
       cleared: 'ローカルストレージをクリアしました',
     },
+    cacheSettings: {
+      title: 'シークレットキャッシュ設定',
+      description: '認証情報（秘密鍵など）をローカルストレージに保存するかどうかを設定します。有効にすると次回起動時に再認証をスキップできます。',
+      enabled: '認証情報をキャッシュする',
+      disabled: '認証情報をキャッシュしない',
+      saved: '設定を保存しました',
+    },
     appInfo: {
       title: 'アプリケーション情報',
       version: 'バージョン:',
@@ -259,6 +273,13 @@ export const en: TranslationData = {
       description: 'Clear stored authentication information. You will need to login again after this operation.',
       clear: 'Clear Auth Data',
       cleared: 'Local storage cleared',
+    },
+    cacheSettings: {
+      title: 'Secret Caching Settings',
+      description: 'Configure whether authentication data (including secret keys) should be stored in local storage. When enabled, you can skip re-authentication on startup.',
+      enabled: 'Cache authentication data',
+      disabled: 'Do not cache authentication data',
+      saved: 'Settings saved',
     },
     appInfo: {
       title: 'Application Info',

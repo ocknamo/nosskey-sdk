@@ -1,6 +1,7 @@
 <script lang="ts">
   import { PWKManager } from "../../../../src/nosskey.js";
   import * as appState from "../store/appState.js";
+  import { cacheSecrets } from "../store/appState.js";
   import { i18n } from "../i18n/i18nStore.js";
 
   // 状態変数
@@ -53,12 +54,20 @@
       appState.publicKey.set(result.publicKey);
       appState.authenticated.set(true);
 
-      // PWKBlobをローカルストレージに保存
-      const pwkBlobToSave = {
-        ...result.pwkBlob,
-        publicKey: result.publicKey, // 公開鍵も一緒に保存
-      };
-      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
+      // キャッシュが有効な場合のみPWKBlobをローカルストレージに保存
+      let shouldCache = false;
+      cacheSecrets.subscribe((value) => {
+        shouldCache = value;
+      });
+
+      if (shouldCache) {
+        // PWKBlobをローカルストレージに保存
+        const pwkBlobToSave = {
+          ...result.pwkBlob,
+          publicKey: result.publicKey, // 公開鍵も一緒に保存
+        };
+        localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
+      }
 
       // ローカルストレージに保存
       const hexCredentialId = result.pwkBlob.credentialId;
