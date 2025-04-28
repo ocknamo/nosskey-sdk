@@ -6,11 +6,11 @@
 
   // 状態変数
   let eventContent = $state('');
-  let eventKind = $state(1); // デフォルトはテキストノート
+  // イベント種類は常にkind=1(テキストノート)
+  const eventKind = 1;
   let signedEvent = $state<NostrEvent | null>(null);
   let publishStatus = $state('');
   let isLoading = $state(false);
-  let relayUrl = $state('wss://relay.damus.io');
   let publicKeyShort = $state('');
   let npubAddress = $state('');
 
@@ -29,22 +29,10 @@
     }
   });
 
-  // イベント種類が変更されたときのハンドラー
-  function handleKindChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    eventKind = Number.parseInt(select.value, 10);
-  }
-
   // イベント内容が変更されたときのハンドラー
   function handleContentChange(event: Event) {
     const textarea = event.target as HTMLTextAreaElement;
     eventContent = textarea.value;
-  }
-
-  // リレーURLが変更されたときのハンドラー
-  function handleRelayChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    relayUrl = input.value;
   }
 
   // イベントに署名
@@ -114,10 +102,8 @@
     publishStatus = 'リレーに送信中...';
 
     try {
-      // rx-nostrの実装の代わりにモック実装
-      // 実際のリレー接続はここでは行わず、デモとして署名されたイベントを表示するだけにする
-      // (インタラクティブな使用のみ)
-      console.log('送信先リレー:', relayUrl);
+      // デフォルトリレー配列の使用
+      console.log('送信先リレー:', appState.defaultRelays);
       console.log('署名済みイベント:', signedEvent);
       
       // デモのためエラーなしと想定
@@ -160,15 +146,6 @@
     <h2>イベント作成</h2>
     
     <div class="form-group">
-      <label for="eventKind">イベント種類:</label>
-      <select id="eventKind" value={eventKind} on:change={handleKindChange}>
-        <option value="1">テキストノート (kind 1)</option>
-        <option value="30023">長文記事 (kind 30023)</option>
-        <option value="3">お気に入り (kind 3)</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
       <label for="content">内容:</label>
       <textarea 
         id="content" 
@@ -177,11 +154,6 @@
         placeholder="ここにメッセージを入力..."
         rows="5"
       ></textarea>
-    </div>
-    
-    <div class="form-group">
-      <label for="relay">リレーURL:</label>
-      <input id="relay" type="text" value={relayUrl} on:input={handleRelayChange} placeholder="wss://..." />
     </div>
     
     <div class="action-buttons">

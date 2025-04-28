@@ -8,6 +8,7 @@
   let isLoading = $state(false);
   let errorMessage = $state('');
   let storedCredentialIds = $state<string[]>([]);
+  let isPrfChecked = $state(false);
 
   // PWKManagerのインスタンスを作成
   const pwkManager = new PWKManager();
@@ -16,9 +17,6 @@
   async function initialize() {
     isLoading = true;
     try {
-      // PRF拡張がサポートされているか確認
-      isSupported = await pwkManager.isPrfSupported();
-      
       // ローカルストレージから保存済みのcredentialIdsを取得
       const savedIds = localStorage.getItem('nosskey_credential_ids');
       if (savedIds) {
@@ -27,6 +25,22 @@
     } catch (error) {
       console.error('初期化エラー:', error);
       errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // PRF対応確認
+  async function checkPrfSupport() {
+    isLoading = true;
+    errorMessage = '';
+    try {
+      // PRF拡張がサポートされているか確認
+      isSupported = await pwkManager.isPrfSupported();
+      isPrfChecked = true;
+    } catch (error) {
+      console.error('PRF対応確認エラー:', error);
+      errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       isLoading = false;
     }
@@ -123,26 +137,33 @@
   
   {#if isLoading}
     <div class="loading">ロード中...</div>
-  {:else if !isSupported}
-    <div class="error">
-      <h2>PRF拡張がサポートされていません</h2>
-      <p>{getUnsupportedMessage()}</p>
-    </div>
   {:else}
     <div class="auth-actions">
-      <button class="create-button" on:click={createNew} disabled={isLoading}>新規作成</button>
-      
-      {#if storedCredentialIds.length > 0}
-        <div class="login-section">
-          <h3>既存のパスキーでログイン</h3>
-          <div class="credential-list">
-            {#each storedCredentialIds as id}
-              <button on:click={() => login(id)} disabled={isLoading}>
-                ログイン ({id.substring(0, 8)}...)
-              </button>
-            {/each}
-          </div>
+      {#if !isPrfChecked}
+        <!-- PRF確認前の状態 -->
+        <button class="check-prf-button" on:click={checkPrfSupport}>
+          PRF拡張対応確認
+        </button>
+      {:else if !isSupported}
+        <div class="error">
+          <h2>PRF拡張がサポートされていません</h2>
+          <p>{getUnsupportedMessage()}</p>
         </div>
+      {:else}
+        <button class="create-button" on:click={createNew} disabled={isLoading}>新規作成</button>
+        
+        {#if storedCredentialIds.length > 0}
+          <div class="login-section">
+            <h3>既存のパスキーでログイン</h3>
+            <div class="credential-list">
+              {#each storedCredentialIds as id}
+                <button on:click={() => login(id)} disabled={isLoading}>
+                  ログイン ({id.substring(0, 8)}...)
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
   {/if}
