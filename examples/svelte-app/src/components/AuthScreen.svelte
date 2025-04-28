@@ -2,6 +2,8 @@
   import { hexToBytes } from "@noble/hashes/utils";
   import { PWKManager } from "../../../../src/nosskey.js";
   import * as appState from "../store/appState.js";
+  import { i18n } from "../i18n/i18nStore.js";
+  import { currentScreen } from "../store/appState.js";
 
   // 状態変数
   let isSupported = $state(false);
@@ -180,7 +182,7 @@
     <div class="auth-actions">
       {#if !isPrfChecked}
         <!-- PRF確認前の状態 -->
-        <button class="check-prf-button" on:click={checkPrfSupport}>
+        <button class="check-prf-button" onclick={checkPrfSupport}>
           PRF拡張対応確認
         </button>
       {:else if !isSupported}
@@ -199,8 +201,14 @@
             disabled={isLoading}
           />
         </div>
-        <button class="create-button" on:click={createNew} disabled={isLoading}
-          >新規作成</button
+        <button class="create-button" onclick={createNew} disabled={isLoading}
+          >{$i18n.t.auth.createNew}</button
+        >
+
+        <button
+          class="import-button"
+          onclick={() => currentScreen.set("import")}
+          disabled={isLoading}>{$i18n.t.auth.importButton}</button
         >
 
         {#if storedCredentialIds.length > 0}
@@ -208,7 +216,7 @@
             <h3>既存のパスキーでログイン</h3>
             <div class="credential-list">
               {#each storedCredentialIds as id}
-                <button on:click={() => login(id)} disabled={isLoading}>
+                <button onclick={() => login(id)} disabled={isLoading}>
                   ログイン ({id.substring(0, 8)}...)
                 </button>
               {/each}

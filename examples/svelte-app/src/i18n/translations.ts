@@ -14,6 +14,7 @@ export interface TranslationData {
     ok: string;
     error: string;
     success: string;
+    back: string;
   };
   auth: {
     title: string;
@@ -26,6 +27,11 @@ export interface TranslationData {
     loading: string;
     username: string;
     usernamePlaceholder: string;
+    importTitle: string;
+    importSubtitle: string;
+    secretKey: string;
+    secretKeyHelp: string;
+    importButton: string;
   };
   nostr: {
     title: string;
@@ -100,6 +106,7 @@ export const ja: TranslationData = {
     ok: 'OK',
     error: 'エラー',
     success: '成功',
+    back: '戻る',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -112,6 +119,11 @@ export const ja: TranslationData = {
     loading: 'ロード中...',
     username: 'ユーザー名（オプション）',
     usernamePlaceholder: 'ユーザー名を入力',
+    importTitle: '既存のNostr鍵をインポート',
+    importSubtitle: '既存の秘密鍵をパスキーで保護します',
+    secretKey: 'Nostr秘密鍵',
+    secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
+    importButton: 'インポート',
   },
   nostr: {
     title: 'Nostr',
@@ -186,6 +198,7 @@ export const en: TranslationData = {
     ok: 'OK',
     error: 'Error',
     success: 'Success',
+    back: 'Back',
   },
   auth: {
     title: 'Nosskey Demo',
@@ -198,6 +211,11 @@ export const en: TranslationData = {
     loading: 'Loading...',
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
+    importTitle: 'Import Existing Nostr Key',
+    importSubtitle: 'Protect your existing secret key with a passkey',
+    secretKey: 'Nostr Secret Key',
+    secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
+    importButton: 'Import',
   },
   nostr: {
     title: 'Nostr',

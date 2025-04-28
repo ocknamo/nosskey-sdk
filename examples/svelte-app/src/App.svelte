@@ -2,6 +2,7 @@
   import AuthScreen from "./components/AuthScreen.svelte";
   import NostrScreen from "./components/NostrScreen.svelte";
   import SettingsScreen from "./components/SettingsScreen.svelte";
+  import ImportKeyScreen from "./components/ImportKeyScreen.svelte";
   import FooterMenu from "./components/FooterMenu.svelte";
   import { currentScreen } from "./store/appState.js";
   import { i18n } from "./i18n/i18nStore.js";
@@ -11,7 +12,12 @@
   // URLのハッシュからページを初期化
   function initializeFromHash() {
     const hash = window.location.hash.substring(1);
-    if (hash === "/auth" || hash === "/nostr" || hash === "/settings") {
+    if (
+      hash === "/auth" ||
+      hash === "/nostr" ||
+      hash === "/settings" ||
+      hash === "/import"
+    ) {
       screen = hash.substring(1); // 先頭の'/'を削除
       currentScreen.set(screen);
     }
@@ -58,6 +64,8 @@
     <NostrScreen />
   {:else if screen === "settings"}
     <SettingsScreen />
+  {:else if screen === "import"}
+    <ImportKeyScreen />
   {/if}
 
   <!-- フッターメニュー -->
