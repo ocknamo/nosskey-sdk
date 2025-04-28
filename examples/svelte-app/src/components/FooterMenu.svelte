@@ -36,7 +36,10 @@
       <div class="icon">📝</div>
       <span>投稿</span>
     </button>
-    <button disabled>
+    <button
+      class={screen === "settings" ? "active" : ""}
+      onclick={() => navigateTo("settings")}
+    >
       <div class="icon">⚙️</div>
       <span>設定</span>
     </button>

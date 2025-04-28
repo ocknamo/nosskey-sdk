@@ -5,7 +5,7 @@ import type { PWKBlob } from '../../../../src/types.js';
 export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
 
 // 画面状態
-export const currentScreen = writable('auth'); // 'auth' または 'nostr'
+export const currentScreen = writable('auth'); // 'auth' または 'nostr' または 'settings'
 
 // 認証状態
 export const authenticated = writable(false);
