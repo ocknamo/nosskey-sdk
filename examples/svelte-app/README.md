@@ -1,47 +1,84 @@
-# Svelte + TS + Vite
+# Nosskey SDK サンプルアプリケーション
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+このアプリケーションは、Nosskey SDKを利用したPasskey（WebAuthn）ベースのNostr鍵管理デモです。PRF拡張の出力値を直接Nostrのシークレットキーとして使用する`directPrfToNostrKey`メソッドを実装しています。
 
-## Recommended IDE Setup
+## 技術スタック
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- **フレームワーク**: Svelte v5
+- **言語**: TypeScript
+- **ビルドツール**: Vite
+- **Nostr関連**: rx-nostr、rx-nostr-crypto
+- **鍵管理**: Nosskey SDK
 
-## Need an official Svelte framework?
+## 主な機能
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+- PRF拡張対応確認
+- Passkey新規作成による鍵生成
+- 既存Passkey認証によるログイン
+- Nostrメッセージの作成と署名
+- リレーへのメッセージ送信
 
-## Technical considerations
+## 動作要件
 
-**Why use this over SvelteKit?**
+- `localhost`またはHTTPS環境での実行が必要
+- Chrome 116以降または Safari 18以降推奨
+- PRF拡張をサポートする認証器が必要:
+  - Chromium 116+ + Google Password Manager Passkey
+  - Chromium 116+ / Safari 18 + CTAP2セキュリティキー（YubiKey 5シリーズ等）
+  - macOS 15・iOS 18以降のApple Passkeys (Touch ID / Face ID)
+  - ※Windows Helloは2025年4月時点でPRF拡張未対応
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+PRF拡張対応の詳細は[こちら](../../docs/prf-support-tables.md)を参照してください。
 
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+## 開発・実行方法
 
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
+```bash
+# リポジトリのクローン（既にクローン済みの場合は不要）
+git clone https://github.com/ocknamo/nosskey-sdk.git
+cd nosskey-sdk
 
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
+# SDKのビルド（初回のみ）
+npm install
+npm run build
 
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
+# サンプルアプリの依存関係インストール
+cd examples/svelte-app
+npm install
 
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+# 開発サーバー起動
+npm run dev
 ```
+
+ブラウザで http://localhost:5173 にアクセスしてアプリケーションを利用できます。
+
+## 技術的詳細
+
+このアプリケーションは下記の特徴を持っています：
+
+1. WebAuthn PRF拡張を使用したシームレスなNostr鍵生成
+2. 鍵の暗号化/復号が不要でシンプルな実装
+3. 同じPasskeyから毎回同じNostr公開鍵を生成
+4. 認証と署名が一体化したユーザー体験
+
+## 構成
+
+- `AuthScreen.svelte` - 認証画面コンポーネント
+- `NostrScreen.svelte` - Nostrメッセージ投稿画面コンポーネント
+- `appState.ts` - アプリケーション状態管理
+
+## 制限事項
+
+- WebAuthn PRF拡張は比較的新しい機能で、全てのブラウザや認証器で対応していない
+- デモ実装のため、エラーハンドリングは基本的な実装にとどまっている
+
+## TODO
+
+- [ ] リレー接続の実装強化（現在はシミュレーション程度）
+- [ ] 簡易的なルーティング機能の実装（'/auth', '/nostr'など）
+- [ ] モバイルファーストのフッターメニュー追加（画面遷移用）
+- [ ] `importNostrKey`機能のサポート追加（現状は`directPrfToNostrKey`のみ）
+- [ ] 多言語対応の実装（日本語・英語）
+- [ ] タイムライン表示機能の追加（自分の投稿を確認可能に）
+- [ ] リレー編集が可能な設定画面の追加
+- [ ] ユーザーメタデータ（プロフィール）の編集・保存機能
+- [ ] Vitestを使用したテスト実装（単体・統合テスト）
