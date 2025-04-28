@@ -17,91 +17,191 @@
 ## 1. 公開インターフェースと型定義
 
 ```typescript
-/** Nostr event JSON (simplified) */
+/**
+ * Nostr event JSON (simplified)
+ */
 export interface NostrEvent {
-  id?:        string;    // sha256 hash of serialized event
-  pubkey?:    string;    // hex
+  id?: string; // sha256 hash of serialized event
+  pubkey?: string; // hex
   created_at?: number;
-  kind:      number;
-  tags?:      string[][];
-  content:   string;
-  sig?:      string;    // hex
+  kind: number;
+  tags?: string[][];
+  content: string;
+  sig?: string; // hex
 }
 
-/** PWK blob (NIP-XX §3) - 暗号化方式 */
+/**
+ * PWK blob structure (暗号化された秘密鍵の保存形式)
+ */
 export interface PWKBlobV1 {
-  v:    1;
-  alg:  'aes-gcm-256';
-  salt: string;   // hex(16 B)
-  iv:   string;   // hex(12 B)
-  ct:   string;   // hex(32 B)
-  tag:  string;   // hex(16 B)
+  v: 1;
+  alg: 'aes-gcm-256';
+  salt: string; // hex(16 B)
+  iv: string; // hex(12 B)
+  ct: string; // hex(32 B)
+  tag: string; // hex(16 B)
   credentialId?: string; // hex形式
 }
 
-/** PWK blob - PRF直接使用方式 */
+/**
+ * PWK blob - PRF直接使用方式 (PoC実装)
+ */
 export interface PWKBlobDirect {
-  v:    1;
-  alg:  'prf-direct';
+  v: 1;
+  alg: 'prf-direct';
   credentialId: string; // hex形式
 }
 
 export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
 
-/** Key options */
+/**
+ * パスキー作成用オプション
+ */
+export interface PasskeyCreationOptions {
+  rp?: {
+    name?: string;
+    id?: string;
+  };
+  user?: {
+    name?: string;
+    displayName?: string;
+  };
+  authenticatorSelection?: AuthenticatorSelectionCriteria;
+  pubKeyCredParams?: PublicKeyCredentialParameters[];
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * Key options
+ */
 export interface KeyOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
 }
 
-/** Sign options */
+/**
+ * キャッシュオプションの型定義
+ */
+export interface KeyCacheOptions {
+  /** キャッシュを有効にするかどうか */
+  enabled: boolean;
+  /** キャッシュの有効期限（ミリ秒） */
+  timeoutMs?: number;
+}
+
+/**
+ * Sign options
+ */
 export interface SignOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   tags?: string[][]; // 追加のタグ
+  /** 秘密鍵をキャッシュするかどうか。指定がない場合はグローバル設定に従う */
+  useCache?: boolean;
 }
 
-/** Creation result */
+/**
+ * Creation result
+ */
 export interface CreateResult {
   pwkBlob: PWKBlob; // 暗号化された秘密鍵
   credentialId: Uint8Array; // 生成されたクレデンシャルID
   publicKey: string; // 生成された公開鍵（hex）
 }
 
-/** High-level API */
+/**
+ * SDK public interface
+ */
 export interface PWKManagerLike {
-  /** PRF拡張機能がサポートされているかチェック */
+  /**
+   * PRF拡張機能がサポートされているかチェック
+   */
   isPrfSupported(): Promise<boolean>;
 
-  /** パスキーを作成（PRF拡張もリクエスト） */
-  createPasskey(): Promise<Uint8Array>; // 返り値はCredentialID
+  /**
+   * パスキーを作成（PRF拡張もリクエスト）
+   * @param options パスキー作成オプション
+   * @returns Credentialの識別子を返す
+   */
+  createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>;
 
-  /** 既存のNostr秘密鍵をパスキーでラップして保護 */
+  /**
+   * 既存のNostr秘密鍵をパスキーでラップして保護
+   * @param secretKey インポートする既存の秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   */
   importNostrKey(
-    credentialId: Uint8Array,
     secretKey: Uint8Array,
+    credentialId?: Uint8Array,
     options?: KeyOptions
   ): Promise<CreateResult>;
 
-  /** 新しいNostr秘密鍵を生成してパスキーでラップ */
+  /**
+   * 新しいNostr秘密鍵を生成してパスキーでラップ
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   */
   generateNostrKey(
-    credentialId: Uint8Array,
+    credentialId?: Uint8Array,
     options?: KeyOptions
   ): Promise<CreateResult>;
 
-  /** PRF値を直接Nostrシークレットキーとして使用（PoC実装） */
+  /**
+   * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   */
   directPrfToNostrKey(
-    credentialId: Uint8Array
+    credentialId?: Uint8Array
   ): Promise<CreateResult>;
 
-  /** イベントに署名 */
+  /**
+   * イベントに署名
+   * @param event 署名するNostrイベント
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param options 署名オプション
+   */
   signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId: Uint8Array,
+    credentialId?: Uint8Array,
     options?: SignOptions
   ): Promise<NostrEvent>;
 
-  /** 秘密鍵をメモリから明示的に消去 */
+  /**
+   * 暗号化された秘密鍵をエクスポート
+   * @param pwk PWKBlob形式の暗号化された秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @returns エクスポートされた秘密鍵（16進数文字列）
+   */
+  exportNostrKey(pwk: PWKBlob, credentialId?: Uint8Array): Promise<string>;
+
+  /**
+   * 秘密鍵をメモリから明示的に消去
+   * @param key 消去する秘密鍵
+   */
   clearKey(key: Uint8Array): void;
+
+  /**
+   * キャッシュ設定を更新
+   * @param options キャッシュオプション
+   */
+  setCacheOptions(options: Partial<KeyCacheOptions>): void;
+
+  /**
+   * 現在のキャッシュ設定を取得
+   */
+  getCacheOptions(): KeyCacheOptions;
+
+  /**
+   * 特定の鍵のキャッシュをクリア
+   * @param credentialId クレデンシャルID
+   */
+  clearCachedKey(credentialId: Uint8Array | string): void;
+
+  /**
+   * 全てのキャッシュをクリア
+   */
+  clearAllCachedKeys(): void;
 }
 ```
 
@@ -109,71 +209,96 @@ export interface PWKManagerLike {
 
 ```typescript
 export class PWKManager implements PWKManagerLike {
-  /* ---------- public ------------------------------------------------ */
+  /**
+   * PRF拡張機能がサポートされているかチェック
+   */
+  async isPrfSupported(): Promise<boolean>;
 
-  async isPrfSupported(): Promise<boolean> {
-    // PRF拡張のサポートをチェック
-  }
+  /**
+   * パスキーを作成（PRF拡張もリクエスト）
+   * @param options パスキー作成オプション
+   * @returns Credentialの識別子を返す
+   */
+  async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>;
 
-  async createPasskey(): Promise<Uint8Array> {
-    // パスキーを作成し、CredentialIDを返す
-    const cred = await navigator.credentials.create({
-      publicKey: {
-        // 設定値
-        extensions: {prf: {}} // PRF拡張をリクエスト
-      }
-    });
-    return new Uint8Array(cred.rawId);
-  }
-
+  /**
+   * 既存のNostr秘密鍵をパスキーでラップして保護
+   * @param secretKey インポートする既存の秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   */
   async importNostrKey(
-    credentialId: Uint8Array,
     secretKey: Uint8Array,
-    options: KeyOptions = {}
-  ): Promise<CreateResult> {
-    // 1. PRF秘密を取得
-    // 2. 提供されたNostr秘密鍵を暗号化
-    // 3. 結果を返却
-  }
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<CreateResult>;
 
+  /**
+   * 新しいNostr秘密鍵を生成してパスキーでラップ
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   */
   async generateNostrKey(
-    credentialId: Uint8Array,
-    options: KeyOptions = {}
-  ): Promise<CreateResult> {
-    // 1. 新しいNostr秘密鍵を生成
-    // 2. importNostrKeyを使って暗号化
-    // 3. 結果を返却
-  }
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<CreateResult>;
 
+  /**
+   * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   */
   async directPrfToNostrKey(
-    credentialId: Uint8Array
-  ): Promise<CreateResult> {
-    // 1. PRF秘密を取得
-    // 2. そのままシークレットキーとして使用
-    // 3. 公開鍵を導出
-    // 4. 結果を返却
-  }
+    credentialId?: Uint8Array
+  ): Promise<CreateResult>;
 
+  /**
+   * イベントに署名
+   * @param event 署名するNostrイベント
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param options 署名オプション
+   */
   async signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId: Uint8Array,
-    options: SignOptions = {}
-  ): Promise<NostrEvent> {
-    // PWKの種類(alg)によって処理を分岐
-    if (pwk.alg === 'prf-direct') {
-      // PRF直接使用方式での署名
-    } else {
-      // 暗号化方式での署名
-    }
-  }
+    credentialId?: Uint8Array,
+    options?: SignOptions
+  ): Promise<NostrEvent>;
 
-  clearKey(key: Uint8Array): void {
-    // 秘密鍵を消去
-  }
+  /**
+   * 暗号化された秘密鍵をエクスポート
+   * @param pwk PWKBlob形式の暗号化された秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   */
+  async exportNostrKey(pwk: PWKBlob, credentialId?: Uint8Array): Promise<string>;
 
-  /* ---------- private helpers -------------------------------------- */
-  // 内部ヘルパーメソッド
+  /**
+   * 秘密鍵をメモリから明示的に消去
+   * @param key 消去する秘密鍵
+   */
+  clearKey(key: Uint8Array): void;
+  
+  /**
+   * キャッシュ設定を更新
+   * @param options キャッシュオプション
+   */
+  setCacheOptions(options: Partial<KeyCacheOptions>): void;
+
+  /**
+   * 現在のキャッシュ設定を取得
+   */
+  getCacheOptions(): KeyCacheOptions;
+
+  /**
+   * 特定の鍵のキャッシュをクリア
+   * @param credentialId クレデンシャルID
+   */
+  clearCachedKey(credentialId: Uint8Array | string): void;
+
+  /**
+   * 全てのキャッシュをクリア
+   */
+  clearAllCachedKeys(): void;
 }
 ```
 
@@ -195,7 +320,7 @@ if (await pwkMgr.isPrfSupported()) {
     // (例: nsecから復元した秘密鍵またはアプリ内部で管理している鍵)
     const existingSecretKey = hexToBytes('7f...'); // 32バイトの秘密鍵
     
-    const result = await pwkMgr.importNostrKey(credentialId, existingSecretKey);
+    const result = await pwkMgr.importNostrKey(existingSecretKey, credentialId);
     localStorage.setItem('pwkBlob', JSON.stringify(result.pwkBlob));
     console.log(`公開鍵: ${result.publicKey}`);
     
@@ -256,24 +381,12 @@ try {
 
 | 項目 | 説明 |
 |------|------|
-| Credential IDs | 本番環境では、すべてのresident credential IDを保存する必要があります。ユーザーは複数のパスキーを登録する可能性があります。 |
-| 曲線の選択 | Nostrは現在secp256k1 Schnorrを使用しています。必要に応じて@noble/secp256k1に切り替えてください。 |
+| PWKブロブの保管 | 暗号化された秘密鍵（PWKブロブ）は通常のNostr秘密鍵と同様に安全に保管する必要があります。紛失した場合はNostr秘密鍵も同様に失われます。 |
+| Credential IDs | パスキー作成時に得られるCredential IDはブラウザのパスキーUIから選択できるため必ずしも保存する必要はありませんが、推奨時のUXを向上させるために保存することが推奨されます。 |
 | メモリ消去 | Web Cryptoバッファはガベージコレクションで切り離されますが、Uint8Arraysに対するexplicit fill(0)はまだ慎重に行うべきです。 |
-| Windows | Windows Hello（2025-04）はPRFを公開していません。ハードウェアキーを挿入するUIを表示してください。 |
+| Windows | Windows Hello（2025-04）はPRF拡張をサポートしていない場合があります。その場合、モバイル端末のパスキーを使用するなどの代替手段をユーザーに案内すると良いでしょう。なお、多くの場合はブラウザのパスキーUIが適切に案内します。 |
 | PRF値の有効性 | PRF値を直接シークレットキーとして使用する場合、secp256k1の有効範囲に入らない可能性があります（確率は極めて低い）。 |
-| バックアップ | 暗号化されたPWKブロブをデバイス外（kind 10060）に保存し、追加のパスキーで復元できるようにします。 |
-
-このスケルトンは、nobleライブラリを追加すれば、どのようなバンドラーベースのウェブスタック（Vite、Webpackなど）でもコンパイルできます：
-
-```bash
-npm i @noble/hashes @noble/curves
-```
-
-ここから以下の拡張が可能です：
-
-- お好みのリアクティブフレームワークでラップ
-- ストレージレイヤーを拡張（IndexedDB、クラウドバックアップ）
-- 強化：CSP、厳格な型、エラーマッピング、同時実行ガード
+| バックアップ | 暗号化されたPWKブロブをデバイス外（kind 10060など）に保存し、追加のパスキーで復元できるようにすることが推奨されます。 |
 
 ## 5. 実装ポイント
 
