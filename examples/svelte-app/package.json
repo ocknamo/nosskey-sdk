@@ -16,5 +16,9 @@
     "svelte-check": "^4.1.5",
     "typescript": "~5.7.2",
     "vite": "^6.3.1"
+  },
+  "dependencies": {
+    "rx-nostr": "^3.6.1",
+    "rx-nostr-crypto": "^3.1.3"
   }
 }
