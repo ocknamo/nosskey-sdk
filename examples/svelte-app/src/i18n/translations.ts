@@ -56,6 +56,22 @@ export interface TranslationData {
       retry: string;
       empty: string;
     };
+    profile: {
+      title: string;
+      loading: string;
+      save: string;
+      saved: string;
+      displayName: string;
+      displayNamePlaceholder: string;
+      username: string;
+      usernamePlaceholder: string;
+      about: string;
+      aboutPlaceholder: string;
+      website: string;
+      websitePlaceholder: string;
+      picture: string;
+      picturePlaceholder: string;
+    };
   };
   settings: {
     title: string;
@@ -162,6 +178,22 @@ export const ja: TranslationData = {
       retry: '再試行',
       empty: '表示するイベントがありません',
     },
+    profile: {
+      title: 'プロフィール編集',
+      loading: '読み込み中...',
+      save: '保存',
+      saved: '保存しました',
+      displayName: '表示名',
+      displayNamePlaceholder: '表示される名前を入力',
+      username: 'ユーザー名',
+      usernamePlaceholder: '@username など',
+      about: '自己紹介',
+      aboutPlaceholder: '自己紹介文を入力',
+      website: 'ウェブサイト',
+      websitePlaceholder: 'https://example.com',
+      picture: 'プロフィール画像URL',
+      picturePlaceholder: 'https://example.com/avatar.jpg',
+    },
   },
   settings: {
     title: '設定',
@@ -267,6 +299,22 @@ export const en: TranslationData = {
       reload: 'Reload',
       retry: 'Retry',
       empty: 'No events to display',
+    },
+    profile: {
+      title: 'Edit Profile',
+      loading: 'Loading...',
+      save: 'Save',
+      saved: 'Profile saved',
+      displayName: 'Display Name',
+      displayNamePlaceholder: 'Enter your display name',
+      username: 'Username',
+      usernamePlaceholder: '@username etc',
+      about: 'About',
+      aboutPlaceholder: 'Tell something about yourself',
+      website: 'Website',
+      websitePlaceholder: 'https://example.com',
+      picture: 'Profile Picture URL',
+      picturePlaceholder: 'https://example.com/avatar.jpg',
     },
   },
   settings: {

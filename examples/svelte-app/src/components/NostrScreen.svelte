@@ -7,6 +7,7 @@
   import { relayService } from "../store/relayStore.js";
   import { i18n } from "../i18n/i18nStore.js";
   import Timeline from "./Timeline.svelte";
+  import ProfileEditor from "./ProfileEditor.svelte";
 
   // 状態変数
   let eventContent = $state("");
@@ -221,7 +222,10 @@
       </div>
     {/if}
 
-    <!-- タイムラインコンポーネント - 署名済みイベントとは独立して表示 -->
+    <!-- プロフィール編集コンポーネント -->
+    <ProfileEditor />
+
+    <!-- タイムラインコンポーネント -->
     <Timeline />
   </div>
 
