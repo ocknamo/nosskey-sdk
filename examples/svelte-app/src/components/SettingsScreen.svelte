@@ -5,12 +5,15 @@
     defaultRelays,
   } from "../store/appState.js";
   import { activeRelays } from "../store/relayStore.js";
+  import { i18n, changeLanguage } from "../i18n/i18nStore.js";
+  import type { Language } from "../i18n/translations.js";
 
   // 状態変数
   let clearResult = $state("");
   let newRelay = $state("");
   let relayMessage = $state("");
   let relays = $state<string[]>([]);
+  let languageMessage = $state("");
 
   // activeRelaysストアを監視して更新
   activeRelays.subscribe((value) => {
@@ -20,19 +23,19 @@
   // リレーを追加する関数
   function addRelay() {
     if (!newRelay) {
-      relayMessage = "リレーURLを入力してください";
+      relayMessage = $i18n.t.settings.relayManagement.messages.enterUrl;
       return;
     }
 
     // 簡易的なバリデーション
     if (!newRelay.startsWith("wss://")) {
-      relayMessage = "リレーURLは 'wss://' で始める必要があります";
+      relayMessage = $i18n.t.settings.relayManagement.messages.startWithWss;
       return;
     }
 
     // すでに存在するかチェック
     if (relays.includes(newRelay)) {
-      relayMessage = "このリレーは既に追加されています";
+      relayMessage = $i18n.t.settings.relayManagement.messages.alreadyExists;
       return;
     }
 
@@ -41,7 +44,7 @@
 
     // 入力フィールドをクリア
     newRelay = "";
-    relayMessage = "リレーを追加しました";
+    relayMessage = $i18n.t.settings.relayManagement.messages.added;
 
     // 3秒後にメッセージをクリア
     setTimeout(() => {
@@ -56,7 +59,7 @@
       currentRelays.filter((r) => r !== relay),
     );
 
-    relayMessage = "リレーを削除しました";
+    relayMessage = $i18n.t.settings.relayManagement.messages.deleted;
 
     // 3秒後にメッセージをクリア
     setTimeout(() => {
@@ -69,7 +72,7 @@
     // デフォルト値にリセット
     activeRelays.set([...defaultRelays]);
 
-    relayMessage = "リレーをデフォルト設定にリセットしました";
+    relayMessage = $i18n.t.settings.relayManagement.messages.reset;
 
     // 3秒後にメッセージをクリア
     setTimeout(() => {
@@ -85,7 +88,7 @@
       localStorage.removeItem("nosskey_pwk_blob");
 
       // メッセージを表示
-      clearResult = "ローカルストレージをクリアしました";
+      clearResult = $i18n.t.settings.localStorage.cleared;
 
       // アプリケーションの状態をリセット
       resetState();
@@ -103,23 +106,23 @@
 </script>
 
 <div class="settings-container">
-  <h1>設定</h1>
+  <h1>{$i18n.t.settings.title}</h1>
 
   <div class="settings-section">
-    <h2>リレー管理</h2>
-    <p>Nostrメッセージを送信するリレーを追加・削除できます。</p>
+    <h2>{$i18n.t.settings.relayManagement.title}</h2>
+    <p>{$i18n.t.settings.relayManagement.description}</p>
 
     <div class="relay-list">
-      <h3>現在のリレー</h3>
+      <h3>{$i18n.t.settings.relayManagement.currentRelays}</h3>
       {#if relays.length === 0}
-        <p class="empty-message">リレーが設定されていません</p>
+        <p class="empty-message">{$i18n.t.settings.relayManagement.noRelays}</p>
       {:else}
         <ul>
           {#each relays as relay}
             <li>
               <span class="relay-url">{relay}</span>
               <button class="remove-button" onclick={() => removeRelay(relay)}
-                >削除</button
+                >{$i18n.t.settings.relayManagement.delete}</button
               >
             </li>
           {/each}
@@ -128,13 +131,15 @@
     </div>
 
     <div class="add-relay">
-      <h3>リレーを追加</h3>
+      <h3>{$i18n.t.settings.relayManagement.addRelay}</h3>
       <div class="input-group">
         <input type="text" placeholder="wss://" bind:value={newRelay} />
-        <button onclick={addRelay}>追加</button>
+        <button onclick={addRelay}
+          >{$i18n.t.settings.relayManagement.add}</button
+        >
       </div>
       <button class="secondary-button" onclick={resetRelays}
-        >デフォルトに戻す</button
+        >{$i18n.t.settings.relayManagement.reset}</button
       >
 
       {#if relayMessage}
@@ -146,13 +151,13 @@
   </div>
 
   <div class="settings-section">
-    <h2>ローカルストレージ</h2>
+    <h2>{$i18n.t.settings.localStorage.title}</h2>
     <p>
-      保存された認証情報をクリアします。この操作を行うと再度ログインが必要になります。
+      {$i18n.t.settings.localStorage.description}
     </p>
 
     <button class="danger-button" onclick={clearLocalStorage}>
-      認証情報をクリア
+      {$i18n.t.settings.localStorage.clear}
     </button>
 
     {#if clearResult}
@@ -163,13 +168,60 @@
   </div>
 
   <div class="settings-section">
-    <h2>アプリケーション情報</h2>
+    <h2>{$i18n.t.settings.language.title}</h2>
+    <div class="language-selector">
+      <p>{$i18n.t.settings.language.selectLanguage}</p>
+      <div class="radio-group">
+        <label>
+          <input
+            type="radio"
+            name="language"
+            value="ja"
+            checked={$i18n.currentLanguage === "ja"}
+            onclick={() => {
+              changeLanguage("ja");
+              languageMessage = $i18n.t.settings.language.changed;
+              setTimeout(() => {
+                languageMessage = "";
+              }, 3000);
+            }}
+          />
+          {$i18n.t.settings.language.japaneseLabel}
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="language"
+            value="en"
+            checked={$i18n.currentLanguage === "en"}
+            onclick={() => {
+              changeLanguage("en");
+              languageMessage = $i18n.t.settings.language.changed;
+              setTimeout(() => {
+                languageMessage = "";
+              }, 3000);
+            }}
+          />
+          {$i18n.t.settings.language.englishLabel}
+        </label>
+      </div>
+
+      {#if languageMessage}
+        <div class="result-message">
+          {languageMessage}
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>{$i18n.t.settings.appInfo.title}</h2>
     <div class="info-item">
-      <div class="label">バージョン:</div>
+      <div class="label">{$i18n.t.settings.appInfo.version}</div>
       <div class="value">0.1.0</div>
     </div>
     <div class="info-item">
-      <div class="label">ビルド日時:</div>
+      <div class="label">{$i18n.t.settings.appInfo.buildDate}</div>
       <div class="value">2025/04/29</div>
     </div>
   </div>
@@ -180,6 +232,27 @@
     max-width: 700px;
     margin: 0 auto;
     padding: 20px;
+  }
+
+  .language-selector {
+    margin-top: 15px;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 15px 0;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .radio-group input[type="radio"] {
+    margin-right: 10px;
   }
 
   h1,

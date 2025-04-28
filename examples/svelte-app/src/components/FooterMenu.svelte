@@ -1,5 +1,6 @@
 <script lang="ts">
   import { currentScreen, resetState } from "../store/appState.js";
+  import { i18n } from "../i18n/i18nStore.js";
 
   // 現在の画面
   let screen = $state("auth");
@@ -27,25 +28,25 @@
       onclick={() => navigateTo("auth")}
     >
       <div class="icon">🔑</div>
-      <span>認証</span>
+      <span>{$i18n.t.navigation.auth}</span>
     </button>
     <button
       class={screen === "nostr" ? "active" : ""}
       onclick={() => navigateTo("nostr")}
     >
       <div class="icon">📝</div>
-      <span>投稿</span>
+      <span>{$i18n.t.navigation.nostr}</span>
     </button>
     <button
       class={screen === "settings" ? "active" : ""}
       onclick={() => navigateTo("settings")}
     >
       <div class="icon">⚙️</div>
-      <span>設定</span>
+      <span>{$i18n.t.navigation.settings}</span>
     </button>
     <button onclick={logout}>
       <div class="icon">🚪</div>
-      <span>ログアウト</span>
+      <span>{$i18n.t.navigation.logout}</span>
     </button>
   </div>
 </footer>

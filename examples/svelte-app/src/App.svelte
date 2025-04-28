@@ -4,6 +4,7 @@
   import SettingsScreen from "./components/SettingsScreen.svelte";
   import FooterMenu from "./components/FooterMenu.svelte";
   import { currentScreen } from "./store/appState.js";
+  import { i18n } from "./i18n/i18nStore.js";
 
   let screen = $state("auth");
 
