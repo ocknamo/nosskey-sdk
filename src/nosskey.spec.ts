@@ -24,7 +24,8 @@ vi.mock('rx-nostr-crypto', () => {
 
 describe('PWKManager', () => {
   // WebAuthn APIのモック
-  const mockPrfResult = new Uint8Array(32).fill(42).buffer;
+  const mockPrfResultValue = 42;
+  const mockPrfResult = new Uint8Array(32).fill(mockPrfResultValue).buffer;
   const mockCredentialId = new Uint8Array(16).fill(1);
   let originalCrypto: typeof globalThis.crypto;
   let originalCredentials: typeof globalThis.navigator.credentials;
@@ -263,6 +264,58 @@ describe('PWKManager', () => {
 
       // すべての要素が0になっていることを確認
       expect(Array.from(key).every((byte) => byte === 0)).toBe(true);
+    });
+  });
+
+  describe('exportNostrKey', () => {
+    it('暗号化された秘密鍵をエクスポートできる（aes-gcm-256）', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+
+      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob, mockCredentialId);
+
+      // 復号された秘密鍵（モックでは32バイトの66で埋められたもの）
+      expect(secretKey).toBe(bytesToHex(new Uint8Array(32).fill(66)));
+      expect(crypto.subtle.decrypt).toHaveBeenCalled();
+    });
+
+    it('PRF直接使用方式の秘密鍵をエクスポートできる', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+      };
+
+      // PRF値自体がシークレットキー
+      // テスト用に特別なモックを作成
+      const testPrfResult = new Uint8Array(32).fill(mockPrfResultValue);
+      const mockCredential = {
+        getClientExtensionResults: vi.fn(() => ({
+          prf: {
+            results: {
+              first: testPrfResult.buffer,
+            },
+          },
+        })),
+      };
+
+      // 特別なモックを設定
+      vi.spyOn(navigator.credentials, 'get').mockResolvedValueOnce(mockCredential as any);
+
+      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob, mockCredentialId);
+
+      // PRF値自体がシークレットキー（32バイトの42で埋められたもの）
+      expect(secretKey).toBe(bytesToHex(testPrfResult));
+      // 復号処理は行われない
+      expect(crypto.subtle.decrypt).not.toHaveBeenCalled();
     });
   });
 

@@ -183,4 +183,12 @@ export interface PWKManagerLike {
    * 全てのキャッシュをクリア
    */
   clearAllCachedKeys(): void;
+
+  /**
+   * 暗号化された秘密鍵をエクスポート
+   * @param pwk PWKBlob形式の暗号化された秘密鍵
+   * @param credentialId 使用するクレデンシャルID
+   * @returns エクスポートされた秘密鍵（16進数文字列）
+   */
+  exportNostrKey(pwk: PWKBlob, credentialId: Uint8Array): Promise<string>;
 }
