@@ -39,6 +39,7 @@ examples/svelte-app/
 
 #### appState.ts
 アプリケーションの状態管理を行うストア：
+- `defaultRelays` - デフォルトで使用するリレーの配列
 - `currentScreen` - 現在の画面を保持するwritableストア（'auth'または'nostr'）
 - `authenticated` - 認証状態を管理
 - `credentialId` - パスキーの認証情報ID
@@ -50,7 +51,8 @@ examples/svelte-app/
 
 #### AuthScreen.svelte
 認証画面を担当するコンポーネント：
-- PRF拡張対応確認機能
+- PRF拡張対応確認ボタン
+  - ユーザーアクションでPRF拡張対応状況を確認
 - パスキー新規作成機能
   - `createPasskey()`メソッドで新規パスキー作成
   - `directPrfToNostrKey()`メソッドでPRFから直接Nostr鍵を導出
@@ -61,11 +63,10 @@ examples/svelte-app/
 #### NostrScreen.svelte
 Nostrメッセージ作成・投稿画面を担当するコンポーネント：
 - ユーザー情報（公開鍵）表示
-- イベント種類選択（テキストノート、長文記事など）
-- メッセージ入力フォーム
+- メッセージ入力フォーム（常にkind=1のテキストノート）
 - イベント署名機能
   - パスキーを使用してNostrイベントに署名
-- リレー接続・メッセージ送信機能
+- デフォルトリレーへのメッセージ送信機能
 - ログアウト機能
 
 #### App.svelte
@@ -75,8 +76,10 @@ Nostrメッセージ作成・投稿画面を担当するコンポーネント：
 
 ## 4. データフロー
 
-1. アプリ起動時にPRF拡張対応状況を確認（`initialize()`）
-2. パスキー登録時：
+1. アプリ起動時に初期化（`initialize()`）
+2. ユーザーがPRF拡張対応確認ボタンをクリック（`checkPrfSupport()`）
+3. PRF拡張が対応している場合、パスキー作成・ログインボタンを表示
+4. パスキー登録時：
    - 新規パスキー作成（`createNew()`）
    - PRF値から直接シークレットキー導出（`directPrfToNostrKey()`）
    - 結果をストアとlocalStorageに保存
