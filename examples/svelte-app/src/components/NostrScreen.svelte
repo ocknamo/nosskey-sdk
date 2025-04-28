@@ -5,6 +5,8 @@
   import type { RelayInfo } from "../services/relay.service.js";
   import * as appState from "../store/appState.js";
   import { relayService } from "../store/relayStore.js";
+  import { i18n } from "../i18n/i18nStore.js";
+  import Timeline from "./Timeline.svelte";
 
   // 状態変数
   let eventContent = $state("");
@@ -144,29 +146,29 @@
 </script>
 
 <div class="nostr-container">
-  <h1>Nostr</h1>
+  <h1>{$i18n.t.nostr.title}</h1>
 
   <div class="user-info">
     <div class="pubkey-display">
-      <h3>公開鍵</h3>
+      <h3>{$i18n.t.nostr.publicKey}</h3>
       <p>{publicKeyShort}</p>
       <p class="npub">{npubAddress}</p>
     </div>
 
     <div class="relay-status">
-      <h3>リレー接続状態</h3>
+      <h3>{$i18n.t.nostr.relayStatus}</h3>
       <ul>
         {#each Object.entries(relayStatuses) as [url, status]}
           <li>
             <span class="relay-url">{url}</span>
             <span class="status-badge status-{status.status}">
               {status.status === "active"
-                ? "接続済み"
+                ? $i18n.t.nostr.relayStates.connected
                 : status.status === "connecting"
-                  ? "接続中"
+                  ? $i18n.t.nostr.relayStates.connecting
                   : status.status === "closed"
-                    ? "切断"
-                    : "不明"}
+                    ? $i18n.t.nostr.relayStates.disconnected
+                    : $i18n.t.nostr.relayStates.unknown}
             </span>
           </li>
         {/each}
@@ -175,15 +177,15 @@
   </div>
 
   <div class="event-creation">
-    <h2>イベント作成</h2>
+    <h2>{$i18n.t.nostr.eventCreation}</h2>
 
     <div class="form-group">
-      <label for="content">内容:</label>
+      <label for="content">{$i18n.t.nostr.content}</label>
       <textarea
         id="content"
         value={eventContent}
         on:input={handleContentChange}
-        placeholder="ここにメッセージを入力..."
+        placeholder={$i18n.t.nostr.contentPlaceholder}
         rows="5"
       ></textarea>
     </div>
@@ -194,7 +196,7 @@
         on:click={signEvent}
         disabled={isLoading || !eventContent.trim()}
       >
-        署名
+        {$i18n.t.nostr.sign}
       </button>
 
       <button
@@ -202,7 +204,7 @@
         on:click={publishEvent}
         disabled={isLoading || !signedEvent}
       >
-        公開
+        {$i18n.t.nostr.publish}
       </button>
     </div>
 
@@ -214,10 +216,13 @@
 
     {#if signedEvent}
       <div class="signed-event">
-        <h3>署名済みイベント</h3>
+        <h3>{$i18n.t.nostr.signedEvent}</h3>
         <pre>{JSON.stringify(signedEvent, null, 2)}</pre>
       </div>
     {/if}
+
+    <!-- タイムラインコンポーネント - 署名済みイベントとは独立して表示 -->
+    <Timeline />
   </div>
 
   <!-- フッターメニューに移動したため、ログアウトボタンは削除 -->

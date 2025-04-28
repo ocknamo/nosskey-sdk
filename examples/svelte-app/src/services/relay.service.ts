@@ -1,6 +1,7 @@
-import { type RxNostr, createRxNostr, noopVerifier } from 'rx-nostr';
-import { type Writable, writable } from 'svelte/store';
+import { type RxNostr, createRxNostr, noopVerifier, createRxBackwardReq, uniq } from 'rx-nostr';
+import { type Writable, writable, readable } from 'svelte/store';
 import type { NostrEvent } from '../../../../src/types.js';
+import { type Observable } from 'rxjs';
 
 export type RelayStatus = 'active' | 'connecting' | 'closed' | 'error';
 
@@ -23,6 +24,9 @@ export class RelayService {
 
   // 送信状態を格納するStore
   public publishStatus: Writable<string> = writable('');
+  
+  // タイムラインイベントを格納するStore
+  public timelineEvents: Writable<NostrEvent[]> = writable([]);
 
   constructor(relayUrls: string[] = []) {
     // rx-nostrの初期化
@@ -195,6 +199,90 @@ export class RelayService {
         clearTimeout(timeoutId);
       });
     });
+  }
+
+  /**
+   * イベントをクエリ（検索）
+   * @param filters 検索フィルター
+   * @param options オプション設定
+   * @returns 検索結果のObservable
+   */
+  public queryEvents(
+    filters: Array<{ authors?: string[]; kinds?: number[]; since?: number; until?: number; limit?: number }>,
+    options = { uniq: true, id: 'timeline-query' }
+  ): Observable<{ from: string; event: NostrEvent }> {
+    const req = createRxBackwardReq();
+    const source = this.rxNostr.use(req);
+    
+    if (options.uniq) {
+      return source.pipe(uniq());
+    }
+    
+    return source;
+  }
+  
+  /**
+   * タイムラインを取得（自分の投稿）
+   * @param publicKey 公開鍵（16進数形式）
+   * @param options オプション
+   */
+  public fetchTimeline(publicKey: string, options = { limit: 20 }) {
+    if (!publicKey) {
+      console.error('公開鍵が指定されていません');
+      return;
+    }
+    
+    // timelineEventsを初期化
+    this.timelineEvents.set([]);
+    
+    // 直近のイベントを取得
+    const req = createRxBackwardReq();
+    
+    // クエリ設定
+    const subscription = this.rxNostr
+      .use(req)
+      .pipe(uniq())
+      .subscribe({
+        next: (packet) => {
+          const event = packet.event;
+          
+          if (event) {
+            // 新しいイベントを追加
+            this.timelineEvents.update(events => {
+              // 日付の新しい順に並べ替え
+              const updatedEvents = [...events, event].sort(
+                (a, b) => (b.created_at || 0) - (a.created_at || 0)
+              );
+              
+              // 上限数を超えた古いイベントを削除
+              if (updatedEvents.length > options.limit) {
+                return updatedEvents.slice(0, options.limit);
+              }
+              
+              return updatedEvents;
+            });
+          }
+        },
+        error: (error) => {
+          console.error('イベント取得エラー:', error);
+        }
+      });
+    
+    // テキスト投稿（kind:1）と特定の著者のみを対象に
+    req.emit([
+      {
+        kinds: [1], // テキスト投稿
+        authors: [publicKey],
+        limit: options.limit
+      }
+    ]);
+    
+    // 30秒後にサブスクリプションを終了
+    setTimeout(() => {
+      subscription.unsubscribe();
+    }, 30000);
+    
+    return subscription;
   }
 
   /**

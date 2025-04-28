@@ -49,6 +49,13 @@ export interface TranslationData {
     sign: string;
     publish: string;
     signedEvent: string;
+    timeline: {
+      title: string;
+      loading: string;
+      reload: string;
+      retry: string;
+      empty: string;
+    };
   };
   settings: {
     title: string;
@@ -148,6 +155,13 @@ export const ja: TranslationData = {
     sign: '署名',
     publish: '公開',
     signedEvent: '署名済みイベント',
+    timeline: {
+      title: 'タイムライン',
+      loading: '読み込み中...',
+      reload: '更新',
+      retry: '再試行',
+      empty: '表示するイベントがありません',
+    },
   },
   settings: {
     title: '設定',
@@ -247,6 +261,13 @@ export const en: TranslationData = {
     sign: 'Sign',
     publish: 'Publish',
     signedEvent: 'Signed Event',
+    timeline: {
+      title: 'Timeline',
+      loading: 'Loading...',
+      reload: 'Reload',
+      retry: 'Retry',
+      empty: 'No events to display',
+    },
   },
   settings: {
     title: 'Settings',
