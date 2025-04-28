@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { createRxNostr } from 'rx-nostr';
+  import { onDestroy } from 'svelte';
   import { PWKManager } from '../../../../src/nosskey.js';
   import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
+  import type { RelayInfo } from '../services/relay.service.js';
   import * as appState from '../store/appState.js';
+  import { relayService } from '../store/relayStore.js';
 
   // 状態変数
   let eventContent = $state('');
@@ -13,9 +15,26 @@
   let isLoading = $state(false);
   let publicKeyShort = $state('');
   let npubAddress = $state('');
+  let relayStatuses = $state<{[url: string]: RelayInfo}>({});
 
   // PWKManagerのインスタンスを作成
   const pwkManager = new PWKManager();
+  
+  // リレーサービスからの状態をサブスクライブ
+  const unsubscribeRelayStatus = relayService.relayStatuses.subscribe(value => {
+    relayStatuses = value;
+  });
+  
+  // 公開ステータスのサブスクリプション
+  const unsubscribePublishStatus = relayService.publishStatus.subscribe(value => {
+    publishStatus = value;
+  });
+  
+  // コンポーネント破棄時にサブスクリプションを解除
+  onDestroy(() => {
+    unsubscribeRelayStatus();
+    unsubscribePublishStatus();
+  });
 
   // パブリックキーを取得
   let publicKeyValue = '';
@@ -99,24 +118,13 @@
     }
 
     isLoading = true;
-    publishStatus = 'リレーに送信中...';
 
     try {
-      // デフォルトリレー配列の使用
+      // リレーサービスを使用してイベントを送信
       console.log('送信先リレー:', appState.defaultRelays);
       console.log('署名済みイベント:', signedEvent);
       
-      // デモのためエラーなしと想定
-      const result = true;
-      
-      // 署名成功をシミュレート
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      if (result) {
-        publishStatus = '送信完了';
-      } else {
-        publishStatus = '送信タイムアウトまたはエラー';
-      }
+      await relayService.publishEvent(signedEvent);
     } catch (error) {
       console.error('送信エラー:', error);
       publishStatus = `送信エラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -139,6 +147,22 @@
       <h3>公開鍵</h3>
       <p>{publicKeyShort}</p>
       <p class="npub">{npubAddress}</p>
+    </div>
+    
+    <div class="relay-status">
+      <h3>リレー接続状態</h3>
+      <ul>
+        {#each Object.entries(relayStatuses) as [url, status]}
+          <li>
+            <span class="relay-url">{url}</span>
+            <span class="status-badge status-{status.status}">
+              {status.status === 'active' ? '接続済み' : 
+               status.status === 'connecting' ? '接続中' : 
+               status.status === 'closed' ? '切断' : '不明'}
+            </span>
+          </li>
+        {/each}
+      </ul>
     </div>
   </div>
   
@@ -218,6 +242,55 @@
   .npub {
     font-size: 0.9rem;
     color: #666;
+  }
+  
+  .relay-status {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+  }
+  
+  .relay-status ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .relay-status li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .relay-url {
+    font-family: monospace;
+    word-break: break-all;
+  }
+  
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 10px;
+    white-space: nowrap;
+  }
+  
+  .status-active {
+    background-color: #28a745;
+    color: white;
+  }
+  
+  .status-connecting {
+    background-color: #ffc107;
+    color: black;
+  }
+  
+  .status-closed, .status-error {
+    background-color: #dc3545;
+    color: white;
   }
   
   .event-creation {
