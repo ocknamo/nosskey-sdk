@@ -1,6 +1,7 @@
 <script lang="ts">
   import AuthScreen from "./components/AuthScreen.svelte";
   import NostrScreen from "./components/NostrScreen.svelte";
+  import FooterMenu from "./components/FooterMenu.svelte";
   import { currentScreen } from "./store/appState.js";
 
   let screen = $state("auth");
@@ -54,6 +55,9 @@
   {:else if screen === "nostr"}
     <NostrScreen />
   {/if}
+
+  <!-- フッターメニュー -->
+  <FooterMenu />
 </div>
 
 <style>
@@ -61,6 +65,7 @@
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    padding-bottom: 80px; /* フッターの高さ分の余白を追加 */
   }
 
   :global(body) {

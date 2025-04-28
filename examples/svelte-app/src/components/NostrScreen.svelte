@@ -1,35 +1,39 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { PWKManager } from '../../../../src/nosskey.js';
-  import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
-  import type { RelayInfo } from '../services/relay.service.js';
-  import * as appState from '../store/appState.js';
-  import { relayService } from '../store/relayStore.js';
+  import { onDestroy } from "svelte";
+  import { PWKManager } from "../../../../src/nosskey.js";
+  import type { NostrEvent, PWKBlob } from "../../../../src/types.js";
+  import type { RelayInfo } from "../services/relay.service.js";
+  import * as appState from "../store/appState.js";
+  import { relayService } from "../store/relayStore.js";
 
   // 状態変数
-  let eventContent = $state('');
+  let eventContent = $state("");
   // イベント種類は常にkind=1(テキストノート)
   const eventKind = 1;
   let signedEvent = $state<NostrEvent | null>(null);
-  let publishStatus = $state('');
+  let publishStatus = $state("");
   let isLoading = $state(false);
-  let publicKeyShort = $state('');
-  let npubAddress = $state('');
-  let relayStatuses = $state<{[url: string]: RelayInfo}>({});
+  let publicKeyShort = $state("");
+  let npubAddress = $state("");
+  let relayStatuses = $state<{ [url: string]: RelayInfo }>({});
 
   // PWKManagerのインスタンスを作成
   const pwkManager = new PWKManager();
-  
+
   // リレーサービスからの状態をサブスクライブ
-  const unsubscribeRelayStatus = relayService.relayStatuses.subscribe(value => {
-    relayStatuses = value;
-  });
-  
+  const unsubscribeRelayStatus = relayService.relayStatuses.subscribe(
+    (value) => {
+      relayStatuses = value;
+    },
+  );
+
   // 公開ステータスのサブスクリプション
-  const unsubscribePublishStatus = relayService.publishStatus.subscribe(value => {
-    publishStatus = value;
-  });
-  
+  const unsubscribePublishStatus = relayService.publishStatus.subscribe(
+    (value) => {
+      publishStatus = value;
+    },
+  );
+
   // コンポーネント破棄時にサブスクリプションを解除
   onDestroy(() => {
     unsubscribeRelayStatus();
@@ -37,10 +41,10 @@
   });
 
   // パブリックキーを取得
-  let publicKeyValue = '';
-  appState.publicKey.subscribe(value => {
-    publicKeyValue = value || '';
-    
+  let publicKeyValue = "";
+  appState.publicKey.subscribe((value) => {
+    publicKeyValue = value || "";
+
     if (publicKeyValue) {
       // 公開鍵を表示用に整形
       publicKeyShort = `${publicKeyValue.slice(0, 8)}...${publicKeyValue.slice(-8)}`;
@@ -57,32 +61,32 @@
   // イベントに署名
   async function signEvent() {
     if (!eventContent.trim()) {
-      publishStatus = 'コンテンツを入力してください';
+      publishStatus = "コンテンツを入力してください";
       return;
     }
 
     isLoading = true;
-    publishStatus = '署名中...';
+    publishStatus = "署名中...";
 
     try {
       // サブスクライブしている値を取得
       let credValue: Uint8Array | null = null;
       let pwkValue: PWKBlob | null = null;
-      
+
       // 一時的なサブスクリプションを作成して値を取得
-      const unsubCred = appState.credentialId.subscribe(value => {
+      const unsubCred = appState.credentialId.subscribe((value) => {
         credValue = value;
       });
-      const unsubPwk = appState.pwkBlob.subscribe(value => {
+      const unsubPwk = appState.pwkBlob.subscribe((value) => {
         pwkValue = value;
       });
-      
+
       // サブスクリプションを解除
       unsubCred();
       unsubPwk();
-      
+
       if (!publicKeyValue || !pwkValue || !credValue) {
-        throw new Error('認証情報が見つかりません');
+        throw new Error("認証情報が見つかりません");
       }
 
       // イベントの作成
@@ -90,19 +94,19 @@
         kind: eventKind,
         content: eventContent,
         created_at: Math.floor(Date.now() / 1000),
-        tags: []
+        tags: [],
       };
 
       // イベントに署名
       signedEvent = await pwkManager.signEvent(event, pwkValue, credValue);
-      
+
       if (signedEvent.id) {
         publishStatus = `署名完了: ${signedEvent.id.slice(0, 8)}...`;
       } else {
-        publishStatus = '署名完了';
+        publishStatus = "署名完了";
       }
     } catch (error) {
-      console.error('署名エラー:', error);
+      console.error("署名エラー:", error);
       publishStatus = `署名エラー: ${error instanceof Error ? error.message : String(error)}`;
       signedEvent = null;
     } finally {
@@ -113,7 +117,7 @@
   // イベントをリレーに送信
   async function publishEvent() {
     if (!signedEvent) {
-      publishStatus = 'まず署名してください';
+      publishStatus = "まず署名してください";
       return;
     }
 
@@ -121,12 +125,12 @@
 
     try {
       // リレーサービスを使用してイベントを送信
-      console.log('送信先リレー:', appState.defaultRelays);
-      console.log('署名済みイベント:', signedEvent);
-      
+      console.log("送信先リレー:", appState.defaultRelays);
+      console.log("署名済みイベント:", signedEvent);
+
       await relayService.publishEvent(signedEvent);
     } catch (error) {
-      console.error('送信エラー:', error);
+      console.error("送信エラー:", error);
       publishStatus = `送信エラー: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       isLoading = false;
@@ -141,14 +145,14 @@
 
 <div class="nostr-container">
   <h1>Nostr</h1>
-  
+
   <div class="user-info">
     <div class="pubkey-display">
       <h3>公開鍵</h3>
       <p>{publicKeyShort}</p>
       <p class="npub">{npubAddress}</p>
     </div>
-    
+
     <div class="relay-status">
       <h3>リレー接続状態</h3>
       <ul>
@@ -156,54 +160,58 @@
           <li>
             <span class="relay-url">{url}</span>
             <span class="status-badge status-{status.status}">
-              {status.status === 'active' ? '接続済み' : 
-               status.status === 'connecting' ? '接続中' : 
-               status.status === 'closed' ? '切断' : '不明'}
+              {status.status === "active"
+                ? "接続済み"
+                : status.status === "connecting"
+                  ? "接続中"
+                  : status.status === "closed"
+                    ? "切断"
+                    : "不明"}
             </span>
           </li>
         {/each}
       </ul>
     </div>
   </div>
-  
+
   <div class="event-creation">
     <h2>イベント作成</h2>
-    
+
     <div class="form-group">
       <label for="content">内容:</label>
-      <textarea 
-        id="content" 
+      <textarea
+        id="content"
         value={eventContent}
         on:input={handleContentChange}
         placeholder="ここにメッセージを入力..."
         rows="5"
       ></textarea>
     </div>
-    
+
     <div class="action-buttons">
-      <button 
-        class="sign-button" 
-        on:click={signEvent} 
+      <button
+        class="sign-button"
+        on:click={signEvent}
         disabled={isLoading || !eventContent.trim()}
       >
         署名
       </button>
-      
-      <button 
-        class="publish-button" 
-        on:click={publishEvent} 
+
+      <button
+        class="publish-button"
+        on:click={publishEvent}
         disabled={isLoading || !signedEvent}
       >
         公開
       </button>
     </div>
-    
+
     {#if publishStatus}
       <div class="status-message">
         {publishStatus}
       </div>
     {/if}
-    
+
     {#if signedEvent}
       <div class="signed-event">
         <h3>署名済みイベント</h3>
@@ -211,10 +219,8 @@
       </div>
     {/if}
   </div>
-  
-  <div class="footer-actions">
-    <button class="logout-button" on:click={logout}>ログアウト</button>
-  </div>
+
+  <!-- フッターメニューに移動したため、ログアウトボタンは削除 -->
 </div>
 
 <style>
@@ -223,40 +229,42 @@
     margin: 0 auto;
     padding: 20px;
   }
-  
-  h1, h2, h3 {
+
+  h1,
+  h2,
+  h3 {
     margin-bottom: 10px;
   }
-  
+
   .user-info {
     background-color: #f5f5f5;
     padding: 15px;
     border-radius: 5px;
     margin-bottom: 20px;
   }
-  
+
   .pubkey-display {
     word-break: break-all;
   }
-  
+
   .npub {
     font-size: 0.9rem;
     color: #666;
   }
-  
+
   .relay-status {
     margin-top: 15px;
     padding: 10px;
     background-color: #f8f9fa;
     border-radius: 4px;
   }
-  
+
   .relay-status ul {
     list-style: none;
     padding: 0;
     margin: 0;
   }
-  
+
   .relay-status li {
     display: flex;
     justify-content: space-between;
@@ -264,12 +272,12 @@
     padding: 5px;
     border-bottom: 1px solid #eee;
   }
-  
+
   .relay-url {
     font-family: monospace;
     word-break: break-all;
   }
-  
+
   .status-badge {
     padding: 2px 8px;
     border-radius: 12px;
@@ -277,57 +285,60 @@
     margin-left: 10px;
     white-space: nowrap;
   }
-  
+
   .status-active {
     background-color: #28a745;
     color: white;
   }
-  
+
   .status-connecting {
     background-color: #ffc107;
     color: black;
   }
-  
-  .status-closed, .status-error {
+
+  .status-closed,
+  .status-error {
     background-color: #dc3545;
     color: white;
   }
-  
+
   .event-creation {
     background-color: #fff;
     padding: 20px;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
-  
+
   .form-group {
     margin-bottom: 15px;
   }
-  
+
   label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
   }
-  
-  input, textarea, select {
+
+  input,
+  textarea,
+  select {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
   }
-  
+
   textarea {
     resize: vertical;
   }
-  
+
   .action-buttons {
     display: flex;
     gap: 10px;
     margin-top: 20px;
   }
-  
+
   button {
     padding: 12px 24px;
     border: none;
@@ -336,29 +347,29 @@
     cursor: pointer;
     transition: background-color 0.3s;
   }
-  
+
   .sign-button {
     background-color: #5755d9;
     color: white;
   }
-  
+
   .publish-button {
     background-color: #28a745;
     color: white;
   }
-  
+
   button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
   }
-  
+
   .status-message {
     margin-top: 15px;
     padding: 10px;
     background-color: #f8f9fa;
     border-radius: 4px;
   }
-  
+
   .signed-event {
     margin-top: 20px;
     padding: 15px;
@@ -366,18 +377,18 @@
     border-radius: 4px;
     overflow-x: auto;
   }
-  
+
   pre {
     margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
   }
-  
+
   .footer-actions {
     margin-top: 30px;
     text-align: right;
   }
-  
+
   .logout-button {
     background-color: #dc3545;
     color: white;
