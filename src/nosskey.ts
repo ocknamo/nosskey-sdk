@@ -6,6 +6,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { seckeySigner } from 'rx-nostr-crypto';
 import type {
   CreateResult,
+  KeyCacheOptions,
   KeyOptions,
   NostrEvent,
   PWKBlob,
@@ -37,6 +38,67 @@ type PRFExtensionResponse = {
  * Nosskey - Passkey-Wrapped Key for Nostr
  */
 export class PWKManager implements PWKManagerLike {
+  // 一時的に保持する秘密鍵
+  #cachedKeys: Map<string, { sk: Uint8Array; expireAt: number }> = new Map();
+
+  // キャッシュの設定
+  #cacheOptions: KeyCacheOptions = {
+    enabled: false,
+    timeoutMs: 5 * 60 * 1000, // デフォルト5分
+  };
+
+  /**
+   * PWKManager コンストラクタ
+   * @param options 初期化オプション
+   */
+  constructor(options?: { cacheOptions?: Partial<KeyCacheOptions> }) {
+    if (options?.cacheOptions) {
+      this.#cacheOptions = { ...this.#cacheOptions, ...options.cacheOptions };
+    }
+  }
+
+  /**
+   * キャッシュ設定を更新
+   * @param options キャッシュオプション
+   */
+  setCacheOptions(options: Partial<KeyCacheOptions>): void {
+    this.#cacheOptions = { ...this.#cacheOptions, ...options };
+
+    // キャッシュが無効化された場合は全てのキャッシュをクリア
+    if (options.enabled === false) {
+      this.clearAllCachedKeys();
+    }
+  }
+
+  /**
+   * 現在のキャッシュ設定を取得
+   */
+  getCacheOptions(): KeyCacheOptions {
+    return { ...this.#cacheOptions };
+  }
+
+  /**
+   * 特定の鍵のキャッシュをクリア
+   * @param credentialId クレデンシャルID
+   */
+  clearCachedKey(credentialId: Uint8Array | string): void {
+    const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
+    const cached = this.#cachedKeys.get(id);
+    if (cached) {
+      this.clearKey(cached.sk);
+      this.#cachedKeys.delete(id);
+    }
+  }
+
+  /**
+   * 全てのキャッシュをクリア
+   */
+  clearAllCachedKeys(): void {
+    for (const { sk } of this.#cachedKeys.values()) {
+      this.clearKey(sk);
+    }
+    this.#cachedKeys.clear();
+  }
   /**
    * PRF拡張機能がサポートされているかチェック
    */
@@ -225,27 +287,60 @@ export class PWKManager implements PWKManagerLike {
     credentialId: Uint8Array,
     options: SignOptions = {}
   ): Promise<NostrEvent> {
-    const { clearMemory = true, tags } = options;
+    const { clearMemory = true, tags, useCache } = options;
 
-    // PRF値を取得
-    const prfSecret = await this.#prfSecret(credentialId);
+    // useCache が明示的に指定されていればその値を、そうでなければグローバル設定を使用
+    const shouldUseCache = useCache !== undefined ? useCache : this.#cacheOptions.enabled;
 
-    let sk: Uint8Array;
+    const credentialIdHex = bytesToHex(credentialId);
+    let sk: Uint8Array | undefined;
 
-    // PWKの種類によって処理を分岐
-    if (pwk.alg === 'prf-direct') {
-      // PRF値を直接シークレットキーとして使用
-      sk = prfSecret;
-    } else {
-      // PWKBlobV1として扱い、暗号化された秘密鍵を復号
-      const pwkV1 = pwk as PWKBlobV1;
-      const salt = hexToBytes(pwkV1.salt);
-      const iv = hexToBytes(pwkV1.iv);
-      const ct = hexToBytes(pwkV1.ct);
-      const tag = hexToBytes(pwkV1.tag);
+    // キャッシュが有効で、キャッシュに鍵がある場合はそれを使用
+    if (shouldUseCache && this.#cachedKeys.has(credentialIdHex)) {
+      const cached = this.#cachedKeys.get(credentialIdHex);
 
-      const aes = await this.#deriveAesGcmKey(prfSecret, salt);
-      sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+      if (cached) {
+        // 有効期限をチェック
+        if (Date.now() < cached.expireAt) {
+          sk = cached.sk;
+        } else {
+          // 期限切れの場合は削除
+          this.#cachedKeys.delete(credentialIdHex);
+          this.clearKey(cached.sk);
+        }
+      }
+    }
+
+    // キャッシュがない場合は通常の処理
+    if (!sk) {
+      // PRF値を取得
+      const prfSecret = await this.#prfSecret(credentialId);
+
+      // PWKの種類によって処理を分岐
+      if (pwk.alg === 'prf-direct') {
+        // PRF値を直接シークレットキーとして使用
+        sk = prfSecret;
+      } else {
+        // PWKBlobV1として扱い、暗号化された秘密鍵を復号
+        const pwkV1 = pwk as PWKBlobV1;
+        const salt = hexToBytes(pwkV1.salt);
+        const iv = hexToBytes(pwkV1.iv);
+        const ct = hexToBytes(pwkV1.ct);
+        const tag = hexToBytes(pwkV1.tag);
+
+        const aes = await this.#deriveAesGcmKey(prfSecret, salt);
+        sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+      }
+
+      // キャッシュが有効な場合は保存
+      if (shouldUseCache) {
+        const expireAt = Date.now() + (this.#cacheOptions.timeoutMs || 5 * 60 * 1000);
+        // コピーを作成して保存
+        this.#cachedKeys.set(credentialIdHex, {
+          sk: new Uint8Array(sk),
+          expireAt,
+        });
+      }
     }
 
     // 秘密鍵HEX文字列を取得
@@ -255,8 +350,8 @@ export class PWKManager implements PWKManagerLike {
     const signer = seckeySigner(skHex, { tags });
     const signedEvent = await signer.signEvent(event);
 
-    // 必要に応じて平文の秘密鍵を消去
-    if (clearMemory) {
+    // キャッシュを使用しない場合、または明示的にclearMemory=trueの場合のみメモリクリア
+    if (!shouldUseCache && clearMemory) {
       this.clearKey(sk);
     }
 

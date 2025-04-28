@@ -265,4 +265,151 @@ describe('PWKManager', () => {
       expect(Array.from(key).every((byte) => byte === 0)).toBe(true);
     });
   });
+
+  describe('キャッシュ機能', () => {
+    it('デフォルトではキャッシュが無効', () => {
+      const pwkManager = new PWKManager();
+      const options = pwkManager.getCacheOptions();
+      expect(options.enabled).toBe(false);
+    });
+
+    it('コンストラクタでキャッシュ設定を指定できる', () => {
+      const pwkManager = new PWKManager({
+        cacheOptions: { enabled: true, timeoutMs: 10000 },
+      });
+      const options = pwkManager.getCacheOptions();
+      expect(options.enabled).toBe(true);
+      expect(options.timeoutMs).toBe(10000);
+    });
+
+    it('setCacheOptions でキャッシュ設定を更新できる', () => {
+      const pwkManager = new PWKManager();
+      pwkManager.setCacheOptions({ enabled: true, timeoutMs: 20000 });
+      const options = pwkManager.getCacheOptions();
+      expect(options.enabled).toBe(true);
+      expect(options.timeoutMs).toBe(20000);
+    });
+
+    it('キャッシュが有効な場合、2回目の署名で認証が不要', async () => {
+      const pwkManager = new PWKManager();
+      pwkManager.setCacheOptions({ enabled: true });
+
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      // 1回目の署名（PRF認証必要）
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      // navigator.credentials.get の呼び出し回数をリセット
+      vi.clearAllMocks();
+
+      // 2回目の署名（キャッシュから取得、個別に指定必要）
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+
+      // PRF認証が呼ばれていないことを確認
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('個別のオプションでキャッシュを制御できる', async () => {
+      const pwkManager = new PWKManager();
+      // グローバルにはキャッシュ無効だが、個別に有効化
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      // キャッシュを有効にして署名
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+
+      vi.clearAllMocks();
+
+      // 2回目の署名（キャッシュから取得、明示的に指定が必要）
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+
+      // PRF認証が呼ばれていないことを確認
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('clearCachedKey で特定の鍵のキャッシュをクリアできる', async () => {
+      const pwkManager = new PWKManager({ cacheOptions: { enabled: true } });
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      // キャッシュを利用して署名
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      // 特定の鍵のキャッシュをクリア
+      pwkManager.clearCachedKey(mockCredentialId);
+
+      vi.clearAllMocks();
+
+      // 再度署名（キャッシュがクリアされているため認証が必要）
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      // PRF認証が呼ばれていることを確認
+      expect(navigator.credentials.get).toHaveBeenCalled();
+    });
+
+    it('clearAllCachedKeys で全てのキャッシュをクリアできる', async () => {
+      const pwkManager = new PWKManager({ cacheOptions: { enabled: true } });
+      const mockPwkBlob: PWKBlob = {
+        v: 1,
+        alg: 'aes-gcm-256',
+        salt: bytesToHex(new Uint8Array(16).fill(11)),
+        iv: bytesToHex(new Uint8Array(12).fill(22)),
+        ct: bytesToHex(new Uint8Array(32).fill(33)),
+        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      // キャッシュを利用して署名
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      // 全てのキャッシュをクリア
+      pwkManager.clearAllCachedKeys();
+
+      vi.clearAllMocks();
+
+      // 再度署名（キャッシュがクリアされているため認証が必要）
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+
+      // PRF認証が呼ばれていることを確認
+      expect(navigator.credentials.get).toHaveBeenCalled();
+    });
+  });
 });

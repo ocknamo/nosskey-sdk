@@ -54,7 +54,7 @@ export interface PasskeyCreationOptions {
   };
   authenticatorSelection?: AuthenticatorSelectionCriteria;
   pubKeyCredParams?: PublicKeyCredentialParameters[];
-  extensions?: Record<string, any>;
+  extensions?: Record<string, unknown>;
 }
 
 /**
@@ -73,11 +73,23 @@ export interface CreateOptions {
 }
 
 /**
+ * キャッシュオプションの型定義
+ */
+export interface KeyCacheOptions {
+  /** キャッシュを有効にするかどうか */
+  enabled: boolean;
+  /** キャッシュの有効期限（ミリ秒） */
+  timeoutMs?: number;
+}
+
+/**
  * Sign options
  */
 export interface SignOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   tags?: string[][]; // 追加のタグ
+  /** 秘密鍵をキャッシュするかどうか。指定がない場合はグローバル設定に従う */
+  useCache?: boolean;
 }
 
 /**
@@ -149,4 +161,26 @@ export interface PWKManagerLike {
    * @param key 消去する秘密鍵
    */
   clearKey(key: Uint8Array): void;
+
+  /**
+   * キャッシュ設定を更新
+   * @param options キャッシュオプション
+   */
+  setCacheOptions(options: Partial<KeyCacheOptions>): void;
+
+  /**
+   * 現在のキャッシュ設定を取得
+   */
+  getCacheOptions(): KeyCacheOptions;
+
+  /**
+   * 特定の鍵のキャッシュをクリア
+   * @param credentialId クレデンシャルID
+   */
+  clearCachedKey(credentialId: Uint8Array | string): void;
+
+  /**
+   * 全てのキャッシュをクリア
+   */
+  clearAllCachedKeys(): void;
 }
