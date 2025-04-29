@@ -393,9 +393,4 @@ function logout() {
     margin-top: 30px;
     text-align: right;
   }
-
-  .logout-button {
-    background-color: #dc3545;
-    color: white;
-  }
 </style>

@@ -123,7 +123,6 @@ export interface TranslationData {
     auth: string;
     nostr: string;
     settings: string;
-    logout: string;
   };
 }
 
@@ -247,7 +246,6 @@ export const ja: TranslationData = {
     auth: '認証',
     nostr: '投稿',
     settings: '設定',
-    logout: 'ログアウト',
   },
 };
 

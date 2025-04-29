@@ -14,11 +14,6 @@ currentScreen.subscribe((value) => {
 function navigateTo(target: string) {
   currentScreen.set(target);
 }
-
-// ログアウト処理
-function logout() {
-  resetState();
-}
 </script>
 
 <footer class="footer-menu">
@@ -43,10 +38,6 @@ function logout() {
     >
       <div class="icon">⚙️</div>
       <span>{$i18n.t.navigation.settings}</span>
-    </button>
-    <button onclick={logout}>
-      <div class="icon">🚪</div>
-      <span>{$i18n.t.navigation.logout}</span>
     </button>
   </div>
 </footer>
@@ -97,12 +88,5 @@ function logout() {
   .icon {
     font-size: 1.5rem;
     margin-bottom: 4px;
-  }
-
-  /* モバイルデバイスでのみ表示 */
-  @media (min-width: 768px) {
-    .footer-menu {
-      display: none;
-    }
   }
 </style>

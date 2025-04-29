@@ -36,7 +36,7 @@ function loadCacheTimeoutSetting() {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('nosskey_cache_timeout');
     // デフォルトは300秒（5分）
-    return saved === null ? 300 : parseInt(saved, 10);
+    return saved === null ? 300 : Number.parseInt(saved, 10);
   }
   return 300;
 }
@@ -45,15 +45,15 @@ function loadCacheTimeoutSetting() {
 try {
   cacheSecrets.set(loadCacheSecretsSetting());
   cacheTimeout.set(loadCacheTimeoutSetting());
-  
+
   // 設定が変更されたら保存
-  cacheSecrets.subscribe(value => {
+  cacheSecrets.subscribe((value) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('nosskey_cache_secrets', String(value));
     }
   });
-  
-  cacheTimeout.subscribe(value => {
+
+  cacheTimeout.subscribe((value) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('nosskey_cache_timeout', String(value));
     }
