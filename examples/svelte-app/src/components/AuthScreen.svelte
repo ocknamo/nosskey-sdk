@@ -1,186 +1,201 @@
 <script lang="ts">
-import { hexToBytes } from '@noble/hashes/utils';
-import { PWKManager } from '../../../../src/nosskey.js';
-import { i18n } from '../i18n/i18nStore.js';
-import * as appState from '../store/appState.js';
-import { cacheSecrets, currentScreen } from '../store/appState.js';
+  import { hexToBytes } from "@noble/hashes/utils";
+  import { PWKManager } from "../../../../src/nosskey.js";
+  import { i18n } from "../i18n/i18nStore.js";
+  import * as appState from "../store/appState.js";
+  import {
+    cacheSecrets,
+    cacheTimeout,
+    currentScreen,
+  } from "../store/appState.js";
 
-// 状態変数
-let isSupported = $state(false);
-let isLoading = $state(false);
-let errorMessage = $state('');
-let storedCredentialIds = $state<string[]>([]);
-let isPrfChecked = $state(false);
-const username = $state('');
+  // 状態変数
+  let isSupported = $state(false);
+  let isLoading = $state(false);
+  let errorMessage = $state("");
+  let storedCredentialIds = $state<string[]>([]);
+  let isPrfChecked = $state(false);
+  let username = $state("");
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+  // PWKManagerのインスタンスを作成（キャッシュ設定を反映）
+  let isCaching = false;
+  let timeoutSeconds = 300; // デフォルト5分（300秒）
 
-// 初期化関数
-async function initialize() {
-  isLoading = true;
-  try {
-    // ローカルストレージから保存済みのcredentialIdsを取得
-    const savedIds = localStorage.getItem('nosskey_credential_ids');
-    if (savedIds) {
-      storedCredentialIds = JSON.parse(savedIds);
+  cacheSecrets.subscribe((value) => {
+    isCaching = value;
+  });
+
+  cacheTimeout.subscribe((value) => {
+    timeoutSeconds = value;
+  });
+
+  const pwkManager = new PWKManager({
+    cacheOptions: {
+      enabled: isCaching,
+      timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
+    },
+  });
+
+  // 初期化関数
+  async function initialize() {
+    isLoading = true;
+    try {
+      // ローカルストレージからsavedCredentialIdsを取得（表示用）
+      const savedIds = localStorage.getItem("nosskey_credential_ids");
+      if (savedIds) {
+        storedCredentialIds = JSON.parse(savedIds);
+      }
+
+      // ローカルストレージから保存済みのPWKBlobを取得
+      const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
+      if (savedPwkBlob) {
+        // PWKBlobを復元
+        const parsedPwkBlob = JSON.parse(savedPwkBlob);
+
+        // 状態を更新
+        appState.pwkBlob.set(parsedPwkBlob);
+        appState.publicKey.set(parsedPwkBlob.publicKey);
+        appState.authenticated.set(true);
+
+        // PWKManagerのキャッシュ設定を更新
+        pwkManager.setCacheOptions({
+          enabled: isCaching,
+          timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
+        });
+
+        // PRF拡張対応確認をスキップしてNostr画面に遷移
+        appState.currentScreen.set("nostr");
+        return; // 初期化処理を終了
+      }
+    } catch (error) {
+      console.error("初期化エラー:", error);
+      errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
     }
+  }
 
-    // ローカルストレージから保存済みのPWKBlobを取得
-    const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
-    if (savedPwkBlob) {
-      // PWKBlobを復元
-      const parsedPwkBlob = JSON.parse(savedPwkBlob);
+  // PRF対応確認
+  async function checkPrfSupport() {
+    isLoading = true;
+    errorMessage = "";
+    try {
+      // PRF拡張がサポートされているか確認
+      isSupported = await pwkManager.isPrfSupported();
+      isPrfChecked = true;
+    } catch (error) {
+      console.error("PRF対応確認エラー:", error);
+      errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // 新規パスキー作成とNostrキー導出
+  async function createNew() {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // 新しいパスキーを作成
+      const newCredentialId = await pwkManager.createPasskey({
+        user: {
+          name: username || "user@example.com",
+          displayName: username || "PWK user",
+        },
+      });
+
+      // PRFを直接Nostrキーとして使用
+      const result = await pwkManager.directPrfToNostrKey(newCredentialId);
 
       // 状態を更新
-      appState.pwkBlob.set(parsedPwkBlob);
-      appState.publicKey.set(parsedPwkBlob.publicKey);
+      appState.credentialId.set(result.credentialId);
+      appState.pwkBlob.set(result.pwkBlob);
+      appState.publicKey.set(result.publicKey);
       appState.authenticated.set(true);
 
-      // PRF拡張対応確認をスキップしてNostr画面に遷移
-      appState.currentScreen.set('nostr');
-      return; // 初期化処理を終了
-    }
-  } catch (error) {
-    console.error('初期化エラー:', error);
-    errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
+      // ローカルストレージに保存（表示用）
+      const hexCredentialId = result.pwkBlob.credentialId;
+      if (hexCredentialId && !storedCredentialIds.includes(hexCredentialId)) {
+        storedCredentialIds = [...storedCredentialIds, hexCredentialId];
+        localStorage.setItem(
+          "nosskey_credential_ids",
+          JSON.stringify(storedCredentialIds),
+        );
+      }
 
-// PRF対応確認
-async function checkPrfSupport() {
-  isLoading = true;
-  errorMessage = '';
-  try {
-    // PRF拡張がサポートされているか確認
-    isSupported = await pwkManager.isPrfSupported();
-    isPrfChecked = true;
-  } catch (error) {
-    console.error('PRF対応確認エラー:', error);
-    errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 新規パスキー作成とNostrキー導出
-async function createNew() {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // 新しいパスキーを作成
-    const newCredentialId = await pwkManager.createPasskey({
-      user: {
-        name: username || 'user@example.com',
-        displayName: username || 'PWK user',
-      },
-    });
-
-    // PRFを直接Nostrキーとして使用
-    const result = await pwkManager.directPrfToNostrKey(newCredentialId);
-
-    // 状態を更新
-    appState.credentialId.set(result.credentialId);
-    appState.pwkBlob.set(result.pwkBlob);
-    appState.publicKey.set(result.publicKey);
-    appState.authenticated.set(true);
-
-    // ローカルストレージに保存
-    const hexCredentialId = result.pwkBlob.credentialId;
-    if (hexCredentialId && !storedCredentialIds.includes(hexCredentialId)) {
-      storedCredentialIds = [...storedCredentialIds, hexCredentialId];
-      localStorage.setItem('nosskey_credential_ids', JSON.stringify(storedCredentialIds));
-    }
-
-    // キャッシュが有効な場合のみPWKBlobをローカルストレージに保存
-    let shouldCache = false;
-    cacheSecrets.subscribe((value) => {
-      shouldCache = value;
-    });
-
-    if (shouldCache) {
+      // PWKBlobは暗号化されているため常に保存
       const pwkBlobToSave = {
         ...result.pwkBlob,
         publicKey: result.publicKey, // 公開鍵も一緒に保存
       };
-      localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
+
+      // Nostr画面に遷移
+      appState.currentScreen.set("nostr");
+    } catch (error) {
+      console.error("パスキー作成エラー:", error);
+      errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
     }
-
-    // Nostr画面に遷移
-    appState.currentScreen.set('nostr');
-  } catch (error) {
-    console.error('パスキー作成エラー:', error);
-    errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
   }
-}
 
-// 既存のパスキーでログイン
-async function login(credentialIdHex: string) {
-  isLoading = true;
-  errorMessage = '';
+  // 既存のパスキーでログイン
+  async function login(credentialIdHex: string) {
+    isLoading = true;
+    errorMessage = "";
 
-  try {
-    // 16進数文字列をUint8Arrayに変換
-    const rawCredentialId = hexToBytes(credentialIdHex);
+    try {
+      // 16進数文字列をUint8Arrayに変換
+      const rawCredentialId = hexToBytes(credentialIdHex);
 
-    // PRFを直接Nostrキーとして使用
-    const result = await pwkManager.directPrfToNostrKey(rawCredentialId);
+      // PRFを直接Nostrキーとして使用
+      const result = await pwkManager.directPrfToNostrKey(rawCredentialId);
 
-    // 状態を更新
-    appState.credentialId.set(result.credentialId);
-    appState.pwkBlob.set(result.pwkBlob);
-    appState.publicKey.set(result.publicKey);
-    appState.authenticated.set(true);
+      // 状態を更新
+      appState.credentialId.set(result.credentialId);
+      appState.pwkBlob.set(result.pwkBlob);
+      appState.publicKey.set(result.publicKey);
+      appState.authenticated.set(true);
 
-    // キャッシュが有効な場合のみPWKBlobをローカルストレージに保存
-    let shouldCache = false;
-    cacheSecrets.subscribe((value) => {
-      shouldCache = value;
-    });
-
-    if (shouldCache) {
+      // PWKBlobは暗号化されているため常に保存
       const pwkBlobToSave = {
         ...result.pwkBlob,
         publicKey: result.publicKey, // 公開鍵も一緒に保存
       };
-      localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
+
+      // Nostr画面に遷移
+      appState.currentScreen.set("nostr");
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // サポート対象外の場合のメッセージ
+  function getUnsupportedMessage() {
+    const isChrome = navigator.userAgent.indexOf("Chrome") > -1;
+    const isFirefox = navigator.userAgent.indexOf("Firefox") > -1;
+
+    if (isChrome) {
+      return "Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。";
     }
 
-    // Nostr画面に遷移
-    appState.currentScreen.set('nostr');
-  } catch (error) {
-    console.error('ログインエラー:', error);
-    errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
+    if (isFirefox) {
+      return "Firefox では about:config から webauthn:enable_prf を true に設定してください。";
+    }
 
-// サポート対象外の場合のメッセージ
-function getUnsupportedMessage() {
-  const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
-  const isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
-
-  if (isChrome) {
-    return 'Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。';
+    return "お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。";
   }
 
-  if (isFirefox) {
-    return 'Firefox では about:config から webauthn:enable_prf を true に設定してください。';
-  }
-
-  return 'お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。';
-}
-
-// コンポーネントのマウント時に初期化
-$effect(() => {
-  initialize();
-});
+  // コンポーネントのマウント時に初期化
+  $effect(() => {
+    initialize();
+  });
 </script>
 
 <div class="auth-container">
