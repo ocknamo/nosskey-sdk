@@ -1,60 +1,55 @@
 <script lang="ts">
-  import AuthScreen from "./components/AuthScreen.svelte";
-  import NostrScreen from "./components/NostrScreen.svelte";
-  import SettingsScreen from "./components/SettingsScreen.svelte";
-  import ImportKeyScreen from "./components/ImportKeyScreen.svelte";
-  import FooterMenu from "./components/FooterMenu.svelte";
-  import { currentScreen } from "./store/appState.js";
-  import { i18n } from "./i18n/i18nStore.js";
+import AuthScreen from './components/AuthScreen.svelte';
+import FooterMenu from './components/FooterMenu.svelte';
+import ImportKeyScreen from './components/ImportKeyScreen.svelte';
+import NostrScreen from './components/NostrScreen.svelte';
+import SettingsScreen from './components/SettingsScreen.svelte';
+import { i18n } from './i18n/i18nStore.js';
+import { currentScreen } from './store/appState.js';
 
-  let screen = $state("auth");
+let screen = $state('auth');
 
-  // URLのハッシュからページを初期化
-  function initializeFromHash() {
-    const hash = window.location.hash.substring(1);
-    if (
-      hash === "/auth" ||
-      hash === "/nostr" ||
-      hash === "/settings" ||
-      hash === "/import"
-    ) {
-      screen = hash.substring(1); // 先頭の'/'を削除
-      currentScreen.set(screen);
-    }
+// URLのハッシュからページを初期化
+function initializeFromHash() {
+  const hash = window.location.hash.substring(1);
+  if (hash === '/auth' || hash === '/nostr' || hash === '/settings' || hash === '/import') {
+    screen = hash.substring(1); // 先頭の'/'を削除
+    currentScreen.set(screen);
   }
+}
 
-  // ハッシュ変更時に画面を更新
-  function handleHashChange() {
+// ハッシュ変更時に画面を更新
+function handleHashChange() {
+  initializeFromHash();
+}
+
+// ストアの値が変更されたときにURLハッシュを更新
+function updateHash(value: string) {
+  // URLハッシュの変更によるループを防ぐ
+  if (window.location.hash !== `#/${value}`) {
+    window.location.hash = `#/${value}`;
+  }
+  screen = value;
+}
+
+// 初期化とイベントリスナー設定
+$effect(() => {
+  if (typeof window !== 'undefined') {
+    // ページ読み込み時に初期化
     initializeFromHash();
+
+    // ハッシュの変更を監視
+    window.addEventListener('hashchange', handleHashChange);
+
+    // コンポーネント破棄時にイベントリスナーを削除
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }
+});
 
-  // ストアの値が変更されたときにURLハッシュを更新
-  function updateHash(value: string) {
-    // URLハッシュの変更によるループを防ぐ
-    if (window.location.hash !== `#/${value}`) {
-      window.location.hash = `#/${value}`;
-    }
-    screen = value;
-  }
-
-  // 初期化とイベントリスナー設定
-  $effect(() => {
-    if (typeof window !== "undefined") {
-      // ページ読み込み時に初期化
-      initializeFromHash();
-
-      // ハッシュの変更を監視
-      window.addEventListener("hashchange", handleHashChange);
-
-      // コンポーネント破棄時にイベントリスナーを削除
-      return () => {
-        window.removeEventListener("hashchange", handleHashChange);
-      };
-    }
-  });
-
-  // ストアの監視
-  currentScreen.subscribe(updateHash);
+// ストアの監視
+currentScreen.subscribe(updateHash);
 </script>
 
 <div class="app-container">

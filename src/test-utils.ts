@@ -10,15 +10,15 @@
  */
 export async function registerDummyPasskey(userId: string): Promise<PublicKeyCredential> {
   // Create a dummy credential for testing
-  const dummySignature = new Uint8Array(64)
+  const dummySignature = new Uint8Array(64);
   // Fill with some non-zero values for testing
   for (let i = 0; i < dummySignature.length; i++) {
-    dummySignature[i] = (i + 1) % 256
+    dummySignature[i] = (i + 1) % 256;
   }
 
-  const dummyId = new Uint8Array(32)
+  const dummyId = new Uint8Array(32);
   for (let i = 0; i < dummyId.length; i++) {
-    dummyId[i] = (i + 1) % 256
+    dummyId[i] = (i + 1) % 256;
   }
 
   const credential = {
@@ -35,7 +35,7 @@ export async function registerDummyPasskey(userId: string): Promise<PublicKeyCre
       getPublicKeyAlgorithm: () => -7,
       getTransports: () => ['internal'],
     },
-  } as unknown as PublicKeyCredential
+  } as unknown as PublicKeyCredential;
 
-  return credential
-} 
+  return credential;
+}

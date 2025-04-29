@@ -1,171 +1,166 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
-  import { PWKManager } from "../../../../src/nosskey.js";
-  import type { NostrEvent, PWKBlob } from "../../../../src/types.js";
-  import { relayService } from "../store/relayStore.js";
-  import { i18n } from "../i18n/i18nStore.js";
-  import * as appState from "../store/appState.js";
+import { onDestroy, onMount } from 'svelte';
+import { PWKManager } from '../../../../src/nosskey.js';
+import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
+import { i18n } from '../i18n/i18nStore.js';
+import * as appState from '../store/appState.js';
+import { relayService } from '../store/relayStore.js';
 
-  // 状態変数
-  let displayName = $state("");
-  let name = $state("");
-  let about = $state("");
-  let website = $state("");
-  let picture = $state("");
+// 状態変数
+let displayName = $state('');
+let name = $state('');
+let about = $state('');
+let website = $state('');
+let picture = $state('');
 
-  let isLoading = $state(false);
-  let saveMessage = $state("");
-  let currentPublicKey = $state("");
+let isLoading = $state(false);
+let saveMessage = $state('');
+let currentPublicKey = $state('');
 
-  // PWKManagerのインスタンスを作成
-  const pwkManager = new PWKManager();
+// PWKManagerのインスタンスを作成
+const pwkManager = new PWKManager();
 
-  // publicKeyストアを監視
-  appState.publicKey.subscribe((value) => {
-    if (value) {
-      currentPublicKey = value;
-      loadProfile();
-    }
-  });
+// publicKeyストアを監視
+appState.publicKey.subscribe((value) => {
+  if (value) {
+    currentPublicKey = value;
+    loadProfile();
+  }
+});
 
-  // プロフィールデータを読み込み
-  async function loadProfile() {
-    if (!currentPublicKey) {
-      return;
-    }
+// プロフィールデータを読み込み
+async function loadProfile() {
+  if (!currentPublicKey) {
+    return;
+  }
 
-    isLoading = true;
-    saveMessage = "";
+  isLoading = true;
+  saveMessage = '';
 
-    try {
-      // リレーからkind:0（メタデータ）のイベントを取得する
-      // まず既存のkind:0のイベントを検索
-      const req = relayService.queryEvents([
-        {
-          kinds: [0],
-          authors: [currentPublicKey],
-          limit: 1,
-        },
-      ]);
+  try {
+    // リレーからkind:0（メタデータ）のイベントを取得する
+    // まず既存のkind:0のイベントを検索
+    const req = relayService.queryEvents([
+      {
+        kinds: [0],
+        authors: [currentPublicKey],
+        limit: 1,
+      },
+    ]);
 
-      const results: Array<{ from: string; event: NostrEvent }> = [];
+    const results: Array<{ from: string; event: NostrEvent }> = [];
 
-      // イベント取得のサブスクリプション
-      const subscription = req.subscribe({
-        next: (packet) => {
-          if (packet && packet.event) {
-            results.push(packet);
-          }
-        },
-        complete: () => {
-          // 最新のイベントを処理
-          if (results.length > 0) {
-            // 最新のイベントからメタデータを取得（作成日時の降順でソート）
-            const latestEvent = results
-              .map((r) => r.event)
-              .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
+    // イベント取得のサブスクリプション
+    const subscription = req.subscribe({
+      next: (packet) => {
+        if (packet?.event) {
+          results.push(packet);
+        }
+      },
+      complete: () => {
+        // 最新のイベントを処理
+        if (results.length > 0) {
+          // 最新のイベントからメタデータを取得（作成日時の降順でソート）
+          const latestEvent = results
+            .map((r) => r.event)
+            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
 
-            if (latestEvent && latestEvent.content) {
-              try {
-                // contentはJSONオブジェクト
-                const metadata = JSON.parse(latestEvent.content);
-                displayName =
-                  metadata.display_name || metadata.displayName || "";
-                name = metadata.name || "";
-                about = metadata.about || "";
-                website = metadata.website || "";
-                picture = metadata.picture || "";
-              } catch (e) {
-                console.error("メタデータのパースに失敗:", e);
-              }
+          if (latestEvent?.content) {
+            try {
+              // contentはJSONオブジェクト
+              const metadata = JSON.parse(latestEvent.content);
+              displayName = metadata.display_name || metadata.displayName || '';
+              name = metadata.name || '';
+              about = metadata.about || '';
+              website = metadata.website || '';
+              picture = metadata.picture || '';
+            } catch (e) {
+              console.error('メタデータのパースに失敗:', e);
             }
           }
+        }
 
-          isLoading = false;
-        },
-        error: (err) => {
-          console.error("プロフィール取得エラー:", err);
-          isLoading = false;
-        },
-      });
-
-      // クエリの実行
-      setTimeout(() => {
-        subscription.unsubscribe();
         isLoading = false;
-      }, 5000); // 5秒後にタイムアウト
-    } catch (error) {
-      console.error("プロフィール取得エラー:", error);
+      },
+      error: (err) => {
+        console.error('プロフィール取得エラー:', err);
+        isLoading = false;
+      },
+    });
+
+    // クエリの実行
+    setTimeout(() => {
+      subscription.unsubscribe();
       isLoading = false;
-    }
+    }, 5000); // 5秒後にタイムアウト
+  } catch (error) {
+    console.error('プロフィール取得エラー:', error);
+    isLoading = false;
   }
+}
 
-  // プロフィールを保存
-  async function saveProfile() {
-    isLoading = true;
-    saveMessage = "";
+// プロフィールを保存
+async function saveProfile() {
+  isLoading = true;
+  saveMessage = '';
 
-    try {
-      // サブスクライブしている値を取得
-      let credValue: Uint8Array | null = null;
-      let pwkValue: PWKBlob | null = null;
+  try {
+    // サブスクライブしている値を取得
+    let credValue: Uint8Array | null = null;
+    let pwkValue: PWKBlob | null = null;
 
-      // 一時的なサブスクリプションを作成して値を取得
-      const unsubCred = appState.credentialId.subscribe((value) => {
-        credValue = value;
-      });
-      const unsubPwk = appState.pwkBlob.subscribe((value) => {
-        pwkValue = value;
-      });
+    // 一時的なサブスクリプションを作成して値を取得
+    const unsubCred = appState.credentialId.subscribe((value) => {
+      credValue = value;
+    });
+    const unsubPwk = appState.pwkBlob.subscribe((value) => {
+      pwkValue = value;
+    });
 
-      // サブスクリプションを解除
-      unsubCred();
-      unsubPwk();
+    // サブスクリプションを解除
+    unsubCred();
+    unsubPwk();
 
-      if (!currentPublicKey || !pwkValue || !credValue) {
-        throw new Error("認証情報が見つかりません");
-      }
-
-      // メタデータオブジェクトの作成
-      const metadata = {
-        name: name,
-        display_name: displayName,
-        about: about,
-        website: website,
-        picture: picture,
-      };
-
-      // メタデータイベントの作成 (kind:0)
-      const event: NostrEvent = {
-        kind: 0,
-        content: JSON.stringify(metadata),
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [],
-      };
-
-      // イベントに署名
-      const signedEvent = await pwkManager.signEvent(
-        event,
-        pwkValue,
-        credValue,
-      );
-
-      // 署名したイベントをリレーに送信
-      await relayService.publishEvent(signedEvent);
-
-      saveMessage = $i18n.t.nostr.profile.saved;
-
-      // 3秒後にメッセージをクリア
-      setTimeout(() => {
-        saveMessage = "";
-      }, 3000);
-    } catch (error) {
-      console.error("プロフィール保存エラー:", error);
-      saveMessage = `エラー: ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
+    if (!currentPublicKey || !pwkValue || !credValue) {
+      throw new Error('認証情報が見つかりません');
     }
+
+    // メタデータオブジェクトの作成
+    const metadata = {
+      name: name,
+      display_name: displayName,
+      about: about,
+      website: website,
+      picture: picture,
+    };
+
+    // メタデータイベントの作成 (kind:0)
+    const event: NostrEvent = {
+      kind: 0,
+      content: JSON.stringify(metadata),
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [],
+    };
+
+    // イベントに署名
+    const signedEvent = await pwkManager.signEvent(event, pwkValue, credValue);
+
+    // 署名したイベントをリレーに送信
+    await relayService.publishEvent(signedEvent);
+
+    saveMessage = $i18n.t.nostr.profile.saved;
+
+    // 3秒後にメッセージをクリア
+    setTimeout(() => {
+      saveMessage = '';
+    }, 3000);
+  } catch (error) {
+    console.error('プロフィール保存エラー:', error);
+    saveMessage = `エラー: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
   }
+}
 </script>
 
 <div class="profile-editor">

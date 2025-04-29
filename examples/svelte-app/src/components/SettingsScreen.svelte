@@ -1,124 +1,117 @@
 <script lang="ts">
-  import {
-    resetState,
-    currentScreen,
-    defaultRelays,
-    cacheSecrets,
-  } from "../store/appState.js";
-  import { activeRelays } from "../store/relayStore.js";
-  import { i18n, changeLanguage } from "../i18n/i18nStore.js";
-  import type { Language } from "../i18n/translations.js";
+import { changeLanguage, i18n } from '../i18n/i18nStore.js';
+import type { Language } from '../i18n/translations.js';
+import { cacheSecrets, currentScreen, defaultRelays, resetState } from '../store/appState.js';
+import { activeRelays } from '../store/relayStore.js';
 
-  // 状態変数
-  let clearResult = $state("");
-  let newRelay = $state("");
-  let relayMessage = $state("");
-  let relays = $state<string[]>([]);
-  let languageMessage = $state("");
-  let cacheSettingMessage = $state("");
-  let isCaching = $state(true);
+// 状態変数
+let clearResult = $state('');
+let newRelay = $state('');
+let relayMessage = $state('');
+let relays = $state<string[]>([]);
+const languageMessage = $state('');
+let cacheSettingMessage = $state('');
+let isCaching = $state(true);
 
-  // ストアを監視して更新
-  activeRelays.subscribe((value) => {
-    relays = value;
-  });
+// ストアを監視して更新
+activeRelays.subscribe((value) => {
+  relays = value;
+});
 
-  cacheSecrets.subscribe((value) => {
-    isCaching = value;
-  });
+cacheSecrets.subscribe((value) => {
+  isCaching = value;
+});
 
-  // リレーを追加する関数
-  function addRelay() {
-    if (!newRelay) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.enterUrl;
-      return;
-    }
+// リレーを追加する関数
+function addRelay() {
+  if (!newRelay) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.enterUrl;
+    return;
+  }
 
-    // 簡易的なバリデーション
-    if (!newRelay.startsWith("wss://")) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.startWithWss;
-      return;
-    }
+  // 簡易的なバリデーション
+  if (!newRelay.startsWith('wss://')) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.startWithWss;
+    return;
+  }
 
-    // すでに存在するかチェック
-    if (relays.includes(newRelay)) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.alreadyExists;
-      return;
-    }
+  // すでに存在するかチェック
+  if (relays.includes(newRelay)) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.alreadyExists;
+    return;
+  }
 
-    // リレーを追加（activeRelaysストアを更新）
-    activeRelays.update((currentRelays) => [...currentRelays, newRelay]);
+  // リレーを追加（activeRelaysストアを更新）
+  activeRelays.update((currentRelays) => [...currentRelays, newRelay]);
 
-    // 入力フィールドをクリア
-    newRelay = "";
-    relayMessage = $i18n.t.settings.relayManagement.messages.added;
+  // 入力フィールドをクリア
+  newRelay = '';
+  relayMessage = $i18n.t.settings.relayManagement.messages.added;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// リレーを削除する関数
+function removeRelay(relay: string) {
+  // activeRelaysストアを更新
+  activeRelays.update((currentRelays) => currentRelays.filter((r) => r !== relay));
+
+  relayMessage = $i18n.t.settings.relayManagement.messages.deleted;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// リレーをデフォルトにリセットする関数
+function resetRelays() {
+  // デフォルト値にリセット
+  activeRelays.set([...defaultRelays]);
+
+  relayMessage = $i18n.t.settings.relayManagement.messages.reset;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// キャッシュ設定を更新する関数
+function updateCacheSetting(value: boolean) {
+  cacheSecrets.set(value);
+  cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
+}
+
+// ローカルストレージをクリアする関数
+function clearLocalStorage() {
+  try {
+    // 保存されたキーを削除
+    localStorage.removeItem('nosskey_credential_ids');
+    localStorage.removeItem('nosskey_pwk_blob');
+
+    // メッセージを表示
+    clearResult = $i18n.t.settings.localStorage.cleared;
+
+    // アプリケーションの状態をリセット
+    resetState();
 
     // 3秒後にメッセージをクリア
     setTimeout(() => {
-      relayMessage = "";
+      clearResult = '';
+      // 認証画面に戻る
+      currentScreen.set('auth');
     }, 3000);
+  } catch (error) {
+    clearResult = `エラー: ${error instanceof Error ? error.message : String(error)}`;
   }
-
-  // リレーを削除する関数
-  function removeRelay(relay: string) {
-    // activeRelaysストアを更新
-    activeRelays.update((currentRelays) =>
-      currentRelays.filter((r) => r !== relay),
-    );
-
-    relayMessage = $i18n.t.settings.relayManagement.messages.deleted;
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      relayMessage = "";
-    }, 3000);
-  }
-
-  // リレーをデフォルトにリセットする関数
-  function resetRelays() {
-    // デフォルト値にリセット
-    activeRelays.set([...defaultRelays]);
-
-    relayMessage = $i18n.t.settings.relayManagement.messages.reset;
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      relayMessage = "";
-    }, 3000);
-  }
-
-  // キャッシュ設定を更新する関数
-  function updateCacheSetting(value: boolean) {
-    cacheSecrets.set(value);
-    cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
-    setTimeout(() => {
-      cacheSettingMessage = "";
-    }, 3000);
-  }
-
-  // ローカルストレージをクリアする関数
-  function clearLocalStorage() {
-    try {
-      // 保存されたキーを削除
-      localStorage.removeItem("nosskey_credential_ids");
-      localStorage.removeItem("nosskey_pwk_blob");
-
-      // メッセージを表示
-      clearResult = $i18n.t.settings.localStorage.cleared;
-
-      // アプリケーションの状態をリセット
-      resetState();
-
-      // 3秒後にメッセージをクリア
-      setTimeout(() => {
-        clearResult = "";
-        // 認証画面に戻る
-        currentScreen.set("auth");
-      }, 3000);
-    } catch (error) {
-      clearResult = `エラー: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  }
+}
 </script>
 
 <div class="settings-container">

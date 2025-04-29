@@ -33,9 +33,9 @@ function loadCacheSecretsSetting() {
 // 初期化
 try {
   cacheSecrets.set(loadCacheSecretsSetting());
-  
+
   // 設定が変更されたら保存
-  cacheSecrets.subscribe(value => {
+  cacheSecrets.subscribe((value) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('nosskey_cache_secrets', String(value));
     }

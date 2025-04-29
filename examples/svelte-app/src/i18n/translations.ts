@@ -208,7 +208,7 @@ export const ja: TranslationData = {
       reset: 'デフォルトに戻す',
       messages: {
         enterUrl: 'リレーURLを入力してください',
-        startWithWss: 'リレーURLは \'wss://\' で始める必要があります',
+        startWithWss: "リレーURLは 'wss://' で始める必要があります",
         alreadyExists: 'このリレーは既に追加されています',
         added: 'リレーを追加しました',
         deleted: 'リレーを削除しました',
@@ -217,13 +217,15 @@ export const ja: TranslationData = {
     },
     localStorage: {
       title: 'ローカルストレージ',
-      description: '保存された認証情報をクリアします。この操作を行うと再度ログインが必要になります。',
+      description:
+        '保存された認証情報をクリアします。この操作を行うと再度ログインが必要になります。',
       clear: '認証情報をクリア',
       cleared: 'ローカルストレージをクリアしました',
     },
     cacheSettings: {
       title: 'シークレットキャッシュ設定',
-      description: '認証情報（秘密鍵など）をローカルストレージに保存するかどうかを設定します。有効にすると次回起動時に再認証をスキップできます。',
+      description:
+        '認証情報（秘密鍵など）をローカルストレージに保存するかどうかを設定します。有効にすると次回起動時に再認証をスキップできます。',
       enabled: '認証情報をキャッシュする',
       disabled: '認証情報をキャッシュしない',
       saved: '設定を保存しました',
@@ -330,7 +332,7 @@ export const en: TranslationData = {
       reset: 'Reset to Default',
       messages: {
         enterUrl: 'Please enter a relay URL',
-        startWithWss: 'Relay URL must start with \'wss://\'',
+        startWithWss: "Relay URL must start with 'wss://'",
         alreadyExists: 'This relay is already added',
         added: 'Relay added successfully',
         deleted: 'Relay deleted',
@@ -339,13 +341,15 @@ export const en: TranslationData = {
     },
     localStorage: {
       title: 'Local Storage',
-      description: 'Clear stored authentication information. You will need to login again after this operation.',
+      description:
+        'Clear stored authentication information. You will need to login again after this operation.',
       clear: 'Clear Auth Data',
       cleared: 'Local storage cleared',
     },
     cacheSettings: {
       title: 'Secret Caching Settings',
-      description: 'Configure whether authentication data (including secret keys) should be stored in local storage. When enabled, you can skip re-authentication on startup.',
+      description:
+        'Configure whether authentication data (including secret keys) should be stored in local storage. When enabled, you can skip re-authentication on startup.',
       enabled: 'Cache authentication data',
       disabled: 'Do not cache authentication data',
       saved: 'Settings saved',

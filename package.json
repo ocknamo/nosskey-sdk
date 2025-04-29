@@ -32,7 +32,13 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format": "biome format --write ./src ./examples && biome check --write ./src ./examples",
+    "format:check": "biome check ./src",
+    "lint": "biome check ./src",
+    "lint:fix": "biome check --write ./src",
+    "fix": "npm run lint:fix && npm run format",
+    "fix:unsafe": "biome check --fix --unsafe"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { currentScreen, resetState } from "../store/appState.js";
-  import { i18n } from "../i18n/i18nStore.js";
+import { i18n } from '../i18n/i18nStore.js';
+import { currentScreen, resetState } from '../store/appState.js';
 
-  // 現在の画面
-  let screen = $state("auth");
+// 現在の画面
+let screen = $state('auth');
 
-  // ストアを監視して現在の画面を更新
-  currentScreen.subscribe((value) => {
-    screen = value;
-  });
+// ストアを監視して現在の画面を更新
+currentScreen.subscribe((value) => {
+  screen = value;
+});
 
-  // 画面遷移処理
-  function navigateTo(target: string) {
-    currentScreen.set(target);
-  }
+// 画面遷移処理
+function navigateTo(target: string) {
+  currentScreen.set(target);
+}
 
-  // ログアウト処理
-  function logout() {
-    resetState();
-  }
+// ログアウト処理
+function logout() {
+  resetState();
+}
 </script>
 
 <footer class="footer-menu">

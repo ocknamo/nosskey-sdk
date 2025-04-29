@@ -1,6 +1,6 @@
-import { writable, derived } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import type { I18nStore, Language, TranslationData } from './translations.js';
-import { ja, en } from './translations.js';
+import { en, ja } from './translations.js';
 
 // デフォルト言語（日本語）と翻訳データ
 const DEFAULT_LANGUAGE: Language = 'ja';
@@ -15,7 +15,7 @@ const translations: Record<Language, TranslationData> = {
 export const currentLanguage = writable<Language>(loadLanguage());
 
 // 言語変更時にローカルストレージに保存
-currentLanguage.subscribe(lang => {
+currentLanguage.subscribe((lang) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('nosskey_language', lang);
   }
@@ -31,13 +31,10 @@ function loadLanguage(): Language {
 
     // ブラウザの言語設定に基づいてデフォルト言語を決定（英語・日本語のみサポート）
     const browserLang = navigator.language.split('-')[0];
-    if (browserLang === 'ja') {
-      return 'ja';
-    } else if (browserLang === 'en') {
-      return 'en';
-    }
+
+    return browserLang === 'ja' ? 'ja' : 'en';
   }
-  
+
   return DEFAULT_LANGUAGE;
 }
 
@@ -49,7 +46,7 @@ export function changeLanguage(lang: Language): void {
 // 現在の言語に基づいた翻訳データを提供するストア
 export const i18n = derived<typeof currentLanguage, I18nStore>(
   currentLanguage,
-  $currentLanguage => ({
+  ($currentLanguage) => ({
     currentLanguage: $currentLanguage,
     t: translations[$currentLanguage],
   })

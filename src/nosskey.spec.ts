@@ -308,7 +308,9 @@ describe('PWKManager', () => {
       };
 
       // 特別なモックを設定
-      vi.spyOn(navigator.credentials, 'get').mockResolvedValueOnce(mockCredential as any);
+      vi.spyOn(navigator.credentials, 'get').mockResolvedValueOnce(
+        mockCredential as unknown as Credential | null
+      );
 
       const secretKey = await pwkManager.exportNostrKey(mockPwkBlob, mockCredentialId);
 
