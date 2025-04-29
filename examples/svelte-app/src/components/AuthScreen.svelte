@@ -59,8 +59,8 @@ async function initialize() {
         timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
       });
 
-      // PRF拡張対応確認をスキップしてNostr画面に遷移
-      appState.currentScreen.set('nostr');
+      // PRF拡張対応確認をスキップして認証済み状態に
+      appState.authenticated.set(true);
       return; // 初期化処理を終了
     }
   } catch (error) {
@@ -124,8 +124,8 @@ async function createNew() {
     };
     localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
 
-    // Nostr画面に遷移
-    appState.currentScreen.set('nostr');
+    // アカウント画面に遷移
+    appState.currentScreen.set('account');
   } catch (error) {
     console.error('パスキー作成エラー:', error);
     errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -159,8 +159,8 @@ async function login(credentialIdHex: string) {
     };
     localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
 
-    // Nostr画面に遷移
-    appState.currentScreen.set('nostr');
+    // アカウント画面に遷移
+    appState.currentScreen.set('account');
   } catch (error) {
     console.error('ログインエラー:', error);
     errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;

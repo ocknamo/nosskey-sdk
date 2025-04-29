@@ -69,22 +69,17 @@ async function signEvent() {
 
   try {
     // サブスクライブしている値を取得
-    let credValue: Uint8Array | null = null;
     let pwkValue: PWKBlob | null = null;
 
     // 一時的なサブスクリプションを作成して値を取得
-    const unsubCred = appState.credentialId.subscribe((value) => {
-      credValue = value;
-    });
     const unsubPwk = appState.pwkBlob.subscribe((value) => {
       pwkValue = value;
     });
 
     // サブスクリプションを解除
-    unsubCred();
     unsubPwk();
 
-    if (!publicKeyValue || !pwkValue || !credValue) {
+    if (!publicKeyValue || !pwkValue) {
       throw new Error('認証情報が見つかりません');
     }
 
@@ -96,8 +91,8 @@ async function signEvent() {
       tags: [],
     };
 
-    // イベントに署名
-    signedEvent = await pwkManager.signEvent(event, pwkValue, credValue);
+    // イベントに署名（credentialIdはpwkValueから取得されるため不要）
+    signedEvent = await pwkManager.signEvent(event, pwkValue);
 
     if (signedEvent.id) {
       publishStatus = `署名完了: ${signedEvent.id.slice(0, 8)}...`;

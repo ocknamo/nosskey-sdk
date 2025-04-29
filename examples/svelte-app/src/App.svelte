@@ -1,18 +1,18 @@
 <script lang="ts">
-import AuthScreen from './components/AuthScreen.svelte';
+import AccountScreen from './components/AccountScreen.svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import ImportKeyScreen from './components/ImportKeyScreen.svelte';
-import NostrScreen from './components/NostrScreen.svelte';
 import SettingsScreen from './components/SettingsScreen.svelte';
+import TimelineScreen from './components/TimelineScreen.svelte';
 import { i18n } from './i18n/i18nStore.js';
 import { currentScreen } from './store/appState.js';
 
-let screen = $state('auth');
+let screen = $state('account');
 
 // URLのハッシュからページを初期化
 function initializeFromHash() {
   const hash = window.location.hash.substring(1);
-  if (hash === '/auth' || hash === '/nostr' || hash === '/settings' || hash === '/import') {
+  if (hash === '/account' || hash === '/timeline' || hash === '/settings' || hash === '/import') {
     screen = hash.substring(1); // 先頭の'/'を削除
     currentScreen.set(screen);
   }
@@ -53,10 +53,10 @@ currentScreen.subscribe(updateHash);
 </script>
 
 <div class="app-container">
-  {#if screen === "auth"}
-    <AuthScreen />
-  {:else if screen === "nostr"}
-    <NostrScreen />
+  {#if screen === "account"}
+    <AccountScreen />
+  {:else if screen === "timeline"}
+    <TimelineScreen />
   {:else if screen === "settings"}
     <SettingsScreen />
   {:else if screen === "import"}

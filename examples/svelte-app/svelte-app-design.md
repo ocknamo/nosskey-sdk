@@ -9,11 +9,11 @@
 ### 2.1 技術スタック
 
 - **フロントエンド**: Svelte v5
-- **構成**: シンプルなSPA（2画面切り替え方式）
+- **構成**: シンプルなSPA（3画面切り替え方式）
 - **ビルドツール**: Vite
 - **Nostr関連**: rx-nostr
 - **鍵管理**: Nosskey SDK (`directPrfToNostrKey` メソッド)
-- **スタイリング**: カスタムCSS
+- **スタイリング**: カスタムCSS + SVGアイコン
 
 ### 2.2 プロジェクト構造
 
@@ -22,12 +22,23 @@ examples/svelte-app/
 ├── public/
 ├── src/
 │   ├── components/
-│   │   ├── AuthScreen.svelte   # 認証画面
-│   │   └── NostrScreen.svelte  # Nostrメッセージ投稿画面
+│   │   ├── AccountScreen.svelte   # アカウント画面
+│   │   ├── AuthScreen.svelte      # 認証コンポーネント
+│   │   ├── FooterMenu.svelte      # フッターナビゲーション
+│   │   ├── PostForm.svelte        # 投稿フォーム
+│   │   ├── ProfileEditor.svelte   # プロフィール編集
+│   │   ├── RelayStatus.svelte     # リレー接続状態
+│   │   ├── SettingsScreen.svelte  # 設定画面
+│   │   ├── Timeline.svelte        # タイムライン表示
+│   │   └── TimelineScreen.svelte  # タイムライン画面
+│   ├── assets/
+│   │   ├── account-icon.svg       # アカウントアイコン
+│   │   ├── home-icon.svg          # タイムラインアイコン 
+│   │   └── setting-icon.svg       # 設定アイコン
 │   ├── store/
-│   │   └── appState.ts         # アプリケーション状態管理
-│   ├── App.svelte              # メインアプリコンポーネント
-│   └── main.ts                 # エントリーポイント
+│   │   └── appState.ts            # アプリケーション状態管理
+│   ├── App.svelte                 # メインアプリコンポーネント
+│   └── main.ts                    # エントリーポイント
 ├── index.html
 ├── package.json
 └── vite.config.ts
@@ -40,17 +51,27 @@ examples/svelte-app/
 #### appState.ts
 アプリケーションの状態管理を行うストア：
 - `defaultRelays` - デフォルトで使用するリレーの配列
-- `currentScreen` - 現在の画面を保持するwritableストア（'auth'または'nostr'）
+- `currentScreen` - 現在の画面を保持するwritableストア（'account'、'timeline'または'settings'）
 - `authenticated` - 認証状態を管理
 - `credentialId` - パスキーの認証情報ID
 - `pwkBlob` - パスキー派生のNostr鍵情報
 - `publicKey` - Nostr公開鍵
 - `resetState()` - 全ての状態をリセットする関数
+- `cacheSecrets` - 秘密鍵情報をキャッシュするかどうか
+- `cacheTimeout` - キャッシュのタイムアウト時間（秒）
 
 ### 3.2 コンポーネント
 
+#### AccountScreen.svelte
+アカウント情報と認証を担当するコンポーネント：
+- 認証状態による表示切り替え
+  - 未認証時はAuthScreenを表示
+  - 認証済み時はアカウント情報（プロフィール、リレー状態）を表示
+- ローカルストレージと認証状態の整合性チェック
+- 状態変化の監視とエラーハンドリング
+
 #### AuthScreen.svelte
-認証画面を担当するコンポーネント：
+認証機能を担当するコンポーネント：
 - PRF拡張対応確認ボタン
   - ユーザーアクションでPRF拡張対応状況を確認
 - パスキー新規作成機能
@@ -60,62 +81,157 @@ examples/svelte-app/
 - ブラウザ対応状況表示
 - エラーハンドリング
 
-#### NostrScreen.svelte
-Nostrメッセージ作成・投稿画面を担当するコンポーネント：
-- ユーザー情報（公開鍵）表示
+#### TimelineScreen.svelte
+タイムライン表示と投稿機能を担当するコンポーネント：
+- 認証状態による表示切り替え
+  - 未認証時は認証要求メッセージを表示
+  - 認証済み時はタイムラインと投稿フォームを表示
+- PostFormとTimelineコンポーネントを統合
+- ユーザーインタラクション管理
+
+#### PostForm.svelte
+Nostrメッセージ作成・投稿機能を担当するコンポーネント：
 - メッセージ入力フォーム（常にkind=1のテキストノート）
 - イベント署名機能
   - パスキーを使用してNostrイベントに署名
 - デフォルトリレーへのメッセージ送信機能
-- ログアウト機能
+- 投稿状態とエラーハンドリング
+
+#### RelayStatus.svelte
+リレー接続状態と公開鍵を表示するコンポーネント：
+- 公開鍵情報の表示（短縮形式とnpub形式）
+- リレー接続状態の視覚的な表示
+- ステータスに応じた色分け表示
+
+#### FooterMenu.svelte
+アプリケーションナビゲーションを担当するコンポーネント：
+- SVGアイコンを使用したナビゲーションタブ
+  - アカウント画面（account-icon.svg）
+  - タイムライン画面（home-icon.svg）
+  - 設定画面（setting-icon.svg）
+- 現在の画面に応じたアクティブ状態表示
+- 画面遷移機能
 
 #### App.svelte
 アプリケーションのメインコンポーネント：
-- 状態に応じた画面切り替え（AuthScreen ⇔ NostrScreen）
+- URLハッシュに基づく画面初期化
+- 状態に応じた画面切り替え（AccountScreen ⇔ TimelineScreen ⇔ SettingsScreen）
 - 全体のスタイル定義
 
 ## 4. データフロー
 
-1. アプリ起動時に初期化（`initialize()`）
-2. ユーザーがPRF拡張対応確認ボタンをクリック（`checkPrfSupport()`）
+1. アプリ起動時に初期化
+   - ローカルストレージのチェック
+   - 認証状態と保存データの整合性検証
+2. ユーザーがPRF拡張対応確認ボタンをクリック
 3. PRF拡張が対応している場合、パスキー作成・ログインボタンを表示
 4. パスキー登録時：
-   - 新規パスキー作成（`createNew()`）
-   - PRF値から直接シークレットキー導出（`directPrfToNostrKey()`）
+   - 新規パスキー作成
+   - PRF値から直接シークレットキー導出
    - 結果をストアとlocalStorageに保存
-   - Nostr画面へ自動遷移
-3. 既存パスキーでログイン時：
-   - 保存されたcredentialIdを使用して認証（`login()`）
+   - アカウント画面へ自動遷移
+5. 既存パスキーでログイン時：
+   - 保存されたcredentialIdを使用して認証
    - PRF値からNostr鍵を再生成
-   - Nostr画面へ自動遷移
-4. Nostrメッセージ投稿時：
-   - イベント作成と署名（`signEvent()`）
-   - リレーへの送信（`publishEvent()`）
-5. ログアウト時：
-   - 状態をリセット（`resetState()`）
-   - 認証画面へ遷移
+   - アカウント画面へ自動遷移
+6. Nostrメッセージ投稿時：
+   - イベント作成と署名（pwkBlobから情報取得）
+   - リレーへの送信
+7. ログアウト時：
+   - 状態をリセット
+   - アカウント画面へ遷移（未認証状態）
 
-## 5. 技術的考慮事項
+## 5. ユーザー状態と状態遷移
 
-### 5.1 WebAuthn/Passkey対応
+アプリケーションのユーザー状態は主に認証状態（authenticated）とPWKBlobの有無によって管理されています。
+
+### 5.1 状態モデル
+
+アプリケーションでは以下の主要な状態が存在します：
+
+1. **未認証状態（パスキーなし）**: 
+   - `authenticated = false`, `pwkBlob = null`
+   - 初回起動時や認証情報クリア後の状態
+   - AccountScreenはAuthScreenコンポーネントを表示
+
+2. **認証済み状態（PWKBlobあり）**:
+   - `authenticated = true`, `pwkBlob ≠ null`
+   - パスキー認証後またはlocalStorageから復元後
+   - AccountScreenはプロフィールとリレー状態を表示
+
+### 5.2 状態の同期メカニズム
+
+AccountScreenコンポーネントは、マウント時にlocalStorageとの整合性チェックを実施します：
+
+```javascript
+// 保存されているPWKBlobがあるかどうかをチェック
+const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
+
+// ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
+if (savedPwkBlob && !$authenticated) {
+  authenticated.set(true);
+}
+
+// 逆に認証情報がないのに認証状態がtrueの場合も修正
+if (!savedPwkBlob && $authenticated) {
+  authenticated.set(false);
+}
+```
+
+これにより、authenticatedフラグとPWKBlobの存在が常に同期された状態を保ちます。
+
+### 5.3 状態遷移のフローダイアグラム
+
+```mermaid
+graph TD
+    A[初期状態: 未認証] -->|パスキー作成/インポート| B[認証済み状態]
+    B -->|署名操作等| B
+    B -->|ログアウト/認証情報クリア| A
+    
+    %% 再訪問・復元フロー
+    C[アプリ起動] -->|localStorage確認| D{PWKBlobあり?}
+    D -->|Yes| B
+    D -->|No| A
+```
+
+### 5.4 キャッシュと認証
+
+秘密鍵のキャッシュはSDK内部で管理され、以下の設定で制御されます：
+
+- `cacheSecrets`: キャッシュを有効/無効にする設定
+- `cacheTimeout`: キャッシュの有効期間（秒）
+
+これらの設定はSettingsScreenで変更可能で、変更はSDKに反映されます。
+
+## 6. 技術的考慮事項
+
+### 6.1 WebAuthn/Passkey対応
 
 - `localhost`または`HTTPS`環境での実行が必要
 - Chrome または Safari最新版での動作を想定
 - PRF拡張をサポートする認証器（YubiKey等）が必要
 
-### 5.2 PRF直接使用の利点
+### 6.2 PRF直接使用の利点
 
 - 鍵の暗号化/復号が不要でシンプル
 - 毎回同じパスキーを使えば同じ公開鍵が生成される
 - ユーザー体験の向上（認証と署名が一体化）
 
-### 5.3 制限事項
+### 6.3 制限事項
 
 - WebAuthn PRF拡張は比較的新しい機能で、全てのブラウザや認証器で対応していない
 - デモ実装のため、リレー接続はシミュレーションのみ
 - エラーハンドリングが基本的な実装にとどまっている
 
-## 6. 開発・実行方法
+### 6.4 UI/UXの設計
+
+- 3つの主要画面（アカウント、タイムライン、設定）によるシンプルなナビゲーション
+- フッターメニューによる直感的な画面切り替え
+- SVGアイコンを使用したモダンなデザイン
+- 認証状態に応じた適切な画面表示の制御
+- エラー状態の視覚的フィードバック
+
+## 7. 開発・実行方法
 
 ```bash
 # リポジトリのクローン

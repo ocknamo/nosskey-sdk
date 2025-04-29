@@ -106,22 +106,17 @@ async function saveProfile() {
 
   try {
     // サブスクライブしている値を取得
-    let credValue: Uint8Array | null = null;
     let pwkValue: PWKBlob | null = null;
 
     // 一時的なサブスクリプションを作成して値を取得
-    const unsubCred = appState.credentialId.subscribe((value) => {
-      credValue = value;
-    });
     const unsubPwk = appState.pwkBlob.subscribe((value) => {
       pwkValue = value;
     });
 
     // サブスクリプションを解除
-    unsubCred();
     unsubPwk();
 
-    if (!currentPublicKey || !pwkValue || !credValue) {
+    if (!currentPublicKey || !pwkValue) {
       throw new Error('認証情報が見つかりません');
     }
 
@@ -142,8 +137,8 @@ async function saveProfile() {
       tags: [],
     };
 
-    // イベントに署名
-    const signedEvent = await pwkManager.signEvent(event, pwkValue, credValue);
+    // イベントに署名（credentialIdはpwkValueから取得されるため不要）
+    const signedEvent = await pwkManager.signEvent(event, pwkValue);
 
     // 署名したイベントをリレーに送信
     await relayService.publishEvent(signedEvent);

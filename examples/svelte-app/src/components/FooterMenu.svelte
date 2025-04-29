@@ -1,9 +1,12 @@
 <script lang="ts">
+import AccountIcon from '../assets/account-icon.svg';
+import HomeIcon from '../assets/home-icon.svg';
+import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18nStore.js';
 import { currentScreen, resetState } from '../store/appState.js';
 
 // 現在の画面
-let screen = $state('auth');
+let screen = $state('account');
 
 // ストアを監視して現在の画面を更新
 currentScreen.subscribe((value) => {
@@ -19,24 +22,30 @@ function navigateTo(target: string) {
 <footer class="footer-menu">
   <div class="footer-content">
     <button
-      class={screen === "auth" ? "active" : ""}
-      onclick={() => navigateTo("auth")}
+      class={screen === "account" ? "active" : ""}
+      onclick={() => navigateTo("account")}
     >
-      <div class="icon">🔑</div>
-      <span>{$i18n.t.navigation.auth}</span>
+      <div class="icon">
+        <img src={AccountIcon} alt="Account" />
+      </div>
+      <span>{$i18n.t.navigation.account}</span>
     </button>
     <button
-      class={screen === "nostr" ? "active" : ""}
-      onclick={() => navigateTo("nostr")}
+      class={screen === "timeline" ? "active" : ""}
+      onclick={() => navigateTo("timeline")}
     >
-      <div class="icon">📝</div>
-      <span>{$i18n.t.navigation.nostr}</span>
+      <div class="icon">
+        <img src={HomeIcon} alt="Timeline" />
+      </div>
+      <span>{$i18n.t.navigation.timeline}</span>
     </button>
     <button
       class={screen === "settings" ? "active" : ""}
       onclick={() => navigateTo("settings")}
     >
-      <div class="icon">⚙️</div>
+      <div class="icon">
+        <img src={SettingIcon} alt="Settings" />
+      </div>
       <span>{$i18n.t.navigation.settings}</span>
     </button>
   </div>

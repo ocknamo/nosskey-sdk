@@ -120,9 +120,10 @@ export interface TranslationData {
     };
   };
   navigation: {
-    auth: string;
-    nostr: string;
+    account: string;
+    timeline: string;
     settings: string;
+    logout?: string; // 後方互換性のためにオプショナル
   };
 }
 
@@ -243,8 +244,8 @@ export const ja: TranslationData = {
     },
   },
   navigation: {
-    auth: '認証',
-    nostr: '投稿',
+    account: 'アカウント',
+    timeline: 'タイムライン',
     settings: '設定',
   },
 };
@@ -366,8 +367,8 @@ export const en: TranslationData = {
     },
   },
   navigation: {
-    auth: 'Auth',
-    nostr: 'Post',
+    account: 'Account',
+    timeline: 'Timeline',
     settings: 'Settings',
     logout: 'Logout',
   },

@@ -5,7 +5,7 @@ import type { PWKBlob } from '../../../../src/types.js';
 export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
 
 // 画面状態
-export const currentScreen = writable('auth'); // 'auth' または 'nostr' または 'settings'
+export const currentScreen = writable('account'); // 'account' または 'timeline' または 'settings'
 
 // 認証状態
 export const authenticated = writable(false);
@@ -64,7 +64,7 @@ try {
 
 // リセット関数
 export const resetState = () => {
-  currentScreen.set('auth');
+  currentScreen.set('account');
   authenticated.set(false);
   credentialId.set(null);
   pwkBlob.set(null);
