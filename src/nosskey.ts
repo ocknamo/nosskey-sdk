@@ -224,15 +224,9 @@ export class PWKManager implements PWKManagerLike {
       credentialId: bytesToHex(credentialId || responseId), // 指定されたIDかresponseから取得したIDを使用
     };
 
-    // パスキーのcredentialIdを取得
-    // 注：現在の実装では、credentialIdが指定されていない場合でも
-    // 認証に成功したcredentialIdを特定するのは困難なため、
-    // もし将来的に実装するならWebAuthn APIの拡張が必要
-
     // 結果を返却
     return {
       pwkBlob,
-      credentialId: credentialId || responseId, // 認証で使用したcredentialIdを返す
       publicKey,
     };
   }
@@ -284,7 +278,6 @@ export class PWKManager implements PWKManagerLike {
     // 結果を返却
     return {
       pwkBlob,
-      credentialId: credentialId || responseId, // 認証で使用したcredentialIdを返す
       publicKey,
     };
   }

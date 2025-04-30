@@ -97,7 +97,6 @@ export interface SignOptions {
  */
 export interface CreateResult {
   pwkBlob: PWKBlob; // 暗号化された秘密鍵
-  credentialId: Uint8Array; // 生成されたクレデンシャルID
   publicKey: string; // 生成された公開鍵（hex）
 }
 
