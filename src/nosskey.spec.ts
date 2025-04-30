@@ -218,6 +218,7 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -225,7 +226,7 @@ describe('PWKManager', () => {
         tags: [],
       };
 
-      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, {
+      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob, {
         tags: [['t', 'test']],
       });
 
@@ -247,7 +248,7 @@ describe('PWKManager', () => {
         tags: [],
       };
 
-      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      const signedEvent = await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       expect(signedEvent).toHaveProperty('id', 'test-event-id');
       expect(signedEvent).toHaveProperty('sig', 'test-signature');
@@ -277,9 +278,10 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
 
-      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob, mockCredentialId);
+      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob);
 
       // 復号された秘密鍵（モックでは32バイトの66で埋められたもの）
       expect(secretKey).toBe(bytesToHex(new Uint8Array(32).fill(66)));
@@ -312,7 +314,7 @@ describe('PWKManager', () => {
         mockCredential as unknown as Credential | null
       );
 
-      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob, mockCredentialId);
+      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob);
 
       // PRF値自体がシークレットキー（32バイトの42で埋められたもの）
       expect(secretKey).toBe(bytesToHex(testPrfResult));
@@ -356,6 +358,7 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -364,13 +367,13 @@ describe('PWKManager', () => {
       };
 
       // 1回目の署名（PRF認証必要）
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       // navigator.credentials.get の呼び出し回数をリセット
       vi.clearAllMocks();
 
       // 2回目の署名（キャッシュから取得、個別に指定必要）
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, { useCache: true });
 
       // PRF認証が呼ばれていないことを確認
       expect(navigator.credentials.get).not.toHaveBeenCalled();
@@ -386,6 +389,7 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -394,12 +398,12 @@ describe('PWKManager', () => {
       };
 
       // キャッシュを有効にして署名
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, { useCache: true });
 
       vi.clearAllMocks();
 
       // 2回目の署名（キャッシュから取得、明示的に指定が必要）
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId, { useCache: true });
+      await pwkManager.signEvent(mockEvent, mockPwkBlob, { useCache: true });
 
       // PRF認証が呼ばれていないことを確認
       expect(navigator.credentials.get).not.toHaveBeenCalled();
@@ -414,6 +418,7 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -422,7 +427,7 @@ describe('PWKManager', () => {
       };
 
       // キャッシュを利用して署名
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       // 特定の鍵のキャッシュをクリア
       pwkManager.clearCachedKey(mockCredentialId);
@@ -430,7 +435,7 @@ describe('PWKManager', () => {
       vi.clearAllMocks();
 
       // 再度署名（キャッシュがクリアされているため認証が必要）
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       // PRF認証が呼ばれていることを確認
       expect(navigator.credentials.get).toHaveBeenCalled();
@@ -445,6 +450,7 @@ describe('PWKManager', () => {
         iv: bytesToHex(new Uint8Array(12).fill(22)),
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
+        credentialId: bytesToHex(mockCredentialId),
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -453,7 +459,7 @@ describe('PWKManager', () => {
       };
 
       // キャッシュを利用して署名
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       // 全てのキャッシュをクリア
       pwkManager.clearAllCachedKeys();
@@ -461,7 +467,7 @@ describe('PWKManager', () => {
       vi.clearAllMocks();
 
       // 再度署名（キャッシュがクリアされているため認証が必要）
-      await pwkManager.signEvent(mockEvent, mockPwkBlob, mockCredentialId);
+      await pwkManager.signEvent(mockEvent, mockPwkBlob);
 
       // PRF認証が呼ばれていることを確認
       expect(navigator.credentials.get).toHaveBeenCalled();

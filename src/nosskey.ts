@@ -188,7 +188,7 @@ export class PWKManager implements PWKManagerLike {
     const { clearMemory = true } = options;
 
     // PRF秘密を取得
-    const secret = await this.#prfSecret(credentialId);
+    const { secret, id: responseId } = await this.#prfSecret(credentialId);
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(secretKey);
@@ -221,12 +221,8 @@ export class PWKManager implements PWKManagerLike {
       iv: bytesToHex(iv),
       ct: bytesToHex(ciphertext),
       tag: bytesToHex(tag),
+      credentialId: bytesToHex(credentialId || responseId), // 指定されたIDかresponseから取得したIDを使用
     };
-
-    // credentialIdが指定されていれば追加
-    if (credentialId) {
-      pwkBlob.credentialId = bytesToHex(credentialId);
-    }
 
     // パスキーのcredentialIdを取得
     // 注：現在の実装では、credentialIdが指定されていない場合でも
@@ -236,7 +232,7 @@ export class PWKManager implements PWKManagerLike {
     // 結果を返却
     return {
       pwkBlob,
-      credentialId: credentialId || new Uint8Array(0), // undefined対策
+      credentialId: credentialId || responseId, // 認証で使用したcredentialIdを返す
       publicKey,
     };
   }
@@ -263,7 +259,7 @@ export class PWKManager implements PWKManagerLike {
    */
   async directPrfToNostrKey(credentialId?: Uint8Array): Promise<CreateResult> {
     // PRF秘密を取得（これが直接シークレットキーになる）
-    const sk = await this.#prfSecret(credentialId);
+    const { secret: sk, id: responseId } = await this.#prfSecret(credentialId);
 
     // secp256k1の有効範囲チェック
     // 注: 実用上は確率が非常に低いため省略可能
@@ -282,13 +278,13 @@ export class PWKManager implements PWKManagerLike {
     const pwkBlob: PWKBlob = {
       v: 1 as const,
       alg: 'prf-direct' as const,
-      credentialId: bytesToHex(credentialId || new Uint8Array(0)),
+      credentialId: bytesToHex(credentialId || responseId),
     };
 
     // 結果を返却
     return {
       pwkBlob,
-      credentialId: credentialId || new Uint8Array(0), // undefined対策
+      credentialId: credentialId || responseId, // 認証で使用したcredentialIdを返す
       publicKey,
     };
   }
@@ -296,25 +292,18 @@ export class PWKManager implements PWKManagerLike {
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵またはPRF直接使用
-   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
   async signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId?: Uint8Array,
     options: SignOptions = {}
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags, useCache } = options;
 
-    // PWKBlobからcredentialIdを取得（指定がある場合）
-    let usedCredentialId = credentialId;
-
-    // credentialIdが指定されていない場合はPWKBlobから取得を試みる
-    if (!usedCredentialId && pwk.credentialId) {
-      usedCredentialId = hexToBytes(pwk.credentialId);
-    }
+    // PWKBlobからcredentialIdを取得
+    const usedCredentialId = pwk.credentialId ? hexToBytes(pwk.credentialId) : undefined;
 
     // useCache が明示的に指定されていればその値を、そうでなければグローバル設定を使用
     const shouldUseCache = useCache !== undefined ? useCache : this.#cacheOptions.enabled;
@@ -343,7 +332,7 @@ export class PWKManager implements PWKManagerLike {
     // キャッシュがない場合は通常の処理
     if (!sk) {
       // PRF値を取得
-      const prfSecret = await this.#prfSecret(usedCredentialId);
+      const { secret: prfSecret, id: responseId } = await this.#prfSecret(usedCredentialId);
 
       // PWKの種類によって処理を分岐
       if (pwk.alg === 'prf-direct') {
@@ -404,7 +393,7 @@ export class PWKManager implements PWKManagerLike {
     }
 
     // PRF値を取得
-    const prfSecret = await this.#prfSecret(usedCredentialId);
+    const { secret: prfSecret, id: responseId } = await this.#prfSecret(usedCredentialId);
 
     let sk: Uint8Array;
 
@@ -448,8 +437,9 @@ export class PWKManager implements PWKManagerLike {
   /**
    * クレデンシャルIDを使用してPRF秘密を取得
    * @param credentialId 特定のクレデンシャルIDを指定する場合。省略すると、ユーザーが選択したパスキーが使用される
+   * @returns PRF秘密と使用されたcredentialIDを含むオブジェクト
    */
-  async #prfSecret(credentialId?: Uint8Array): Promise<Uint8Array> {
+  async #prfSecret(credentialId?: Uint8Array): Promise<{ secret: Uint8Array; id: Uint8Array }> {
     const allowCredentials = credentialId ? [{ type: 'public-key', id: credentialId }] : [];
 
     const response = await navigator.credentials.get({
@@ -481,7 +471,13 @@ export class PWKManager implements PWKManagerLike {
       throw new Error('PRF secret not available');
     }
 
-    return new Uint8Array(secret);
+    // responseからcredentialIdを取得
+    const responseId = new Uint8Array((response as PublicKeyCredential).rawId);
+
+    return {
+      secret: new Uint8Array(secret),
+      id: responseId,
+    };
   }
 
   /**

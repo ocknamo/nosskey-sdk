@@ -26,7 +26,7 @@ export interface PWKBlobV1 {
   iv: string; // hex(12 B)
   ct: string; // hex(32 B)
   tag: string; // hex(16 B)
-  credentialId?: string; // クレデンシャルIDをhex形式で保存
+  credentialId: string; // クレデンシャルIDをhex形式で保存
 }
 
 /**
@@ -145,14 +145,12 @@ export interface PWKManagerLike {
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵またはPRF直接使用
-   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
   signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId?: Uint8Array,
     options?: SignOptions
   ): Promise<NostrEvent>;
 

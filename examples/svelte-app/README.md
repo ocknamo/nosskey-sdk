@@ -88,6 +88,7 @@ npm run dev
 - [ ] Vitestを使用したテスト実装（単体・統合テスト）
 - [ ] ログアウトレベルの段階化（軽量/標準/完全の3段階）
 - [ ] `authenticated`変数を`isLoggedIn`など意味がより明確な変数名に変更
+- [ ] `nosskey_credential_ids`の保管と表示をやめる
 
 ## ログイン状態の定義
 
