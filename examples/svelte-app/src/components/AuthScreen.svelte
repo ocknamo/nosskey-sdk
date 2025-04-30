@@ -15,6 +15,8 @@
   let storedCredentialIds = $state<string[]>([]);
   let isPrfChecked = $state(false);
   let username = $state("");
+  let createdCredentialId = $state(""); // 新規作成したパスキーのID
+  let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
   // PWKManagerのインスタンスを作成（キャッシュ設定を反映）
   let isCaching = false;
@@ -90,7 +92,7 @@
     }
   }
 
-  // 新規パスキー作成とNostrキー導出
+  // 新規パスキー作成
   async function createNew() {
     isLoading = true;
     errorMessage = "";
@@ -104,34 +106,22 @@
         },
       });
 
-      // PRFを直接Nostrキーとして使用
-      const result = await pwkManager.directPrfToNostrKey(newCredentialId);
+      // 作成したパスキーのIDを保存（Uint8ArrayからHEX文字列に変換）
+      // Uint8Array → 16進数文字列への変換
+      const credentialIdHex = Array.from(newCredentialId)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      createdCredentialId = credentialIdHex;
+      isPasskeyCreated = true;
 
-      // 状態を更新
-      appState.credentialId.set(result.credentialId);
-      appState.pwkBlob.set(result.pwkBlob);
-      appState.publicKey.set(result.publicKey);
-      appState.authenticated.set(true);
-
-      // ローカルストレージに保存（表示用）
-      const hexCredentialId = result.pwkBlob.credentialId;
-      if (hexCredentialId && !storedCredentialIds.includes(hexCredentialId)) {
-        storedCredentialIds = [...storedCredentialIds, hexCredentialId];
+      // 作成されたパスキーをローカルストレージに保存（表示用）
+      if (!storedCredentialIds.includes(credentialIdHex)) {
+        storedCredentialIds = [...storedCredentialIds, credentialIdHex];
         localStorage.setItem(
           "nosskey_credential_ids",
           JSON.stringify(storedCredentialIds),
         );
       }
-
-      // PWKBlobは暗号化されているため常に保存
-      const pwkBlobToSave = {
-        ...result.pwkBlob,
-        publicKey: result.publicKey, // 公開鍵も一緒に保存
-      };
-      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
-
-      // アカウント画面に遷移
-      appState.currentScreen.set("account");
     } catch (error) {
       console.error("パスキー作成エラー:", error);
       errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -198,58 +188,103 @@
 </script>
 
 <div class="auth-container">
-  <h1>Nosskey デモ</h1>
-  <p>パスキー由来のNostr鍵 (PRF直接使用)</p>
+  <h1>{$i18n.t.auth.title}</h1>
+  <p>{$i18n.t.auth.subtitle}</p>
+
+  <!-- アプリ説明 -->
+  <div class="app-description">
+    <p>{$i18n.t.auth.appDescription}</p>
+  </div>
 
   {#if isLoading}
-    <div class="loading">ロード中...</div>
+    <div class="loading">{$i18n.t.auth.loading}</div>
   {:else}
-    <div class="auth-actions">
-      {#if !isPrfChecked}
-        <!-- PRF確認前の状態 -->
-        <button class="check-prf-button" onclick={checkPrfSupport}>
-          PRF拡張対応確認
+    <!-- パスキー作成セクション（メイン機能） -->
+    <div class="auth-section main-section">
+      <h2>{$i18n.t.auth.passkeySectionTitle}</h2>
+      <p>{$i18n.t.auth.passkeySectionDesc}</p>
+
+      <!-- クロスデバイス認証の説明 -->
+      <div class="info-box">
+        <h3>{$i18n.t.auth.crossDeviceTitle}</h3>
+        <p>{$i18n.t.auth.crossDeviceDesc}</p>
+      </div>
+
+      <div class="username-input">
+        <label for="username">{$i18n.t.auth.username}</label>
+        <input
+          id="username"
+          type="text"
+          bind:value={username}
+          placeholder={$i18n.t.auth.usernamePlaceholder}
+          disabled={isLoading}
+        />
+      </div>
+
+      {#if !isPasskeyCreated}
+        <button class="create-button" onclick={createNew} disabled={isLoading}>
+          {$i18n.t.auth.createNew}
         </button>
-      {:else if !isSupported}
-        <div class="error">
-          <h2>PRF拡張がサポートされていません</h2>
-          <p>{getUnsupportedMessage()}</p>
-        </div>
       {:else}
-        <div class="username-input">
-          <label for="username">ユーザー名（オプション）</label>
-          <input
-            id="username"
-            type="text"
-            bind:value={username}
-            placeholder="ユーザー名を入力"
+        <div class="success-message">
+          <h3>{$i18n.t.auth.passkeyCreated}</h3>
+          <p>{$i18n.t.auth.firstLogin}</p>
+          <button
+            class="login-button"
+            onclick={() => login(createdCredentialId)}
             disabled={isLoading}
-          />
+          >
+            {$i18n.t.auth.proceedWithLogin}
+          </button>
         </div>
-        <button class="create-button" onclick={createNew} disabled={isLoading}
-          >{$i18n.t.auth.createNew}</button
-        >
-
-        <button
-          class="import-button"
-          onclick={() => currentScreen.set("import")}
-          disabled={isLoading}>{$i18n.t.auth.importButton}</button
-        >
-
-        {#if storedCredentialIds.length > 0}
-          <div class="login-section">
-            <h3>既存のパスキーでログイン</h3>
-            <div class="credential-list">
-              {#each storedCredentialIds as id}
-                <button onclick={() => login(id)} disabled={isLoading}>
-                  ログイン ({id.substring(0, 8)}...)
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/if}
       {/if}
     </div>
+
+    <!-- その他のログインオプション -->
+    <div class="auth-section">
+      <button
+        class="import-button"
+        onclick={() => currentScreen.set("import")}
+        disabled={isLoading}>{$i18n.t.auth.importButton}</button
+      >
+
+      {#if storedCredentialIds.length > 0}
+        <div class="login-section">
+          <h3>{$i18n.t.auth.loginWith}</h3>
+          <p>{$i18n.t.auth.existingPasskeyDesc}</p>
+          <div class="credential-list">
+            {#each storedCredentialIds as id}
+              <button onclick={() => login(id)} disabled={isLoading}>
+                {$i18n.t.auth.login} ({id.substring(0, 8)}...)
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <!-- 開発者向けセクション（折りたたみ可能） -->
+    <details class="developer-section">
+      <summary>{$i18n.t.auth.developerSection}</summary>
+      <div class="auth-section developer-content">
+        <p>{$i18n.t.auth.prfDebugInfo}</p>
+
+        {#if !isPrfChecked}
+          <button class="check-prf-button" onclick={checkPrfSupport}>
+            {$i18n.t.auth.checkPrf}
+          </button>
+        {:else if !isSupported}
+          <div class="error">
+            <h3>{$i18n.t.auth.unsupportedTitle}</h3>
+            <p>{getUnsupportedMessage()}</p>
+          </div>
+        {:else}
+          <div class="success">
+            <p>{$i18n.t.auth.prfSupportedMessage}</p>
+          </div>
+        {/if}
+      </div>
+    </details>
   {/if}
 
   {#if errorMessage}
@@ -272,18 +307,59 @@
     margin-bottom: 10px;
   }
 
-  .auth-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  .app-description {
+    margin: 20px 0;
+    font-size: 1.1rem;
+    color: #666;
+  }
+
+  .auth-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    text-align: left;
+  }
+
+  .main-section {
+    border-left: 4px solid #5755d9;
+    background-color: #f8f9ff;
+  }
+
+  .info-box {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #e6f7ff;
+    border-left: 4px solid #1890ff;
+    border-radius: 4px;
+  }
+
+  .developer-section {
     margin-top: 30px;
+    color: #666;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .developer-section summary {
+    cursor: pointer;
+    color: #888;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+  }
+
+  .developer-content {
+    background-color: #f0f0f0;
+    border-color: #ddd;
   }
 
   .username-input {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
   }
 
   .username-input input {
@@ -308,6 +384,15 @@
     font-weight: bold;
     font-size: 1.2rem;
     padding: 16px 32px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .import-button {
+    background-color: #eaeaea;
+    color: #333;
+    width: 100%;
+    margin-bottom: 15px;
   }
 
   .credential-list {
@@ -315,6 +400,14 @@
     flex-direction: column;
     gap: 10px;
     margin-top: 10px;
+  }
+
+  .success {
+    padding: 10px;
+    background-color: #e6ffed;
+    border-left: 4px solid #52c41a;
+    border-radius: 4px;
+    margin: 10px 0;
   }
 
   .error-message {
@@ -327,7 +420,50 @@
 
   .login-section {
     margin-top: 20px;
-    padding-top: 20px;
+    padding-top: 15px;
     border-top: 1px solid #eee;
+  }
+
+  .success-message {
+    padding: 15px;
+    background-color: #f0f9ff;
+    border: 1px solid #d1e9ff;
+    border-radius: 8px;
+    text-align: center;
+    margin: 15px 0;
+  }
+
+  .success-message h3 {
+    color: #52c41a;
+    margin-bottom: 10px;
+  }
+
+  .login-button {
+    background-color: #52c41a;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    width: 100%;
+    margin-top: 15px;
+  }
+
+  @media (max-width: 480px) {
+    .auth-container {
+      padding: 15px 10px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    .auth-section {
+      padding: 15px;
+    }
+
+    .create-button {
+      font-size: 1.1rem;
+      padding: 14px 20px;
+    }
   }
 </style>

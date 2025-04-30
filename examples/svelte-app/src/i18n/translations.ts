@@ -32,6 +32,22 @@ export interface TranslationData {
     secretKey: string;
     secretKeyHelp: string;
     importButton: string;
+    // 新規追加
+    appDescription: string;
+    passkeySectionTitle: string;
+    passkeySectionDesc: string;
+    crossDeviceTitle: string;
+    crossDeviceDesc: string;
+    existingPasskeyTitle: string;
+    existingPasskeyDesc: string;
+    // 開発者向け
+    developerSection: string;
+    prfDebugInfo: string;
+    prfSupportedMessage: string;
+    // 初回ログイン
+    firstLogin: string;
+    passkeyCreated: string;
+    proceedWithLogin: string;
   };
   nostr: {
     title: string;
@@ -146,6 +162,9 @@ export const ja: TranslationData = {
     createNew: '新規作成',
     loginWith: '既存のパスキーでログイン',
     login: 'ログイン',
+    firstLogin: '初回ログイン',
+    passkeyCreated: 'パスキーが作成されました',
+    proceedWithLogin: 'ログインして続ける',
     loading: 'ロード中...',
     username: 'ユーザー名（オプション）',
     usernamePlaceholder: 'ユーザー名を入力',
@@ -154,6 +173,18 @@ export const ja: TranslationData = {
     secretKey: 'Nostr秘密鍵',
     secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
     importButton: 'インポート',
+    // 新規追加
+    appDescription: 'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。',
+    passkeySectionTitle: 'パスキーでアカウント作成',
+    passkeySectionDesc: 'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
+    crossDeviceTitle: '全ての端末で利用可能',
+    crossDeviceDesc: 'お使いの端末が直接対応していなくても、ブラウザのQRコードまたは通知を使って、スマートフォンなどを認証器として利用できます。',
+    existingPasskeyTitle: '既存のパスキーでログイン',
+    existingPasskeyDesc: '以前作成したパスキーで再度ログイン',
+    // 開発者向け
+    developerSection: '開発者向け',
+    prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
+    prfSupportedMessage: 'PRF拡張がサポートされています',
   },
   nostr: {
     title: 'Nostr',
@@ -277,6 +308,22 @@ export const en: TranslationData = {
     secretKey: 'Nostr Secret Key',
     secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
     importButton: 'Import',
+    // 新規追加
+    appDescription: 'This app uses passkey authentication to securely manage your Nostr keys.',
+    passkeySectionTitle: 'Create Account with Passkey',
+    passkeySectionDesc: 'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
+    crossDeviceTitle: 'Available on all devices',
+    crossDeviceDesc: 'Even if your device doesn\'t directly support it, you can use your smartphone as an authenticator via QR code or browser notification.',
+    existingPasskeyTitle: 'Login with Existing Passkey',
+    existingPasskeyDesc: 'Login again with previously created passkey',
+    // 開発者向け
+    developerSection: 'For Developers',
+    prfDebugInfo: 'PRF extension check is for debugging purposes',
+    prfSupportedMessage: 'PRF extension is supported',
+    // 初回ログイン
+    firstLogin: 'First Login',
+    passkeyCreated: 'Passkey Created Successfully',
+    proceedWithLogin: 'Proceed with Login',
   },
   nostr: {
     title: 'Nostr',
