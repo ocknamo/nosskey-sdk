@@ -156,14 +156,12 @@ export interface PWKManagerLike {
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵またはPRF直接使用
-   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
   signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId?: Uint8Array,
     options?: SignOptions
   ): Promise<NostrEvent>;
 
@@ -254,14 +252,12 @@ export class PWKManager implements PWKManagerLike {
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵またはPRF直接使用
-   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
   async signEvent(
     event: NostrEvent,
     pwk: PWKBlob,
-    credentialId?: Uint8Array,
     options?: SignOptions
   ): Promise<NostrEvent>;
 
@@ -367,8 +363,7 @@ try {
   };
   const signedEvent = await pwkMgr.signEvent(
     event, 
-    directResult.pwkBlob, 
-    credentialId
+    directResult.pwkBlob
   );
   console.log('署名されたイベント:', signedEvent);
   
@@ -382,7 +377,6 @@ try {
 | 項目 | 説明 |
 |------|------|
 | PWKブロブの保管 | 暗号化された秘密鍵（PWKブロブ）は通常のNostr秘密鍵と同様に安全に保管する必要があります。紛失した場合はNostr秘密鍵も同様に失われます。 |
-| Credential IDs | パスキー作成時に得られるCredential IDはブラウザのパスキーUIから選択できるため必ずしも保存する必要はありませんが、推奨時のUXを向上させるために保存することが推奨されます。 |
 | メモリ消去 | Web Cryptoバッファはガベージコレクションで切り離されますが、Uint8Arraysに対するexplicit fill(0)はまだ慎重に行うべきです。 |
 | Windows | Windows Hello（2025-04）はPRF拡張をサポートしていない場合があります。その場合、モバイル端末のパスキーを使用するなどの代替手段をユーザーに案内すると良いでしょう。なお、多くの場合はブラウザのパスキーUIが適切に案内します。 |
 | PRF値の有効性 | PRF値を直接シークレットキーとして使用する場合、secp256k1の有効範囲に入らない可能性があります（確率は極めて低い）。 |
