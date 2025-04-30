@@ -1,164 +1,162 @@
 <script lang="ts">
-  import { PWKManager } from "../../../../src/nosskey.js";
-  import { changeLanguage, i18n } from "../i18n/i18nStore.js";
-  import type { Language } from "../i18n/translations.js";
-  import {
-    cacheSecrets,
-    cacheTimeout,
-    currentScreen,
-    defaultRelays,
-    resetState,
-  } from "../store/appState.js";
-  import { activeRelays } from "../store/relayStore.js";
+import { PWKManager } from '../../../../src/nosskey.js';
+import { changeLanguage, i18n } from '../i18n/i18nStore.js';
+import type { Language } from '../i18n/translations.js';
+import {
+  cacheSecrets,
+  cacheTimeout,
+  currentScreen,
+  defaultRelays,
+  resetState,
+} from '../store/appState.js';
+import { activeRelays } from '../store/relayStore.js';
 
-  // 状態変数
-  let clearResult = $state("");
-  let newRelay = $state("");
-  let relayMessage = $state("");
-  let relays = $state<string[]>([]);
-  let languageMessage = $state("");
-  let cacheSettingMessage = $state("");
-  let isCaching = $state(true);
-  let timeoutSeconds = $state(300); // デフォルト5分（300秒）
+// 状態変数
+let clearResult = $state('');
+let newRelay = $state('');
+let relayMessage = $state('');
+let relays = $state<string[]>([]);
+const languageMessage = $state('');
+let cacheSettingMessage = $state('');
+let isCaching = $state(true);
+let timeoutSeconds = $state(300); // デフォルト5分（300秒）
 
-  // ストアを監視して更新
-  activeRelays.subscribe((value) => {
-    relays = value;
+// ストアを監視して更新
+activeRelays.subscribe((value) => {
+  relays = value;
+});
+
+cacheSecrets.subscribe((value) => {
+  isCaching = value;
+});
+
+cacheTimeout.subscribe((value) => {
+  timeoutSeconds = value;
+});
+
+// リレーを追加する関数
+function addRelay() {
+  if (!newRelay) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.enterUrl;
+    return;
+  }
+
+  // 簡易的なバリデーション
+  if (!newRelay.startsWith('wss://')) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.startWithWss;
+    return;
+  }
+
+  // すでに存在するかチェック
+  if (relays.includes(newRelay)) {
+    relayMessage = $i18n.t.settings.relayManagement.messages.alreadyExists;
+    return;
+  }
+
+  // リレーを追加（activeRelaysストアを更新）
+  activeRelays.update((currentRelays) => [...currentRelays, newRelay]);
+
+  // 入力フィールドをクリア
+  newRelay = '';
+  relayMessage = $i18n.t.settings.relayManagement.messages.added;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// リレーを削除する関数
+function removeRelay(relay: string) {
+  // activeRelaysストアを更新
+  activeRelays.update((currentRelays) => currentRelays.filter((r) => r !== relay));
+
+  relayMessage = $i18n.t.settings.relayManagement.messages.deleted;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// リレーをデフォルトにリセットする関数
+function resetRelays() {
+  // デフォルト値にリセット
+  activeRelays.set([...defaultRelays]);
+
+  relayMessage = $i18n.t.settings.relayManagement.messages.reset;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    relayMessage = '';
+  }, 3000);
+}
+
+// PWKManagerのインスタンスを作成
+const pwkManager = new PWKManager();
+
+// キャッシュ設定を更新する関数
+function updateCacheSetting(value: boolean) {
+  // storeを更新
+  cacheSecrets.set(value);
+
+  // PWKManagerのキャッシュ設定も更新
+  pwkManager.setCacheOptions({
+    enabled: value,
+    timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
   });
 
-  cacheSecrets.subscribe((value) => {
-    isCaching = value;
-  });
+  cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
+}
 
-  cacheTimeout.subscribe((value) => {
+// タイムアウト設定を更新
+function updateTimeoutSetting(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const value = Number.parseInt(input.value, 10);
+
+  if (!Number.isNaN(value) && value > 0) {
     timeoutSeconds = value;
-  });
+    cacheTimeout.set(value);
 
-  // リレーを追加する関数
-  function addRelay() {
-    if (!newRelay) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.enterUrl;
-      return;
-    }
-
-    // 簡易的なバリデーション
-    if (!newRelay.startsWith("wss://")) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.startWithWss;
-      return;
-    }
-
-    // すでに存在するかチェック
-    if (relays.includes(newRelay)) {
-      relayMessage = $i18n.t.settings.relayManagement.messages.alreadyExists;
-      return;
-    }
-
-    // リレーを追加（activeRelaysストアを更新）
-    activeRelays.update((currentRelays) => [...currentRelays, newRelay]);
-
-    // 入力フィールドをクリア
-    newRelay = "";
-    relayMessage = $i18n.t.settings.relayManagement.messages.added;
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      relayMessage = "";
-    }, 3000);
-  }
-
-  // リレーを削除する関数
-  function removeRelay(relay: string) {
-    // activeRelaysストアを更新
-    activeRelays.update((currentRelays) =>
-      currentRelays.filter((r) => r !== relay),
-    );
-
-    relayMessage = $i18n.t.settings.relayManagement.messages.deleted;
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      relayMessage = "";
-    }, 3000);
-  }
-
-  // リレーをデフォルトにリセットする関数
-  function resetRelays() {
-    // デフォルト値にリセット
-    activeRelays.set([...defaultRelays]);
-
-    relayMessage = $i18n.t.settings.relayManagement.messages.reset;
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      relayMessage = "";
-    }, 3000);
-  }
-
-  // PWKManagerのインスタンスを作成
-  const pwkManager = new PWKManager();
-
-  // キャッシュ設定を更新する関数
-  function updateCacheSetting(value: boolean) {
-    // storeを更新
-    cacheSecrets.set(value);
-
-    // PWKManagerのキャッシュ設定も更新
+    // PWKManagerのタイムアウト設定も更新
     pwkManager.setCacheOptions({
-      enabled: value,
-      timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
+      enabled: isCaching,
+      timeoutMs: value * 1000, // 秒をミリ秒に変換
     });
 
     cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
     setTimeout(() => {
-      cacheSettingMessage = "";
+      cacheSettingMessage = '';
     }, 3000);
   }
+}
 
-  // タイムアウト設定を更新
-  function updateTimeoutSetting(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const value = Number.parseInt(input.value, 10);
+// ローカルストレージをクリアする関数
+function clearLocalStorage() {
+  try {
+    // 保存されたキーを削除
+    localStorage.removeItem('nosskey_credential_ids');
+    localStorage.removeItem('nosskey_pwk_blob');
 
-    if (!Number.isNaN(value) && value > 0) {
-      timeoutSeconds = value;
-      cacheTimeout.set(value);
+    // メッセージを表示
+    clearResult = $i18n.t.settings.localStorage.cleared;
 
-      // PWKManagerのタイムアウト設定も更新
-      pwkManager.setCacheOptions({
-        enabled: isCaching,
-        timeoutMs: value * 1000, // 秒をミリ秒に変換
-      });
+    // アプリケーションの状態をリセット
+    resetState();
 
-      cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
-      setTimeout(() => {
-        cacheSettingMessage = "";
-      }, 3000);
-    }
+    // 3秒後にメッセージをクリア
+    setTimeout(() => {
+      clearResult = '';
+      // 認証画面に戻る
+      currentScreen.set('auth');
+    }, 3000);
+  } catch (error) {
+    clearResult = `エラー: ${error instanceof Error ? error.message : String(error)}`;
   }
-
-  // ローカルストレージをクリアする関数
-  function clearLocalStorage() {
-    try {
-      // 保存されたキーを削除
-      localStorage.removeItem("nosskey_credential_ids");
-      localStorage.removeItem("nosskey_pwk_blob");
-
-      // メッセージを表示
-      clearResult = $i18n.t.settings.localStorage.cleared;
-
-      // アプリケーションの状態をリセット
-      resetState();
-
-      // 3秒後にメッセージをクリア
-      setTimeout(() => {
-        clearResult = "";
-        // 認証画面に戻る
-        currentScreen.set("auth");
-      }, 3000);
-    } catch (error) {
-      clearResult = `エラー: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  }
+}
 </script>
 
 <div class="settings-container">

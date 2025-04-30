@@ -176,9 +176,11 @@ export const ja: TranslationData = {
     // 新規追加
     appDescription: 'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。',
     passkeySectionTitle: 'パスキーでアカウント作成',
-    passkeySectionDesc: 'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
+    passkeySectionDesc:
+      'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
     crossDeviceTitle: '全ての端末で利用可能',
-    crossDeviceDesc: 'お使いの端末が直接対応していなくても、ブラウザのQRコードまたは通知を使って、スマートフォンなどを認証器として利用できます。',
+    crossDeviceDesc:
+      'お使いの端末が直接対応していなくても、ブラウザのQRコードまたは通知を使って、スマートフォンなどを認証器として利用できます。',
     existingPasskeyTitle: '既存のパスキーでログイン',
     existingPasskeyDesc: '以前作成したパスキーで再度ログイン',
     // 開発者向け
@@ -311,9 +313,11 @@ export const en: TranslationData = {
     // 新規追加
     appDescription: 'This app uses passkey authentication to securely manage your Nostr keys.',
     passkeySectionTitle: 'Create Account with Passkey',
-    passkeySectionDesc: 'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
+    passkeySectionDesc:
+      'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
     crossDeviceTitle: 'Available on all devices',
-    crossDeviceDesc: 'Even if your device doesn\'t directly support it, you can use your smartphone as an authenticator via QR code or browser notification.',
+    crossDeviceDesc:
+      "Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     existingPasskeyTitle: 'Login with Existing Passkey',
     existingPasskeyDesc: 'Login again with previously created passkey',
     // 開発者向け

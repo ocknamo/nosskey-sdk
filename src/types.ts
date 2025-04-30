@@ -27,6 +27,8 @@ export interface PWKBlobV1 {
   ct: string; // hex(32 B)
   tag: string; // hex(16 B)
   credentialId: string; // クレデンシャルIDをhex形式で保存
+  pubkey: string; // 公開鍵（hex形式）
+  username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 
 /**
@@ -36,6 +38,8 @@ export interface PWKBlobDirect {
   v: 1;
   alg: 'prf-direct';
   credentialId: string; // hex形式
+  pubkey: string; // 公開鍵（hex形式）
+  username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 
 export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
@@ -62,14 +66,7 @@ export interface PasskeyCreationOptions {
  */
 export interface KeyOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
-}
-
-/**
- * Create options (互換性のため残す)
- */
-export interface CreateOptions {
-  secretKey?: Uint8Array; // 外部から渡すシークレットキー（省略時は生成）
-  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
+  username?: string; // パスキー作成時のユーザー名
 }
 
 /**
@@ -90,14 +87,6 @@ export interface SignOptions {
   tags?: string[][]; // 追加のタグ
   /** 秘密鍵をキャッシュするかどうか。指定がない場合はグローバル設定に従う */
   useCache?: boolean;
-}
-
-/**
- * Creation result
- */
-export interface CreateResult {
-  pwkBlob: PWKBlob; // 暗号化された秘密鍵
-  publicKey: string; // 生成された公開鍵（hex）
 }
 
 /**
@@ -126,20 +115,21 @@ export interface PWKManagerLike {
     secretKey: Uint8Array,
     credentialId?: Uint8Array,
     options?: KeyOptions
-  ): Promise<CreateResult>;
+  ): Promise<PWKBlob>;
 
   /**
    * 新しいNostr秘密鍵を生成してパスキーでラップ
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */
-  generateNostrKey(credentialId?: Uint8Array, options?: KeyOptions): Promise<CreateResult>;
+  generateNostrKey(credentialId?: Uint8Array, options?: KeyOptions): Promise<PWKBlob>;
 
   /**
    * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
    */
-  directPrfToNostrKey(credentialId?: Uint8Array): Promise<CreateResult>;
+  directPrfToNostrKey(credentialId?: Uint8Array, options?: KeyOptions): Promise<PWKBlob>;
 
   /**
    * イベントに署名
@@ -147,11 +137,7 @@ export interface PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  signEvent(
-    event: NostrEvent,
-    pwk: PWKBlob,
-    options?: SignOptions
-  ): Promise<NostrEvent>;
+  signEvent(event: NostrEvent, pwk: PWKBlob, options?: SignOptions): Promise<NostrEvent>;
 
   /**
    * 秘密鍵をメモリから明示的に消去

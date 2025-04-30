@@ -1,4 +1,3 @@
-import { bytesToHex } from './utils.js';
 import { seckeySigner } from 'rx-nostr-crypto';
 /**
  * Nosskey SDK テスト
@@ -7,6 +6,7 @@ import { seckeySigner } from 'rx-nostr-crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PWKManager } from './nosskey.js';
 import type { NostrEvent, PWKBlob } from './types.js';
+import { bytesToHex } from './utils.js';
 
 // rx-nostr-crypto のモック
 vi.mock('rx-nostr-crypto', () => {
@@ -140,12 +140,13 @@ describe('PWKManager', () => {
 
       const result = await pwkManager.importNostrKey(credentialId, secretKey);
 
-      expect(result).toHaveProperty('pwkBlob');
+      expect(result).toHaveProperty('v');
+      expect(result).toHaveProperty('alg');
       expect(result).toHaveProperty('credentialId');
-      expect(result).toHaveProperty('publicKey');
-      expect(result.pwkBlob.v).toBe(1);
-      expect(result.pwkBlob.alg).toBe('aes-gcm-256');
-      expect(result.publicKey).toBe('test-pubkey');
+      expect(result).toHaveProperty('pubkey');
+      expect(result.v).toBe(1);
+      expect(result.alg).toBe('aes-gcm-256');
+      expect(result.pubkey).toBe('test-pubkey');
 
       expect(crypto.subtle.encrypt).toHaveBeenCalled();
       expect(seckeySigner).toHaveBeenCalled();
@@ -159,10 +160,13 @@ describe('PWKManager', () => {
 
       const result = await pwkManager.generateNostrKey(credentialId);
 
-      expect(result).toHaveProperty('pwkBlob');
-      expect(result.pwkBlob.v).toBe(1);
-      expect(result.pwkBlob.alg).toBe('aes-gcm-256');
-      expect(result.publicKey).toBe('test-pubkey');
+      expect(result).toHaveProperty('v');
+      expect(result).toHaveProperty('alg');
+      expect(result).toHaveProperty('credentialId');
+      expect(result).toHaveProperty('pubkey');
+      expect(result.v).toBe(1);
+      expect(result.alg).toBe('aes-gcm-256');
+      expect(result.pubkey).toBe('test-pubkey');
 
       expect(crypto.getRandomValues).toHaveBeenCalled();
     });
@@ -175,11 +179,13 @@ describe('PWKManager', () => {
 
       const result = await pwkManager.directPrfToNostrKey(credentialId);
 
-      expect(result).toHaveProperty('pwkBlob');
-      expect(result.pwkBlob.v).toBe(1);
-      expect(result.pwkBlob.alg).toBe('prf-direct');
-      expect(result.pwkBlob).toHaveProperty('credentialId');
-      expect(result.publicKey).toBe('test-pubkey');
+      expect(result).toHaveProperty('v');
+      expect(result).toHaveProperty('alg');
+      expect(result).toHaveProperty('credentialId');
+      expect(result).toHaveProperty('pubkey');
+      expect(result.v).toBe(1);
+      expect(result.alg).toBe('prf-direct');
+      expect(result.pubkey).toBe('test-pubkey');
     });
 
     it('PRF値がゼロの場合はエラーを投げる', async () => {
@@ -219,6 +225,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -241,6 +248,7 @@ describe('PWKManager', () => {
         v: 1 as const, // const assertion to match the exact type
         alg: 'prf-direct' as const, // const assertion to match the exact type
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -279,6 +287,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
 
       const secretKey = await pwkManager.exportNostrKey(mockPwkBlob);
@@ -294,6 +303,7 @@ describe('PWKManager', () => {
         v: 1 as const,
         alg: 'prf-direct' as const,
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
 
       // PRF値自体がシークレットキー
@@ -359,6 +369,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -390,6 +401,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -419,6 +431,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -451,6 +464,7 @@ describe('PWKManager', () => {
         ct: bytesToHex(new Uint8Array(32).fill(33)),
         tag: bytesToHex(new Uint8Array(16).fill(44)),
         credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
       };
       const mockEvent: NostrEvent = {
         kind: 1,

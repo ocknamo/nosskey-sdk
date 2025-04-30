@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { bytesToHex, hexToBytes } from './utils.js';
 
 describe('バイト変換ユーティリティ', () => {
@@ -25,7 +25,7 @@ describe('バイト変換ユーティリティ', () => {
       const input = '68656c6c6f'; // 'hello' のASCII 16進数表現
       const expected = new Uint8Array([104, 101, 108, 108, 111]);
       const result = hexToBytes(input);
-      
+
       expect(result instanceof Uint8Array).toBe(true);
       expect(result.length).toBe(expected.length);
       for (let i = 0; i < result.length; i++) {
@@ -37,7 +37,7 @@ describe('バイト変換ユーティリティ', () => {
       const input = '68656C6C6F'; // 大文字で'hello'のASCII 16進数表現
       const expected = new Uint8Array([104, 101, 108, 108, 111]);
       const result = hexToBytes(input);
-      
+
       expect(result.length).toBe(expected.length);
       for (let i = 0; i < result.length; i++) {
         expect(result[i]).toBe(expected[i]);
@@ -60,7 +60,7 @@ describe('バイト変換ユーティリティ', () => {
       const input = '68 65-6c.6c/6f'; // スペースやハイフン等を含む
       const expected = new Uint8Array([104, 101, 108, 108, 111]);
       const result = hexToBytes(input);
-      
+
       expect(result.length).toBe(expected.length);
       for (let i = 0; i < result.length; i++) {
         expect(result[i]).toBe(expected[i]);

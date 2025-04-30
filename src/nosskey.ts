@@ -1,20 +1,20 @@
-/**
- * Nosskey class for Passkey-Derived Nostr Identity
- * @packageDocumentation
- */
-import { bytesToHex, hexToBytes } from './utils.js';
 import { seckeySigner } from 'rx-nostr-crypto';
 import type {
-  CreateResult,
   KeyCacheOptions,
   KeyOptions,
   NostrEvent,
   PWKBlob,
+  PWKBlobDirect,
   PWKBlobV1,
   PWKManagerLike,
   PasskeyCreationOptions,
   SignOptions,
 } from './types.js';
+/**
+ * Nosskey class for Passkey-Derived Nostr Identity
+ * @packageDocumentation
+ */
+import { bytesToHex, hexToBytes } from './utils.js';
 
 /* 定数 */
 const PRF_EVAL_INPUT = new TextEncoder().encode('nostr-pwk');
@@ -184,7 +184,7 @@ export class PWKManager implements PWKManagerLike {
     secretKey: Uint8Array,
     credentialId?: Uint8Array,
     options: KeyOptions = {}
-  ): Promise<CreateResult> {
+  ): Promise<PWKBlob> {
     const { clearMemory = true } = options;
 
     // PRF秘密を取得
@@ -222,13 +222,12 @@ export class PWKManager implements PWKManagerLike {
       ct: bytesToHex(ciphertext),
       tag: bytesToHex(tag),
       credentialId: bytesToHex(credentialId || responseId), // 指定されたIDかresponseから取得したIDを使用
+      pubkey: publicKey, // 公開鍵を追加
+      ...(options.username && { username: options.username }), // usernameがあれば追加
     };
 
     // 結果を返却
-    return {
-      pwkBlob,
-      publicKey,
-    };
+    return pwkBlob;
   }
 
   /**
@@ -236,10 +235,7 @@ export class PWKManager implements PWKManagerLike {
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */
-  async generateNostrKey(
-    credentialId?: Uint8Array,
-    options: KeyOptions = {}
-  ): Promise<CreateResult> {
+  async generateNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<PWKBlob> {
     // 新しいNostr秘密鍵を生成
     const nostrSK = crypto.getRandomValues(new Uint8Array(32));
 
@@ -250,8 +246,9 @@ export class PWKManager implements PWKManagerLike {
   /**
    * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
    */
-  async directPrfToNostrKey(credentialId?: Uint8Array): Promise<CreateResult> {
+  async directPrfToNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<PWKBlob> {
     // PRF秘密を取得（これが直接シークレットキーになる）
     const { secret: sk, id: responseId } = await this.#prfSecret(credentialId);
 
@@ -269,17 +266,16 @@ export class PWKManager implements PWKManagerLike {
     const publicKey = await signer.getPublicKey();
 
     // PWKBlob構築（'prf-direct'タイプ）
-    const pwkBlob: PWKBlob = {
+    const pwkBlob: PWKBlobDirect = {
       v: 1 as const,
       alg: 'prf-direct' as const,
       credentialId: bytesToHex(credentialId || responseId),
+      pubkey: publicKey, // 公開鍵を追加
+      ...(options.username && { username: options.username }), // usernameがあれば追加
     };
 
     // 結果を返却
-    return {
-      pwkBlob,
-      publicKey,
-    };
+    return pwkBlob;
   }
 
   /**
@@ -288,11 +284,7 @@ export class PWKManager implements PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  async signEvent(
-    event: NostrEvent,
-    pwk: PWKBlob,
-    options: SignOptions = {}
-  ): Promise<NostrEvent> {
+  async signEvent(event: NostrEvent, pwk: PWKBlob, options: SignOptions = {}): Promise<NostrEvent> {
     const { clearMemory = true, tags, useCache } = options;
 
     // PWKBlobからcredentialIdを取得
