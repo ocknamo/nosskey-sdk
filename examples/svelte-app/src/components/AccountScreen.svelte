@@ -1,49 +1,51 @@
 <script lang="ts">
-import { onMount } from 'svelte';
-import { i18n } from '../i18n/i18nStore.js';
-import { authenticated, publicKey, pwkBlob } from '../store/appState.js';
-import AuthScreen from './AuthScreen.svelte';
-import ProfileEditor from './ProfileEditor.svelte';
-import RelayStatus from './RelayStatus.svelte';
+  import { onMount } from "svelte";
+  import { i18n } from "../i18n/i18nStore.js";
+  import { isLoggedIn, publicKey, pwkBlob } from "../store/appState.js";
+  import AuthScreen from "./AuthScreen.svelte";
+  import ProfileEditor from "./ProfileEditor.svelte";
+  import RelayStatus from "./RelayStatus.svelte";
 
-// Svelte v5のrunesモードに対応した記法
-const isAuthenticated = $derived($authenticated);
+  // Svelte v5のrunesモードに対応した記法
+  const isAuthenticated = $derived($isLoggedIn);
 
-onMount(() => {
-  console.log('AccountScreen mounted');
+  onMount(() => {
+    console.log("AccountScreen mounted");
 
-  // 保存されているPWKBlobがあるかどうかをチェック
-  const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
+    // 保存されているPWKBlobがあるかどうかをチェック
+    const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
 
-  // ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
-  if (savedPwkBlob && !$authenticated) {
-    console.log('認証情報が見つかりましたが、認証状態がfalseでした。修正します。');
-    try {
-      const parsedPwkBlob = JSON.parse(savedPwkBlob);
-      pwkBlob.set(parsedPwkBlob);
+    // ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
+    if (savedPwkBlob && !$isLoggedIn) {
+      console.log(
+        "認証情報が見つかりましたが、認証状態がfalseでした。修正します。",
+      );
+      try {
+        const parsedPwkBlob = JSON.parse(savedPwkBlob);
+        pwkBlob.set(parsedPwkBlob);
 
-      // 公開鍵も設定（parsedPwkBlobに含まれている場合）
-      if (parsedPwkBlob.publicKey) {
-        publicKey.set(parsedPwkBlob.publicKey);
+        // 公開鍵も設定（parsedPwkBlobに含まれている場合）
+        if (parsedPwkBlob.publicKey) {
+          publicKey.set(parsedPwkBlob.publicKey);
+        }
+
+        isLoggedIn.set(true);
+      } catch (error) {
+        console.error("保存された認証情報の解析に失敗しました:", error);
       }
-
-      authenticated.set(true);
-    } catch (error) {
-      console.error('保存された認証情報の解析に失敗しました:', error);
     }
-  }
 
-  // 逆に認証情報がないのに認証状態がtrueの場合も修正
-  if (!savedPwkBlob && $authenticated) {
-    console.log('認証情報がありませんが、認証状態がtrueでした。修正します。');
-    authenticated.set(false);
-  }
-});
+    // 逆に認証情報がないのに認証状態がtrueの場合も修正
+    if (!savedPwkBlob && $isLoggedIn) {
+      console.log("認証情報がありませんが、認証状態がtrueでした。修正します。");
+      isLoggedIn.set(false);
+    }
+  });
 
-// 認証状態の変更を記録
-$effect(() => {
-  console.log('認証状態が変更されました:', $authenticated);
-});
+  // 認証状態の変更を記録
+  $effect(() => {
+    console.log("認証状態が変更されました:", $isLoggedIn);
+  });
 </script>
 
 <div class="account-screen">

@@ -1,21 +1,21 @@
 <script lang="ts">
-import { onMount } from 'svelte';
-import { i18n } from '../i18n/i18nStore.js';
-import { authenticated } from '../store/appState.js';
-import PostForm from './PostForm.svelte';
-import Timeline from './Timeline.svelte';
+  import { onMount } from "svelte";
+  import { i18n } from "../i18n/i18nStore.js";
+  import { isLoggedIn } from "../store/appState.js";
+  import PostForm from "./PostForm.svelte";
+  import Timeline from "./Timeline.svelte";
 
-// 認証状態を監視
-let isAuthenticated = $state(false);
+  // 認証状態を監視
+  let isAuthenticated = $state(false);
 
-// ストアを監視
-authenticated.subscribe((value) => {
-  isAuthenticated = value;
-});
+  // ストアを監視
+  isLoggedIn.subscribe((value) => {
+    isAuthenticated = value;
+  });
 
-onMount(() => {
-  console.log('TimelineScreen mounted');
-});
+  onMount(() => {
+    console.log("TimelineScreen mounted");
+  });
 </script>
 
 <div class="timeline-screen">

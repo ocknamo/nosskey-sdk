@@ -8,7 +8,7 @@ export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 
 export const currentScreen = writable('account'); // 'account' または 'timeline' または 'settings'
 
 // 認証状態
-export const authenticated = writable(false);
+export const isLoggedIn = writable(false);
 
 // パスキー情報
 export const credentialId = writable<Uint8Array | null>(null);
@@ -65,7 +65,7 @@ try {
 // リセット関数
 export const resetState = () => {
   currentScreen.set('account');
-  authenticated.set(false);
+  isLoggedIn.set(false);
   credentialId.set(null);
   pwkBlob.set(null);
   publicKey.set(null);
