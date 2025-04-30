@@ -2,7 +2,7 @@
  * Nosskey class for Passkey-Derived Nostr Identity
  * @packageDocumentation
  */
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from './utils.js';
 import { seckeySigner } from 'rx-nostr-crypto';
 import type {
   CreateResult,

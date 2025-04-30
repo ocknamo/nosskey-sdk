@@ -9,5 +9,8 @@ export * from './types.js';
 // クラスとユーティリティのエクスポート
 export { PWKManager } from './nosskey.js';
 
+// ユーティリティのエクスポート
+export { bytesToHex, hexToBytes } from './utils.js';
+
 // テスト用ユーティリティのエクスポート
 export { registerDummyPasskey } from './test-utils.js';

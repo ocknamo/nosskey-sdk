@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { hexToBytes } from "@noble/hashes/utils";
-  import { PWKManager } from "../../../../src/nosskey.js";
+  import { PWKManager, hexToBytes } from "../../../../src/index.js";
   import { i18n } from "../i18n/i18nStore.js";
   import * as appState from "../store/appState.js";
   import {

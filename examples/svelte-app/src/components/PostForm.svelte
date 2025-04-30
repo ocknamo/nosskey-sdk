@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { hexToBytes } from "@noble/hashes/utils";
   import { onDestroy } from "svelte";
   import { PWKManager } from "../../../../src/nosskey.js";
   import type { NostrEvent, PWKBlob } from "../../../../src/types.js";

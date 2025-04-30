@@ -1,4 +1,4 @@
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex } from './utils.js';
 import { seckeySigner } from 'rx-nostr-crypto';
 /**
  * Nosskey SDK テスト
