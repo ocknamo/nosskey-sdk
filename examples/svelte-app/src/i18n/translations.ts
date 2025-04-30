@@ -126,6 +126,8 @@ export interface TranslationData {
       enabled: string;
       disabled: string;
       saved: string;
+      timeoutLabel: string;
+      timeoutHint: string;
     };
     appInfo: {
       title: string;
@@ -272,6 +274,8 @@ export const ja: TranslationData = {
       enabled: '認証情報をキャッシュする',
       disabled: '認証情報をキャッシュしない',
       saved: '設定を保存しました',
+      timeoutLabel: 'キャッシュ時間（秒）',
+      timeoutHint: '（10秒〜24時間の間で設定可能）',
     },
     appInfo: {
       title: 'アプリケーション情報',
@@ -418,6 +422,8 @@ export const en: TranslationData = {
       enabled: 'Cache authentication data',
       disabled: 'Do not cache authentication data',
       saved: 'Settings saved',
+      timeoutLabel: 'Cache Duration (seconds)',
+      timeoutHint: '(Configurable between 10 seconds and 24 hours)',
     },
     appInfo: {
       title: 'Application Info',

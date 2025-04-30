@@ -245,7 +245,9 @@
 
       {#if isCaching}
         <div class="timeout-setting">
-          <label for="timeout-seconds">キャッシュ時間（秒）：</label>
+          <label for="timeout-seconds"
+            >{$i18n.t.settings.cacheSettings.timeoutLabel}：</label
+          >
           <input
             id="timeout-seconds"
             type="number"
@@ -254,7 +256,7 @@
             value={timeoutSeconds}
             onchange={updateTimeoutSetting}
           />
-          <small>（10秒〜24時間の間で設定可能）</small>
+          <small>{$i18n.t.settings.cacheSettings.timeoutHint}</small>
         </div>
       {/if}
 
