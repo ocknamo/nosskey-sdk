@@ -14,7 +14,7 @@
 
   // 戻るボタン処理
   function goBack() {
-    appState.currentScreen.set("auth");
+    appState.currentScreen.set("account");
   }
 
   // 秘密鍵のバリデーション（64文字の16進数文字列）

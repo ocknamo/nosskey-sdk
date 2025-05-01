@@ -144,14 +144,14 @@
 
       // 状態を更新
       appState.credentialId.set(result.credentialId);
-      appState.pwkBlob.set(result.pwkBlob);
-      appState.publicKey.set(result.publicKey);
+      appState.pwkBlob.set(result);
+      appState.publicKey.set(result.pubkey);
       appState.isLoggedIn.set(true);
 
       // PWKBlobは暗号化されているため常に保存
       const pwkBlobToSave = {
-        ...result.pwkBlob,
-        publicKey: result.publicKey, // 公開鍵も一緒に保存
+        ...result,
+        publicKey: result.pubkey, // 公開鍵も一緒に保存
       };
       localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
 
