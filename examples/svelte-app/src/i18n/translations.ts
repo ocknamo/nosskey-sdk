@@ -164,9 +164,8 @@ export const ja: TranslationData = {
   appWarning: {
     title: '注意事項',
     domainChange:
-      'このデモアプリはテスト環境専用です。実際の運用では異なるドメインでの使用をお勧めします。ドメインを変更する場合、パスキーの再作成が必要になります。',
-    demoDescription:
-      'このアプリはデモンストレーション目的で提供されています。実際のユースケースでは、セキュリティとユーザビリティを考慮した独自の実装を検討してください。',
+      'このデモアプリはテスト環境専用です。実際の運用では異なるドメインとなります。ドメインが変更された場合、パスキーの再作成が必要になります。',
+    demoDescription: 'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -313,9 +312,9 @@ export const en: TranslationData = {
   appWarning: {
     title: 'Important Notice',
     domainChange:
-      'This demo app is intended for testing environments only. For production use, we recommend using it on a different domain. Note that changing domains will require recreating passkeys.',
+      'This demo application is for test environment only. In actual operation, the domain will be different. Note that changing domains will require recreating passkeys.',
     demoDescription:
-      'This application is provided for demonstration purposes. For actual use cases, consider implementing your own solution with security and usability in mind.',
+      'This application is provided for the purpose of demonstrating the UX of Nostr key management.',
   },
   auth: {
     title: 'Nosskey Demo',

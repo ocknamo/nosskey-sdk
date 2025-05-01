@@ -16,7 +16,8 @@ let clearResult = $state('');
 let newRelay = $state('');
 let relayMessage = $state('');
 let relays = $state<string[]>([]);
-const languageMessage = $state('');
+// biome-ignore lint:
+let languageMessage = $state('');
 let cacheSettingMessage = $state('');
 let isCaching = $state(true);
 let timeoutSeconds = $state(300); // デフォルト5分（300秒）
@@ -161,13 +162,6 @@ function clearLocalStorage() {
 
 <div class="settings-container">
   <h1>{$i18n.t.settings.title}</h1>
-
-  <!-- デモアプリとドメイン変更の注意喚起セクション -->
-  <div class="settings-section warning-section">
-    <h2>{$i18n.t.appWarning.title}</h2>
-    <p class="warning-text">{$i18n.t.appWarning.domainChange}</p>
-    <p class="warning-text">{$i18n.t.appWarning.demoDescription}</p>
-  </div>
 
   <div class="settings-section">
     <h2>{$i18n.t.settings.relayManagement.title}</h2>
@@ -528,17 +522,5 @@ function clearLocalStorage() {
 
   .value {
     flex: 1;
-  }
-
-  /* 警告セクションのスタイル */
-  .warning-section {
-    border-left: 4px solid #ffc107;
-    background-color: #fff8e1;
-  }
-
-  .warning-text {
-    color: #856404;
-    margin-bottom: 10px;
-    line-height: 1.5;
   }
 </style>

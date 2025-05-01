@@ -10,7 +10,8 @@ let isLoading = $state(false);
 let errorMessage = $state('');
 let storedCredentialIds = $state<string[]>([]);
 let isPrfChecked = $state(false);
-const username = $state('');
+// biome-ignore lint:
+let username = $state('');
 let createdCredentialId = $state(''); // 新規作成したパスキーのID
 let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 

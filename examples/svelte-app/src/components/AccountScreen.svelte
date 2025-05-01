@@ -46,6 +46,13 @@ $effect(() => {
 });
 </script>
 
+<!-- デモアプリとドメイン変更の注意喚起セクション -->
+<div class="warning-section">
+  <h2>{$i18n.t.appWarning.title}</h2>
+  <p class="warning-text">{$i18n.t.appWarning.domainChange}</p>
+  <p class="warning-text">{$i18n.t.appWarning.demoDescription}</p>
+</div>
+
 <div class="account-screen">
   {#if !isAuthenticated}
     <!-- 未認証の場合、認証画面を表示 -->
@@ -82,5 +89,17 @@ $effect(() => {
     font-size: 1.8rem;
     margin-bottom: 20px;
     text-align: center;
+  }
+
+  /* 警告セクションのスタイル */
+  .warning-section {
+    border-left: 4px solid #ffc107;
+    background-color: #fff8e1;
+  }
+
+  .warning-text {
+    color: #856404;
+    margin-bottom: 10px;
+    line-height: 1.5;
   }
 </style>
