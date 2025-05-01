@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PWKManager, hexToBytes } from "../../../../src/index.js";
+  import { PWKManager, bytesToHex, hexToBytes } from "../../../../src/index.js";
   import { i18n } from "../i18n/i18nStore.js";
   import * as appState from "../store/appState.js";
   import {
@@ -14,7 +14,7 @@
   let errorMessage = $state("");
   let storedCredentialIds = $state<string[]>([]);
   let isPrfChecked = $state(false);
-  const username = $state("");
+  let username = $state("");
   let createdCredentialId = $state(""); // 新規作成したパスキーのID
   let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
@@ -106,22 +106,8 @@
         },
       });
 
-      // 作成したパスキーのIDを保存（Uint8ArrayからHEX文字列に変換）
-      // Uint8Array → 16進数文字列への変換
-      const credentialIdHex = Array.from(newCredentialId)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-      createdCredentialId = credentialIdHex;
+      createdCredentialId = bytesToHex(newCredentialId);
       isPasskeyCreated = true;
-
-      // 作成されたパスキーをローカルストレージに保存（表示用）
-      if (!storedCredentialIds.includes(credentialIdHex)) {
-        storedCredentialIds = [...storedCredentialIds, credentialIdHex];
-        localStorage.setItem(
-          "nosskey_credential_ids",
-          JSON.stringify(storedCredentialIds),
-        );
-      }
     } catch (error) {
       console.error("パスキー作成エラー:", error);
       errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -131,19 +117,17 @@
   }
 
   // 既存のパスキーでログイン
-  async function login(credentialIdHex: string) {
+  async function login(credentialId: string) {
     isLoading = true;
     errorMessage = "";
 
     try {
-      // 16進数文字列をUint8Arrayに変換
-      const rawCredentialId = hexToBytes(credentialIdHex);
-
       // PRFを直接Nostrキーとして使用
-      const result = await pwkManager.directPrfToNostrKey(rawCredentialId);
+      const result = await pwkManager.directPrfToNostrKey(
+        hexToBytes(credentialId),
+      );
 
       // 状態を更新
-      appState.credentialId.set(result.credentialId);
       appState.pwkBlob.set(result);
       appState.publicKey.set(result.pubkey);
       appState.isLoggedIn.set(true);
@@ -247,20 +231,6 @@
         onclick={() => currentScreen.set("import")}
         disabled={isLoading}>{$i18n.t.auth.importButton}</button
       >
-
-      {#if storedCredentialIds.length > 0}
-        <div class="login-section">
-          <h3>{$i18n.t.auth.loginWith}</h3>
-          <p>{$i18n.t.auth.existingPasskeyDesc}</p>
-          <div class="credential-list">
-            {#each storedCredentialIds as id}
-              <button onclick={() => login(id)} disabled={isLoading}>
-                {$i18n.t.auth.login} ({id.substring(0, 8)}...)
-              </button>
-            {/each}
-          </div>
-        </div>
-      {/if}
     </div>
 
     <!-- 開発者向けセクション（折りたたみ可能） -->
@@ -395,13 +365,6 @@
     margin-bottom: 15px;
   }
 
-  .credential-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 10px;
-  }
-
   .success {
     padding: 10px;
     background-color: #e6ffed;
@@ -416,12 +379,6 @@
     background-color: #ffdddd;
     color: #ff0000;
     border-radius: 4px;
-  }
-
-  .login-section {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
   }
 
   .success-message {

@@ -1,22 +1,26 @@
 <script lang="ts">
-import AccountIcon from '../assets/account-icon.svg';
-import HomeIcon from '../assets/home-icon.svg';
-import SettingIcon from '../assets/setting-icon.svg';
-import { i18n } from '../i18n/i18nStore.js';
-import { currentScreen, resetState } from '../store/appState.js';
+  import AccountIcon from "../assets/account-icon.svg";
+  import HomeIcon from "../assets/home-icon.svg";
+  import SettingIcon from "../assets/setting-icon.svg";
+  import { i18n } from "../i18n/i18nStore.js";
+  import {
+    currentScreen,
+    resetState,
+    type ScreenName,
+  } from "../store/appState.js";
 
-// 現在の画面
-let screen = $state('account');
+  // 現在の画面
+  let screen = $state("account");
 
-// ストアを監視して現在の画面を更新
-currentScreen.subscribe((value) => {
-  screen = value;
-});
+  // ストアを監視して現在の画面を更新
+  currentScreen.subscribe((value) => {
+    screen = value;
+  });
 
-// 画面遷移処理
-function navigateTo(target: string) {
-  currentScreen.set(target);
-}
+  // 画面遷移処理
+  function navigateTo(target: ScreenName) {
+    currentScreen.set(target);
+  }
 </script>
 
 <footer class="footer-menu">

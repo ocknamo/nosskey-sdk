@@ -4,14 +4,17 @@ import type { PWKBlob } from '../../../../src/types.js';
 // デフォルトリレーのリスト
 export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
 
+export type ScreenName = 'account' | 'timeline' | 'settings' | 'import';
+
+export function isScreenName(hash: any): hash is ScreenName {
+  return new Set(['account','timeline','settings','import']).has(hash);
+}
+
 // 画面状態
-export const currentScreen = writable('account'); // 'account' または 'timeline' または 'settings'
+export const currentScreen = writable<ScreenName>('account'); // 'account' または 'timeline' または 'settings'
 
 // 認証状態
 export const isLoggedIn = writable(false);
-
-// パスキー情報
-export const credentialId = writable<Uint8Array | null>(null);
 
 // Nostrキー情報
 export const pwkBlob = writable<PWKBlob | null>(null);
@@ -66,7 +69,6 @@ try {
 export const resetState = () => {
   currentScreen.set('account');
   isLoggedIn.set(false);
-  credentialId.set(null);
   pwkBlob.set(null);
   publicKey.set(null);
 };

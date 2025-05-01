@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PWKManager } from "../../../../src/nosskey.js";
+  import { hexToBytes } from "../../../../src/utils.js";
   import { i18n } from "../i18n/i18nStore.js";
   import * as appState from "../store/appState.js";
   import { cacheSecrets } from "../store/appState.js";
@@ -44,53 +45,25 @@
       const newCredentialId = await pwkManager.createPasskey();
 
       // 既存の秘密鍵をインポート
-      const result = await pwkManager.importNostrKey(
+      const pwk = await pwkManager.importNostrKey(
         secretKeyBytes,
         newCredentialId,
       );
 
       // 状態を更新
-      appState.credentialId.set(result.credentialId);
-      appState.pwkBlob.set(result.pwkBlob);
-      appState.publicKey.set(result.publicKey);
+      appState.pwkBlob.set(pwk);
+      appState.publicKey.set(pwk.pubkey);
       appState.isLoggedIn.set(true);
 
-      // キャッシュが有効な場合のみPWKBlobをローカルストレージに保存
-      let shouldCache = false;
-      cacheSecrets.subscribe((value) => {
-        shouldCache = value;
-      });
-
-      if (shouldCache) {
-        // PWKBlobをローカルストレージに保存
-        const pwkBlobToSave = {
-          ...result.pwkBlob,
-          publicKey: result.publicKey, // 公開鍵も一緒に保存
-        };
-        localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
-      }
-
-      // ローカルストレージに保存
-      const hexCredentialId = result.pwkBlob.credentialId;
-      if (hexCredentialId) {
-        // 既存の値を取得してマージ
-        const savedIds = localStorage.getItem("nosskey_credential_ids");
-        let storedCredentialIds: string[] = [];
-        if (savedIds) {
-          storedCredentialIds = JSON.parse(savedIds);
-        }
-
-        if (!storedCredentialIds.includes(hexCredentialId)) {
-          storedCredentialIds.push(hexCredentialId);
-          localStorage.setItem(
-            "nosskey_credential_ids",
-            JSON.stringify(storedCredentialIds),
-          );
-        }
-      }
+      // PWKBlobをローカルストレージに保存
+      const pwkBlobToSave = {
+        ...pwk,
+        publicKey: pwk.pubkey, // 公開鍵も一緒に保存
+      };
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
 
       // Nostr画面に遷移
-      appState.currentScreen.set("nostr");
+      appState.currentScreen.set("timeline");
     } catch (error) {
       console.error("インポートエラー:", error);
       errorMessage = `インポートエラー: ${error instanceof Error ? error.message : String(error)}`;

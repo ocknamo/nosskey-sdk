@@ -153,7 +153,7 @@
       setTimeout(() => {
         clearResult = "";
         // 認証画面に戻る
-        currentScreen.set("auth");
+        currentScreen.set("account");
       }, 3000);
     } catch (error) {
       clearResult = `エラー: ${error instanceof Error ? error.message : String(error)}`;
