@@ -16,6 +16,7 @@ function initializeRelays() {
 
   if (savedRelays) {
     relayList = JSON.parse(savedRelays);
+    relayList = relayList.length === 0 ? [...defaultRelays] : relayList;
   } else {
     relayList = [...defaultRelays]; // デフォルトリレーのコピーを使用
   }

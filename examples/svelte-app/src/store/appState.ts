@@ -6,7 +6,7 @@ export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 
 
 export type ScreenName = 'account' | 'timeline' | 'settings' | 'import';
 
-export function isScreenName(hash: unknown): hash is ScreenName {
+export function isScreenName(hash: string): hash is ScreenName {
   return new Set(['account', 'timeline', 'settings', 'import']).has(hash);
 }
 

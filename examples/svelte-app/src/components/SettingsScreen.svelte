@@ -1,7 +1,6 @@
 <script lang="ts">
 import { PWKManager } from '../../../../src/nosskey.js';
 import { changeLanguage, i18n } from '../i18n/i18nStore.js';
-import type { Language } from '../i18n/translations.js';
 import {
   cacheSecrets,
   cacheTimeout,
