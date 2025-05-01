@@ -15,7 +15,12 @@ let publishStatus = $state('');
 let isLoading = $state(false);
 
 // PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+const pwkManager = new PWKManager({
+  cacheOptions: {
+    enabled: true,
+    timeoutMs: 30 * 1000, // 秒をミリ秒に変換
+  },
+});
 
 // 公開ステータスのサブスクリプション
 const unsubscribePublishStatus = relayService.publishStatus.subscribe((value) => {

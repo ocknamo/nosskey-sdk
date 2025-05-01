@@ -23,8 +23,8 @@ onMount(() => {
       pwkBlob.set(parsedPwkBlob);
 
       // 公開鍵も設定（parsedPwkBlobに含まれている場合）
-      if (parsedPwkBlob.publicKey) {
-        publicKey.set(parsedPwkBlob.publicKey);
+      if (parsedPwkBlob.pubkey) {
+        publicKey.set(parsedPwkBlob.pubkey);
       }
 
       isLoggedIn.set(true);

@@ -287,19 +287,15 @@ export class PWKManager implements PWKManagerLike {
   async signEvent(event: NostrEvent, pwk: PWKBlob, options: SignOptions = {}): Promise<NostrEvent> {
     const { clearMemory = true, tags, useCache } = options;
 
-    // PWKBlobからcredentialIdを取得
-    const usedCredentialId = pwk.credentialId ? hexToBytes(pwk.credentialId) : undefined;
-
     // useCache が明示的に指定されていればその値を、そうでなければグローバル設定を使用
     const shouldUseCache = useCache !== undefined ? useCache : this.#cacheOptions.enabled;
 
     let sk: Uint8Array | undefined;
 
     // キャッシュが有効で、クレデンシャルIDがあり、キャッシュに鍵がある場合はそれを使用
-    if (shouldUseCache && usedCredentialId) {
-      const credentialIdHex = bytesToHex(usedCredentialId);
-      if (this.#cachedKeys.has(credentialIdHex)) {
-        const cached = this.#cachedKeys.get(credentialIdHex);
+    if (shouldUseCache) {
+      if (this.#cachedKeys.has(pwk.credentialId)) {
+        const cached = this.#cachedKeys.get(pwk.credentialId);
 
         if (cached) {
           // 有効期限をチェック
@@ -307,7 +303,7 @@ export class PWKManager implements PWKManagerLike {
             sk = cached.sk;
           } else {
             // 期限切れの場合は削除
-            this.#cachedKeys.delete(credentialIdHex);
+            this.#cachedKeys.delete(pwk.credentialId);
             this.clearKey(cached.sk);
           }
         }
@@ -317,7 +313,9 @@ export class PWKManager implements PWKManagerLike {
     // キャッシュがない場合は通常の処理
     if (!sk) {
       // PRF値を取得
-      const { secret: prfSecret, id: responseId } = await this.#prfSecret(usedCredentialId);
+      const { secret: prfSecret, id: responseId } = await this.#prfSecret(
+        hexToBytes(pwk.credentialId)
+      );
 
       // PWKの種類によって処理を分岐
       if (pwk.alg === 'prf-direct') {
@@ -334,11 +332,12 @@ export class PWKManager implements PWKManagerLike {
         const aes = await this.#deriveAesGcmKey(prfSecret, salt);
         sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
       }
-
       // キャッシュが有効で、かつusedCredentialIdがある場合は保存
-      if (shouldUseCache && usedCredentialId) {
-        const expireAt = Date.now() + (this.#cacheOptions.timeoutMs || 5 * 60 * 1000);
-        const idHex = bytesToHex(usedCredentialId);
+      if (shouldUseCache) {
+        const timeout =
+          this.#cacheOptions.timeoutMs !== undefined ? this.#cacheOptions.timeoutMs : 5 * 60 * 1000;
+        const expireAt = Date.now() + timeout;
+        const idHex = pwk.credentialId;
         // コピーを作成して保存
         this.#cachedKeys.set(idHex, {
           sk: new Uint8Array(sk),

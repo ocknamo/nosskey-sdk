@@ -51,12 +51,7 @@ async function importKey() {
     appState.publicKey.set(pwk.pubkey);
     appState.isLoggedIn.set(true);
 
-    // PWKBlobをローカルストレージに保存
-    const pwkBlobToSave = {
-      ...pwk,
-      publicKey: pwk.pubkey, // 公開鍵も一緒に保存
-    };
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
+    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
 
     // Nostr画面に遷移
     appState.currentScreen.set('timeline');

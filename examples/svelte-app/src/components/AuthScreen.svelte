@@ -52,7 +52,7 @@ async function initialize() {
 
       // 状態を更新
       appState.pwkBlob.set(parsedPwkBlob);
-      appState.publicKey.set(parsedPwkBlob.publicKey);
+      appState.publicKey.set(parsedPwkBlob.pubkey);
       appState.isLoggedIn.set(true);
 
       // PWKManagerのキャッシュ設定を更新
@@ -120,19 +120,13 @@ async function login(credentialId: string) {
 
   try {
     // PRFを直接Nostrキーとして使用
-    const result = await pwkManager.directPrfToNostrKey(hexToBytes(credentialId));
+    const pwk = await pwkManager.directPrfToNostrKey(hexToBytes(credentialId));
 
     // 状態を更新
-    appState.pwkBlob.set(result);
-    appState.publicKey.set(result.pubkey);
+    appState.pwkBlob.set(pwk);
+    appState.publicKey.set(pwk.pubkey);
     appState.isLoggedIn.set(true);
-
-    // PWKBlobは暗号化されているため常に保存
-    const pwkBlobToSave = {
-      ...result,
-      publicKey: result.pubkey, // 公開鍵も一緒に保存
-    };
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
+    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
 
     // アカウント画面に遷移
     appState.currentScreen.set('account');
