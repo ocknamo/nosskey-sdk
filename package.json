@@ -33,10 +33,10 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
-    "format": "biome format --write ./src ./examples && biome check --write ./src ./examples",
+    "format": "biome format --write && biome check --write",
     "format:check": "biome check ./src",
-    "lint": "biome check ./src",
-    "lint:fix": "biome check --write ./src",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "fix": "npm run lint:fix && npm run format",
     "fix:unsafe": "biome check --fix --unsafe"
   },

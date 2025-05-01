@@ -1,78 +1,74 @@
 <script lang="ts">
-  import { PWKManager } from "../../../../src/nosskey.js";
-  import { hexToBytes } from "../../../../src/utils.js";
-  import { i18n } from "../i18n/i18nStore.js";
-  import * as appState from "../store/appState.js";
-  import { cacheSecrets } from "../store/appState.js";
+import { PWKManager } from '../../../../src/nosskey.js';
+import { hexToBytes } from '../../../../src/utils.js';
+import { i18n } from '../i18n/i18nStore.js';
+import * as appState from '../store/appState.js';
+import { cacheSecrets } from '../store/appState.js';
 
-  // 状態変数
-  let secretKey = $state("");
-  let isLoading = $state(false);
-  let errorMessage = $state("");
+// 状態変数
+let secretKey = $state('');
+let isLoading = $state(false);
+let errorMessage = $state('');
 
-  // PWKManagerのインスタンスを作成
-  const pwkManager = new PWKManager();
+// PWKManagerのインスタンスを作成
+const pwkManager = new PWKManager();
 
-  // 戻るボタン処理
-  function goBack() {
-    appState.currentScreen.set("account");
+// 戻るボタン処理
+function goBack() {
+  appState.currentScreen.set('account');
+}
+
+// 秘密鍵のバリデーション（64文字の16進数文字列）
+function isValidSecretKey(sk: string): boolean {
+  return /^[0-9a-f]{64}$/i.test(sk);
+}
+
+// Nostr秘密鍵インポート処理
+async function importKey() {
+  // 秘密鍵の簡易バリデーション
+  if (!secretKey || !isValidSecretKey(secretKey)) {
+    errorMessage = '有効な秘密鍵（64文字の16進数）を入力してください';
+    return;
   }
 
-  // 秘密鍵のバリデーション（64文字の16進数文字列）
-  function isValidSecretKey(sk: string): boolean {
-    return /^[0-9a-f]{64}$/i.test(sk);
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    // 秘密鍵を16進数文字列からバイト配列に変換
+    const secretKeyBytes = new Uint8Array(
+      secretKey.match(/.{1,2}/g)?.map((byte) => Number.parseInt(byte, 16)) || []
+    );
+
+    // 新しいパスキーを作成
+    const newCredentialId = await pwkManager.createPasskey();
+
+    // 既存の秘密鍵をインポート
+    const pwk = await pwkManager.importNostrKey(secretKeyBytes, newCredentialId);
+
+    // 状態を更新
+    appState.pwkBlob.set(pwk);
+    appState.publicKey.set(pwk.pubkey);
+    appState.isLoggedIn.set(true);
+
+    // PWKBlobをローカルストレージに保存
+    const pwkBlobToSave = {
+      ...pwk,
+      publicKey: pwk.pubkey, // 公開鍵も一緒に保存
+    };
+    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwkBlobToSave));
+
+    // Nostr画面に遷移
+    appState.currentScreen.set('timeline');
+  } catch (error) {
+    console.error('インポートエラー:', error);
+    errorMessage = `インポートエラー: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    // 秘密鍵をメモリから消去
+    secretKey = '';
+    isLoading = false;
   }
-
-  // Nostr秘密鍵インポート処理
-  async function importKey() {
-    // 秘密鍵の簡易バリデーション
-    if (!secretKey || !isValidSecretKey(secretKey)) {
-      errorMessage = "有効な秘密鍵（64文字の16進数）を入力してください";
-      return;
-    }
-
-    isLoading = true;
-    errorMessage = "";
-
-    try {
-      // 秘密鍵を16進数文字列からバイト配列に変換
-      const secretKeyBytes = new Uint8Array(
-        secretKey.match(/.{1,2}/g)?.map((byte) => Number.parseInt(byte, 16)) ||
-          [],
-      );
-
-      // 新しいパスキーを作成
-      const newCredentialId = await pwkManager.createPasskey();
-
-      // 既存の秘密鍵をインポート
-      const pwk = await pwkManager.importNostrKey(
-        secretKeyBytes,
-        newCredentialId,
-      );
-
-      // 状態を更新
-      appState.pwkBlob.set(pwk);
-      appState.publicKey.set(pwk.pubkey);
-      appState.isLoggedIn.set(true);
-
-      // PWKBlobをローカルストレージに保存
-      const pwkBlobToSave = {
-        ...pwk,
-        publicKey: pwk.pubkey, // 公開鍵も一緒に保存
-      };
-      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwkBlobToSave));
-
-      // Nostr画面に遷移
-      appState.currentScreen.set("timeline");
-    } catch (error) {
-      console.error("インポートエラー:", error);
-      errorMessage = `インポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      // 秘密鍵をメモリから消去
-      secretKey = "";
-      isLoading = false;
-    }
-  }
+}
 </script>
 
 <div class="import-container">

@@ -3,6 +3,15 @@
   "organizeImports": {
     "enabled": true
   },
+  "files": {
+    "include": ["./src/*", "./examples/*"],
+    "ignore": [
+      "./examples/svelte-app/dist",
+      "examples/svelte-app/node_modules",
+      "./dist",
+      "./node_modules"
+    ]
+  },
   "linter": {
     "enabled": true,
     "rules": {
