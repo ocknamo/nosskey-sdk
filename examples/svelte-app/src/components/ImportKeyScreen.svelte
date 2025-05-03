@@ -1,17 +1,15 @@
 <script lang="ts">
-import { PWKManager } from '../../../../src/nosskey.js';
-import { hexToBytes } from '../../../../src/utils.js';
 import { i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
-import { cacheSecrets } from '../store/appState.js';
 
 // 状態変数
 let secretKey = $state('');
 let isLoading = $state(false);
 let errorMessage = $state('');
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // 戻るボタン処理
 function goBack() {

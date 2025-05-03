@@ -1,8 +1,8 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
-import { PWKManager } from '../../../../src/nosskey.js';
 import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
 
@@ -14,13 +14,8 @@ let signedEvent = $state<NostrEvent | null>(null);
 let publishStatus = $state('');
 let isLoading = $state(false);
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager({
-  cacheOptions: {
-    enabled: true,
-    timeoutMs: 30 * 1000, // 秒をミリ秒に変換
-  },
-});
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // 公開ステータスのサブスクリプション
 const unsubscribePublishStatus = relayService.publishStatus.subscribe((value) => {

@@ -1,6 +1,6 @@
 <script lang="ts">
-import { PWKManager } from '../../../../src/nosskey.js';
 import { changeLanguage, i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import {
   cacheSecrets,
   cacheTimeout,
@@ -92,19 +92,13 @@ function resetRelays() {
   }, 3000);
 }
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // キャッシュ設定を更新する関数
 function updateCacheSetting(value: boolean) {
-  // storeを更新
+  // storeを更新（pwkManager.serviceがサブスクライブして自動的に反映）
   cacheSecrets.set(value);
-
-  // PWKManagerのキャッシュ設定も更新
-  pwkManager.setCacheOptions({
-    enabled: value,
-    timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
-  });
 
   cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
   setTimeout(() => {
@@ -119,13 +113,7 @@ function updateTimeoutSetting(event: Event) {
 
   if (!Number.isNaN(value) && value > 0) {
     timeoutSeconds = value;
-    cacheTimeout.set(value);
-
-    // PWKManagerのタイムアウト設定も更新
-    pwkManager.setCacheOptions({
-      enabled: isCaching,
-      timeoutMs: value * 1000, // 秒をミリ秒に変換
-    });
+    cacheTimeout.set(value); // pwkManager.serviceがサブスクライブして自動的に反映
 
     cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
     setTimeout(() => {

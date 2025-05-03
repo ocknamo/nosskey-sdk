@@ -1,6 +1,6 @@
 import { type RxNostr, createRxBackwardReq, createRxNostr, noopVerifier, uniq } from 'rx-nostr';
 import type { Observable } from 'rxjs';
-import { type Writable, readable, writable } from 'svelte/store';
+import { type Writable, writable } from 'svelte/store';
 import type { NostrEvent } from '../../../../src/types.js';
 
 export type RelayStatus = 'active' | 'connecting' | 'closed' | 'error';

@@ -1,4 +1,4 @@
-import { get, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 import { RelayService } from '../services/relay.service.js';
 import { defaultRelays } from './appState.js';
 

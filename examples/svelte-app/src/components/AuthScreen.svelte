@@ -1,8 +1,9 @@
 <script lang="ts">
-import { PWKManager, bytesToHex, hexToBytes } from '../../../../src/index.js';
+import { bytesToHex, hexToBytes } from '../../../../src/index.js';
 import { i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
-import { cacheSecrets, cacheTimeout, currentScreen } from '../store/appState.js';
+import { currentScreen } from '../store/appState.js';
 
 // 状態変数
 let isSupported = $state(false);
@@ -14,24 +15,8 @@ let username = $state('');
 let createdCredentialId = $state(''); // 新規作成したパスキーのID
 let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
-// PWKManagerのインスタンスを作成（キャッシュ設定を反映）
-let isCaching = false;
-let timeoutSeconds = 300; // デフォルト5分（300秒）
-
-cacheSecrets.subscribe((value) => {
-  isCaching = value;
-});
-
-cacheTimeout.subscribe((value) => {
-  timeoutSeconds = value;
-});
-
-const pwkManager = new PWKManager({
-  cacheOptions: {
-    enabled: isCaching,
-    timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
-  },
-});
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // 初期化関数
 async function initialize() {
@@ -48,11 +33,7 @@ async function initialize() {
       appState.publicKey.set(parsedPwkBlob.pubkey);
       appState.isLoggedIn.set(true);
 
-      // PWKManagerのキャッシュ設定を更新
-      pwkManager.setCacheOptions({
-        enabled: isCaching,
-        timeoutMs: timeoutSeconds * 1000, // 秒をミリ秒に変換
-      });
+      // シングルトン化によりキャッシュ設定は自動的に最新の値が使用される
 
       // PRF拡張対応確認をスキップして認証済み状態に
       appState.isLoggedIn.set(true);

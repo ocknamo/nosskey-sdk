@@ -1,8 +1,8 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
-import { PWKManager } from '../../../../src/nosskey.js';
 import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import type { RelayInfo } from '../services/relay.service.js';
 import * as appState from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
@@ -20,8 +20,8 @@ let publicKeyShort = $state('');
 let npubAddress = $state('');
 let relayStatuses = $state<{ [url: string]: RelayInfo }>({});
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // リレーサービスからの状態をサブスクライブ
 const unsubscribeRelayStatus = relayService.relayStatuses.subscribe((value) => {

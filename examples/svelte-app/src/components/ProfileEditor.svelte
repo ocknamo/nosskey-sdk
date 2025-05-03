@@ -1,8 +1,7 @@
 <script lang="ts">
-import { onDestroy, onMount } from 'svelte';
-import { PWKManager } from '../../../../src/nosskey.js';
 import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18nStore.js';
+import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
 
@@ -17,8 +16,8 @@ let isLoading = $state(false);
 let saveMessage = $state('');
 let currentPublicKey = $state('');
 
-// PWKManagerのインスタンスを作成
-const pwkManager = new PWKManager();
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
 // publicKeyストアを監視
 appState.publicKey.subscribe((value) => {
