@@ -23,7 +23,3 @@ SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey
 - **軽量ログアウト**: 一時的にキャッシュのみクリア
 - **標準ログアウト**: PWKBlobとキャッシュをクリア
 - **完全ログアウト**: すべてのデータとパスキーを削除
-
-### 2. 変数名の改善
-
-`authenticated`という変数名は意味が広く分かりにくいため、より明確な`isLoggedIn`などへの変更を検討しています。

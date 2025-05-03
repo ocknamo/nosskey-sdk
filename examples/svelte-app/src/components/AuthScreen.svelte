@@ -8,7 +8,6 @@ import { cacheSecrets, cacheTimeout, currentScreen } from '../store/appState.js'
 let isSupported = $state(false);
 let isLoading = $state(false);
 let errorMessage = $state('');
-let storedCredentialIds = $state<string[]>([]);
 let isPrfChecked = $state(false);
 // biome-ignore lint:
 let username = $state('');
@@ -38,12 +37,6 @@ const pwkManager = new PWKManager({
 async function initialize() {
   isLoading = true;
   try {
-    // ローカルストレージからsavedCredentialIdsを取得（表示用）
-    const savedIds = localStorage.getItem('nosskey_credential_ids');
-    if (savedIds) {
-      storedCredentialIds = JSON.parse(savedIds);
-    }
-
     // ローカルストレージから保存済みのPWKBlobを取得
     const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
     if (savedPwkBlob) {

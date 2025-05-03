@@ -52,8 +52,7 @@ examples/svelte-app/
 アプリケーションの状態管理を行うストア：
 - `defaultRelays` - デフォルトで使用するリレーの配列
 - `currentScreen` - 現在の画面を保持するwritableストア（'account'、'timeline'または'settings'）
-- `authenticated` - 認証状態を管理
-- `credentialId` - パスキーの認証情報ID
+- `isLoggedIn` - 認証状態を管理
 - `pwkBlob` - パスキー派生のNostr鍵情報
 - `publicKey` - Nostr公開鍵
 - `resetState()` - 全ての状態をリセットする関数
@@ -143,19 +142,19 @@ Nostrメッセージ作成・投稿機能を担当するコンポーネント：
 
 ## 5. ユーザー状態と状態遷移
 
-アプリケーションのユーザー状態は主に認証状態（authenticated）とPWKBlobの有無によって管理されています。詳細なユーザー認証のユースケースとPWKBlob概念については、[PWKBlobとユーザー認証ユースケース](../../docs/pwkblob-auth-usecases.md)を参照してください。
+アプリケーションのユーザー状態は主に認証状態（isLoggedIn）とPWKBlobの有無によって管理されています。詳細なユーザー認証のユースケースとPWKBlob概念については、[PWKBlobとユーザー認証ユースケース](../../docs/pwkblob-auth-usecases.md)を参照してください。
 
 ### 5.1 状態モデル
 
 本アプリケーションでは、「PWKBlobが存在すること」をログイン状態と定義しています。これにより、ユーザーの状態は以下のように明確に表現されます：
 
 1. **未ログイン状態（パスキーなし）**: 
-   - `authenticated = false`, `pwkBlob = null`
+   - `isLoggedIn = false`, `pwkBlob = null`
    - 初回起動時や認証情報クリア後の状態
    - AccountScreenはAuthScreenコンポーネントを表示
 
 2. **ログイン状態（PWKBlobあり）**:
-   - `authenticated = true`, `pwkBlob ≠ null`
+   - `isLoggedIn = true`, `pwkBlob ≠ null`
    - パスキー認証後またはlocalStorageから復元後
    - AccountScreenはプロフィールとリレー状態を表示
 
@@ -170,17 +169,17 @@ AccountScreenコンポーネントは、マウント時にlocalStorageとの整�
 const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
 
 // ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
-if (savedPwkBlob && !$authenticated) {
-  authenticated.set(true);
+if (savedPwkBlob && !$isLoggedIn) {
+  isLoggedIn.set(true);
 }
 
 // 逆に認証情報がないのに認証状態がtrueの場合も修正
-if (!savedPwkBlob && $authenticated) {
-  authenticated.set(false);
+if (!savedPwkBlob && $isLoggedIn) {
+  isLoggedIn.set(false);
 }
 ```
 
-これにより、authenticatedフラグとPWKBlobの存在が常に同期された状態を保ちます。
+これにより、isLoggedInフラグとPWKBlobの存在が常に同期された状態を保ちます。
 
 ### 5.3 状態遷移のフローダイアグラム
 

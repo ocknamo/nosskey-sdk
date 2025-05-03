@@ -7,7 +7,7 @@ import ProfileEditor from './ProfileEditor.svelte';
 import RelayStatus from './RelayStatus.svelte';
 
 // Svelte v5のrunesモードに対応した記法
-const isAuthenticated = $derived($isLoggedIn);
+const login = $derived($isLoggedIn);
 
 onMount(() => {
   console.log('AccountScreen mounted');
@@ -54,7 +54,7 @@ $effect(() => {
 </div>
 
 <div class="account-screen">
-  {#if !isAuthenticated}
+  {#if !login}
     <!-- 未認証の場合、認証画面を表示 -->
     <AuthScreen />
   {:else}

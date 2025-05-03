@@ -138,7 +138,6 @@ function updateTimeoutSetting(event: Event) {
 function clearLocalStorage() {
   try {
     // 保存されたキーを削除
-    localStorage.removeItem('nosskey_credential_ids');
     localStorage.removeItem('nosskey_pwk_blob');
 
     // メッセージを表示

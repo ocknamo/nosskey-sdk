@@ -6,11 +6,11 @@ import PostForm from './PostForm.svelte';
 import Timeline from './Timeline.svelte';
 
 // 認証状態を監視
-let isAuthenticated = $state(false);
+let login = $state(false);
 
 // ストアを監視
 isLoggedIn.subscribe((value) => {
-  isAuthenticated = value;
+  login = value;
 });
 
 onMount(() => {
@@ -19,7 +19,7 @@ onMount(() => {
 </script>
 
 <div class="timeline-screen">
-  {#if !isAuthenticated}
+  {#if !login}
     <!-- 未認証の場合はメッセージを表示 -->
     <div class="auth-required">
       <h2>タイムラインの閲覧には認証が必要です</h2>
