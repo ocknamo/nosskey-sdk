@@ -101,5 +101,6 @@ $effect(() => {
     color: #856404;
     margin-bottom: 10px;
     line-height: 1.5;
+    text-align: left;
   }
 </style>

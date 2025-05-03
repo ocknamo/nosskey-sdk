@@ -164,8 +164,9 @@ export const ja: TranslationData = {
   appWarning: {
     title: '注意事項',
     domainChange:
-      'このデモアプリはテスト環境専用です。実際の運用では異なるドメインとなります。ドメインが変更された場合、パスキーの再作成が必要になります。',
-    demoDescription: 'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。',
+      'このデモアプリはテスト環境専用です。実際の運用では異なるドメインとなります。ドメインが変更された場合、パスキーの再作成が必要となり紐づく鍵も変更されます。',
+    demoDescription:
+      'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。パスキーで作成された鍵はプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となりパスキーが失われない限り復元可能です',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -312,9 +313,9 @@ export const en: TranslationData = {
   appWarning: {
     title: 'Important Notice',
     domainChange:
-      'This demo application is for test environment only. In actual operation, the domain will be different. Note that changing domains will require recreating passkeys.',
+      'This demo application is for test environment only. In actual operation, the domain will be different. If the domain is changed, the passkey will need to be recreated and the associated key will also be changed.',
     demoDescription:
-      'This application is provided for the purpose of demonstrating the UX of Nostr key management.',
+      'This application is provided for the purpose of demonstrating the UX of Nostr key management. Keys created with the passkey are cloud-backed by the platform, eliminating the need for cumbersome private key management, and can be restored as long as the passkey is not lost.',
   },
   auth: {
     title: 'Nosskey Demo',
