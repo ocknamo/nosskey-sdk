@@ -192,11 +192,11 @@ export const ja: TranslationData = {
     passkeySectionTitle: 'パスキーでアカウント作成',
     passkeySectionDesc:
       'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
-    crossDeviceTitle: '全ての端末で利用可能',
+    crossDeviceTitle: '幅広い端末で利用可能',
     crossDeviceDesc:
       'お使いの端末が直接対応していなくても、ブラウザのQRコードまたは通知を使って、スマートフォンなどを認証器として利用できます。',
     existingPasskeyTitle: '既存のパスキーでログイン',
-    existingPasskeyDesc: '以前作成したパスキーで再度ログイン',
+    existingPasskeyDesc: '以前作成したパスキーで再度ログイン。インポートしたNostr Keyの復元は"まだ"サポートされていません',
     // 開発者向け
     developerSection: '開発者向け',
     prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
@@ -338,11 +338,11 @@ export const en: TranslationData = {
     passkeySectionTitle: 'Create Account with Passkey',
     passkeySectionDesc:
       'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
-    crossDeviceTitle: 'Available on all devices',
+    crossDeviceTitle: 'Available on a wide range of devices',
     crossDeviceDesc:
       "Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     existingPasskeyTitle: 'Login with Existing Passkey',
-    existingPasskeyDesc: 'Login again with previously created passkey',
+    existingPasskeyDesc: 'Login again with previously created passkey. Recovery of imported Nostr Key is not “yet” supported.',
     // 開発者向け
     developerSection: 'For Developers',
     prfDebugInfo: 'PRF extension check is for debugging purposes',

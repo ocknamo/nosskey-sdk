@@ -1,137 +1,164 @@
 <script lang="ts">
-import { bytesToHex, hexToBytes } from '../../../../src/index.js';
-import { i18n } from '../i18n/i18nStore.js';
-import { getPWKManager } from '../services/pwkManager.service.js';
-import * as appState from '../store/appState.js';
-import { currentScreen } from '../store/appState.js';
+  import { bytesToHex, hexToBytes } from "../../../../src/index.js";
+  import { i18n } from "../i18n/i18nStore.js";
+  import { getPWKManager } from "../services/pwkManager.service.js";
+  import * as appState from "../store/appState.js";
+  import { currentScreen } from "../store/appState.js";
 
-// 状態変数
-let isSupported = $state(false);
-let isLoading = $state(false);
-let errorMessage = $state('');
-let isPrfChecked = $state(false);
-// biome-ignore lint:
-let username = $state('');
-let createdCredentialId = $state(''); // 新規作成したパスキーのID
-let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
+  // 状態変数
+  let isSupported = $state(false);
+  let isLoading = $state(false);
+  let errorMessage = $state("");
+  let isPrfChecked = $state(false);
+  // biome-ignore lint:
+  let username = $state("");
+  let createdCredentialId = $state(""); // 新規作成したパスキーのID
+  let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
-// PWKManagerのシングルトンインスタンスを取得
-const pwkManager = getPWKManager();
+  // PWKManagerのシングルトンインスタンスを取得
+  const pwkManager = getPWKManager();
 
-// 初期化関数
-async function initialize() {
-  isLoading = true;
-  try {
-    // ローカルストレージから保存済みのPWKBlobを取得
-    const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
-    if (savedPwkBlob) {
-      // PWKBlobを復元
-      const parsedPwkBlob = JSON.parse(savedPwkBlob);
+  // 初期化関数
+  async function initialize() {
+    isLoading = true;
+    try {
+      // ローカルストレージから保存済みのPWKBlobを取得
+      const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
+      if (savedPwkBlob) {
+        // PWKBlobを復元
+        const parsedPwkBlob = JSON.parse(savedPwkBlob);
+
+        // 状態を更新
+        appState.pwkBlob.set(parsedPwkBlob);
+        appState.publicKey.set(parsedPwkBlob.pubkey);
+        appState.isLoggedIn.set(true);
+
+        // シングルトン化によりキャッシュ設定は自動的に最新の値が使用される
+
+        // PRF拡張対応確認をスキップして認証済み状態に
+        appState.isLoggedIn.set(true);
+        return; // 初期化処理を終了
+      }
+    } catch (error) {
+      console.error("初期化エラー:", error);
+      errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // PRF対応確認
+  async function checkPrfSupport() {
+    isLoading = true;
+    errorMessage = "";
+    try {
+      // PRF拡張がサポートされているか確認
+      isSupported = await pwkManager.isPrfSupported();
+      isPrfChecked = true;
+    } catch (error) {
+      console.error("PRF対応確認エラー:", error);
+      errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // 新規パスキー作成
+  async function createNew() {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // 新しいパスキーを作成
+      const newCredentialId = await pwkManager.createPasskey({
+        user: {
+          name: username || "user@example.com",
+          displayName: username || "PWK user",
+        },
+      });
+
+      createdCredentialId = bytesToHex(newCredentialId);
+      isPasskeyCreated = true;
+    } catch (error) {
+      console.error("パスキー作成エラー:", error);
+      errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // 特定のcredentialIdでログイン
+  async function login(credentialId: string) {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // PRFを直接Nostrキーとして使用
+      const pwk = await pwkManager.directPrfToNostrKey(
+        hexToBytes(credentialId),
+      );
 
       // 状態を更新
-      appState.pwkBlob.set(parsedPwkBlob);
-      appState.publicKey.set(parsedPwkBlob.pubkey);
+      appState.pwkBlob.set(pwk);
+      appState.publicKey.set(pwk.pubkey);
       appState.isLoggedIn.set(true);
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwk));
 
-      // シングルトン化によりキャッシュ設定は自動的に最新の値が使用される
-
-      // PRF拡張対応確認をスキップして認証済み状態に
-      appState.isLoggedIn.set(true);
-      return; // 初期化処理を終了
+      // アカウント画面に遷移
+      appState.currentScreen.set("account");
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
     }
-  } catch (error) {
-    console.error('初期化エラー:', error);
-    errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// PRF対応確認
-async function checkPrfSupport() {
-  isLoading = true;
-  errorMessage = '';
-  try {
-    // PRF拡張がサポートされているか確認
-    isSupported = await pwkManager.isPrfSupported();
-    isPrfChecked = true;
-  } catch (error) {
-    console.error('PRF対応確認エラー:', error);
-    errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 新規パスキー作成
-async function createNew() {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // 新しいパスキーを作成
-    const newCredentialId = await pwkManager.createPasskey({
-      user: {
-        name: username || 'user@example.com',
-        displayName: username || 'PWK user',
-      },
-    });
-
-    createdCredentialId = bytesToHex(newCredentialId);
-    isPasskeyCreated = true;
-  } catch (error) {
-    console.error('パスキー作成エラー:', error);
-    errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 既存のパスキーでログイン
-async function login(credentialId: string) {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // PRFを直接Nostrキーとして使用
-    const pwk = await pwkManager.directPrfToNostrKey(hexToBytes(credentialId));
-
-    // 状態を更新
-    appState.pwkBlob.set(pwk);
-    appState.publicKey.set(pwk.pubkey);
-    appState.isLoggedIn.set(true);
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('ログインエラー:', error);
-    errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// サポート対象外の場合のメッセージ
-function getUnsupportedMessage() {
-  const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
-  const isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
-
-  if (isChrome) {
-    return 'Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。';
   }
 
-  if (isFirefox) {
-    return 'Firefox では about:config から webauthn:enable_prf を true に設定してください。';
+  // 既存のパスキーでログイン（credentialIdなし）
+  async function loginWithExistingPasskey() {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
+      const pwk = await pwkManager.directPrfToNostrKey();
+
+      // 状態を更新
+      appState.pwkBlob.set(pwk);
+      appState.publicKey.set(pwk.pubkey);
+      appState.isLoggedIn.set(true);
+      localStorage.setItem("nosskey_pwk_blob", JSON.stringify(pwk));
+
+      // アカウント画面に遷移
+      appState.currentScreen.set("account");
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
   }
 
-  return 'お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。';
-}
+  // サポート対象外の場合のメッセージ
+  function getUnsupportedMessage() {
+    const isChrome = navigator.userAgent.indexOf("Chrome") > -1;
+    const isFirefox = navigator.userAgent.indexOf("Firefox") > -1;
 
-// コンポーネントのマウント時に初期化
-$effect(() => {
-  initialize();
-});
+    if (isChrome) {
+      return "Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。";
+    }
+
+    if (isFirefox) {
+      return "Firefox では about:config から webauthn:enable_prf を true に設定してください。";
+    }
+
+    return "お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。";
+  }
+
+  // コンポーネントのマウント時に初期化
+  $effect(() => {
+    initialize();
+  });
 </script>
 
 <div class="auth-container">
@@ -146,45 +173,67 @@ $effect(() => {
   {#if isLoading}
     <div class="loading">{$i18n.t.auth.loading}</div>
   {:else}
-    <!-- パスキー作成セクション（メイン機能） -->
+    <!-- メインセクション -->
     <div class="auth-section main-section">
-      <h2>{$i18n.t.auth.passkeySectionTitle}</h2>
-      <p>{$i18n.t.auth.passkeySectionDesc}</p>
+      <h2>Nostrアカウント</h2>
 
-      <!-- クロスデバイス認証の説明 -->
-      <div class="info-box">
-        <h3>{$i18n.t.auth.crossDeviceTitle}</h3>
-        <p>{$i18n.t.auth.crossDeviceDesc}</p>
-      </div>
-
-      <div class="username-input">
-        <label for="username">{$i18n.t.auth.username}</label>
-        <input
-          id="username"
-          type="text"
-          bind:value={username}
-          placeholder={$i18n.t.auth.usernamePlaceholder}
+      <!-- 既存パスキーでログイン -->
+      <div class="login-option">
+        <h3>{$i18n.t.auth.existingPasskeyTitle}</h3>
+        <p>{$i18n.t.auth.existingPasskeyDesc}</p>
+        <button
+          class="login-with-existing-button"
+          onclick={loginWithExistingPasskey}
           disabled={isLoading}
-        />
+        >
+          {$i18n.t.auth.loginWith}
+        </button>
       </div>
 
-      {#if !isPasskeyCreated}
-        <button class="create-button" onclick={createNew} disabled={isLoading}>
-          {$i18n.t.auth.createNew}
-        </button>
-      {:else}
-        <div class="success-message">
-          <h3>{$i18n.t.auth.passkeyCreated}</h3>
-          <p>{$i18n.t.auth.firstLogin}</p>
+      <!-- 新規パスキー作成 -->
+      <div class="login-option">
+        <h3>{$i18n.t.auth.passkeySectionTitle}</h3>
+        <p>{$i18n.t.auth.passkeySectionDesc}</p>
+
+        <!-- クロスデバイス認証の説明 -->
+        <div class="info-box">
+          <h3>{$i18n.t.auth.crossDeviceTitle}</h3>
+          <p>{$i18n.t.auth.crossDeviceDesc}</p>
+        </div>
+
+        <div class="username-input">
+          <label for="username">{$i18n.t.auth.username}</label>
+          <input
+            id="username"
+            type="text"
+            bind:value={username}
+            placeholder={$i18n.t.auth.usernamePlaceholder}
+            disabled={isLoading}
+          />
+        </div>
+
+        {#if !isPasskeyCreated}
           <button
-            class="login-button"
-            onclick={() => login(createdCredentialId)}
+            class="create-button"
+            onclick={createNew}
             disabled={isLoading}
           >
-            {$i18n.t.auth.proceedWithLogin}
+            {$i18n.t.auth.createNew}
           </button>
-        </div>
-      {/if}
+        {:else}
+          <div class="success-message">
+            <h3>{$i18n.t.auth.passkeyCreated}</h3>
+            <p>{$i18n.t.auth.firstLogin}</p>
+            <button
+              class="login-button"
+              onclick={() => login(createdCredentialId)}
+              disabled={isLoading}
+            >
+              {$i18n.t.auth.proceedWithLogin}
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
 
     <!-- その他のログインオプション -->
@@ -366,6 +415,29 @@ $effect(() => {
     padding: 12px 24px;
     width: 100%;
     margin-top: 15px;
+  }
+
+  .login-with-existing-button {
+    background-color: #1890ff;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .login-option {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    background-color: #fafafa;
+  }
+
+  .login-option h3 {
+    margin-top: 0;
+    color: #5755d9;
+    margin-bottom: 10px;
   }
 
   @media (max-width: 480px) {
