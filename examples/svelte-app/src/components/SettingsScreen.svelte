@@ -264,7 +264,6 @@ function clearLocalStorage() {
             value={timeoutSeconds}
             onchange={updateTimeoutSetting}
           />
-          <small>{$i18n.t.settings.cacheSettings.timeoutHint}</small>
         </div>
       {/if}
 

@@ -138,7 +138,6 @@ export interface TranslationData {
       disabled: string;
       saved: string;
       timeoutLabel: string;
-      timeoutHint: string;
       clearTitle: string;
       clearDescription: string;
       clearButton: string;
@@ -300,19 +299,18 @@ export const ja: TranslationData = {
     localStorage: {
       title: 'ローカルストレージ',
       description:
-        '保存された認証情報をクリアします。この操作を行うと再度ログインが必要になります。',
-      clear: '認証情報をクリア',
+        '保存された情報を全てクリアします。この操作を行うと再度ログインが必要になります。',
+      clear: '情報をクリア',
       cleared: 'ローカルストレージをクリアしました',
     },
     cacheSettings: {
       title: 'シークレットキャッシュ設定',
       description:
-        '認証情報（秘密鍵など）をローカルストレージに保存するかどうかを設定します。有効にすると次回起動時に再認証をスキップできます。',
-      enabled: '認証情報をキャッシュする',
-      disabled: '認証情報をキャッシュしない',
+        '秘密鍵を一時的にメモリに保存するかどうかを設定します。有効にするとキャッシュ時間内の再認証をスキップできますが、長時間保持すると秘密鍵漏洩やなりすましのリスクが高まります',
+      enabled: '秘密鍵をキャッシュする',
+      disabled: '秘密鍵をキャッシュしない',
       saved: '設定を保存しました',
       timeoutLabel: 'キャッシュ時間（秒）',
-      timeoutHint: '（10秒〜24時間の間で設定可能）',
       clearTitle: 'キャッシュのクリア',
       clearDescription:
         '現在のシークレットキーのキャッシュをクリアします。次回の操作時に再認証が必要になります。',
@@ -476,19 +474,18 @@ export const en: TranslationData = {
     localStorage: {
       title: 'Local Storage',
       description:
-        'Clear stored authentication information. You will need to login again after this operation.',
-      clear: 'Clear Auth Data',
+        'Clear all stored information. You will need to login again after this operation.',
+      clear: 'Clear Information',
       cleared: 'Local storage cleared',
     },
     cacheSettings: {
       title: 'Secret Caching Settings',
       description:
-        'Configure whether authentication data (including secret keys) should be stored in local storage. When enabled, you can skip re-authentication on startup.',
-      enabled: 'Cache authentication data',
-      disabled: 'Do not cache authentication data',
+        'Configure whether to temporarily store the secret key in memory. When enabled, you can skip re-authentication within the cache duration, but keeping it for a long time increases the risk of secret key leakage and impersonation.',
+      enabled: 'Cache secret key',
+      disabled: 'Do not cache secret key',
       saved: 'Settings saved',
       timeoutLabel: 'Cache Duration (seconds)',
-      timeoutHint: '(Configurable between 10 seconds and 24 hours)',
       clearTitle: 'Clear Cache',
       clearDescription:
         'Clear the current secret key cache. You will need to re-authenticate on next operation.',
