@@ -181,7 +181,7 @@ export const ja: TranslationData = {
     passkeyCreated: 'パスキーが作成されました',
     proceedWithLogin: 'ログインして続ける',
     loading: 'ロード中...',
-    username: 'ユーザー名（オプション）',
+    username: 'ユーザー名',
     usernamePlaceholder: 'ユーザー名を入力',
     importTitle: '既存のNostr鍵をインポート',
     importSubtitle:

@@ -209,6 +209,7 @@ $effect(() => {
             bind:value={username}
             placeholder={$i18n.t.auth.usernamePlaceholder}
             disabled={isLoading}
+            required={true}
           />
         </div>
 
@@ -216,7 +217,7 @@ $effect(() => {
           <button
             class="create-button"
             onclick={createNew}
-            disabled={isLoading}
+            disabled={isLoading || !username}
           >
             {$i18n.t.auth.createNew}
           </button>
@@ -358,6 +359,11 @@ $effect(() => {
     cursor: pointer;
     font-size: 1rem;
     transition: background-color 0.3s ease;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .create-button {
