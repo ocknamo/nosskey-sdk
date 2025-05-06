@@ -72,3 +72,21 @@ export const resetState = () => {
   pwkBlob.set(null);
   publicKey.set(null);
 };
+
+// ログアウト関数
+export const logout = () => {
+  // PWKBlobをクリア
+  pwkBlob.set(null);
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('nosskey_pwk_blob');
+  }
+
+  // 公開鍵情報もクリア
+  publicKey.set(null);
+
+  // ログイン状態を更新
+  isLoggedIn.set(false);
+
+  // 画面を認証画面に戻す
+  currentScreen.set('account');
+};

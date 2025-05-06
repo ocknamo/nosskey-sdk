@@ -139,6 +139,17 @@ export interface TranslationData {
       saved: string;
       timeoutLabel: string;
       timeoutHint: string;
+      clearTitle: string;
+      clearDescription: string;
+      clearButton: string;
+      clearSuccess: string;
+      clearError: string;
+    };
+    logout: {
+      title: string;
+      description: string;
+      button: string;
+      success: string;
     };
     appInfo: {
       title: string;
@@ -302,6 +313,18 @@ export const ja: TranslationData = {
       saved: '設定を保存しました',
       timeoutLabel: 'キャッシュ時間（秒）',
       timeoutHint: '（10秒〜24時間の間で設定可能）',
+      clearTitle: 'キャッシュのクリア',
+      clearDescription:
+        '現在のシークレットキーのキャッシュをクリアします。次回の操作時に再認証が必要になります。',
+      clearButton: 'キャッシュをクリア',
+      clearSuccess: 'シークレットキーのキャッシュがクリアされました。',
+      clearError: 'キャッシュのクリアに失敗しました。',
+    },
+    logout: {
+      title: 'ログアウト',
+      description: 'アプリからログアウトします。すべてのアカウント情報がクリアされます。',
+      button: 'ログアウト',
+      success: 'ログアウトが完了しました。',
     },
     appInfo: {
       title: 'アプリケーション情報',
@@ -466,6 +489,18 @@ export const en: TranslationData = {
       saved: 'Settings saved',
       timeoutLabel: 'Cache Duration (seconds)',
       timeoutHint: '(Configurable between 10 seconds and 24 hours)',
+      clearTitle: 'Clear Cache',
+      clearDescription:
+        'Clear the current secret key cache. You will need to re-authenticate on next operation.',
+      clearButton: 'Clear Cache',
+      clearSuccess: 'Secret key cache has been cleared.',
+      clearError: 'Failed to clear cache.',
+    },
+    logout: {
+      title: 'Logout',
+      description: 'Logout from the application. All account information will be cleared.',
+      button: 'Logout',
+      success: 'Logout completed.',
     },
     appInfo: {
       title: 'Application Info',

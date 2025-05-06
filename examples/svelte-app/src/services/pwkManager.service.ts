@@ -50,3 +50,13 @@ export function getPWKManager(): PWKManager {
 export function resetPWKManager(): void {
   instance = null;
 }
+
+// シークレットキーのキャッシュをクリア
+export function clearSecretCache(): boolean {
+  if (instance) {
+    // SDKの提供するメソッドを使用
+    instance.clearAllCachedKeys();
+    return true;
+  }
+  return false;
+}

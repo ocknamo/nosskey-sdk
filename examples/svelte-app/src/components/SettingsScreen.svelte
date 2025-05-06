@@ -1,11 +1,12 @@
 <script lang="ts">
 import { changeLanguage, i18n } from '../i18n/i18nStore.js';
-import { getPWKManager } from '../services/pwkManager.service.js';
+import { clearSecretCache, getPWKManager } from '../services/pwkManager.service.js';
 import {
   cacheSecrets,
   cacheTimeout,
   currentScreen,
   defaultRelays,
+  logout,
   resetState,
 } from '../store/appState.js';
 import { activeRelays } from '../store/relayStore.js';
@@ -120,6 +121,35 @@ function updateTimeoutSetting(event: Event) {
       cacheSettingMessage = '';
     }, 3000);
   }
+}
+
+// キャッシュをクリアする関数
+function clearCache() {
+  const success = clearSecretCache();
+
+  if (success) {
+    cacheSettingMessage = $i18n.t.settings.cacheSettings.clearSuccess;
+  } else {
+    cacheSettingMessage = $i18n.t.settings.cacheSettings.clearError;
+  }
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
+}
+
+// ログアウト関数
+let logoutMessage = $state('');
+
+function logoutFromApp() {
+  logout();
+  logoutMessage = $i18n.t.settings.logout.success;
+
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    logoutMessage = '';
+  }, 3000);
 }
 
 // ローカルストレージをクリアする関数
@@ -238,12 +268,37 @@ function clearLocalStorage() {
         </div>
       {/if}
 
+      <div class="cache-clear">
+        <h3>{$i18n.t.settings.cacheSettings.clearTitle}</h3>
+        <p>{$i18n.t.settings.cacheSettings.clearDescription}</p>
+        <button class="secondary-button" onclick={clearCache}>
+          {$i18n.t.settings.cacheSettings.clearButton}
+        </button>
+      </div>
+
       {#if cacheSettingMessage}
         <div class="result-message">
           {cacheSettingMessage}
         </div>
       {/if}
     </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>{$i18n.t.settings.logout.title}</h2>
+    <p>
+      {$i18n.t.settings.logout.description}
+    </p>
+
+    <button class="danger-button" onclick={logoutFromApp}>
+      {$i18n.t.settings.logout.button}
+    </button>
+
+    {#if logoutMessage}
+      <div class="result-message">
+        {logoutMessage}
+      </div>
+    {/if}
   </div>
 
   <div class="settings-section">
