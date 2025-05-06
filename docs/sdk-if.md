@@ -11,7 +11,7 @@
 **注意**: このSDKは本番環境向けに完成されたものではなく、エッジケース処理、UXプロンプト、失効処理、および完全な暗号強化は省略されています。主に以下を示しています：
 
 - 公開インターフェース（型とクラス）
-- 主要メソッド：`createPasskey()`, `importNostrKey()`, `generateNostrKey()`, `directPrfToNostrKey()`, `signEvent()`, `isPrfSupported()`の実装
+- 主要メソッド：`createPasskey()`, `importNostrKey()`, `generateNostrKey()`, `directPrfToNostrKey()`, `signEventWithPWK()`, `isPrfSupported()`の実装
 - 使用例
 
 ## 1. 公開インターフェースと型定義
@@ -159,7 +159,7 @@ export interface PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  signEvent(
+  signEventWithPWK(
     event: NostrEvent,
     pwk: PWKBlob,
     options?: SignOptions
@@ -255,7 +255,7 @@ export class PWKManager implements PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  async signEvent(
+  async signEventWithPWK(
     event: NostrEvent,
     pwk: PWKBlob,
     options?: SignOptions
@@ -361,7 +361,7 @@ try {
     tags: [],
     created_at: Math.floor(Date.now() / 1000)
   };
-  const signedEvent = await pwkMgr.signEvent(
+  const signedEvent = await pwkMgr.signEventWithPWK(
     event, 
     directResult.pwkBlob
   );

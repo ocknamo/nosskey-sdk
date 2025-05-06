@@ -284,7 +284,7 @@ export class PWKManager implements PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  async signEvent(event: NostrEvent, pwk: PWKBlob, options: SignOptions = {}): Promise<NostrEvent> {
+  async signEventWithPWK(event: NostrEvent, pwk: PWKBlob, options: SignOptions = {}): Promise<NostrEvent> {
     const { clearMemory = true, tags, useCache } = options;
 
     // useCache が明示的に指定されていればその値を、そうでなければグローバル設定を使用

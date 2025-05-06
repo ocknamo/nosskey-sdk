@@ -354,7 +354,7 @@ PRF値を直接使用する実装は実験的（PoC）な位置づけとして�
 
 3. **署名処理での分岐**:
    ```typescript
-   async signEvent(event, pwk, credentialId, options = {}) {
+   async signEventWithPWK(event, pwk, credentialId, options = {}) {
      if (pwk.alg === 'prf-direct') {
        // PRF値を直接シークレットキーとして使用
        const sk = await this.#prfSecret(credentialId);

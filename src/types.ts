@@ -137,7 +137,7 @@ export interface PWKManagerLike {
    * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
    * @param options 署名オプション
    */
-  signEvent(event: NostrEvent, pwk: PWKBlob, options?: SignOptions): Promise<NostrEvent>;
+  signEventWithPWK(event: NostrEvent, pwk: PWKBlob, options?: SignOptions): Promise<NostrEvent>;
 
   /**
    * 秘密鍵をメモリから明示的に消去
