@@ -49,8 +49,8 @@ $effect(() => {
 <!-- デモアプリとドメイン変更の注意喚起セクション -->
 <div class="warning-section">
   <h2>{$i18n.t.appWarning.title}</h2>
-  <p class="warning-text">{$i18n.t.appWarning.domainChange}</p>
   <p class="warning-text">{$i18n.t.appWarning.demoDescription}</p>
+  <p class="warning-text">{$i18n.t.appWarning.domainChange}</p>
 </div>
 
 <div class="account-screen">

@@ -165,13 +165,12 @@ export const ja: TranslationData = {
   appWarning: {
     title: '注意事項',
     domainChange:
-      'パスキーは異なるドメインでは使用できません。したがってNosskeyに対応していても異なるドメイン下のアプリではPRFダイレクト鍵は使えないため使いたい場合は秘密鍵のエクスポートが必要です',
-    demoDescription:
-      'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。パスキーで作成された鍵はプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となりパスキーが失われない限り復元可能です',
+      'パスキーは異なるドメインでは使用できません。したがってNosskeyに対応していても異なるドメイン下のアプリではPWK(Passkey Wrapped Key)は使えないため、秘密鍵のエクスポートが必要です',
+    demoDescription: 'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。',
   },
   auth: {
     title: 'Nosskey デモ',
-    subtitle: 'パスキー由来のNostr鍵 (PRFを直接使用)',
+    subtitle: 'パスキーにラップされたNostr秘密鍵(PWK)を活用したクライアント',
     checkPrf: 'PRF拡張対応確認',
     unsupportedTitle: 'PRF拡張がサポートされていません',
     createNew: '新規作成',
@@ -191,7 +190,8 @@ export const ja: TranslationData = {
     importButton: 'インポート',
     // 新規追加
     accountTitle: 'Nostrアカウント',
-    appDescription: 'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。',
+    appDescription:
+      'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。パスキーはプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となります',
     passkeySectionTitle: 'パスキーでアカウント作成',
     passkeySectionDesc:
       'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
@@ -317,13 +317,13 @@ export const en: TranslationData = {
   appWarning: {
     title: 'Important Notice',
     domainChange:
-      'Passkey cannot be used in different domains. Therefore, even if Nosskey is supported, PRF direct keys cannot be used in apps under different domains, so if you want to use them, you must export your private key.',
+      'Passkey cannot be used in different domains. Therefore, even if Nosskey is supported, PWK(Passkey Wrapped Key) cannot be used in apps under different domains, so if you want to use them, you must export your private key.',
     demoDescription:
-      'This application is provided for the purpose of demonstrating the UX of Nostr key management. Keys created with the passkey are cloud-backed by the platform, eliminating the need for cumbersome private key management, and can be restored as long as the passkey is not lost.',
+      'This application is provided for the purpose of demonstrating the UX of Nostr key management.',
   },
   auth: {
     title: 'Nosskey Demo',
-    subtitle: 'Passkey-derived Nostr Key (Direct PRF)',
+    subtitle: 'Client using Passkey Wrapped Nostr private Key(PWK)',
     checkPrf: 'Check PRF Extension Support',
     unsupportedTitle: 'PRF Extension Not Supported',
     createNew: 'Create New',
@@ -340,7 +340,8 @@ export const en: TranslationData = {
     importButton: 'Import',
     // 新規追加
     accountTitle: 'Nostr account',
-    appDescription: 'This app uses passkey authentication to securely manage your Nostr keys.',
+    appDescription:
+      'This app uses passkey authentication to securely manage your Nostr keys. Passkey is cloud-backed by the platform, eliminating the need for cumbersome private key management.',
     passkeySectionTitle: 'Create Account with Passkey',
     passkeySectionDesc:
       'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
