@@ -1,5 +1,6 @@
 <script lang="ts">
 import { bytesToHex, hexToBytes } from '../../../../src/index.js';
+import NosskeyImage from '../assets/nosskey.svg';
 import { i18n } from '../i18n/i18nStore.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
@@ -160,6 +161,7 @@ $effect(() => {
 </script>
 
 <div class="auth-container">
+  <img src={NosskeyImage} alt="Nosskey hero" width="100" height="100" />
   <h1>{$i18n.t.auth.title}</h1>
   <p>{$i18n.t.auth.subtitle}</p>
 
@@ -173,7 +175,7 @@ $effect(() => {
   {:else}
     <!-- メインセクション -->
     <div class="auth-section main-section">
-      <h2>Nostrアカウント</h2>
+      <h2>{$i18n.t.auth.accountTitle}</h2>
 
       <!-- 既存パスキーでログイン -->
       <div class="login-option">

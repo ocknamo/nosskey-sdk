@@ -95,6 +95,7 @@ $effect(() => {
   .warning-section {
     border-left: 4px solid #ffc107;
     background-color: #fff8e1;
+    padding: 0 8px;
   }
 
   .warning-text {

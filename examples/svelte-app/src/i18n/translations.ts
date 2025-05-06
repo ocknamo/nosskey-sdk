@@ -38,6 +38,7 @@ export interface TranslationData {
     secretKeyHelp: string;
     importButton: string;
     // 新規追加
+    accountTitle: string;
     appDescription: string;
     passkeySectionTitle: string;
     passkeySectionDesc: string;
@@ -183,11 +184,13 @@ export const ja: TranslationData = {
     username: 'ユーザー名（オプション）',
     usernamePlaceholder: 'ユーザー名を入力',
     importTitle: '既存のNostr鍵をインポート',
-    importSubtitle: '既存の秘密鍵をパスキーで保護します。PRFを直接秘密鍵として使用せず、秘密鍵の暗号化に使用します',
+    importSubtitle:
+      '既存の秘密鍵をパスキーで保護します。PRFを直接秘密鍵として使用せず、秘密鍵の暗号化に使用します',
     secretKey: 'Nostr秘密鍵',
     secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
     importButton: 'インポート',
     // 新規追加
+    accountTitle: 'Nostrアカウント',
     appDescription: 'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。',
     passkeySectionTitle: 'パスキーでアカウント作成',
     passkeySectionDesc:
@@ -330,11 +333,13 @@ export const en: TranslationData = {
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
     importTitle: 'Import Existing Nostr Key',
-    importSubtitle: 'Protect your existing secret key with a passkey. Do not use PRF directly as private key, use PRF for encryption of private key',
+    importSubtitle:
+      'Protect your existing secret key with a passkey. Do not use PRF directly as private key, use PRF for encryption of private key',
     secretKey: 'Nostr Secret Key',
     secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
     importButton: 'Import',
     // 新規追加
+    accountTitle: 'Nostr account',
     appDescription: 'This app uses passkey authentication to securely manage your Nostr keys.',
     passkeySectionTitle: 'Create Account with Passkey',
     passkeySectionDesc:
