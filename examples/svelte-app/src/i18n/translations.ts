@@ -15,6 +15,12 @@ export interface TranslationData {
     error: string;
     success: string;
     back: string;
+    errorMessages: {
+      init: string;
+      prfCheck: string;
+      passkeyCreation: string;
+      login: string;
+    };
   };
   appWarning: {
     title: string;
@@ -54,6 +60,10 @@ export interface TranslationData {
     firstLogin: string;
     passkeyCreated: string;
     proceedWithLogin: string;
+    // インポートセクション
+    importSectionTitle: string;
+    importSectionDesc: string;
+    importNotImplemented: string;
   };
   nostr: {
     title: string;
@@ -161,6 +171,12 @@ export const ja: TranslationData = {
     error: 'エラー',
     success: '成功',
     back: '戻る',
+    errorMessages: {
+      init: '初期化エラー:',
+      prfCheck: 'PRF対応確認エラー:',
+      passkeyCreation: 'パスキー作成エラー:',
+      login: 'ログインエラー:',
+    },
   },
   appWarning: {
     title: '注意事項',
@@ -205,6 +221,10 @@ export const ja: TranslationData = {
     developerSection: '開発者向け',
     prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
     prfSupportedMessage: 'PRF拡張がサポートされています',
+    // インポートセクション
+    importSectionTitle: 'Nostrアカウント（インポート）',
+    importSectionDesc: '既存のNostrアカウントをインポート',
+    importNotImplemented: '※インポート鍵による再ログイン機能は未実装です',
   },
   nostr: {
     title: 'Nostr',
@@ -313,6 +333,12 @@ export const en: TranslationData = {
     error: 'Error',
     success: 'Success',
     back: 'Back',
+    errorMessages: {
+      init: 'Initialization Error:',
+      prfCheck: 'PRF Support Check Error:',
+      passkeyCreation: 'Passkey Creation Error:',
+      login: 'Login Error:',
+    },
   },
   appWarning: {
     title: 'Important Notice',
@@ -350,7 +376,7 @@ export const en: TranslationData = {
       "Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     existingPasskeyTitle: 'Login with Existing Passkey',
     existingPasskeyDesc:
-      'Login again with previously created passkey. Recovery of imported Nostr Key is not “yet” supported.',
+      'Login again with previously created passkey. Recovery of imported Nostr Key is not "yet" supported.',
     // 開発者向け
     developerSection: 'For Developers',
     prfDebugInfo: 'PRF extension check is for debugging purposes',
@@ -359,6 +385,10 @@ export const en: TranslationData = {
     firstLogin: 'First Login',
     passkeyCreated: 'Passkey Created Successfully',
     proceedWithLogin: 'Proceed with Login',
+    // インポートセクション
+    importSectionTitle: 'Nostr Account (Import)',
+    importSectionDesc: 'Import Existing Nostr Account',
+    importNotImplemented: '* Re-login with imported key is not implemented yet',
   },
   nostr: {
     title: 'Nostr',

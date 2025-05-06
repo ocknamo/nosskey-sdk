@@ -42,7 +42,7 @@ async function initialize() {
     }
   } catch (error) {
     console.error('初期化エラー:', error);
-    errorMessage = `初期化エラー: ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = `${$i18n.t.common.errorMessages.init} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -58,7 +58,7 @@ async function checkPrfSupport() {
     isPrfChecked = true;
   } catch (error) {
     console.error('PRF対応確認エラー:', error);
-    errorMessage = `PRF対応確認エラー: ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -82,7 +82,7 @@ async function createNew() {
     isPasskeyCreated = true;
   } catch (error) {
     console.error('パスキー作成エラー:', error);
-    errorMessage = `パスキー作成エラー: ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -107,7 +107,7 @@ async function login(credentialId: string) {
     appState.currentScreen.set('account');
   } catch (error) {
     console.error('ログインエラー:', error);
-    errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -132,7 +132,7 @@ async function loginWithExistingPasskey() {
     appState.currentScreen.set('account');
   } catch (error) {
     console.error('ログインエラー:', error);
-    errorMessage = `ログインエラー: ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -238,12 +238,18 @@ $effect(() => {
     </div>
 
     <!-- その他のログインオプション -->
-    <div class="auth-section">
-      <button
-        class="import-button"
-        onclick={() => currentScreen.set("import")}
-        disabled={isLoading}>{$i18n.t.auth.importButton}</button
-      >
+    <div class="auth-section main-section">
+      <h2>{$i18n.t.auth.importSectionTitle}</h2>
+      <div class="login-option">
+        <h3>{$i18n.t.auth.importSectionDesc}</h3>
+        <button
+          class="import-button"
+          onclick={() => currentScreen.set("import")}
+          disabled={isLoading}>{$i18n.t.auth.importButton}</button
+        >
+
+        <div>{$i18n.t.auth.importNotImplemented}</div>
+      </div>
     </div>
 
     <!-- 開発者向けセクション（折りたたみ可能） -->
