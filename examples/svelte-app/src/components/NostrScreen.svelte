@@ -358,7 +358,6 @@ function logout() {
 
   button:disabled {
     background-color: #ccc;
-    cursor: not-allowed;
   }
 
   .status-message {

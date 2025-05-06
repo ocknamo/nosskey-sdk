@@ -295,7 +295,6 @@ async function saveProfile() {
 
   .save-button:disabled {
     background-color: #ccc;
-    cursor: not-allowed;
   }
 
   .save-message {

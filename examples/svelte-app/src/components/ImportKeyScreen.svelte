@@ -193,7 +193,6 @@ async function importKey() {
 
   button:disabled {
     background-color: #ccc;
-    cursor: not-allowed;
   }
 
   .error-message {

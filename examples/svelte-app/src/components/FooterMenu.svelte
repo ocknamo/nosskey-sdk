@@ -91,7 +91,6 @@ function navigateTo(target: ScreenName) {
 
   button:disabled {
     opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .icon {

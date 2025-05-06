@@ -223,7 +223,6 @@ async function publishEvent() {
 
   button:disabled {
     background-color: #ccc;
-    cursor: not-allowed;
   }
 
   .status-message {
