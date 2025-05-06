@@ -155,8 +155,8 @@ function logoutFromApp() {
 // ローカルストレージをクリアする関数
 function clearLocalStorage() {
   try {
-    // 保存されたキーを削除
-    localStorage.removeItem('nosskey_pwk_blob');
+    // ローカルストレージのすべてのキーを削除
+    localStorage.clear();
 
     // メッセージを表示
     clearResult = $i18n.t.settings.localStorage.cleared;
@@ -411,11 +411,6 @@ function clearLocalStorage() {
     border-radius: 4px;
     border: 1px solid #ccc;
     max-width: 200px;
-  }
-
-  .timeout-setting small {
-    color: #666;
-    font-size: 0.8rem;
   }
 
   .radio-group label {
