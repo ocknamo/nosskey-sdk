@@ -164,13 +164,13 @@ export const ja: TranslationData = {
   appWarning: {
     title: '注意事項',
     domainChange:
-      'このデモアプリはテスト環境専用です。実際の運用では異なるドメインとなります。ドメインが変更された場合、パスキーの再作成が必要となり紐づく鍵も変更されます。',
+      'パスキーは異なるドメインでは使用できません。したがってNosskeyに対応していても異なるドメイン下のアプリではPRFダイレクト鍵は使えないため使いたい場合は秘密鍵のエクスポートが必要です',
     demoDescription:
       'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。パスキーで作成された鍵はプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となりパスキーが失われない限り復元可能です',
   },
   auth: {
     title: 'Nosskey デモ',
-    subtitle: 'パスキー由来のNostr鍵 (PRF直接使用)',
+    subtitle: 'パスキー由来のNostr鍵 (PRFを直接使用)',
     checkPrf: 'PRF拡張対応確認',
     unsupportedTitle: 'PRF拡張がサポートされていません',
     createNew: '新規作成',
@@ -183,7 +183,7 @@ export const ja: TranslationData = {
     username: 'ユーザー名（オプション）',
     usernamePlaceholder: 'ユーザー名を入力',
     importTitle: '既存のNostr鍵をインポート',
-    importSubtitle: '既存の秘密鍵をパスキーで保護します',
+    importSubtitle: '既存の秘密鍵をパスキーで保護します。PRFを直接秘密鍵として使用せず、秘密鍵の暗号化に使用します',
     secretKey: 'Nostr秘密鍵',
     secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
     importButton: 'インポート',
@@ -314,7 +314,7 @@ export const en: TranslationData = {
   appWarning: {
     title: 'Important Notice',
     domainChange:
-      'This demo application is for test environment only. In actual operation, the domain will be different. If the domain is changed, the passkey will need to be recreated and the associated key will also be changed.',
+      'Passkey cannot be used in different domains. Therefore, even if Nosskey is supported, PRF direct keys cannot be used in apps under different domains, so if you want to use them, you must export your private key.',
     demoDescription:
       'This application is provided for the purpose of demonstrating the UX of Nostr key management. Keys created with the passkey are cloud-backed by the platform, eliminating the need for cumbersome private key management, and can be restored as long as the passkey is not lost.',
   },
@@ -330,7 +330,7 @@ export const en: TranslationData = {
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
     importTitle: 'Import Existing Nostr Key',
-    importSubtitle: 'Protect your existing secret key with a passkey',
+    importSubtitle: 'Protect your existing secret key with a passkey. Do not use PRF directly as private key, use PRF for encryption of private key',
     secretKey: 'Nostr Secret Key',
     secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
     importButton: 'Import',
