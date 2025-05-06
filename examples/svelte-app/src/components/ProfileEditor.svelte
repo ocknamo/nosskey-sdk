@@ -33,9 +33,9 @@
     if (value) {
       currentPublicKey = value;
       // まずLocalStorageから読み込み（この時点ではisLoadingをtrueにしない）
-      loadLocalProfile();
-      // その後リレーからも取得
-      loadProfile();
+      const hasLocalData = loadLocalProfile();
+      // その後リレーからも取得（LocalStorageの読み込み結果を渡す）
+      loadProfile(hasLocalData);
     }
   });
 
@@ -85,13 +85,10 @@
   }
 
   // プロフィールデータを読み込み
-  async function loadProfile() {
+  async function loadProfile(hasLocalData = false) {
     if (!currentPublicKey) {
       return;
     }
-
-    // LocalStorageにデータがあっても、リレーからの最新データを取得するためのロード状態
-    const hasLocalData = loadLocalProfile();
 
     // LocalStorageにデータがない場合のみ、ローディング表示を有効にする
     isLoading = !hasLocalData;
