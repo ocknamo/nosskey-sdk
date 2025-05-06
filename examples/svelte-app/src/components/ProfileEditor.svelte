@@ -1,4 +1,5 @@
 <script lang="ts">
+import { completeOnTimeout, createRxBackwardReq, latest, uniq } from 'rx-nostr';
 import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18nStore.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
@@ -19,7 +20,7 @@ let currentPublicKey = $state('');
 // PWKManagerのシングルトンインスタンスを取得
 const pwkManager = getPWKManager();
 
-// publicKeyストアを監視
+// publicKeyストアを監視（設定変更時など）
 appState.publicKey.subscribe((value) => {
   if (value) {
     currentPublicKey = value;
@@ -39,59 +40,70 @@ async function loadProfile() {
   try {
     // リレーからkind:0（メタデータ）のイベントを取得する
     // まず既存のkind:0のイベントを検索
-    const req = relayService.queryEvents([
+    // RxBackwardReqオブジェクトを取得
+    const req = createRxBackwardReq();
+
+    // 受信したイベントを格納する変数
+    const receivedEvents: NostrEvent[] = [];
+
+    // イベント取得のサブスクリプション
+    const subscription = relayService
+      .getRxNostr()
+      .use(req)
+      .pipe(
+        uniq(), // ユニークなイベントのみ
+        latest(), // 最新のイベントのみ
+        completeOnTimeout(5000) // 5秒後にタイムアウト
+      )
+      .subscribe({
+        next: (packet) => {
+          if (packet?.event) {
+            // イベントを保存
+            receivedEvents.push(packet.event);
+
+            try {
+              // contentがJSONオブジェクトの場合のみ処理
+              if (packet.event.content) {
+                const metadata = JSON.parse(packet.event.content);
+
+                // メタデータから値を設定
+                displayName = metadata.display_name || metadata.displayName || '';
+                name = metadata.name || '';
+                about = metadata.about || '';
+                website = metadata.website || '';
+                picture = metadata.picture || '';
+              }
+            } catch (e) {
+              console.error('メタデータのパースに失敗:', e);
+            }
+          }
+        },
+        complete: () => {
+          console.log('リレーからの応答完了。取得結果:', receivedEvents.length, '件');
+
+          // completeは呼ばれないかもしれないが、呼ばれた場合のために処理を残しておく
+          if (receivedEvents.length === 0) {
+            console.log('リレーからメタデータが取得できませんでした');
+          }
+
+          isLoading = false;
+        },
+        error: (err) => {
+          console.error('プロフィール取得エラー:', err);
+          isLoading = false;
+        },
+      });
+
+    // クエリの実行
+    req.emit([
       {
         kinds: [0],
         authors: [currentPublicKey],
         limit: 1,
       },
-    ]);
+    ]); // リクエストを実際に送信
 
-    const results: Array<{ from: string; event: NostrEvent }> = [];
-
-    // イベント取得のサブスクリプション
-    const subscription = req.subscribe({
-      next: (packet) => {
-        if (packet?.event) {
-          results.push(packet);
-        }
-      },
-      complete: () => {
-        // 最新のイベントを処理
-        if (results.length > 0) {
-          // 最新のイベントからメタデータを取得（作成日時の降順でソート）
-          const latestEvent = results
-            .map((r) => r.event)
-            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
-
-          if (latestEvent?.content) {
-            try {
-              // contentはJSONオブジェクト
-              const metadata = JSON.parse(latestEvent.content);
-              displayName = metadata.display_name || metadata.displayName || '';
-              name = metadata.name || '';
-              about = metadata.about || '';
-              website = metadata.website || '';
-              picture = metadata.picture || '';
-            } catch (e) {
-              console.error('メタデータのパースに失敗:', e);
-            }
-          }
-        }
-
-        isLoading = false;
-      },
-      error: (err) => {
-        console.error('プロフィール取得エラー:', err);
-        isLoading = false;
-      },
-    });
-
-    // クエリの実行
-    setTimeout(() => {
-      subscription.unsubscribe();
-      isLoading = false;
-    }, 5000); // 5秒後にタイムアウト
+    // タイムアウト処理はcompleteOnTimeoutオペレータで自動的に行われる
   } catch (error) {
     console.error('プロフィール取得エラー:', error);
     isLoading = false;
