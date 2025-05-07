@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { RelayService } from '../services/relay.service.js';
-import { defaultRelays } from './appState.js';
+import { defaultRelays } from './app-state.js';
 
 // 現在使用中のリレーリスト
 export const activeRelays = writable<string[]>([]);

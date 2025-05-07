@@ -1,7 +1,7 @@
 <script lang="ts">
 import CopyIcon from '../assets/copy-icon.svg';
 import { changeLanguage, i18n } from '../i18n/i18n-store.js';
-import { clearSecretCache, getPWKManager } from '../services/pwkManager.service.js';
+import { clearSecretCache, getPWKManager } from '../services/pwk-manager.service.js';
 import {
   cacheSecrets,
   cacheTimeout,
@@ -10,8 +10,8 @@ import {
   logout,
   pwkBlob,
   resetState,
-} from '../store/appState.js';
-import { activeRelays } from '../store/relayStore.js';
+} from '../store/app-state.js';
+import { activeRelays } from '../store/relay-store.js';
 import { hexToNsec } from '../utils/bech32-converter.js';
 
 // 状態変数

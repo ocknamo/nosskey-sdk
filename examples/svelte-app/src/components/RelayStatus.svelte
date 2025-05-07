@@ -3,8 +3,8 @@ import { onDestroy } from 'svelte';
 import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import type { RelayInfo } from '../services/relay.service.js';
-import { publicKey } from '../store/appState.js';
-import { relayService } from '../store/relayStore.js';
+import { publicKey } from '../store/app-state.js';
+import { relayService } from '../store/relay-store.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
 
 // 状態変数

@@ -3,8 +3,8 @@ import type { Subscription } from 'rxjs';
 import { onDestroy } from 'svelte';
 import type { NostrEvent } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18n-store.js';
-import { publicKey } from '../store/appState.js';
-import { relayService } from '../store/relayStore.js';
+import { publicKey } from '../store/app-state.js';
+import { relayService } from '../store/relay-store.js';
 
 // 状態変数
 let events = $state<NostrEvent[]>([]);

@@ -1,5 +1,5 @@
 import { PWKManager } from '../../../../src/index.js';
-import { cacheSecrets, cacheTimeout } from '../store/appState.js';
+import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
 
 // シングルトンインスタンス
 let instance: PWKManager | null = null;

@@ -3,7 +3,7 @@ import AccountIcon from '../assets/account-icon.svg';
 import HomeIcon from '../assets/home-icon.svg';
 import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
-import { type ScreenName, currentScreen } from '../store/appState.js';
+import { type ScreenName, currentScreen } from '../store/app-state.js';
 
 // 現在の画面
 let screen = $state('account');

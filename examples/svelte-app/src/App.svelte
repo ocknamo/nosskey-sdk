@@ -4,7 +4,7 @@ import FooterMenu from './components/FooterMenu.svelte';
 import ImportKeyScreen from './components/ImportKeyScreen.svelte';
 import SettingsScreen from './components/SettingsScreen.svelte';
 import TimelineScreen from './components/TimelineScreen.svelte';
-import { currentScreen, isScreenName } from './store/appState.js';
+import { currentScreen, isScreenName } from './store/app-state.js';
 
 let screen = $state('account');
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { i18n } from '../i18n/i18n-store.js';
-import { isLoggedIn, publicKey, pwkBlob } from '../store/appState.js';
+import { isLoggedIn, publicKey, pwkBlob } from '../store/app-state.js';
 import AuthScreen from './AuthScreen.svelte';
 import ProfileEditor from './ProfileEditor.svelte';
 import RelayStatus from './RelayStatus.svelte';
