@@ -1,24 +1,29 @@
 <script lang="ts">
 import type { Subscription } from 'rxjs';
-import { onDestroy } from 'svelte';
+import { onDestroy, onMount } from 'svelte';
 import type { NostrEvent } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
+import { timelineMode } from '../store/timeline-store.js';
 
 // 状態変数
 let events = $state<NostrEvent[]>([]);
 let loading = $state(true);
 let error = $state<string | null>(null);
 let currentPublicKey = $state<string | null>(null);
+let currentMode = $state<'global' | 'user'>('global');
 
 // サブスクリプション管理
 let timelineSubscription: Subscription | undefined = undefined;
 
-// publicKeyストアを監視
+// ストアを監視
 $effect(() => {
   currentPublicKey = $publicKey;
-  if (currentPublicKey) {
+  currentMode = $timelineMode;
+
+  // データの再読み込み
+  if ((currentMode === 'user' && currentPublicKey) || currentMode === 'global') {
     loadTimeline();
   }
 });
@@ -30,8 +35,9 @@ const unsubscribe = relayService.timelineEvents.subscribe((value) => {
 });
 
 // タイムラインデータの読み込み
-function loadTimeline() {
-  if (!currentPublicKey) {
+async function loadTimeline() {
+  // ユーザーモードの場合は公開鍵が必要
+  if (currentMode === 'user' && !currentPublicKey) {
     error = '公開鍵が設定されていません';
     loading = false;
     return;
@@ -45,12 +51,12 @@ function loadTimeline() {
   // 初期化
   loading = true;
   error = null;
-  events = [];
 
   try {
-    // タイムラインを取得
-    timelineSubscription = relayService.fetchTimeline(currentPublicKey, {
+    // モードに応じたタイムラインを取得
+    timelineSubscription = await relayService.fetchTimelineByMode(currentMode, currentPublicKey, {
       limit: 50,
+      forceRefresh: false,
     });
   } catch (err) {
     error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
@@ -67,6 +73,11 @@ onDestroy(() => {
   }
 });
 
+// 初期データ読み込み
+onMount(() => {
+  loadTimeline();
+});
+
 // 日付のフォーマット
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp * 1000);
@@ -74,8 +85,26 @@ function formatDate(timestamp: number): string {
 }
 
 // 再読み込み処理
-function reloadTimeline() {
-  loadTimeline();
+async function reloadTimeline() {
+  // 前回のサブスクリプションがあれば解除
+  if (timelineSubscription) {
+    timelineSubscription.unsubscribe();
+  }
+
+  // 初期化
+  loading = true;
+  error = null;
+
+  try {
+    // モードに応じたタイムラインを取得（強制更新）
+    timelineSubscription = await relayService.fetchTimelineByMode(currentMode, currentPublicKey, {
+      limit: 50,
+      forceRefresh: true,
+    });
+  } catch (err) {
+    error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
+    loading = false;
+  }
 }
 </script>
 

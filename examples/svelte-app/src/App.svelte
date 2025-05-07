@@ -1,10 +1,13 @@
 <script lang="ts">
+import { onMount } from 'svelte';
 import AccountScreen from './components/AccountScreen.svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import ImportKeyScreen from './components/ImportKeyScreen.svelte';
 import SettingsScreen from './components/SettingsScreen.svelte';
 import TimelineScreen from './components/TimelineScreen.svelte';
-import { currentScreen, isScreenName } from './store/app-state.js';
+import { currentScreen, isLoggedIn, isScreenName, publicKey } from './store/app-state.js';
+import { relayService } from './store/relay-store.js';
+import { timelineMode } from './store/timeline-store.js';
 
 let screen = $state('account');
 
@@ -50,6 +53,28 @@ $effect(() => {
 
 // ストアの監視
 currentScreen.subscribe(updateHash);
+
+// アプリの初期化
+onMount(async () => {
+  console.log('App initialized, preloading global timeline data');
+
+  try {
+    // グローバルタイムラインの初期データをプリロード
+    await relayService.fetchTimelineByMode('global', null);
+  } catch (error) {
+    console.error('Error preloading timeline data:', error);
+  }
+
+  // 認証状態の監視
+  $effect(() => {
+    if ($isLoggedIn && $publicKey && $timelineMode === 'user') {
+      // 認証済みユーザーのタイムラインデータをロード
+      relayService.fetchTimelineByMode('user', $publicKey).catch((error) => {
+        console.error('Error loading user timeline:', error);
+      });
+    }
+  });
+});
 </script>
 
 <div class="app-container">

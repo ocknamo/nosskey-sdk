@@ -1,39 +1,101 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { i18n } from '../i18n/i18n-store.js';
-import { isLoggedIn } from '../store/app-state.js';
+import { isLoggedIn, publicKey } from '../store/app-state.js';
+import { relayService } from '../store/relay-store.js';
+import { setTimelineMode, timelineMode } from '../store/timeline-store.js';
 import PostForm from './PostForm.svelte';
 import Timeline from './Timeline.svelte';
 
-// 認証状態を監視
+// 状態変数
 let login = $state(false);
+let currentMode = $state<'global' | 'user'>('global');
+let currentPublicKey = $state<string | null>(null);
+let loading = $state(false);
 
 // ストアを監視
-isLoggedIn.subscribe((value) => {
-  login = value;
+$effect(() => {
+  login = $isLoggedIn;
+  currentMode = $timelineMode;
+  currentPublicKey = $publicKey;
 });
 
-onMount(() => {
+// グローバルモードに切り替え
+async function switchToGlobal() {
+  if (currentMode !== 'global') {
+    loading = true;
+    setTimelineMode('global');
+    // データを再取得
+    try {
+      await relayService.fetchTimelineByMode('global', null);
+    } finally {
+      loading = false;
+    }
+  }
+}
+
+// ユーザーモードに切り替え（認証済みのみ）
+async function switchToUser() {
+  if (login && currentPublicKey && currentMode !== 'user') {
+    loading = true;
+    setTimelineMode('user');
+    // データを再取得
+    try {
+      await relayService.fetchTimelineByMode('user', currentPublicKey);
+    } finally {
+      loading = false;
+    }
+  }
+}
+
+onMount(async () => {
   console.log('TimelineScreen mounted');
+
+  // 初期タイムラインをロード
+  loading = true;
+  try {
+    if (login && currentPublicKey && currentMode === 'user') {
+      await relayService.fetchTimelineByMode('user', currentPublicKey);
+    } else {
+      await relayService.fetchTimelineByMode('global', null);
+    }
+  } finally {
+    loading = false;
+  }
 });
 </script>
 
 <div class="timeline-screen">
-  {#if !login}
-    <!-- 未認証の場合はメッセージを表示 -->
-    <div class="auth-required">
-      <h2>タイムラインの閲覧には認証が必要です</h2>
-      <p>アカウント画面から認証してください</p>
-    </div>
-  {:else}
-    <h1>{$i18n.t.nostr.timeline.title}</h1>
+  <h1>{$i18n.t.nostr.timeline.title}</h1>
 
-    <!-- 投稿フォーム -->
+  <!-- モード切り替えタブ -->
+  <div class="timeline-tabs">
+    <button
+      class="tab-button {currentMode === 'global' ? 'active' : ''}"
+      onclick={switchToGlobal}
+      disabled={loading}
+    >
+      {$i18n.t.nostr.timeline.globalFeed}
+    </button>
+
+    {#if login}
+      <button
+        class="tab-button {currentMode === 'user' ? 'active' : ''}"
+        onclick={switchToUser}
+        disabled={loading}
+      >
+        {$i18n.t.nostr.timeline.userFeed}
+      </button>
+    {/if}
+  </div>
+
+  {#if login}
+    <!-- 認証済みの場合は投稿フォームを表示 -->
     <PostForm />
-
-    <!-- タイムライン -->
-    <Timeline />
   {/if}
+
+  <!-- タイムライン -->
+  <Timeline />
 </div>
 
 <style>
@@ -50,20 +112,32 @@ onMount(() => {
     text-align: center;
   }
 
-  .auth-required {
-    text-align: center;
-    background-color: #f8f9fa;
-    padding: 40px 20px;
-    border-radius: 8px;
-    margin-top: 40px;
+  .timeline-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
   }
 
-  .auth-required h2 {
-    margin-bottom: 16px;
-    color: #5755d9;
+  .tab-button {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
   }
 
-  .auth-required p {
-    color: #666;
+  .tab-button.active {
+    background-color: #5755d9;
+    color: white;
+    font-weight: bold;
+  }
+
+  .tab-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

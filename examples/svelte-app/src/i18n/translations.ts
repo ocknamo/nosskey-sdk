@@ -92,6 +92,8 @@ export interface TranslationData {
       reload: string;
       retry: string;
       empty: string;
+      globalFeed: string;
+      userFeed: string;
     };
     profile: {
       title: string;
@@ -276,6 +278,8 @@ export const ja: TranslationData = {
       reload: '更新',
       retry: '再試行',
       empty: '表示するイベントがありません',
+      globalFeed: 'グローバル',
+      userFeed: 'フォロー中',
     },
     profile: {
       title: 'プロフィール編集',
@@ -466,6 +470,8 @@ export const en: TranslationData = {
       reload: 'Reload',
       retry: 'Retry',
       empty: 'No events to display',
+      globalFeed: 'Global',
+      userFeed: 'Following',
     },
     profile: {
       title: 'Edit Profile',
