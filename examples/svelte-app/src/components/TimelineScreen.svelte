@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { i18n } from '../i18n/i18nStore.js';
+import { i18n } from '../i18n/i18n-store.js';
 import { isLoggedIn } from '../store/appState.js';
 import PostForm from './PostForm.svelte';
 import Timeline from './Timeline.svelte';

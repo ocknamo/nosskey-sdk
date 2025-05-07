@@ -1,7 +1,7 @@
 <script lang="ts">
 import { bytesToHex, hexToBytes } from '../../../../src/index.js';
 import NosskeyImage from '../assets/nosskey.svg';
-import { i18n } from '../i18n/i18nStore.js';
+import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
 import { currentScreen } from '../store/appState.js';

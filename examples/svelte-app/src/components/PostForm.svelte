@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
-import { i18n } from '../i18n/i18nStore.js';
+import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';

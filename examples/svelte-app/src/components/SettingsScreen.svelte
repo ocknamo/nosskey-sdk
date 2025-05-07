@@ -1,6 +1,6 @@
 <script lang="ts">
 import CopyIcon from '../assets/copy-icon.svg';
-import { changeLanguage, i18n } from '../i18n/i18nStore.js';
+import { changeLanguage, i18n } from '../i18n/i18n-store.js';
 import { clearSecretCache, getPWKManager } from '../services/pwkManager.service.js';
 import {
   cacheSecrets,

@@ -2,7 +2,7 @@
 import type { Subscription } from 'rxjs';
 import { onDestroy } from 'svelte';
 import type { NostrEvent } from '../../../../src/types.js';
-import { i18n } from '../i18n/i18nStore.js';
+import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
 

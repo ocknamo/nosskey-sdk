@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 import CopyIcon from '../assets/copy-icon.svg';
-import { i18n } from '../i18n/i18nStore.js';
+import { i18n } from '../i18n/i18n-store.js';
 import type { RelayInfo } from '../services/relay.service.js';
 import { publicKey } from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
