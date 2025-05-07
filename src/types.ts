@@ -80,6 +80,18 @@ export interface KeyCacheOptions {
 }
 
 /**
+ * PWK保存のためのオプション
+ */
+export interface PWKStorageOptions {
+  /** PWKの保存を有効にするか（デフォルト: true） */
+  enabled: boolean;
+  /** 使用するストレージ（デフォルト: localStorage） */
+  storage?: Storage;
+  /** 保存に使用するキー名（デフォルト: "nosskey_pwk"） */
+  storageKey?: string;
+}
+
+/**
  * Sign options
  */
 export interface SignOptions {
@@ -93,6 +105,48 @@ export interface SignOptions {
  * SDK public interface
  */
 export interface PWKManagerLike {
+  /**
+   * NIP-07互換: 公開鍵を取得
+   * 現在設定されているPWKから公開鍵を返す
+   */
+  getPublicKey(): Promise<string>;
+
+  /**
+   * NIP-07互換: イベント署名
+   * 現在設定されているPWKでイベントに署名
+   * @param event 署名するNostrイベント
+   */
+  signEvent(event: NostrEvent): Promise<NostrEvent>;
+
+  /**
+   * 現在のPWKを設定
+   * ストレージが有効な場合は保存も行う
+   * @param pwk 設定するPWK
+   */
+  setCurrentPWK(pwk: PWKBlob): void;
+
+  /**
+   * 現在のPWKを取得
+   * 未設定の場合はストレージからの読み込みを試みる
+   */
+  getCurrentPWK(): PWKBlob | null;
+
+  /**
+   * PWKストレージの設定を更新
+   * @param options ストレージオプション
+   */
+  setStorageOptions(options: Partial<PWKStorageOptions>): void;
+
+  /**
+   * 現在のPWKストレージ設定を取得
+   */
+  getStorageOptions(): PWKStorageOptions;
+
+  /**
+   * ストレージに保存されたPWKをクリア
+   */
+  clearStoredPWK(): void;
+
   /**
    * PRF拡張機能がサポートされているかチェック
    */

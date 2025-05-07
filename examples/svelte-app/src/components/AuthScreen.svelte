@@ -73,8 +73,8 @@ async function createNew() {
     // 新しいパスキーを作成
     const newCredentialId = await pwkManager.createPasskey({
       user: {
-        name: username || 'user@example.com',
-        displayName: username || 'PWK user',
+        name: username || 'user@nosskey',
+        displayName: username || 'user@nosskey',
       },
     });
 

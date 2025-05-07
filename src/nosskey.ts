@@ -7,6 +7,7 @@ import type {
   PWKBlobDirect,
   PWKBlobV1,
   PWKManagerLike,
+  PWKStorageOptions,
   PasskeyCreationOptions,
   SignOptions,
 } from './types.js';
@@ -47,14 +48,165 @@ export class PWKManager implements PWKManagerLike {
     timeoutMs: 5 * 60 * 1000, // デフォルト5分
   };
 
+  // 現在のPWK
+  #currentPWK: PWKBlob | null = null;
+
+  // PWK保存の設定
+  #storageOptions: PWKStorageOptions = {
+    enabled: true,
+    storageKey: 'nosskey_pwk',
+  };
+
   /**
    * PWKManager コンストラクタ
    * @param options 初期化オプション
    */
-  constructor(options?: { cacheOptions?: Partial<KeyCacheOptions> }) {
+  constructor(options?: {
+    cacheOptions?: Partial<KeyCacheOptions>;
+    storageOptions?: Partial<PWKStorageOptions>;
+  }) {
     if (options?.cacheOptions) {
       this.#cacheOptions = { ...this.#cacheOptions, ...options.cacheOptions };
     }
+
+    if (options?.storageOptions) {
+      this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
+    }
+
+    // ストレージが有効な場合、PWKの読み込みを試みる
+    if (this.#storageOptions.enabled) {
+      const loadedPWK = this.#loadPWKFromStorage();
+      if (loadedPWK) {
+        this.#currentPWK = loadedPWK;
+      }
+    }
+  }
+
+  /**
+   * PWKストレージの設定を更新
+   * @param options ストレージオプション
+   */
+  setStorageOptions(options: Partial<PWKStorageOptions>): void {
+    this.#storageOptions = { ...this.#storageOptions, ...options };
+
+    // ストレージが無効化された場合はストレージからPWKを削除
+    if (options.enabled === false) {
+      this.clearStoredPWK();
+    }
+  }
+
+  /**
+   * 現在のPWKストレージ設定を取得
+   */
+  getStorageOptions(): PWKStorageOptions {
+    return { ...this.#storageOptions };
+  }
+
+  /**
+   * 現在のPWKを設定
+   * ストレージが有効な場合は保存も行う
+   * @param pwk 設定するPWK
+   */
+  setCurrentPWK(pwk: PWKBlob): void {
+    this.#currentPWK = pwk;
+
+    // ストレージが有効な場合は保存
+    if (this.#storageOptions.enabled) {
+      void this.#savePWKToStorage(pwk);
+    }
+  }
+
+  /**
+   * 現在のPWKを取得
+   * 未設定の場合はストレージからの読み込みを試みる
+   */
+  getCurrentPWK(): PWKBlob | null {
+    // 現在のPWKがない場合はストレージからの読み込みを試みる
+    if (!this.#currentPWK && this.#storageOptions.enabled) {
+      this.#currentPWK = this.#loadPWKFromStorage();
+    }
+    return this.#currentPWK;
+  }
+
+  /**
+   * PWKをストレージに保存（内部メソッド）
+   * @param pwk 保存するPWK
+   */
+  async #savePWKToStorage(pwk: PWKBlob): Promise<void> {
+    if (!this.#storageOptions.enabled) return;
+
+    const storage =
+      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+
+    if (!storage) return;
+
+    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
+    storage.setItem(key, JSON.stringify(pwk));
+  }
+
+  /**
+   * ストレージからPWKを読み込み（内部メソッド）
+   */
+  #loadPWKFromStorage(): PWKBlob | null {
+    if (!this.#storageOptions.enabled) return null;
+
+    const storage =
+      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+
+    if (!storage) return null;
+
+    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
+    const data = storage.getItem(key);
+
+    if (!data) return null;
+
+    try {
+      return JSON.parse(data) as PWKBlob;
+    } catch (e) {
+      console.error('Failed to parse stored PWK', e);
+      return null;
+    }
+  }
+
+  /**
+   * ストレージに保存されたPWKをクリア
+   */
+  clearStoredPWK(): void {
+    const storage =
+      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+
+    if (!storage) return;
+
+    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
+    storage.removeItem(key);
+
+    // 現在のPWKも消去
+    this.#currentPWK = null;
+  }
+
+  /**
+   * NIP-07互換: 公開鍵を取得
+   * 現在設定されているPWKから公開鍵を返す
+   */
+  async getPublicKey(): Promise<string> {
+    const pwk = this.getCurrentPWK();
+    if (!pwk) {
+      throw new Error('No current PWK set');
+    }
+    return pwk.pubkey;
+  }
+
+  /**
+   * NIP-07互換: イベント署名
+   * 現在設定されているPWKでイベントに署名
+   * @param event 署名するNostrイベント
+   */
+  async signEvent(event: NostrEvent): Promise<NostrEvent> {
+    const pwk = this.getCurrentPWK();
+    if (!pwk) {
+      throw new Error('No current PWK set');
+    }
+    return this.signEventWithPWK(event, pwk);
   }
 
   /**

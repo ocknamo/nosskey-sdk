@@ -40,7 +40,9 @@ export interface PWKBlobV1 {
   iv: string; // hex(12 B)
   ct: string; // hex(32 B)
   tag: string; // hex(16 B)
-  credentialId?: string; // hex形式
+  credentialId: string; // クレデンシャルIDをhex形式で保存
+  pubkey: string; // 公開鍵（hex形式）
+  username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 
 /**
@@ -50,6 +52,8 @@ export interface PWKBlobDirect {
   v: 1;
   alg: 'prf-direct';
   credentialId: string; // hex形式
+  pubkey: string; // 公開鍵（hex形式）
+  username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 
 export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
@@ -76,6 +80,7 @@ export interface PasskeyCreationOptions {
  */
 export interface KeyOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
+  username?: string; // パスキー作成時のユーザー名
 }
 
 /**
@@ -99,18 +104,63 @@ export interface SignOptions {
 }
 
 /**
- * Creation result
+ * PWK保存のためのオプション
  */
-export interface CreateResult {
-  pwkBlob: PWKBlob; // 暗号化された秘密鍵
-  credentialId: Uint8Array; // 生成されたクレデンシャルID
-  publicKey: string; // 生成された公開鍵（hex）
+export interface PWKStorageOptions {
+  /** PWKの保存を有効にするか（デフォルト: true） */
+  enabled: boolean;
+  /** 使用するストレージ（デフォルト: localStorage） */
+  storage?: Storage;
+  /** 保存に使用するキー名（デフォルト: "nosskey_pwk"） */
+  storageKey?: string;
 }
 
 /**
  * SDK public interface
  */
 export interface PWKManagerLike {
+  /**
+   * NIP-07互換: 公開鍵を取得
+   * 現在設定されているPWKから公開鍵を返す
+   */
+  getPublicKey(): Promise<string>;
+
+  /**
+   * NIP-07互換: イベント署名
+   * 現在設定されているPWKでイベントに署名
+   * @param event 署名するNostrイベント
+   */
+  signEvent(event: NostrEvent): Promise<NostrEvent>;
+
+  /**
+   * 現在のPWKを設定
+   * ストレージが有効な場合は保存も行う
+   * @param pwk 設定するPWK
+   */
+  setCurrentPWK(pwk: PWKBlob): void;
+
+  /**
+   * 現在のPWKを取得
+   * 未設定の場合はストレージからの読み込みを試みる
+   */
+  getCurrentPWK(): PWKBlob | null;
+
+  /**
+   * PWKストレージの設定を更新
+   * @param options ストレージオプション
+   */
+  setStorageOptions(options: Partial<PWKStorageOptions>): void;
+
+  /**
+   * 現在のPWKストレージ設定を取得
+   */
+  getStorageOptions(): PWKStorageOptions;
+
+  /**
+   * ストレージに保存されたPWKをクリア
+   */
+  clearStoredPWK(): void;
+
   /**
    * PRF拡張機能がサポートされているかチェック
    */
@@ -133,7 +183,7 @@ export interface PWKManagerLike {
     secretKey: Uint8Array,
     credentialId?: Uint8Array,
     options?: KeyOptions
-  ): Promise<CreateResult>;
+  ): Promise<PWKBlob>;
 
   /**
    * 新しいNostr秘密鍵を生成してパスキーでラップ
@@ -143,15 +193,17 @@ export interface PWKManagerLike {
   generateNostrKey(
     credentialId?: Uint8Array,
     options?: KeyOptions
-  ): Promise<CreateResult>;
+  ): Promise<PWKBlob>;
 
   /**
    * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
    */
   directPrfToNostrKey(
-    credentialId?: Uint8Array
-  ): Promise<CreateResult>;
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<PWKBlob>;
 
   /**
    * イベントに署名

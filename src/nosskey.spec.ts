@@ -333,6 +333,196 @@ describe('PWKManager', () => {
     });
   });
 
+  describe('PWK保存機能', () => {
+    let mockLocalStorage: { [key: string]: string };
+
+    beforeEach(() => {
+      // localStorage のモック
+      mockLocalStorage = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          setItem: vi.fn((key, value) => {
+            mockLocalStorage[key] = value;
+          }),
+          getItem: vi.fn((key) => mockLocalStorage[key] || null),
+          removeItem: vi.fn((key) => {
+            delete mockLocalStorage[key];
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    it('デフォルトでPWK保存が有効', () => {
+      const pwkManager = new PWKManager();
+      const options = pwkManager.getStorageOptions();
+      expect(options.enabled).toBe(true);
+      expect(options.storageKey).toBe('nosskey_pwk');
+    });
+
+    it('コンストラクタでPWK保存設定を指定できる', () => {
+      const pwkManager = new PWKManager({
+        storageOptions: { enabled: false, storageKey: 'custom_key' },
+      });
+      const options = pwkManager.getStorageOptions();
+      expect(options.enabled).toBe(false);
+      expect(options.storageKey).toBe('custom_key');
+    });
+
+    it('setStorageOptions でPWK保存設定を更新できる', () => {
+      const pwkManager = new PWKManager();
+      pwkManager.setStorageOptions({ enabled: false, storageKey: 'updated_key' });
+      const options = pwkManager.getStorageOptions();
+      expect(options.enabled).toBe(false);
+      expect(options.storageKey).toBe('updated_key');
+    });
+
+    it('setCurrentPWK で現在のPWKを設定できる', () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+
+      pwkManager.setCurrentPWK(mockPwkBlob);
+
+      // localStorage に保存されていることを確認
+      expect(localStorage.setItem).toHaveBeenCalled();
+      expect(mockLocalStorage['nosskey_pwk']).toBeDefined();
+
+      // 保存された値を検証
+      const storedValue = JSON.parse(mockLocalStorage['nosskey_pwk']);
+      expect(storedValue.pubkey).toBe('test-pubkey');
+    });
+
+    it('getCurrentPWK で現在のPWKを取得できる', () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+
+      pwkManager.setCurrentPWK(mockPwkBlob);
+      const currentPWK = pwkManager.getCurrentPWK();
+
+      expect(currentPWK).not.toBeNull();
+      expect(currentPWK?.pubkey).toBe('test-pubkey');
+    });
+
+    it('ストレージから現在のPWKを読み込める', () => {
+      // 事前にstorageに保存
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+      mockLocalStorage['nosskey_pwk'] = JSON.stringify(mockPwkBlob);
+
+      // 新しいインスタンスを作成（コンストラクタでストレージから読み込み）
+      const pwkManager = new PWKManager();
+      const currentPWK = pwkManager.getCurrentPWK();
+
+      expect(currentPWK).not.toBeNull();
+      expect(currentPWK?.pubkey).toBe('test-pubkey');
+      expect(localStorage.getItem).toHaveBeenCalled();
+    });
+
+    it('clearStoredPWK でストレージのPWKをクリアできる', () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+
+      // PWKを設定してストレージに保存
+      pwkManager.setCurrentPWK(mockPwkBlob);
+
+      // ストレージをクリア
+      pwkManager.clearStoredPWK();
+
+      // localStorage から削除されていることを確認
+      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_pwk');
+
+      // 現在のPWKも消去されていることを確認
+      expect(pwkManager.getCurrentPWK()).toBeNull();
+    });
+  });
+
+  describe('NIP-07互換メソッド', () => {
+    it('getPublicKey で現在のPWKから公開鍵を取得できる', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+
+      pwkManager.setCurrentPWK(mockPwkBlob);
+      const pubkey = await pwkManager.getPublicKey();
+
+      expect(pubkey).toBe('test-pubkey');
+    });
+
+    it('現在のPWKが未設定の場合、getPublicKey はエラーを投げる', async () => {
+      const pwkManager = new PWKManager();
+
+      // getCurrentPWKをモック化してnullを返すようにする
+      vi.spyOn(pwkManager, 'getCurrentPWK').mockReturnValue(null);
+
+      await expect(pwkManager.getPublicKey()).rejects.toThrow('No current PWK set');
+    });
+
+    it('signEvent で現在のPWKを使ってイベントに署名できる', async () => {
+      const pwkManager = new PWKManager();
+      const mockPwkBlob: PWKBlob = {
+        v: 1 as const,
+        alg: 'prf-direct' as const,
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, NIP-07!',
+        tags: [],
+      };
+
+      // スパイを設定
+      const signEventWithPWKSpy = vi.spyOn(pwkManager, 'signEventWithPWK');
+
+      pwkManager.setCurrentPWK(mockPwkBlob);
+      const signedEvent = await pwkManager.signEvent(mockEvent);
+
+      // 既存のsignEventWithPWKメソッドが呼ばれたことを確認
+      expect(signEventWithPWKSpy).toHaveBeenCalledWith(mockEvent, mockPwkBlob);
+
+      // 署名されたイベントを検証
+      expect(signedEvent).toHaveProperty('id', 'test-event-id');
+      expect(signedEvent).toHaveProperty('sig', 'test-signature');
+    });
+
+    it('現在のPWKが未設定の場合、signEvent はエラーを投げる', async () => {
+      const pwkManager = new PWKManager();
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      // getCurrentPWKをモック化してnullを返すようにする
+      vi.spyOn(pwkManager, 'getCurrentPWK').mockReturnValue(null);
+
+      await expect(pwkManager.signEvent(mockEvent)).rejects.toThrow('No current PWK set');
+    });
+  });
+
   describe('キャッシュ機能', () => {
     it('デフォルトではキャッシュが無効', () => {
       const pwkManager = new PWKManager();
