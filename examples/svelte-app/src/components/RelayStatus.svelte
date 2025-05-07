@@ -1,14 +1,17 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
+import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18nStore.js';
 import type { RelayInfo } from '../services/relay.service.js';
 import { publicKey } from '../store/appState.js';
 import { relayService } from '../store/relayStore.js';
+import { hexToNpub } from '../utils/bech32Converter.js';
 
 // 状態変数
 let publicKeyShort = $state('');
 let npubAddress = $state('');
 let relayStatuses = $state<{ [url: string]: RelayInfo }>({});
+let showCopiedMessage = $state(false);
 
 // リレーサービスからの状態をサブスクライブ
 const unsubscribeRelayStatus = relayService.relayStatuses.subscribe((value) => {
@@ -28,16 +31,58 @@ publicKey.subscribe((value) => {
   if (publicKeyValue) {
     // 公開鍵を表示用に整形
     publicKeyShort = `${publicKeyValue.slice(0, 8)}...${publicKeyValue.slice(-8)}`;
-    npubAddress = `npub形式 (実装省略: ${publicKeyValue.slice(0, 6)}...)`;
+
+    // npub形式に変換
+    try {
+      npubAddress = hexToNpub(publicKeyValue);
+    } catch (error) {
+      console.error('npub変換エラー:', error);
+      npubAddress = 'Error: Could not convert to npub';
+    }
   }
 });
+
+// クリップボードにコピー
+function copyNpubToClipboard() {
+  if (npubAddress) {
+    navigator.clipboard
+      .writeText(npubAddress)
+      .then(() => {
+        showCopiedMessage = true;
+        setTimeout(() => {
+          showCopiedMessage = false;
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error('クリップボードコピーエラー:', err);
+      });
+  }
+}
 </script>
 
 <div class="relay-container">
   <div class="pubkey-display">
     <h3>{$i18n.t.nostr.publicKey}</h3>
     <p>{publicKeyShort}</p>
-    <p class="npub">{npubAddress}</p>
+    <div class="npub-container">
+      <div class="npub-wrapper">
+        <p class="npub">
+          {npubAddress.length > 20
+            ? `${npubAddress.slice(0, 12)}...${npubAddress.slice(-8)}`
+            : npubAddress}
+        </p>
+        <button
+          class="icon-button"
+          onclick={copyNpubToClipboard}
+          title={$i18n.t.nostr.copyToClipboard}
+        >
+          <img src={CopyIcon} alt="Copy" />
+        </button>
+      </div>
+      {#if showCopiedMessage}
+        <span class="copied-message">{$i18n.t.nostr.copiedToClipboard}</span>
+      {/if}
+    </div>
   </div>
 
   <div class="relay-status">
@@ -74,9 +119,45 @@ publicKey.subscribe((value) => {
     margin-bottom: 20px;
   }
 
+  .npub-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .npub-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .npub {
     font-size: 0.9rem;
     color: #666;
+    margin: 0;
+  }
+
+  .icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .icon-button:hover {
+    background-color: #eee;
+  }
+
+  .copied-message {
+    color: #28a745;
+    font-size: 0.8rem;
+    font-weight: bold;
   }
 
   .relay-status {

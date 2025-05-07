@@ -2,6 +2,7 @@
 import { i18n } from '../i18n/i18nStore.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
+import { isValidNsec, nsecToHex } from '../utils/bech32Converter.js';
 
 // 状態変数
 let secretKey = $state('');
@@ -16,16 +17,33 @@ function goBack() {
   appState.currentScreen.set('account');
 }
 
-// 秘密鍵のバリデーション（64文字の16進数文字列）
+// 秘密鍵のバリデーション（64文字の16進数文字列またはnsec形式）
 function isValidSecretKey(sk: string): boolean {
+  // nsec形式チェック
+  if (sk.startsWith('nsec1')) {
+    return isValidNsec(sk);
+  }
+
+  // 16進数形式チェック
   return /^[0-9a-f]{64}$/i.test(sk);
+}
+
+// 秘密鍵をHex形式に変換
+function normalizeSecretKey(sk: string): string | null {
+  // nsec形式の場合
+  if (sk.startsWith('nsec1')) {
+    return nsecToHex(sk);
+  }
+
+  // 既にHex形式の場合はそのまま
+  return sk.toLowerCase();
 }
 
 // Nostr秘密鍵インポート処理
 async function importKey() {
   // 秘密鍵の簡易バリデーション
   if (!secretKey || !isValidSecretKey(secretKey)) {
-    errorMessage = '有効な秘密鍵（64文字の16進数）を入力してください';
+    errorMessage = '有効な秘密鍵（64文字の16進数またはnsec形式）を入力してください';
     return;
   }
 
@@ -33,9 +51,16 @@ async function importKey() {
   errorMessage = '';
 
   try {
+    // 秘密鍵を正規化
+    const normalizedKey = normalizeSecretKey(secretKey);
+
+    if (!normalizedKey) {
+      throw new Error('秘密鍵の変換に失敗しました');
+    }
+
     // 秘密鍵を16進数文字列からバイト配列に変換
     const secretKeyBytes = new Uint8Array(
-      secretKey.match(/.{1,2}/g)?.map((byte) => Number.parseInt(byte, 16)) || []
+      normalizedKey.match(/.{1,2}/g)?.map((byte) => Number.parseInt(byte, 16)) || []
     );
 
     // 新しいパスキーを作成
@@ -78,7 +103,7 @@ async function importKey() {
           id="secretKey"
           type="password"
           bind:value={secretKey}
-          placeholder="64文字の16進数（例: d5b...）"
+          placeholder="nsec1... または 64文字の16進数"
           disabled={isLoading}
         />
         <p class="help-text">{$i18n.t.auth.secretKeyHelp}</p>

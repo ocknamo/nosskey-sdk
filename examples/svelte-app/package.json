@@ -18,6 +18,7 @@
     "vite": "^6.3.1"
   },
   "dependencies": {
+    "bech32": "^2.0.0",
     "rx-nostr": "^3.6.1",
     "rx-nostr-crypto": "^3.1.3"
   }

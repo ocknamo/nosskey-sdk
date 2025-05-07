@@ -15,6 +15,9 @@ export interface TranslationData {
     error: string;
     success: string;
     back: string;
+    copy: string;
+    copied: string;
+    loading: string;
     errorMessages: {
       init: string;
       prfCheck: string;
@@ -75,6 +78,8 @@ export interface TranslationData {
       disconnected: string;
       unknown: string;
     };
+    copyToClipboard: string;
+    copiedToClipboard: string;
     eventCreation: string;
     content: string;
     contentPlaceholder: string;
@@ -107,6 +112,14 @@ export interface TranslationData {
   };
   settings: {
     title: string;
+    exportSecretKey: string;
+    exportSecretKeyWarning: string;
+    showExportSection: string;
+    hideExportSection: string;
+    exportWarningFinal: string;
+    confirmExport: string;
+    yourSecretKey: string;
+    noKeyToExport: string;
     relayManagement: {
       title: string;
       description: string;
@@ -181,6 +194,9 @@ export const ja: TranslationData = {
     error: 'エラー',
     success: '成功',
     back: '戻る',
+    copy: 'コピー',
+    copied: 'コピーしました',
+    loading: '読み込み中...',
     errorMessages: {
       init: '初期化エラー:',
       prfCheck: 'PRF対応確認エラー:',
@@ -246,6 +262,8 @@ export const ja: TranslationData = {
       disconnected: '切断',
       unknown: '不明',
     },
+    copyToClipboard: 'クリップボードにコピー',
+    copiedToClipboard: 'コピーしました',
     eventCreation: 'イベント作成',
     content: '内容:',
     contentPlaceholder: 'ここにメッセージを入力...',
@@ -278,6 +296,16 @@ export const ja: TranslationData = {
   },
   settings: {
     title: '設定',
+    exportSecretKey: '秘密鍵のエクスポート',
+    exportSecretKeyWarning:
+      '警告：秘密鍵は誰とも共有しないでください。秘密鍵を持つ人はあなたのアカウントを完全に制御できます。',
+    showExportSection: '秘密鍵をエクスポート（危険）',
+    hideExportSection: 'エクスポートセクションを隠す',
+    exportWarningFinal:
+      '最終警告：この秘密鍵を共有すると、あなたのアカウントが乗っ取られる可能性があります。必ずバックアップ目的でのみ使用してください。',
+    confirmExport: '秘密鍵をエクスポートする（nsec形式）',
+    yourSecretKey: 'あなたの秘密鍵：',
+    noKeyToExport: 'エクスポートする鍵がありません。ログイン状態を確認してください。',
     relayManagement: {
       title: 'リレー管理',
       description: 'Nostrメッセージを送信するリレーを追加・削除できます。',
@@ -354,6 +382,9 @@ export const en: TranslationData = {
     error: 'Error',
     success: 'Success',
     back: 'Back',
+    copy: 'Copy',
+    copied: 'Copied',
+    loading: 'Loading...',
     errorMessages: {
       init: 'Initialization Error:',
       prfCheck: 'PRF Support Check Error:',
@@ -421,6 +452,8 @@ export const en: TranslationData = {
       disconnected: 'Disconnected',
       unknown: 'Unknown',
     },
+    copyToClipboard: 'Copy to Clipboard',
+    copiedToClipboard: 'Copied',
     eventCreation: 'Create Event',
     content: 'Content:',
     contentPlaceholder: 'Enter your message here...',
@@ -453,6 +486,16 @@ export const en: TranslationData = {
   },
   settings: {
     title: 'Settings',
+    exportSecretKey: 'Export Secret Key',
+    exportSecretKeyWarning:
+      'Warning: Never share your secret key with anyone. Anyone with your secret key can fully control your account.',
+    showExportSection: 'Export Secret Key (Dangerous)',
+    hideExportSection: 'Hide Export Section',
+    exportWarningFinal:
+      'Final Warning: Sharing this secret key can lead to your account being compromised. Use only for backup purposes.',
+    confirmExport: 'Export Secret Key (nsec format)',
+    yourSecretKey: 'Your Secret Key:',
+    noKeyToExport: 'No key to export. Please check your login status.',
     relayManagement: {
       title: 'Relay Management',
       description: 'Add or remove relays to send Nostr messages.',
