@@ -32,7 +32,7 @@ export interface PWKBlobV1 {
 }
 
 /**
- * PWK blob - PRF直接使用方式 (PoC実装)
+ * PWK blob - PRF直接使用方式
  */
 export interface PWKBlobDirect {
   v: 1;

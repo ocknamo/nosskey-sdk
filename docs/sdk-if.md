@@ -46,7 +46,7 @@ export interface PWKBlobV1 {
 }
 
 /**
- * PWK blob - PRF直接使用方式 (PoC実装)
+ * PWK blob - PRF直接使用方式
  */
 export interface PWKBlobDirect {
   v: 1;
@@ -443,7 +443,7 @@ try {
 | createPasskey() | パスキーのみ作成 | パスキー登録（UI表示1回目）。秘密鍵関連処理なし |
 | importNostrKey() | 既存鍵のラッピング | 既存のnsec等をパスキーで保護したい場合 |
 | generateNostrKey() | 新規鍵の生成 | 新しいNostrアカウントの作成 |
-| directPrfToNostrKey() | PRF直接使用のPoC | PRF値をそのまま秘密鍵とする実験的実装 |
+| directPrfToNostrKey() | PRF直接使用 | PRF値をそのまま秘密鍵とする実装 |
 
 ### 5.2 PRF値を直接Nostrシークレットキーとして使用する利点
 
@@ -458,12 +458,11 @@ PRF値を直接Nostrのシークレットキーとして使用することの主
 
 ## 6. 実装のバリエーション
 
-### 暗号化方式（標準実装）
+### 暗号化方式
 - パスキーから取得したPRF値を使ってNostr秘密鍵を暗号化
 - 複数の秘密鍵を同じパスキーで保護可能
 - 既存のnsecキーを安全に保管可能
 
-### PRF直接使用方式（実験的実装）
+### PRF直接使用方式
 - パスキーから取得したPRF値を直接Nostrシークレットキーとして使用
 - より単純で効率的だが、既存のnsecは使用できない
-- 実験的用途や特定のニッチなユースケースに適している

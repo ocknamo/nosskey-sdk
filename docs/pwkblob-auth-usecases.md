@@ -12,7 +12,7 @@ PWKBlob（Passkey Wrapped Key Blob）はNosskeyの中核技術概念であり、
 2. **PRF直接使用方式（PWKBlobDirect）**: 
    - パスキーのPRF拡張から直接Nostr秘密鍵を導出
    - PWKBlobDirectには使用方式とcredentialIdのみ含まれる
-   - 同じパスキーと同じusernameから常に同一の秘密鍵が生成される
+   - 同じパスキーと同じsaltから常に同一の秘密鍵が生成される
    - PWKBlobが失われても、同じパスキーで再認証するだけで秘密鍵を復元可能
 
 ```mermaid
