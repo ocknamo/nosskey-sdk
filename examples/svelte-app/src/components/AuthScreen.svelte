@@ -23,21 +23,14 @@ const pwkManager = getPWKManager();
 async function initialize() {
   isLoading = true;
   try {
-    // ローカルストレージから保存済みのPWKBlobを取得
-    const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
-    if (savedPwkBlob) {
-      // PWKBlobを復元
-      const parsedPwkBlob = JSON.parse(savedPwkBlob);
-
-      // 状態を更新
-      appState.pwkBlob.set(parsedPwkBlob);
-      appState.publicKey.set(parsedPwkBlob.pubkey);
+    // PWKが存在するか確認
+    if (pwkManager.hasPWK()) {
+      // 公開鍵を取得して状態を更新
+      const pubKey = await pwkManager.getPublicKey();
+      appState.publicKey.set(pubKey);
       appState.isLoggedIn.set(true);
-
-      // シングルトン化によりキャッシュ設定は自動的に最新の値が使用される
 
       // PRF拡張対応確認をスキップして認証済み状態に
-      appState.isLoggedIn.set(true);
       return; // 初期化処理を終了
     }
   } catch (error) {
@@ -97,11 +90,13 @@ async function login(credentialId: string) {
     // PRFを直接Nostrキーとして使用
     const pwk = await pwkManager.directPrfToNostrKey(hexToBytes(credentialId));
 
-    // 状態を更新
-    appState.pwkBlob.set(pwk);
-    appState.publicKey.set(pwk.pubkey);
+    // SDKにPWKを設定（内部でストレージにも保存される）
+    pwkManager.setCurrentPWK(pwk);
+
+    // 公開鍵を取得して状態を更新
+    const pubKey = await pwkManager.getPublicKey();
+    appState.publicKey.set(pubKey);
     appState.isLoggedIn.set(true);
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
 
     // アカウント画面に遷移
     appState.currentScreen.set('account');
@@ -122,11 +117,13 @@ async function loginWithExistingPasskey() {
     // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
     const pwk = await pwkManager.directPrfToNostrKey();
 
-    // 状態を更新
-    appState.pwkBlob.set(pwk);
-    appState.publicKey.set(pwk.pubkey);
+    // SDKにPWKを設定（内部でストレージにも保存される）
+    pwkManager.setCurrentPWK(pwk);
+
+    // 公開鍵を取得して状態を更新
+    const pubKey = await pwkManager.getPublicKey();
+    appState.publicKey.set(pubKey);
     appState.isLoggedIn.set(true);
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
 
     // アカウント画面に遷移
     appState.currentScreen.set('account');

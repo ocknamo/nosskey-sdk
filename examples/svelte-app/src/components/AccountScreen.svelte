@@ -1,7 +1,8 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { i18n } from '../i18n/i18n-store.js';
-import { isLoggedIn, publicKey, pwkBlob } from '../store/app-state.js';
+import { getPWKManager } from '../services/pwk-manager.service.js';
+import { isLoggedIn, publicKey } from '../store/app-state.js';
 import AuthScreen from './AuthScreen.svelte';
 import ProfileEditor from './ProfileEditor.svelte';
 import RelayStatus from './RelayStatus.svelte';
@@ -9,34 +10,33 @@ import RelayStatus from './RelayStatus.svelte';
 // Svelte v5のrunesモードに対応した記法
 const login = $derived($isLoggedIn);
 
-onMount(() => {
+onMount(async () => {
   console.log('AccountScreen mounted');
 
-  // 保存されているPWKBlobがあるかどうかをチェック
-  const savedPwkBlob = localStorage.getItem('nosskey_pwk_blob');
+  // PWKManagerからインスタンスを取得
+  const pwkManager = getPWKManager();
 
-  // ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
-  if (savedPwkBlob && !$isLoggedIn) {
-    console.log('認証情報が見つかりましたが、認証状態がfalseでした。修正します。');
-    try {
-      const parsedPwkBlob = JSON.parse(savedPwkBlob);
-      pwkBlob.set(parsedPwkBlob);
-
-      // 公開鍵も設定（parsedPwkBlobに含まれている場合）
-      if (parsedPwkBlob.pubkey) {
-        publicKey.set(parsedPwkBlob.pubkey);
+  // PWKが存在するか確認
+  if (pwkManager.hasPWK()) {
+    // 認証状態がfalseの場合は修正
+    if (!$isLoggedIn) {
+      console.log('PWKが見つかりましたが、認証状態がfalseでした。修正します。');
+      try {
+        // 公開鍵を取得して状態を更新
+        const pubKey = await pwkManager.getPublicKey();
+        publicKey.set(pubKey);
+        isLoggedIn.set(true);
+      } catch (error) {
+        console.error('公開鍵の取得に失敗しました:', error);
       }
-
-      isLoggedIn.set(true);
-    } catch (error) {
-      console.error('保存された認証情報の解析に失敗しました:', error);
     }
-  }
-
-  // 逆に認証情報がないのに認証状態がtrueの場合も修正
-  if (!savedPwkBlob && $isLoggedIn) {
-    console.log('認証情報がありませんが、認証状態がtrueでした。修正します。');
-    isLoggedIn.set(false);
+  } else {
+    // 逆に認証情報がないのに認証状態がtrueの場合も修正
+    if ($isLoggedIn) {
+      console.log('PWKがありませんが、認証状態がtrueでした。修正します。');
+      isLoggedIn.set(false);
+      publicKey.set(null);
+    }
   }
 });
 

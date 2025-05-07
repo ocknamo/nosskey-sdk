@@ -4,7 +4,7 @@ import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
 // シングルトンインスタンス
 let instance: PWKManager | null = null;
 
-// cacheOptions の現在の値
+// 設定の現在の値
 let currentCacheEnabled = true;
 let currentCacheTimeout = 300;
 
@@ -40,6 +40,10 @@ export function getPWKManager(): PWKManager {
       cacheOptions: {
         enabled: currentCacheEnabled,
         timeoutMs: currentCacheTimeout * 1000, // 秒をミリ秒に変換
+      },
+      storageOptions: {
+        enabled: true, // PWKの自動保存を有効化
+        storageKey: 'nosskey_pwk', // SDKのデフォルト値を使用
       },
     });
   }

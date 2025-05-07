@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
-import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
+import type { NostrEvent } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import type { RelayInfo } from '../services/relay.service.js';
@@ -58,7 +58,7 @@ function handleContentChange(event: Event) {
 }
 
 // イベントに署名
-async function signEventWithPWK() {
+async function signEvent() {
   if (!eventContent.trim()) {
     publishStatus = 'コンテンツを入力してください';
     return;
@@ -68,19 +68,8 @@ async function signEventWithPWK() {
   publishStatus = '署名中...';
 
   try {
-    // サブスクライブしている値を取得
-    let pwkValue: PWKBlob | null = null;
-
-    // 一時的なサブスクリプションを作成して値を取得
-    const unsubPwk = appState.pwkBlob.subscribe((value) => {
-      pwkValue = value;
-    });
-
-    // サブスクリプションを解除
-    unsubPwk();
-
-    if (!publicKeyValue || !pwkValue) {
-      throw new Error('認証情報が見つかりません');
+    if (!publicKeyValue) {
+      throw new Error('公開鍵が見つかりません');
     }
 
     // イベントの作成
@@ -91,8 +80,8 @@ async function signEventWithPWK() {
       tags: [],
     };
 
-    // イベントに署名（credentialIdはpwkValueから取得されるため不要）
-    signedEvent = await pwkManager.signEventWithPWK(event, pwkValue);
+    // NIP-07互換のsignEventメソッドを使用
+    signedEvent = await pwkManager.signEvent(event);
 
     if (signedEvent.id) {
       publishStatus = `署名完了: ${signedEvent.id.slice(0, 8)}...`;
@@ -185,7 +174,7 @@ function logout() {
     <div class="action-buttons">
       <button
         class="sign-button"
-        onclick={signEventWithPWK}
+        onclick={signEvent}
         disabled={isLoading || !eventContent.trim()}
       >
         {$i18n.t.nostr.sign}

@@ -1,6 +1,6 @@
 <script lang="ts">
 import { completeOnTimeout, createRxBackwardReq, latest, uniq } from 'rx-nostr';
-import type { NostrEvent, PWKBlob } from '../../../../src/types.js';
+import type { NostrEvent } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
@@ -171,19 +171,8 @@ async function saveProfile() {
   saveMessage = '';
 
   try {
-    // サブスクライブしている値を取得
-    let pwkValue: PWKBlob | null = null;
-
-    // 一時的なサブスクリプションを作成して値を取得
-    const unsubPwk = appState.pwkBlob.subscribe((value) => {
-      pwkValue = value;
-    });
-
-    // サブスクリプションを解除
-    unsubPwk();
-
-    if (!currentPublicKey || !pwkValue) {
-      throw new Error('認証情報が見つかりません');
+    if (!currentPublicKey) {
+      throw new Error('公開鍵が見つかりません');
     }
 
     // メタデータオブジェクトの作成
@@ -203,8 +192,8 @@ async function saveProfile() {
       tags: [],
     };
 
-    // イベントに署名（credentialIdはpwkValueから取得されるため不要）
-    const signedEvent = await pwkManager.signEventWithPWK(event, pwkValue);
+    // NIP-07互換のsignEventメソッドを使用
+    const signedEvent = await pwkManager.signEvent(event);
 
     // 署名したイベントをリレーに送信
     await relayService.publishEvent(signedEvent);

@@ -129,6 +129,30 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
+   * PWKが存在するかどうかを確認
+   * ストレージの設定に応じてメモリやストレージから検索
+   * @returns PWKが存在するかどうか
+   */
+  hasPWK(): boolean {
+    // メモリに保持しているか確認
+    if (this.#currentPWK) {
+      return true;
+    }
+
+    // ストレージが有効なら、そこから読み込みを試みる
+    if (this.#storageOptions.enabled) {
+      const loadedPWK = this.#loadPWKFromStorage();
+      if (loadedPWK) {
+        // 副作用: メモリにもロードする
+        this.#currentPWK = loadedPWK;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * PWKをストレージに保存（内部メソッド）
    * @param pwk 保存するPWK
    */

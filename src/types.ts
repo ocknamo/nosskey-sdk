@@ -132,6 +132,13 @@ export interface PWKManagerLike {
   getCurrentPWK(): PWKBlob | null;
 
   /**
+   * PWKが存在するかどうかを確認
+   * ストレージの設定に応じてメモリやストレージから検索
+   * @returns PWKが存在するかどうか
+   */
+  hasPWK(): boolean;
+
+  /**
    * PWKストレージの設定を更新
    * @param options ストレージオプション
    */

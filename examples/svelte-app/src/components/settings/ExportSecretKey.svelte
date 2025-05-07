@@ -2,7 +2,6 @@
 import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
-import { pwkBlob } from '../../store/app-state.js';
 import { hexToNsec } from '../../utils/bech32-converter.js';
 import SettingSection from './SettingSection.svelte';
 
@@ -28,7 +27,9 @@ function toggleExportKeySection() {
 
 // 秘密鍵をエクスポート
 async function exportSecretKey() {
-  if (!$pwkBlob) {
+  // PWKが存在するか確認
+  const currentPWK = pwkManager.getCurrentPWK();
+  if (!currentPWK) {
     exportError = $i18n.t.settings.noKeyToExport;
     return;
   }
@@ -39,7 +40,7 @@ async function exportSecretKey() {
 
   try {
     // PWKManagerのexportNostrKey関数を使用して秘密鍵を取得
-    const hexPrivkey = await pwkManager.exportNostrKey($pwkBlob);
+    const hexPrivkey = await pwkManager.exportNostrKey(currentPWK);
 
     // 16進数からnsec形式に変換
     exportedNsec = hexToNsec(hexPrivkey);

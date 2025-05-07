@@ -69,12 +69,13 @@ async function importKey() {
     // 既存の秘密鍵をインポート
     const pwk = await pwkManager.importNostrKey(secretKeyBytes, newCredentialId);
 
-    // 状態を更新
-    appState.pwkBlob.set(pwk);
-    appState.publicKey.set(pwk.pubkey);
-    appState.isLoggedIn.set(true);
+    // SDKにPWKを設定（内部でストレージにも保存される）
+    pwkManager.setCurrentPWK(pwk);
 
-    localStorage.setItem('nosskey_pwk_blob', JSON.stringify(pwk));
+    // 公開鍵を取得して状態を更新
+    const pubKey = await pwkManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
 
     // Nostr画面に遷移
     appState.currentScreen.set('timeline');

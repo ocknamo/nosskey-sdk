@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { PWKBlob } from '../../../../src/types.js';
+import { getPWKManager } from '../services/pwk-manager.service.js';
 
 // デフォルトリレーのリスト
 export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
@@ -17,7 +17,6 @@ export const currentScreen = writable<ScreenName>('account'); // 'account' ま�
 export const isLoggedIn = writable(false);
 
 // Nostrキー情報
-export const pwkBlob = writable<PWKBlob | null>(null);
 export const publicKey = writable<string | null>(null);
 
 // アプリケーション設定
@@ -69,19 +68,16 @@ try {
 export const resetState = () => {
   currentScreen.set('account');
   isLoggedIn.set(false);
-  pwkBlob.set(null);
   publicKey.set(null);
 };
 
 // ログアウト関数
 export const logout = () => {
-  // PWKBlobをクリア
-  pwkBlob.set(null);
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('nosskey_pwk_blob');
-  }
+  // PWKManagerを使用してSDK側の保存PWKをクリア
+  const pwkManager = getPWKManager();
+  pwkManager.clearStoredPWK();
 
-  // 公開鍵情報もクリア
+  // 公開鍵情報をクリア
   publicKey.set(null);
 
   // ログイン状態を更新
