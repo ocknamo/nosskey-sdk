@@ -1,6 +1,9 @@
 # Nosskey SDK サンプルアプリケーション
 
-このアプリケーションは、Nosskey SDKを利用したPasskey（WebAuthn）ベースのNostr鍵管理デモです。PRF拡張の出力値を直接Nostrのシークレットキーとして使用する`directPrfToNostrKey`メソッドを実装しています。
+[nosskey.app](https://nosskey.app/)
+
+このアプリケーションは、Nosskey SDKを利用したPasskey（WebAuthn）ベースのNostr鍵管理デモです。
+PRF拡張の出力値を直接Nostrのシークレットキーとして使用する方法と既存のNostr鍵をPRF値で暗号化する方法を実装しています。
 
 ## 技術スタック
 
@@ -53,23 +56,12 @@ npm run dev
 
 ## 技術的詳細
 
-このアプリケーションは下記の特徴を持っています：
-
-1. WebAuthn PRF拡張を使用したシームレスなNostr鍵生成
-2. 鍵の暗号化/復号が不要でシンプルな実装
-3. 同じPasskeyから毎回同じNostr公開鍵を生成
-4. 認証と署名が一体化したユーザー体験
-
-## 構成
-
-- `AuthScreen.svelte` - 認証画面コンポーネント
-- `NostrScreen.svelte` - Nostrメッセージ投稿画面コンポーネント
-- `appState.ts` - アプリケーション状態管理
+- [設計](svelte-app-design.md)
 
 ## 制限事項
 
 - WebAuthn PRF拡張は比較的新しい機能で、全てのブラウザや認証器で対応していない
-- デモ実装のため、エラーハンドリングは基本的な実装にとどまっている
+- Nostrクライアントとしての機能は限定的
 
 ## TODO
 
@@ -120,7 +112,7 @@ npm run dev
 
 本アプリケーションでは、「PWKBlobが存在すること」をログイン状態と定義しています。この定義の利点は以下の通りです：
 
-- 同じパスキーと同じusernameを使用すれば、PWKBlobを失った場合でも復元可能
+- 同じパスキーと同じusernameやsaltを使用すれば、PWKBlobを失った場合でも復元可能
 - 状態の判定基準が単一の条件（PWKBlobの存在）で完結するため、実装が単純化される
 
 詳細な設計については[svelte-app-design.md](svelte-app-design.md)を参照してください。
