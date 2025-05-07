@@ -2,17 +2,18 @@
 
 ## 1. 概要
 
-このドキュメントは、Nosskey SDKを利用したサンプルアプリケーションの設計と実装詳細を記述しています。このアプリケーションは、Passkey（WebAuthn）を利用したNostr鍵ラップの仕組みをデモンストレーションするために作成されました。特に、PRF拡張の出力値を直接Nostrのシークレットキーとして使用する`directPrfToNostrKey`メソッドに焦点を当てています。
+このドキュメントは、Nosskey SDKを利用したサンプルアプリケーションの設計と実装詳細を記述しています。このアプリケーションは、Passkey（WebAuthn）を利用したNostr鍵管理の仕組みをデモンストレーションするために作成されました。パスキーとNostr鍵の統合により、安全かつユーザーフレンドリーな鍵管理を実現しています。
 
 ## 2. アプリケーション構成
 
 ### 2.1 技術スタック
 
 - **フロントエンド**: Svelte v5
-- **構成**: シンプルなSPA（3画面切り替え方式）
+- **構成**: シンプルなSPA（4画面切り替え方式）
 - **ビルドツール**: Vite
 - **Nostr関連**: rx-nostr
-- **鍵管理**: Nosskey SDK (`directPrfToNostrKey` メソッド)
+- **鍵管理**: Nosskey SDK
+- **多言語対応**: カスタムi18nストア
 - **スタイリング**: カスタムCSS + SVGアイコン
 
 ### 2.2 プロジェクト構造
@@ -20,23 +21,35 @@
 ```
 examples/svelte-app/
 ├── public/
+│   └── nosskey.svg                # アプリアイコン
 ├── src/
 │   ├── components/
 │   │   ├── AccountScreen.svelte   # アカウント画面
 │   │   ├── AuthScreen.svelte      # 認証コンポーネント
 │   │   ├── FooterMenu.svelte      # フッターナビゲーション
+│   │   ├── ImportKeyScreen.svelte # 鍵インポート画面
+│   │   ├── NostrScreen.svelte     # Nostr機能コンポーネント
 │   │   ├── PostForm.svelte        # 投稿フォーム
 │   │   ├── ProfileEditor.svelte   # プロフィール編集
 │   │   ├── RelayStatus.svelte     # リレー接続状態
 │   │   ├── SettingsScreen.svelte  # 設定画面
 │   │   ├── Timeline.svelte        # タイムライン表示
-│   │   └── TimelineScreen.svelte  # タイムライン画面
-│   ├── assets/
-│   │   ├── account-icon.svg       # アカウントアイコン
-│   │   ├── home-icon.svg          # タイムラインアイコン 
-│   │   └── setting-icon.svg       # 設定アイコン
+│   │   ├── TimelineScreen.svelte  # タイムライン画面
+│   │   └── settings/*             # 設定関連コンポーネント
+│   ├── assets/*                    # svgアイコンなど
+│   ├── i18n/                      # 多言語対応関連
+│   │   ├── i18n-store.ts          # 言語ストア
+│   │   └── translations.ts        # 翻訳データ
+│   ├── services/
+│   │   ├── pwk-manager.service.ts # PWK管理サービス
+│   │   ├── relay.service.ts       # リレー接続サービス
+│   │   └── test-rxnostr.ts        # テスト用ユーティリティ 
 │   ├── store/
-│   │   └── appState.ts            # アプリケーション状態管理
+│   │   ├── app-state.ts           # アプリケーション状態管理
+│   │   └── relay-store.ts         # リレー状態管理
+│   ├── utils/
+│   │   ├── bech32-converter.ts    # Bech32変換ユーティリティ
+│   │   └── bech32-converter.spec.ts # 変換テスト
 │   ├── App.svelte                 # メインアプリコンポーネント
 │   └── main.ts                    # エントリーポイント
 ├── index.html
@@ -44,22 +57,51 @@ examples/svelte-app/
 └── vite.config.ts
 ```
 
-## 3. コンポーネント詳細
+## 3. 機能とコンポーネント詳細
 
 ### 3.1 状態管理
 
-#### appState.ts
+#### app-state.ts
 アプリケーションの状態管理を行うストア：
 - `defaultRelays` - デフォルトで使用するリレーの配列
-- `currentScreen` - 現在の画面を保持するwritableストア（'account'、'timeline'または'settings'）
+- `currentScreen` - 現在の画面を保持するwritableストア（'account'、'timeline'、'settings'、'import'）
 - `isLoggedIn` - 認証状態を管理
-- `pwkBlob` - パスキー派生のNostr鍵情報
 - `publicKey` - Nostr公開鍵
-- `resetState()` - 全ての状態をリセットする関数
-- `cacheSecrets` - 秘密鍵情報をキャッシュするかどうか
+- `cacheSecrets` - 秘密鍵情報をキャッシュするかどうかのフラグ
 - `cacheTimeout` - キャッシュのタイムアウト時間（秒）
+- `resetState()` - 全ての状態をリセットする関数
+- `logout()` - ログアウト処理を行う関数
 
-### 3.2 コンポーネント
+#### relay-store.ts
+リレー関連の状態管理を行うストア：
+- `activeRelays` - 現在使用中のリレーリスト
+- `relayService` - リレーサービスのシングルトンインスタンス
+- リレーリストの初期化・保存機能
+- ストレージとの同期機能
+
+### 3.2 サービス
+
+#### pwk-manager.service.ts
+PWK（Passkey Wrapped Key）管理サービス：
+- `getPWKManager()` - PWKManagerのシングルトンインスタンスを取得
+- キャッシュ設定の動的更新機能
+- シークレットキーのキャッシュクリア機能
+- PWKの保存・復元機能
+
+#### relay.service.ts
+Nostrリレーとの通信を管理するサービス：
+- リレーの追加・削除・状態管理
+- イベント送信機能
+- タイムライン取得機能
+- リレー状態監視機能
+
+### 3.3 画面コンポーネント
+
+#### App.svelte
+アプリケーションのメインコンポーネント：
+- URLハッシュに基づく画面初期化と切り替え
+- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen、ImportKeyScreen）
+- グローバルスタイルの定義
 
 #### AccountScreen.svelte
 アカウント情報と認証を担当するコンポーネント：
@@ -67,33 +109,53 @@ examples/svelte-app/
   - 未認証時はAuthScreenを表示
   - 認証済み時はアカウント情報（プロフィール、リレー状態）を表示
 - ローカルストレージと認証状態の整合性チェック
-- 状態変化の監視とエラーハンドリング
 
 #### AuthScreen.svelte
 認証機能を担当するコンポーネント：
-- PRF拡張対応確認ボタン
-  - ユーザーアクションでPRF拡張対応状況を確認
 - パスキー新規作成機能
-  - `createPasskey()`メソッドで新規パスキー作成
-  - `directPrfToNostrKey()`メソッドでPRFから直接Nostr鍵を導出
 - 既存パスキーでのログイン機能
-- ブラウザ対応状況表示
-- エラーハンドリング
+- インポート画面への遷移機能
+- PRF拡張対応確認機能
+
+#### ImportKeyScreen.svelte
+既存のNostr秘密鍵をインポートするコンポーネント：
+- nsecまたは16進数形式の秘密鍵入力
+- 秘密鍵の検証とインポート
 
 #### TimelineScreen.svelte
 タイムライン表示と投稿機能を担当するコンポーネント：
 - 認証状態による表示切り替え
-  - 未認証時は認証要求メッセージを表示
-  - 認証済み時はタイムラインと投稿フォームを表示
-- PostFormとTimelineコンポーネントを統合
-- ユーザーインタラクション管理
+- PostFormとTimelineコンポーネントの統合
+
+#### SettingsScreen.svelte
+設定画面のコンテナコンポーネント：
+- 各種設定セクションの統合
+
+### 3.4 設定コンポーネント
+
+設定画面は複数の独立した設定セクションで構成されています：
+
+- **RelayManagement.svelte** - リレーの追加・削除・リセット機能
+- **SecretCacheSettings.svelte** - 秘密鍵キャッシュの設定
+- **LanguageSettings.svelte** - アプリケーション言語の切り替え
+- **LogoutSection.svelte** - ログアウト機能
+- **LocalStorageSection.svelte** - ローカルストレージのクリア機能
+- **ExportPWKComponent.svelte** - PWKデータのエクスポート機能
+- **ExportSecretKey.svelte** - 秘密鍵のエクスポート機能
+- **AppInfo.svelte** - アプリケーション情報の表示
+
+### 3.5 共通コンポーネント
+
+#### FooterMenu.svelte
+アプリケーションナビゲーションを担当するコンポーネント：
+- 現在の画面に応じたアクティブ状態表示
+- 画面遷移機能
 
 #### PostForm.svelte
 Nostrメッセージ作成・投稿機能を担当するコンポーネント：
-- メッセージ入力フォーム（常にkind=1のテキストノート）
+- メッセージ入力フォーム
 - イベント署名機能
-  - パスキーを使用してNostrイベントに署名
-- デフォルトリレーへのメッセージ送信機能
+- リレーへのメッセージ送信機能
 - 投稿状態とエラーハンドリング
 
 #### RelayStatus.svelte
@@ -102,137 +164,142 @@ Nostrメッセージ作成・投稿機能を担当するコンポーネント：
 - リレー接続状態の視覚的な表示
 - ステータスに応じた色分け表示
 
-#### FooterMenu.svelte
-アプリケーションナビゲーションを担当するコンポーネント：
-- SVGアイコンを使用したナビゲーションタブ
-  - アカウント画面（account-icon.svg）
-  - タイムライン画面（home-icon.svg）
-  - 設定画面（setting-icon.svg）
-- 現在の画面に応じたアクティブ状態表示
-- 画面遷移機能
+## 4. 多言語対応
 
-#### App.svelte
-アプリケーションのメインコンポーネント：
-- URLハッシュに基づく画面初期化
-- 状態に応じた画面切り替え（AccountScreen ⇔ TimelineScreen ⇔ SettingsScreen）
-- 全体のスタイル定義
+アプリケーションは多言語対応（i18n）機能を実装しています：
 
-## 4. データフロー
+### 4.1 i18n実装
+
+#### i18n-store.ts
+言語設定とテキスト管理：
+- `currentLanguage` - 現在の言語設定（'ja'または'en'）
+- `i18n` - 翻訳データを提供するderivedストア
+- `changeLanguage()` - 言語を切り替える関数
+- ブラウザ設定に基づく言語自動選択機能
+- 設定画面から言語を選択できる
+
+#### translations.ts
+言語リソースの定義：
+- 日本語（ja）と英語（en）の翻訳セット
+- 階層構造を持つ翻訳オブジェクト
+- アプリケーション全体のテキストリソース
+
+## 5. データフロー
+
+### 5.1 起動時フロー
 
 1. アプリ起動時に初期化
+   - ストアの初期化
    - ローカルストレージのチェック
+   - URLハッシュに基づく画面表示
+   - 言語設定の読み込み
    - 認証状態と保存データの整合性検証
-2. ユーザーがPRF拡張対応確認ボタンをクリック
-3. PRF拡張が対応している場合、パスキー作成・ログインボタンを表示
-4. パスキー登録時：
-   - 新規パスキー作成
-   - PRF値から直接シークレットキー導出
-   - 結果をストアとlocalStorageに保存
-   - アカウント画面へ自動遷移
-5. 既存パスキーでログイン時：
-   - 保存されたcredentialIdを使用して認証
-   - PRF値からNostr鍵を再生成
-   - アカウント画面へ自動遷移
-6. Nostrメッセージ投稿時：
-   - イベント作成と署名（pwkBlobから情報取得）
-   - リレーへの送信
-7. ログアウト時：
-   - 状態をリセット
-   - アカウント画面へ遷移（未認証状態）
 
-## 5. ユーザー状態と状態遷移
+### 5.2 認証フロー
 
-アプリケーションのユーザー状態は主に認証状態（isLoggedIn）とPWKBlobの有無によって管理されています。詳細なユーザー認証のユースケースとPWKBlob概念については、[PWKBlobとユーザー認証ユースケース](../../docs/pwkblob-auth-usecases.md)を参照してください。
+#### 新規パスキー作成
+1. 新規パスキー作成
+   - `createPasskey()` メソッドで新規パスキー作成
+   - PRFから直接Nostr鍵を導出
+2. 結果を保存
+3. 認証状態の更新
+4. タイムライン画面へ自動遷移
 
-### 5.1 状態モデル
+#### 既存パスキーでログイン
+1. プラットフォームのUIから選択したパスキーでWebAuthn認証
+2. PRF値からNostr鍵を再生成
+3. 認証状態の更新
+4. タイムライン画面へ自動遷移
 
-本アプリケーションでは、「PWKBlobが存在すること」をログイン状態と定義しています。これにより、ユーザーの状態は以下のように明確に表現されます：
+#### 秘密鍵のインポート
+1. 秘密鍵入力（nsecまたは16進数形式）
+2. 新規パスキーの作成
+3. 秘密鍵をパスキーで保護（PWK）
+4. 認証状態の更新
+5. タイムライン画面へ自動遷移
 
-1. **未ログイン状態（パスキーなし）**: 
-   - `isLoggedIn = false`, `pwkBlob = null`
+### 5.3 メッセージ投稿フロー
+
+1. メッセージ作成（kind=1のテキストノート）
+2. 復号した秘密鍵でイベント署名
+3. 設定されたリレーへのメッセージ送信
+
+### 5.4 ログアウトフロー
+
+1. ログアウト関数の呼び出し
+2. SDKのpwkBlobをクリア
+3. 認証状態のリセット
+4. ストアの状態更新
+5. アカウント画面への遷移（未認証状態）
+
+## 6. ユーザー状態と状態遷移
+
+アプリケーションのユーザー状態は主に認証状態（isLoggedIn）と公開鍵情報の有無によって管理されています。
+
+### 6.1 状態モデル
+
+1. **未ログイン状態**:
+   - `isLoggedIn = false`, `publicKey = null`
    - 初回起動時や認証情報クリア後の状態
    - AccountScreenはAuthScreenコンポーネントを表示
 
-2. **ログイン状態（PWKBlobあり）**:
-   - `isLoggedIn = true`, `pwkBlob ≠ null`
+2. **ログイン状態**:
+   - `isLoggedIn = true`, `publicKey ≠ null`
    - パスキー認証後またはlocalStorageから復元後
    - AccountScreenはプロフィールとリレー状態を表示
 
-この定義の利点は、同じパスキーと同じusernameを使用すれば、PWKBlobを失った場合でも復元可能であるという点です。また、状態の判定基準が単一の条件（PWKBlobの存在）で完結するため、実装が単純化されます。
-
-### 5.2 状態の同期メカニズム
-
-AccountScreenコンポーネントは、マウント時にlocalStorageとの整合性チェックを実施します：
-
-```javascript
-// 保存されているPWKBlobがあるかどうかをチェック
-const savedPwkBlob = localStorage.getItem("nosskey_pwk_blob");
-
-// ローカルストレージに認証情報があるのに認証状態がfalseの場合は修正
-if (savedPwkBlob && !$isLoggedIn) {
-  isLoggedIn.set(true);
-}
-
-// 逆に認証情報がないのに認証状態がtrueの場合も修正
-if (!savedPwkBlob && $isLoggedIn) {
-  isLoggedIn.set(false);
-}
-```
-
-これにより、isLoggedInフラグとPWKBlobの存在が常に同期された状態を保ちます。
-
-### 5.3 状態遷移のフローダイアグラム
+### 6.2 状態遷移のフローダイアグラム
 
 ```mermaid
 graph TD
-    A[初期状態: 未認証] -->|パスキー作成/インポート| B[認証済み状態]
+    A[初期状態: 未認証] -->|パスキー作成| B[認証済み状態]
+    A -->|既存パスキーログイン| B
+    A -->|秘密鍵インポート| B
     B -->|署名操作等| B
-    B -->|ログアウト/認証情報クリア| A
+    B -->|ログアウト| A
     
     %% 再訪問・復元フロー
-    C[アプリ起動] -->|localStorage確認| D{PWKBlobあり?}
+    C[アプリ起動] -->|localStorage確認| D{認証情報あり?}
     D -->|Yes| B
     D -->|No| A
 ```
 
-### 5.4 キャッシュと認証
+### 6.3 画面状態と遷移
 
-秘密鍵のキャッシュはSDK内部で管理され、以下の設定で制御されます：
+アプリケーションは4つの主要画面（`account`, `timeline`, `settings`, `import`）を持ち、これらはURLハッシュと連動しています。画面状態はappState.tsの`currentScreen`ストアで管理されます。
 
-- `cacheSecrets`: キャッシュを有効/無効にする設定
-- `cacheTimeout`: キャッシュの有効期間（秒）
+```mermaid
+graph LR
+    Account((アカウント)) <--> Timeline((タイムライン))
+    Account <--> Settings((設定))
+    Account <--> Import((インポート))
+    Timeline <--> Settings
+```
 
-これらの設定はSettingsScreenで変更可能で、変更はSDKに反映されます。
+### 6.4 設定の管理
 
-## 6. 技術的考慮事項
+アプリケーション設定は以下のように管理されます：
 
-### 6.1 WebAuthn/Passkey対応
+- **言語設定**: `currentLanguage`ストアとlocalStorage
+- **リレー設定**: `activeRelays`ストアとlocalStorage
+- **キャッシュ設定**: `cacheSecrets`および`cacheTimeout`ストアとlocalStorage
+
+これらの設定はユーザーインターフェイスを通じて変更でき、変更はリアルタイムでSDKや関連コンポーネントに反映されます。
+
+## 7. 技術的考慮事項
+
+### 7.1 WebAuthn/Passkey対応
 
 - `localhost`または`HTTPS`環境での実行が必要
-- Chrome または Safari最新版での動作を想定
-- PRF拡張をサポートする認証器（YubiKey等）が必要
+- 最新のChrome、Firefox、Safariなどのモダンブラウザでの動作を想定
 
-### 6.2 PRF直接使用の利点
+### 7.2 UI/UXの設計
 
-- 鍵の暗号化/復号が不要でシンプル
-- 毎回同じパスキーを使えば同じ公開鍵が生成される
-- ユーザー体験の向上（認証と署名が一体化）
-
-### 6.3 制限事項
-
-- WebAuthn PRF拡張は比較的新しい機能で、全てのブラウザや認証器で対応していない
-- デモ実装のため、リレー接続はシミュレーションのみ
-- エラーハンドリングが基本的な実装にとどまっている
-
-### 6.4 UI/UXの設計
-
-- 3つの主要画面（アカウント、タイムライン、設定）によるシンプルなナビゲーション
+- 4つの主要画面によるシンプルなナビゲーション
 - フッターメニューによる直感的な画面切り替え
-- SVGアイコンを使用したモダンなデザイン
 - 認証状態に応じた適切な画面表示の制御
-- エラー状態の視覚的フィードバック
 
-## 7. 開発・実行方法
+## 8. 開発・実行方法
 
 ```bash
 # リポジトリのクローン
