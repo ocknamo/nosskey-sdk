@@ -2,7 +2,7 @@
 import { i18n } from '../i18n/i18nStore.js';
 import { getPWKManager } from '../services/pwkManager.service.js';
 import * as appState from '../store/appState.js';
-import { isValidNsec, nsecToHex } from '../utils/bech32Converter.js';
+import { isValidNsec, nsecToHex } from '../utils/bech32-converter.js';
 
 // 状態変数
 let secretKey = $state('');

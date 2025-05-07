@@ -12,7 +12,7 @@ import {
   resetState,
 } from '../store/appState.js';
 import { activeRelays } from '../store/relayStore.js';
-import { hexToNsec } from '../utils/bech32Converter.js';
+import { hexToNsec } from '../utils/bech32-converter.js';
 
 // 状態変数
 let clearResult = $state('');
