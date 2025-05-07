@@ -14,10 +14,10 @@ import SecretCacheSettings from './settings/SecretCacheSettings.svelte';
 
   <RelayManagement />
   <SecretCacheSettings />
-  <ExportSecretKey />
+  <LanguageSettings />
   <LogoutSection />
   <LocalStorageSection />
-  <LanguageSettings />
+  <ExportSecretKey />
   <AppInfo />
 </div>
 
