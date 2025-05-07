@@ -12,7 +12,7 @@ import { bytesToHex } from './utils.js';
 vi.mock('rx-nostr-crypto', () => {
   return {
     seckeySigner: vi.fn(() => ({
-      signEventWithPWK: vi.fn(async (event) => ({
+      signEvent: vi.fn(async (event) => ({
         ...event,
         id: 'test-event-id',
         sig: 'test-signature',
