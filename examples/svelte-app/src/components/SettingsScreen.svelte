@@ -1,6 +1,7 @@
 <script lang="ts">
 import { i18n } from '../i18n/i18n-store.js';
 import AppInfo from './settings/AppInfo.svelte';
+import ExportPWKComponent from './settings/ExportPWKComponent.svelte';
 import ExportSecretKey from './settings/ExportSecretKey.svelte';
 import LanguageSettings from './settings/LanguageSettings.svelte';
 import LocalStorageSection from './settings/LocalStorageSection.svelte';
@@ -17,6 +18,7 @@ import SecretCacheSettings from './settings/SecretCacheSettings.svelte';
   <LanguageSettings />
   <LogoutSection />
   <LocalStorageSection />
+  <ExportPWKComponent />
   <ExportSecretKey />
   <AppInfo />
 </div>
