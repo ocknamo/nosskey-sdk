@@ -14,12 +14,22 @@
 - テストはvitestで作成されている
 - 詳しい仕様は /docs 以下に置かれたドキュメントに記載されている
 
+### ファイル名
+
+svelteのファイル以外はすべてケバブケース（kebab-case）で実装する
+
+例: 
+- bech32-converter.ts
+- bech32-converter.spec.ts
+
 ### おもなスクリプト
 
 - `npm run fix`
   - タスク完了前に実行しておく
 - `npm run test`
   - テスト実行
+- `cd examples/svelte-app && npm run check`
+  - svelteの構文チェック
 
 ## 作業方法
 
