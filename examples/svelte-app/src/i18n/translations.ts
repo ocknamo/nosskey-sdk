@@ -122,6 +122,19 @@ export interface TranslationData {
     confirmExport: string;
     yourSecretKey: string;
     noKeyToExport: string;
+    exportPWK: {
+      title: string;
+      description: string;
+      warning: string;
+      showExportSection: string;
+      hideExportSection: string;
+      restoreWarning: string;
+      exportButton: string;
+      backupData: string;
+      saveFile: string;
+      saveFileTitle: string;
+      noCurrentPWK: string;
+    };
     relayManagement: {
       title: string;
       description: string;
@@ -368,6 +381,22 @@ export const ja: TranslationData = {
       englishLabel: '英語 (English)',
       changed: '言語を変更しました',
     },
+    exportPWK: {
+      title: 'PWKのエクスポート',
+      description:
+        'PWKをバックアップして別のデバイスで利用したり、ブラウザデータが消去された場合に復元することができます。',
+      warning:
+        '注意: このPWKを紛失するとアカウントへのアクセスができなくなる場合があります。安全な場所に保管してください。',
+      showExportSection: 'PWKをエクスポート',
+      hideExportSection: 'エクスポートセクションを隠す',
+      restoreWarning:
+        'このPWKファイルは、同じパスキーと同じユーザー名でログインできない場合の復元に使用できます。',
+      exportButton: 'PWKをエクスポート',
+      backupData: 'PWKのバックアップデータ:',
+      saveFile: '保存',
+      saveFileTitle: 'ファイルに保存',
+      noCurrentPWK: '現在のPWKが見つかりません。ログイン状態を確認してください。',
+    },
   },
   navigation: {
     account: 'アカウント',
@@ -559,6 +588,22 @@ export const en: TranslationData = {
       japaneseLabel: 'Japanese (日本語)',
       englishLabel: 'English',
       changed: 'Language changed',
+    },
+    exportPWK: {
+      title: 'Export PWK',
+      description:
+        'You can backup your PWK to use on another device or restore it if your browser data is erased.',
+      warning:
+        'Warning: Losing this PWK may result in loss of access to your account. Store it in a safe place.',
+      showExportSection: 'Export PWK',
+      hideExportSection: 'Hide Export Section',
+      restoreWarning:
+        'This PWK file can be used for recovery when you cannot login with the same passkey and the same username.',
+      exportButton: 'Export PWK',
+      backupData: 'PWK Backup Data:',
+      saveFile: 'Save',
+      saveFileTitle: 'Save to file',
+      noCurrentPWK: 'Current PWK not found. Please check your login status.',
     },
   },
   navigation: {

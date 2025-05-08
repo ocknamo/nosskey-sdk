@@ -29,7 +29,7 @@ async function exportPWK() {
   // PWKが存在するか確認
   const currentPWK = pwkManager.getCurrentPWK();
   if (!currentPWK) {
-    exportError = '現在のPWKが見つかりません。ログイン状態を確認してください。';
+    exportError = $i18n.t.settings.exportPWK.noCurrentPWK;
     return;
   }
 
@@ -79,32 +79,35 @@ function savePWKToFile() {
 }
 </script>
 
-<SettingSection title="PWKのエクスポート">
+<SettingSection title={$i18n.t.settings.exportPWK.title}>
   <p class="info-text">
-    PWKをバックアップして別のデバイスで利用したり、ブラウザデータが消去された場合に復元することができます。
+    {$i18n.t.settings.exportPWK.description}
   </p>
   <p class="warning-text">
-    注意:
-    このPWKを紛失するとアカウントへのアクセスができなくなる場合があります。安全な場所に保管してください。
+    {$i18n.t.settings.exportPWK.warning}
   </p>
 
   <button class="action-button export-button" onclick={toggleExportKeySection}>
-    {showExportSection ? "エクスポートセクションを隠す" : "PWKをエクスポート"}
+    {showExportSection
+      ? $i18n.t.settings.exportPWK.hideExportSection
+      : $i18n.t.settings.exportPWK.showExportSection}
   </button>
 
   {#if showExportSection}
     <div class="export-section">
       <p class="warning-text">
-        このPWKファイルは、同じパスキーと同じユーザー名でログインできない場合の復元に使用できます。
+        {$i18n.t.settings.exportPWK.restoreWarning}
       </p>
 
       <button class="action-button" onclick={exportPWK} disabled={isExporting}>
-        {isExporting ? $i18n.t.common.loading : "PWKをエクスポート"}
+        {isExporting
+          ? $i18n.t.common.loading
+          : $i18n.t.settings.exportPWK.exportButton}
       </button>
 
       {#if exportedPWK}
         <div class="key-display">
-          <p>PWKのバックアップデータ:</p>
+          <p>{$i18n.t.settings.exportPWK.backupData}</p>
           <div class="key-container">
             <textarea readonly value={exportedPWK} class="pwk-textarea"
             ></textarea>
@@ -119,9 +122,9 @@ function savePWKToFile() {
               <button
                 class="download-button"
                 onclick={savePWKToFile}
-                title="ファイルに保存"
+                title={$i18n.t.settings.exportPWK.saveFileTitle}
               >
-                保存
+                {$i18n.t.settings.exportPWK.saveFile}
               </button>
             </div>
           </div>
