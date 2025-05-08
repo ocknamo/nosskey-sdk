@@ -182,6 +182,7 @@ export interface TranslationData {
       title: string;
       version: string;
       buildDate: string;
+      commitHash: string;
     };
     language: {
       title: string;
@@ -373,6 +374,7 @@ export const ja: TranslationData = {
       title: 'アプリケーション情報',
       version: 'バージョン:',
       buildDate: 'ビルド日時:',
+      commitHash: 'コミットハッシュ:',
     },
     language: {
       title: '言語設定',
@@ -581,6 +583,7 @@ export const en: TranslationData = {
       title: 'Application Info',
       version: 'Version:',
       buildDate: 'Build Date:',
+      commitHash: 'Commit Hash:',
     },
     language: {
       title: 'Language Settings',

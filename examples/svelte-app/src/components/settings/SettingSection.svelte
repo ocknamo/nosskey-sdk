@@ -11,10 +11,16 @@ export let title: string;
 <style>
   .settings-section {
     background-color: #ffffff;
-    padding: 20px;
+    padding: 20px 60px;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .settings-section {
+      padding: 20px;
+    }
   }
 
   h2 {
