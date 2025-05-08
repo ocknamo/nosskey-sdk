@@ -317,9 +317,9 @@ $effect(() => {
         >
 
         <div class="pwk-import-section">
-          <h3>バックアップしたPWKでログイン</h3>
+          <h3>{$i18n.t.auth.pwkImportTitle}</h3>
           <p>
-            以前にエクスポートしたPWKファイルまたはデータを使用してログインします。
+            {$i18n.t.auth.pwkImportDesc}
           </p>
 
           <div class="pwk-input-container">
@@ -331,14 +331,14 @@ $effect(() => {
               disabled={isLoading}
             />
             <label for="pwk-file-input" class="file-input-label">
-              PWKファイルを選択
+              {$i18n.t.auth.pwkFileSelect}
             </label>
-            <span>または</span>
+            <span>{$i18n.t.auth.orText}</span>
             <button
               class="pwk-textarea-toggle"
               onclick={() => (showPWKTextarea = !showPWKTextarea)}
             >
-              PWKデータを入力
+              {$i18n.t.auth.pwkDataInput}
             </button>
           </div>
 
@@ -346,7 +346,7 @@ $effect(() => {
             <div class="pwk-textarea-container">
               <textarea
                 bind:value={pwkTextInput}
-                placeholder="PWKデータをここに貼り付けてください"
+                placeholder={$i18n.t.auth.pwkDataPlaceholder}
                 class="pwk-textarea"
               ></textarea>
               <button
@@ -354,7 +354,9 @@ $effect(() => {
                 onclick={loginWithPWKText}
                 disabled={isLoading || !pwkTextInput}
               >
-                {isLoading ? "処理中..." : "PWKデータでログイン"}
+                {isLoading
+                  ? $i18n.t.auth.pwkLoginProcessing
+                  : $i18n.t.auth.pwkLoginButton}
               </button>
             </div>
           {/if}

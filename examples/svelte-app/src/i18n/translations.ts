@@ -67,6 +67,15 @@ export interface TranslationData {
     importSectionTitle: string;
     importSectionDesc: string;
     importNotImplemented: string;
+    // PWKインポートセクション
+    pwkImportTitle: string;
+    pwkImportDesc: string;
+    pwkFileSelect: string;
+    pwkDataInput: string;
+    pwkDataPlaceholder: string;
+    pwkLoginButton: string;
+    pwkLoginProcessing: string;
+    orText: string;
   };
   nostr: {
     title: string;
@@ -267,6 +276,15 @@ export const ja: TranslationData = {
     importSectionTitle: 'Nostrアカウント（インポート）',
     importSectionDesc: '既存のNostrアカウントをインポート',
     importNotImplemented: '※インポート鍵による再ログイン機能は未実装です',
+    // PWKインポートセクション
+    pwkImportTitle: 'バックアップしたPWKでログイン',
+    pwkImportDesc: '以前にエクスポートしたPWKファイルまたはデータを使用してログインします。',
+    pwkFileSelect: 'PWKファイルを選択',
+    pwkDataInput: 'PWKデータを入力',
+    pwkDataPlaceholder: 'PWKデータをここに貼り付けてください',
+    pwkLoginButton: 'PWKデータでログイン',
+    pwkLoginProcessing: '処理中...',
+    orText: 'または',
   },
   nostr: {
     title: 'Nostr',
@@ -476,6 +494,15 @@ export const en: TranslationData = {
     importSectionTitle: 'Nostr Account (Import)',
     importSectionDesc: 'Import Existing Nostr Account',
     importNotImplemented: '* Re-login with imported key is not implemented yet',
+    // PWKインポートセクション
+    pwkImportTitle: 'Login with Backed Up PWK',
+    pwkImportDesc: 'Use a previously exported PWK file or data to login.',
+    pwkFileSelect: 'Select PWK File',
+    pwkDataInput: 'Enter PWK Data',
+    pwkDataPlaceholder: 'Paste your PWK data here',
+    pwkLoginButton: 'Login with PWK Data',
+    pwkLoginProcessing: 'Processing...',
+    orText: 'or',
   },
   nostr: {
     title: 'Nostr',
