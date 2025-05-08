@@ -1,50 +1,120 @@
 NIP-XX  
-Passkey-Wrapped Keys (PWK)
+パスキーラップド鍵（Passkey-Wrapped Keys）
 ==========================
 
 `draft` `optional`
 
-This NIP specifies a **Passkey-Wrapped Key** mechanism that lets Nostr
-clients store the user’s secret key encrypted (“wrapped”) with a key
-derived *inside* a WebAuthn/FIDO2 **passkey** using the PRF extension.
-A successful biometric / PIN gesture unlocks the secret key without the
-user ever seeing or copying it.
+このNIPは、WebAuthnパスキー（FIDO2/WebAuthn認証情報）を使用してNostr秘密鍵を管理する方法を定義します。パスキーを使用することで、秘密鍵のバックアップや複雑なパスワード管理が不要になり、生体認証や物理デバイスをタッチするだけの直感的な操作でNostrを使用できるようになります。
 
----
+2つの実装アプローチを提案します：
 
-## 1 Motivation
+1. **PRF直接利用方式**：WebAuthnのPRF拡張から得られる値を直接Nostr秘密鍵として使用
+2. **暗号化方式**：既存のNostr秘密鍵をパスキー由来の鍵で暗号化
 
-* `nsec` をコピー&ペーストする運用は  
-  XSS・キーロガー・クリップボード盗み見に弱い。  
-* 既存ブラウザ拡張はローカルストレージや RAM に平文を保持する。  
-* WebAuthn **PRF extension** (Chrome 116+, Safari 18+, Android 14+)  
-  はユーザー検証付きで 32 byte の秘密を返し、  
-  それを HKDF→AES-GCM 鍵として利用できる。  
-* ラップ／アンラップ方式により  
-  **「生体認証 → 投稿」** の 2 ステップ UX が実現する。
+## WebAuthn PRF拡張について
 
----
+WebAuthnのPRF（Pseudo-Random Function）拡張は、WebAuthn Level 3仕様で導入された機能です。この拡張は、認証器（セキュリティキーやプラットフォーム認証器）の内部秘密鍵と提供されたソルトから決定論的な疑似乱数値を生成します。
 
-## 2 Terminology
+PRF拡張の主な特徴：
+- 認証器内部の秘密鍵を使って32バイトの高エントロピー値を生成
+- 同じ認証情報（credentialId）と同じソルトからは常に同一のPRF値が得られる
+- 値はデバイスの外部に漏れることなく、認証時のみ取得可能
 
-| Term | Meaning |
-|------|---------|
-| **PRF secret** | 32 byte value from `extensions.prf` |
-| **PWK blob**   | JSON object holding the wrapped secret key |
-| **PWK tag**    | Capability flag `"pwk"` returned by the client |
+### PRFのサポート状況
 
----
+### PRF値をNostr秘密鍵として使用する条件
 
-## 3 PWK Blob Format
+PRF拡張から取得した32バイトの値をNostr秘密鍵として使用するにはsecp256k1の有効な秘密鍵範囲（1からn-1まで、nは曲線の位数）内である必要がある。
+範囲チェックを行い範囲外の場合は再生成または調整処理を行うことが推奨されるが、範囲外となる理論的確率は約2^-224と極めて低いため実用上は範囲チェックは省略可能である。
+
+## PWKBlobデータ構造
+
+PWKBlob（Passkey-Wrapped Key Blob）はパスキーによって保護されたNostr秘密鍵のデータ構造です。
+
+### PWKBlobDirect（PRF直接利用方式）
+
+PRF直接利用方式の大きな特徴は、**秘密鍵が明示的に保存されない**ことです。代わりに、署名が必要な時にパスキーから得られるPRF値から秘密鍵を一時的に導出します。同じパスキーと同じusernameからは常に同じNostr鍵が生成されるため、PWKBlobが失われても同じパスキーで復元可能です。
+
+For example:
 
 ```jsonc
 {
-  "v": 1,                   // format version
-  "alg": "aes-gcm-256",
-  "salt": "<16B-hex>",      // HKDF salt
-  "iv":   "<12B-hex>",      // AES-GCM IV
-  "ct":   "<ciphertext-hex>", // encrypted 32 B `nsec`
-  "tag":  "<16B-hex>"       // AES-GCM auth-tag
+  v: 1, // バージョン
+  alg: "prf-direct", // アルゴリズム識別子
+  credentialId: "3a13e..a592d", // パスキーの識別子（hex形式）
+  pubkey: "2b458..0c480", // Nostr公開鍵（hex形式）
+  username: "jone"
 }
-Derived key = HKDF-SHA256(prfSecret, salt, info="nostr-pwk").
+```
 
+### PWKBlobV1（暗号化方式）
+
+暗号化方式では、Nostr秘密鍵はパスキーから取得したPRF値を使用して暗号化され、PWKBlobに保存されます。
+このNIPでは暗号化アルゴリズムについては規定しません。
+
+For example:
+
+```jsonc
+{
+  v: 1; // バージョン
+  alg: "aes-gcm-256", // 暗号化アルゴリズム
+  salt: "a61c7..f645a", // ソルト（hex形式、16バイト）
+  iv: "98f29..28d01", // 初期化ベクトル（hex形式、12バイト）
+  ct: "517a2..8c140", // 暗号化された秘密鍵（hex形式、32バイト）
+  tag: "01eb6..bbfb0", // 認証タグ（hex形式、16バイト）
+  credentialId: "3a13e..a592d", // パスキーの識別子（hex形式）
+  pubkey: "2b458..0c480", // Nostr公開鍵（hex形式）
+  username: "jack" // パスキー作成時のユーザー名（オプション）
+}
+```
+
+## PWKBlobのリレーバックアップ
+
+PWKBlobV1は暗号化された秘密鍵を含むため、デバイスのストレージが失われた場合に備えて、Nostrリレーにイベントとして保存することが推奨されます。
+
+### Example Event
+
+```jsonc
+{
+  "kind": 30100,  // PWKBlob専用のevent kind
+  "content": "{
+    "pwkBlob": {      // PWKBlobオブジェクト
+      // PWKBlobの内容
+    },
+    "description": "My primary device passkey", // オプショナルな説明
+    "deviceInfo": {  // パスキー復元のヒントのためのオプショナルなデバイス情報
+      "name": "iPhone",
+      "os": "iOS 18.0",
+      "browser": "Safari 18"
+    }
+  }",
+  "tags": [
+    ["d", "<alg>:<credentialId>"],   // 同じPWKの重複したバックアップを避けるためPWKBlobのアルゴリズムとcredentialIdを組み合わせてdtagに設定
+    ["p", "2b458..0c480"],   // 多くの場合イベント作成者と一致
+    ["t", "pwkblob"],         // 検索用タグ
+    ["client", "nosskey.app"]  // オプショナルなクライアント識別用タグ(NIP-89) 
+  ],
+  // other fields...
+}
+```
+
+### 復元プロセス
+
+1. 新しいデバイスでアプリケーションを起動
+2. リレーから対象のパブキー宛ての最新のkind 30100イベントを取得
+3. PWKBlobを抽出し、パスキーのPRF値で復号
+4. 復号された秘密鍵でNostrイベントに署名可能に
+
+### 複数デバイス対応
+
+複数のパスキーを登録してバックアップする場合は、各パスキーごとにPWKBlobを作成し、それぞれ別々のイベントでリレーに保存することが可能です。このようにすることで、一部のパスキーが失われても他のパスキーでアカウントにアクセスできます。
+
+## 両方式の比較
+
+| 特性 | PRF直接利用（推奨） | 暗号化方式 |
+|:-----|:------------------|:----------|
+| UX向上 | ★★★★★ | ★★★ |
+| 既存鍵対応 | ✗ 不可 | ✓ 可能 |
+| 管理の手間 | 最小限（自動管理） | 中程度（リレーバックアップ推奨） |
+| 復元容易性 | 高い（同一パスキーで復元） | 中程度（PWKBlobとパスキーが必要） |
+| 最適ユーザー | 新規ユーザー | 既存鍵保有者 |
