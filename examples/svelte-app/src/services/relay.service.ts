@@ -258,19 +258,28 @@ export class RelayService {
           const event = packet.event;
 
           if (event) {
-            // 新しいイベントを追加
+            // 新しいイベントを追加（重複チェック実装）
             this.timelineEvents.update((events) => {
-              // 日付の新しい順に並べ替え
-              const updatedEvents = [...events, event].sort(
-                (a, b) => (b.created_at || 0) - (a.created_at || 0)
-              );
+              // イベントIDによる重複チェック
+              const isDuplicate = events.some((e) => e.id === event.id);
 
-              // 上限数を超えた古いイベントを削除
-              if (updatedEvents.length > options.limit) {
-                return updatedEvents.slice(0, options.limit);
+              // 重複がない場合のみ追加
+              if (!isDuplicate) {
+                // 日付の新しい順に並べ替え
+                const updatedEvents = [...events, event].sort(
+                  (a, b) => (b.created_at || 0) - (a.created_at || 0)
+                );
+
+                // 上限数を超えた古いイベントを削除
+                if (updatedEvents.length > options.limit) {
+                  return updatedEvents.slice(0, options.limit);
+                }
+
+                return updatedEvents;
               }
 
-              return updatedEvents;
+              // 重複の場合は既存のイベントリストを返す
+              return events;
             });
           }
         },
@@ -460,19 +469,28 @@ export class RelayService {
         next: (packet) => {
           const event = packet.event;
           if (event) {
-            // 新しいイベントを追加
+            // 新しいイベントを追加（重複チェック実装）
             this.timelineEvents.update((events) => {
-              // 日付の新しい順に並べ替え
-              const updatedEvents = [...events, event].sort(
-                (a, b) => (b.created_at || 0) - (a.created_at || 0)
-              );
+              // イベントIDによる重複チェック
+              const isDuplicate = events.some((e) => e.id === event.id);
 
-              // 上限数を超えた古いイベントを削除
-              if (updatedEvents.length > options.limit) {
-                return updatedEvents.slice(0, options.limit);
+              // 重複がない場合のみ追加
+              if (!isDuplicate) {
+                // 日付の新しい順に並べ替え
+                const updatedEvents = [...events, event].sort(
+                  (a, b) => (b.created_at || 0) - (a.created_at || 0)
+                );
+
+                // 上限数を超えた古いイベントを削除
+                if (updatedEvents.length > options.limit) {
+                  return updatedEvents.slice(0, options.limit);
+                }
+
+                return updatedEvents;
               }
 
-              return updatedEvents;
+              // 重複の場合は既存のイベントリストを返す
+              return events;
             });
           }
         },

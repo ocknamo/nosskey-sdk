@@ -238,6 +238,7 @@ async function reloadTimeline() {
   .event-content {
     white-space: pre-wrap;
     word-break: break-word;
+    text-align: left;
   }
 
   .event-content p {
