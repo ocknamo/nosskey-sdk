@@ -261,7 +261,7 @@ export class PWKManager implements PWKManagerLike {
     const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
     const cached = this.#cachedKeys.get(id);
     if (cached) {
-      this.clearKey(cached.sk);
+      this.#clearKey(cached.sk);
       this.#cachedKeys.delete(id);
     }
   }
@@ -271,7 +271,7 @@ export class PWKManager implements PWKManagerLike {
    */
   clearAllCachedKeys(): void {
     for (const { sk } of this.#cachedKeys.values()) {
-      this.clearKey(sk);
+      this.#clearKey(sk);
     }
     this.#cachedKeys.clear();
   }
@@ -382,7 +382,7 @@ export class PWKManager implements PWKManagerLike {
 
     // 必要に応じて平文の秘密鍵を消去
     if (clearMemory) {
-      this.clearKey(secretKey);
+      this.#clearKey(secretKey);
     }
 
     // レスポンスで使用するcredentialIdを取得
@@ -484,7 +484,7 @@ export class PWKManager implements PWKManagerLike {
           } else {
             // 期限切れの場合は削除
             this.#cachedKeys.delete(pwk.credentialId);
-            this.clearKey(cached.sk);
+            this.#clearKey(cached.sk);
           }
         }
       }
@@ -535,7 +535,7 @@ export class PWKManager implements PWKManagerLike {
 
     // キャッシュを使用しない場合、または明示的にclearMemory=trueの場合のみメモリクリア
     if (!shouldUseCache && clearMemory) {
-      this.clearKey(sk);
+      this.#clearKey(sk);
     }
 
     return signedEvent;
@@ -583,7 +583,7 @@ export class PWKManager implements PWKManagerLike {
     // メモリからのクリアは、リターン後に元の参照が失われるため必要ない
     // テスト環境では関数が完了した後も保持されるため意図的にスキップ
     // 実際のブラウザ環境では問題ない
-    // this.clearKey(sk);
+    // this.#clearKey(sk);
 
     return skHex;
   }
@@ -592,7 +592,7 @@ export class PWKManager implements PWKManagerLike {
    * 秘密鍵をメモリから明示的に消去
    * @param key 消去する秘密鍵
    */
-  clearKey(key: Uint8Array): void {
+  #clearKey(key: Uint8Array): void {
     key?.fill?.(0);
   }
 

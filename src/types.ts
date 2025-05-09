@@ -201,12 +201,6 @@ export interface PWKManagerLike {
   signEventWithPWK(event: NostrEvent, pwk: PWKBlob, options?: SignOptions): Promise<NostrEvent>;
 
   /**
-   * 秘密鍵をメモリから明示的に消去
-   * @param key 消去する秘密鍵
-   */
-  clearKey(key: Uint8Array): void;
-
-  /**
    * キャッシュ設定を更新
    * @param options キャッシュオプション
    */

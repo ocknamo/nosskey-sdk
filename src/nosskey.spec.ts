@@ -265,17 +265,6 @@ describe('PWKManager', () => {
     });
   });
 
-  describe('clearKey', () => {
-    it('秘密鍵のバッファをゼロで埋める', () => {
-      const pwkManager = new PWKManager();
-      const key = new Uint8Array(32).fill(123);
-      pwkManager.clearKey(key);
-
-      // すべての要素が0になっていることを確認
-      expect(Array.from(key).every((byte) => byte === 0)).toBe(true);
-    });
-  });
-
   describe('exportNostrKey', () => {
     it('暗号化された秘密鍵をエクスポートできる（aes-gcm-256）', async () => {
       const pwkManager = new PWKManager();
