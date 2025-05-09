@@ -33,7 +33,7 @@ export interface NostrEvent {
 /**
  * PWK blob structure (暗号化された秘密鍵の保存形式)
  */
-export interface PWKBlobV1 {
+export interface PWKBlobEncrypted {
   v: 1;
   alg: 'aes-gcm-256';
   salt: string; // hex(16 B)
@@ -56,7 +56,7 @@ export interface PWKBlobDirect {
   username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 
-export type PWKBlob = PWKBlobV1 | PWKBlobDirect;
+export type PWKBlob = PWKBlobEncrypted | PWKBlobDirect;
 
 /**
  * パスキー作成用オプション

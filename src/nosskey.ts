@@ -5,7 +5,7 @@ import type {
   NostrEvent,
   PWKBlob,
   PWKBlobDirect,
-  PWKBlobV1,
+  PWKBlobEncrypted,
   PWKManagerLike,
   PWKStorageOptions,
   PasskeyCreationOptions,
@@ -390,7 +390,7 @@ export class PWKManager implements PWKManagerLike {
     // このAPIではレスポンスから直接credentialIdを取得することができない
 
     // PWKBlobのデータ構築
-    const pwkBlob: PWKBlobV1 = {
+    const pwkBlob: PWKBlobEncrypted = {
       v: 1,
       alg: 'aes-gcm-256',
       salt: bytesToHex(salt),
@@ -502,8 +502,8 @@ export class PWKManager implements PWKManagerLike {
         // PRF値を直接シークレットキーとして使用
         sk = prfSecret;
       } else {
-        // PWKBlobV1として扱い、暗号化された秘密鍵を復号
-        const pwkV1 = pwk as PWKBlobV1;
+        // PWKBlobEncryptedとして扱い、暗号化された秘密鍵を復号
+        const pwkV1 = pwk as PWKBlobEncrypted;
         const salt = hexToBytes(pwkV1.salt);
         const iv = hexToBytes(pwkV1.iv);
         const ct = hexToBytes(pwkV1.ct);
@@ -566,8 +566,8 @@ export class PWKManager implements PWKManagerLike {
       // PRF値を直接シークレットキーとして使用
       sk = new Uint8Array(prfSecret);
     } else {
-      // PWKBlobV1として扱い、暗号化された秘密鍵を復号
-      const pwkV1 = pwk as PWKBlobV1;
+      // PWKBlobEncryptedとして扱い、暗号化された秘密鍵を復号
+      const pwkV1 = pwk as PWKBlobEncrypted;
       const salt = hexToBytes(pwkV1.salt);
       const iv = hexToBytes(pwkV1.iv);
       const ct = hexToBytes(pwkV1.ct);
