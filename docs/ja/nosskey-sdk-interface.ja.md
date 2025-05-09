@@ -1,4 +1,4 @@
-# Passkey-Wrapped Key (PWK)  - TypeScript SDK 実装
+# Passkey-Wrapped Key (PWK) - TypeScript SDK インターフェース定義と実装ガイド
 
 **NIP-49を採用しないシンプルな実装例**
 
