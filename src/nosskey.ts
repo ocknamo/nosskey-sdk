@@ -428,7 +428,7 @@ export class PWKManager implements PWKManagerLike {
     // PRF秘密を取得（これが直接シークレットキーになる）
     const { secret: sk, id: responseId } = await this.#prfSecret(credentialId);
 
-    // secp256k1の有効範囲チェック
+    // secp256k1の有効範囲チェック(ここでは0チェックのみ)
     // 注: 実用上は確率が非常に低いため省略可能
     if (sk.every((byte) => byte === 0)) {
       throw new Error('Invalid PRF output: all zeros');
