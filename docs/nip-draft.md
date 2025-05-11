@@ -22,6 +22,16 @@ Main features of the PRF extension:
 
 ### PRF Support Status
 
+The availability of the PRF extension depends not only on browser support but also on the authenticator's support. To fully utilize the PRF extension, all three layers must support it:
+
+- Authenticator (hardware/platform)
+- OS (authentication API layer)
+- Browser
+
+While major OS and browsers support it, some major authenticators do not yet support it, so client implementers are recommended to implement fallbacks to existing Nostr authentication methods.
+
+Reference: [PRF Support Status](https://github.com/ocknamo/nosskey-sdk/blob/main/docs/en/prf-support-tables.en.md)
+
 ### Conditions for Using PRF Values as Nostr Private Keys
 
 For a 32-byte value obtained from the PRF extension to be used as a Nostr private key, it must be within the valid private key range of secp256k1 (from 1 to n-1, where n is the order of the curve).
