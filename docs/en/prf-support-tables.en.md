@@ -24,8 +24,8 @@
 
 #### Official Documentation
 
-- WebAuthn Level 3 Specification § PRF Extension (W3C Editor's Draft)
-- Explainer (Design explanation & code examples)
+- [WebAuthn Level 3 Specification § PRF Extension (W3C Editor's Draft)](https://www.w3.org/TR/webauthn-3/#prf-extension)
+- [Explainer (Design explanation & code examples)](https://github.com/w3c/webauthn/wiki/Explainer:-PRF-extension)
 
 #### Key Points
 

@@ -137,6 +137,9 @@ WebAuthn PRF拡張の概念実証として、いくつかの公開デモやラ�
 
 例えば仕様には**「提供されたPRF入力は固定のコンテキスト文字列と連結してハッシュされてから認証器に渡される」**ことが明記されており、これによって「WebAuthn経由で取得したHMAC値が他の用途（OSログイン等）で使われるHMACと衝突しない」保証を与えています。また、CTAPレベルでは前述の通りhmac-secret拡張（FIDO2 v2.1）がベースとなっており、その仕様もFIDO Allianceの文書にて参照可能です。
 
+- [WebAuthn Level 3 Specification § PRF Extension (W3C Editor's Draft)](https://www.w3.org/TR/webauthn-3/#prf-extension)
+- [Explainer (Design explanation & code examples)](https://github.com/w3c/webauthn/wiki/Explainer:-PRF-extension)
+
 ### 実装上の注意点・制約
 
 #### 互換性チェックとフォールバック

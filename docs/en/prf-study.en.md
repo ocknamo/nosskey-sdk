@@ -137,6 +137,9 @@ As official references, the W3C WebAuthn Level 3 specification and related FIDO2
 
 For example, the specification clearly states that **"the provided PRF input is hashed after being concatenated with a fixed context string before being passed to the authenticator"**, which guarantees that "HMAC values obtained via WebAuthn do not collide with HMACs used for other purposes (such as OS login)". Also, at the CTAP level, as mentioned earlier, the hmac-secret extension (FIDO2 v2.1) is the basis, and its specification can also be referenced in FIDO Alliance documents.
 
+- [WebAuthn Level 3 Specification § PRF Extension (W3C Editor's Draft)](https://www.w3.org/TR/webauthn-3/#prf-extension)
+- [Explainer (Design explanation & code examples)](https://github.com/w3c/webauthn/wiki/Explainer:-PRF-extension)
+
 ### Implementation Notes and Constraints
 
 #### Compatibility Checks and Fallbacks
