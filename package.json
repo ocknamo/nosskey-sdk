@@ -1,6 +1,6 @@
 {
   "name": "nosskey-sdk",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey",
   "type": "module",
   "main": "./dist/index.cjs",
