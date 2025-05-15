@@ -2,6 +2,10 @@
   "name": "nosskey-sdk",
   "version": "0.0.1",
   "description": "SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -10,7 +14,7 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "require": "./dist/index.cjs"
     }
   },
   "engines": {
