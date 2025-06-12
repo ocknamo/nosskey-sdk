@@ -562,39 +562,8 @@ describe('PWKManager', () => {
       // navigator.credentials.get の呼び出し回数をリセット
       vi.clearAllMocks();
 
-      // 2回目の署名（キャッシュから取得、個別に指定必要）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob, { useCache: true });
-
-      // PRF認証が呼ばれていないことを確認
-      expect(navigator.credentials.get).not.toHaveBeenCalled();
-    });
-
-    it('個別のオプションでキャッシュを制御できる', async () => {
-      const pwkManager = new PWKManager();
-      // グローバルにはキャッシュ無効だが、個別に有効化
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
-        credentialId: bytesToHex(mockCredentialId),
-        pubkey: 'test-pubkey',
-      };
-      const mockEvent: NostrEvent = {
-        kind: 1,
-        content: 'Hello, Nostr!',
-        tags: [],
-      };
-
-      // キャッシュを有効にして署名
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob, { useCache: true });
-
-      vi.clearAllMocks();
-
-      // 2回目の署名（キャッシュから取得、明示的に指定が必要）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob, { useCache: true });
+      // 2回目の署名（キャッシュから取得）
+      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
 
       // PRF認証が呼ばれていないことを確認
       expect(navigator.credentials.get).not.toHaveBeenCalled();

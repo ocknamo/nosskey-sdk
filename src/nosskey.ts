@@ -1,4 +1,7 @@
 import { seckeySigner } from 'rx-nostr-crypto';
+import { aesGcmDecrypt, aesGcmEncrypt, deriveAesGcmKey } from './crypto-utils.js';
+import { KeyCache } from './key-cache.js';
+import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import type {
   KeyCacheOptions,
   KeyOptions,
@@ -17,36 +20,12 @@ import type {
  */
 import { bytesToHex, hexToBytes } from './utils.js';
 
-/* 定数 */
-const PRF_EVAL_INPUT = new TextEncoder().encode('nostr-pwk');
-const INFO_BYTES = new TextEncoder().encode('nostr-pwk');
-const AES_LENGTH = 256; // bits
-
-/**
- * WebAuthn PRF 拡張のレスポンス型
- */
-type PRFExtensionResponse = {
-  getClientExtensionResults(): {
-    prf?: {
-      results?: {
-        first?: ArrayBuffer;
-      };
-    };
-  };
-};
-
 /**
  * Nosskey - Passkey-Wrapped Key for Nostr
  */
 export class PWKManager implements PWKManagerLike {
-  // 一時的に保持する秘密鍵
-  #cachedKeys: Map<string, { sk: Uint8Array; expireAt: number }> = new Map();
-
-  // キャッシュの設定
-  #cacheOptions: KeyCacheOptions = {
-    enabled: false,
-    timeoutMs: 5 * 60 * 1000, // デフォルト5分
-  };
+  // キーキャッシュ管理
+  #keyCache: KeyCache;
 
   // 現在のPWK
   #currentPWK: PWKBlob | null = null;
@@ -65,9 +44,8 @@ export class PWKManager implements PWKManagerLike {
     cacheOptions?: Partial<KeyCacheOptions>;
     storageOptions?: Partial<PWKStorageOptions>;
   }) {
-    if (options?.cacheOptions) {
-      this.#cacheOptions = { ...this.#cacheOptions, ...options.cacheOptions };
-    }
+    // KeyCacheを初期化
+    this.#keyCache = new KeyCache(options?.cacheOptions);
 
     if (options?.storageOptions) {
       this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
@@ -238,19 +216,14 @@ export class PWKManager implements PWKManagerLike {
    * @param options キャッシュオプション
    */
   setCacheOptions(options: Partial<KeyCacheOptions>): void {
-    this.#cacheOptions = { ...this.#cacheOptions, ...options };
-
-    // キャッシュが無効化された場合は全てのキャッシュをクリア
-    if (options.enabled === false) {
-      this.clearAllCachedKeys();
-    }
+    this.#keyCache.setCacheOptions(options);
   }
 
   /**
    * 現在のキャッシュ設定を取得
    */
   getCacheOptions(): KeyCacheOptions {
-    return { ...this.#cacheOptions };
+    return this.#keyCache.getCacheOptions();
   }
 
   /**
@@ -258,55 +231,21 @@ export class PWKManager implements PWKManagerLike {
    * @param credentialId クレデンシャルID
    */
   clearCachedKey(credentialId: Uint8Array | string): void {
-    const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
-    const cached = this.#cachedKeys.get(id);
-    if (cached) {
-      this.#clearKey(cached.sk);
-      this.#cachedKeys.delete(id);
-    }
+    this.#keyCache.clearCachedKey(credentialId);
   }
 
   /**
    * 全てのキャッシュをクリア
    */
   clearAllCachedKeys(): void {
-    for (const { sk } of this.#cachedKeys.values()) {
-      this.#clearKey(sk);
-    }
-    this.#cachedKeys.clear();
+    this.#keyCache.clearAllCachedKeys();
   }
+
   /**
    * PRF拡張機能がサポートされているかチェック
    */
   async isPrfSupported(): Promise<boolean> {
-    try {
-      const response = await navigator.credentials.get({
-        publicKey: {
-          challenge: crypto.getRandomValues(new Uint8Array(32)),
-          allowCredentials: [],
-          userVerification: 'required',
-          extensions: { prf: { eval: { first: PRF_EVAL_INPUT } } },
-        } as PublicKeyCredentialRequestOptions,
-      });
-
-      if (!response) return false;
-
-      // 型アサーション
-      const assertion = response as unknown as {
-        getClientExtensionResults: () => {
-          prf?: {
-            results?: {
-              first?: ArrayBuffer;
-            };
-          };
-        };
-      };
-
-      const res = assertion.getClientExtensionResults()?.prf?.results?.first;
-      return !!res;
-    } catch {
-      return false;
-    }
+    return isPrfSupported();
   }
 
   /**
@@ -315,39 +254,7 @@ export class PWKManager implements PWKManagerLike {
    * @returns Credentialの識別子を返す
    */
   async createPasskey(options: PasskeyCreationOptions = {}): Promise<Uint8Array> {
-    // ブラウザ環境とNodeテスト環境の両方に対応
-    const rpName =
-      options.rp?.name || (typeof location !== 'undefined' ? location.host : 'Nostr PWK');
-    const rpId = options.rp?.id;
-    const userName = options.user?.name || 'user@example.com';
-    const userDisplayName = options.user?.displayName || 'PWK user';
-
-    // パスキーを作成
-    const credentialCreationOptions: CredentialCreationOptions = {
-      publicKey: {
-        rp: {
-          name: rpName,
-          ...(rpId && { id: rpId }),
-        },
-        user: {
-          id: crypto.getRandomValues(new Uint8Array(16)),
-          name: userName,
-          displayName: userDisplayName,
-        },
-        pubKeyCredParams: options.pubKeyCredParams || [{ type: 'public-key', alg: -7 }], // ES256
-        authenticatorSelection: options.authenticatorSelection || {
-          residentKey: 'required',
-          userVerification: 'required',
-        },
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        extensions: options.extensions || { prf: {} }, // PRF拡張を要求
-      } as PublicKeyCredentialCreationOptions,
-    };
-    const cred = (await navigator.credentials.create(
-      credentialCreationOptions
-    )) as PublicKeyCredential;
-
-    return new Uint8Array(cred.rawId);
+    return createPasskey(options);
   }
 
   /**
@@ -364,7 +271,7 @@ export class PWKManager implements PWKManagerLike {
     const { clearMemory = true } = options;
 
     // PRF秘密を取得
-    const { secret, id: responseId } = await this.#prfSecret(credentialId);
+    const { secret, id: responseId } = await getPrfSecret(credentialId);
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(secretKey);
@@ -376,9 +283,9 @@ export class PWKManager implements PWKManagerLike {
     // 秘密鍵を暗号化
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const aes = await this.#deriveAesGcmKey(secret, salt);
+    const aes = await deriveAesGcmKey(secret, salt);
 
-    const { ciphertext, tag } = await this.#aesGcmEncrypt(aes, iv, secretKey);
+    const { ciphertext, tag } = await aesGcmEncrypt(aes, iv, secretKey);
 
     // 必要に応じて平文の秘密鍵を消去
     if (clearMemory) {
@@ -426,7 +333,7 @@ export class PWKManager implements PWKManagerLike {
    */
   async directPrfToNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<PWKBlob> {
     // PRF秘密を取得（これが直接シークレットキーになる）
-    const { secret: sk, id: responseId } = await this.#prfSecret(credentialId);
+    const { secret: sk, id: responseId } = await getPrfSecret(credentialId);
 
     // secp256k1の有効範囲チェック(ここでは0チェックのみ)
     // 注: 実用上は確率が非常に低いため省略可能
@@ -465,35 +372,22 @@ export class PWKManager implements PWKManagerLike {
     pwk: PWKBlob,
     options: SignOptions = {}
   ): Promise<NostrEvent> {
-    const { clearMemory = true, tags, useCache } = options;
+    const { clearMemory = true, tags } = options;
 
-    // useCache が明示的に指定されていればその値を、そうでなければグローバル設定を使用
-    const shouldUseCache = useCache !== undefined ? useCache : this.#cacheOptions.enabled;
+    // グローバル設定を使用
+    const shouldUseCache = this.#keyCache.isEnabled();
 
     let sk: Uint8Array | undefined;
 
     // キャッシュが有効で、クレデンシャルIDがあり、キャッシュに鍵がある場合はそれを使用
     if (shouldUseCache) {
-      if (this.#cachedKeys.has(pwk.credentialId)) {
-        const cached = this.#cachedKeys.get(pwk.credentialId);
-
-        if (cached) {
-          // 有効期限をチェック
-          if (Date.now() < cached.expireAt) {
-            sk = cached.sk;
-          } else {
-            // 期限切れの場合は削除
-            this.#cachedKeys.delete(pwk.credentialId);
-            this.#clearKey(cached.sk);
-          }
-        }
-      }
+      sk = this.#keyCache.getKey(pwk.credentialId);
     }
 
     // キャッシュがない場合は通常の処理
     if (!sk) {
       // PRF値を取得
-      const { secret: prfSecret, id: responseId } = await this.#prfSecret(
+      const { secret: prfSecret, id: responseId } = await getPrfSecret(
         hexToBytes(pwk.credentialId)
       );
 
@@ -509,20 +403,12 @@ export class PWKManager implements PWKManagerLike {
         const ct = hexToBytes(pwkV1.ct);
         const tag = hexToBytes(pwkV1.tag);
 
-        const aes = await this.#deriveAesGcmKey(prfSecret, salt);
-        sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+        const aes = await deriveAesGcmKey(prfSecret, salt);
+        sk = await aesGcmDecrypt(aes, iv, ct, tag);
       }
-      // キャッシュが有効で、かつusedCredentialIdがある場合は保存
+      // キャッシュが有効な場合は保存
       if (shouldUseCache) {
-        const timeout =
-          this.#cacheOptions.timeoutMs !== undefined ? this.#cacheOptions.timeoutMs : 5 * 60 * 1000;
-        const expireAt = Date.now() + timeout;
-        const idHex = pwk.credentialId;
-        // コピーを作成して保存
-        this.#cachedKeys.set(idHex, {
-          sk: new Uint8Array(sk),
-          expireAt,
-        });
+        this.#keyCache.setKey(pwk.credentialId, sk);
       }
     }
 
@@ -557,7 +443,7 @@ export class PWKManager implements PWKManagerLike {
     }
 
     // PRF値を取得
-    const { secret: prfSecret, id: responseId } = await this.#prfSecret(usedCredentialId);
+    const { secret: prfSecret, id: responseId } = await getPrfSecret(usedCredentialId);
 
     let sk: Uint8Array;
 
@@ -573,8 +459,8 @@ export class PWKManager implements PWKManagerLike {
       const ct = hexToBytes(pwkV1.ct);
       const tag = hexToBytes(pwkV1.tag);
 
-      const aes = await this.#deriveAesGcmKey(prfSecret, salt);
-      sk = await this.#aesGcmDecrypt(aes, iv, ct, tag);
+      const aes = await deriveAesGcmKey(prfSecret, salt);
+      sk = await aesGcmDecrypt(aes, iv, ct, tag);
     }
 
     // 秘密鍵HEX文字列を取得
@@ -594,99 +480,5 @@ export class PWKManager implements PWKManagerLike {
    */
   #clearKey(key: Uint8Array): void {
     key?.fill?.(0);
-  }
-
-  /* 内部ヘルパーメソッド */
-
-  /**
-   * クレデンシャルIDを使用してPRF秘密を取得
-   * @param credentialId 特定のクレデンシャルIDを指定する場合。省略すると、ユーザーが選択したパスキーが使用される
-   * @returns PRF秘密と使用されたcredentialIDを含むオブジェクト
-   */
-  async #prfSecret(credentialId?: Uint8Array): Promise<{ secret: Uint8Array; id: Uint8Array }> {
-    const allowCredentials = credentialId ? [{ type: 'public-key', id: credentialId }] : [];
-
-    const response = await navigator.credentials.get({
-      publicKey: {
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        allowCredentials,
-        userVerification: 'required',
-        extensions: { prf: { eval: { first: PRF_EVAL_INPUT } } },
-      } as PublicKeyCredentialRequestOptions,
-    });
-
-    if (!response) {
-      throw new Error('Authentication failed');
-    }
-
-    // 型アサーション
-    const assertion = response as unknown as {
-      getClientExtensionResults: () => {
-        prf?: {
-          results?: {
-            first?: ArrayBuffer;
-          };
-        };
-      };
-    };
-
-    const secret = assertion.getClientExtensionResults()?.prf?.results?.first;
-    if (!secret) {
-      throw new Error('PRF secret not available');
-    }
-
-    // responseからcredentialIdを取得
-    const responseId = new Uint8Array((response as PublicKeyCredential).rawId);
-
-    return {
-      secret: new Uint8Array(secret),
-      id: responseId,
-    };
-  }
-
-  /**
-   * PRF秘密からAES-GCM鍵を導出
-   */
-  async #deriveAesGcmKey(secret: Uint8Array, salt: Uint8Array): Promise<CryptoKey> {
-    const keyMaterial = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
-
-    return crypto.subtle.deriveKey(
-      { name: 'HKDF', hash: 'SHA-256', salt, info: INFO_BYTES },
-      keyMaterial,
-      { name: 'AES-GCM', length: AES_LENGTH },
-      false,
-      ['encrypt', 'decrypt']
-    );
-  }
-
-  /**
-   * AES-GCM暗号化
-   */
-  async #aesGcmEncrypt(key: CryptoKey, iv: Uint8Array, plaintext: Uint8Array) {
-    const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
-
-    // 認証タグ(16バイト)と暗号文を分離
-    const bytes = new Uint8Array(buf);
-    return {
-      ciphertext: bytes.slice(0, -16),
-      tag: bytes.slice(-16),
-    };
-  }
-
-  /**
-   * AES-GCM復号
-   */
-  async #aesGcmDecrypt(
-    key: CryptoKey,
-    iv: Uint8Array,
-    ct: Uint8Array,
-    tag: Uint8Array
-  ): Promise<Uint8Array> {
-    const buf = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      new Uint8Array([...ct, ...tag])
-    );
-    return new Uint8Array(buf);
   }
 }

@@ -86,8 +86,6 @@ export interface KeyCacheOptions {
 export interface SignOptions {
   clearMemory?: boolean; // Whether to clear the private key from memory after operation (default: true)
   tags?: string[][]; // Additional tags
-  /** Whether to cache the private key. Follows global settings if not specified */
-  useCache?: boolean;
 }
 
 /**

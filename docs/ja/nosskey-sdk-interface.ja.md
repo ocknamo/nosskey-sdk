@@ -86,8 +86,6 @@ export interface KeyCacheOptions {
 export interface SignOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   tags?: string[][]; // 追加のタグ
-  /** 秘密鍵をキャッシュするかどうか。指定がない場合はグローバル設定に従う */
-  useCache?: boolean;
 }
 
 /**
