@@ -7,11 +7,23 @@ import type { KeyCacheOptions } from './types.js';
 import { bytesToHex } from './utils.js';
 
 /**
+ * Key cache entry with expiration time
+ */
+interface CacheEntry {
+  id: string;
+  sk: Uint8Array;
+  expireAt: number;
+}
+
+/**
  * Key cache manager for managing temporary secret keys
  */
 export class KeyCache {
-  // 一時的に保持する秘密鍵
-  #cachedKeys: Map<string, { sk: Uint8Array; expireAt: number }> = new Map();
+  // 一時的に保持する秘密鍵（単一エントリ）
+  #cachedEntry: CacheEntry | null = null;
+
+  // 現在アクティブなタイマー
+  #expiryTimer: NodeJS.Timeout | null = null;
 
   // キャッシュの設定
   #cacheOptions: KeyCacheOptions = {
@@ -69,11 +81,24 @@ export class KeyCache {
       this.#cacheOptions.timeoutMs !== undefined ? this.#cacheOptions.timeoutMs : 5 * 60 * 1000;
     const expireAt = Date.now() + timeout;
 
-    // コピーを作成して保存
-    this.#cachedKeys.set(id, {
+    // 既存のキャッシュエントリをクリア
+    this.#clearCachedEntry();
+
+    // 新しいエントリを保存
+    this.#cachedEntry = {
+      id,
       sk: new Uint8Array(sk),
       expireAt,
-    });
+    };
+
+    // 期限切れタイマーを設定（エラー時は安全にキャッシュをクリア）
+    try {
+      this.#scheduleExpiry();
+    } catch (error) {
+      // タイマー設定に失敗した場合は即座にキャッシュをクリア
+      this.#clearCachedEntry();
+      throw error;
+    }
   }
 
   /**
@@ -94,10 +119,9 @@ export class KeyCache {
    */
   clearCachedKey(credentialId: Uint8Array | string): void {
     const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
-    const cached = this.#cachedKeys.get(id);
-    if (cached) {
-      this.#clearKey(cached.sk);
-      this.#cachedKeys.delete(id);
+
+    if (this.#cachedEntry && this.#cachedEntry.id === id) {
+      this.#clearCachedEntry();
     }
   }
 
@@ -105,10 +129,7 @@ export class KeyCache {
    * 全てのキャッシュをクリア
    */
   clearAllCachedKeys(): void {
-    for (const { sk } of this.#cachedKeys.values()) {
-      this.#clearKey(sk);
-    }
-    this.#cachedKeys.clear();
+    this.#clearCachedEntry();
   }
 
   /**
@@ -118,35 +139,56 @@ export class KeyCache {
    * @returns 有効な秘密鍵またはundefined
    */
   #getCachedKeyIfValid(credentialId: string): Uint8Array | undefined {
-    if (!this.#cachedKeys.has(credentialId)) {
-      return undefined;
-    }
-
-    const cached = this.#cachedKeys.get(credentialId);
-    if (!cached) {
+    if (!this.#cachedEntry || this.#cachedEntry.id !== credentialId) {
       return undefined;
     }
 
     // 有効期限をチェック
-    if (Date.now() < cached.expireAt) {
-      return cached.sk;
+    if (Date.now() < this.#cachedEntry.expireAt) {
+      return this.#cachedEntry.sk;
     }
+
     // 期限切れの場合は削除
-    this.#removeExpiredCachedKey(credentialId, cached);
+    this.#clearCachedEntry();
     return undefined;
   }
 
   /**
-   * 期限切れのキャッシュエントリを削除し、秘密鍵をメモリからクリア
-   * @param credentialId クレデンシャルID
-   * @param cached キャッシュされたエントリ
+   * キャッシュエントリをクリアし、タイマーも停止
    */
-  #removeExpiredCachedKey(
-    credentialId: string,
-    cached: { sk: Uint8Array; expireAt: number }
-  ): void {
-    this.#cachedKeys.delete(credentialId);
-    this.#clearKey(cached.sk);
+  #clearCachedEntry(): void {
+    // キャッシュエントリをクリア
+    if (this.#cachedEntry) {
+      this.#clearKey(this.#cachedEntry.sk);
+      this.#cachedEntry = null;
+    }
+
+    // タイマーをクリア
+    if (this.#expiryTimer) {
+      clearTimeout(this.#expiryTimer);
+      this.#expiryTimer = null;
+    }
+  }
+
+  /**
+   * 期限切れタイマーを設定
+   */
+  #scheduleExpiry(): void {
+    if (!this.#cachedEntry) return;
+
+    const now = Date.now();
+    const timeToExpiry = this.#cachedEntry.expireAt - now;
+
+    // 既に期限切れの場合は即座に削除
+    if (timeToExpiry <= 0) {
+      this.#clearCachedEntry();
+      return;
+    }
+
+    // タイマーを設定（期限+1msで実行）
+    this.#expiryTimer = setTimeout(() => {
+      this.#clearCachedEntry();
+    }, timeToExpiry + 1);
   }
 
   /**
