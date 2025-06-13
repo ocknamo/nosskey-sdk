@@ -235,5 +235,6 @@ async function publishEvent() {
     margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
+    text-align: left;
   }
 </style>
