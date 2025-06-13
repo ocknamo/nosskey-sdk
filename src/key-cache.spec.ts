@@ -91,6 +91,57 @@ describe('KeyCache', () => {
       keyCache.setCacheOptions({ enabled: true });
       expect(keyCache.getKey(testCredentialId)).toBeUndefined();
     });
+
+    it('timeoutMsのみを変更した場合でもキャッシュがクリアされる', () => {
+      // キャッシュを有効にして鍵を保存
+      keyCache.setCacheOptions({ enabled: true, timeoutMs: 10 * 60 * 1000 });
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testCredentialId = 'test-credential-id';
+      keyCache.setKey(testCredentialId, testKey);
+
+      // 鍵が保存されていることを確認
+      expect(keyCache.getKey(testCredentialId)).toEqual(testKey);
+
+      // timeoutMsのみを変更
+      keyCache.setCacheOptions({ timeoutMs: 20 * 60 * 1000 });
+
+      // キャッシュがクリアされていることを確認
+      expect(keyCache.getKey(testCredentialId)).toBeUndefined();
+    });
+
+    it('複数の設定を同時に変更した場合でもキャッシュがクリアされる', () => {
+      // キャッシュを有効にして鍵を保存
+      keyCache.setCacheOptions({ enabled: true, timeoutMs: 5 * 60 * 1000 });
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testCredentialId = 'test-credential-id';
+      keyCache.setKey(testCredentialId, testKey);
+
+      // 鍵が保存されていることを確認
+      expect(keyCache.getKey(testCredentialId)).toEqual(testKey);
+
+      // 複数の設定を同時に変更
+      keyCache.setCacheOptions({ enabled: true, timeoutMs: 15 * 60 * 1000 });
+
+      // キャッシュがクリアされていることを確認
+      expect(keyCache.getKey(testCredentialId)).toBeUndefined();
+    });
+
+    it('空のオプションを設定した場合はキャッシュがクリアされない', () => {
+      // キャッシュを有効にして鍵を保存
+      keyCache.setCacheOptions({ enabled: true });
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testCredentialId = 'test-credential-id';
+      keyCache.setKey(testCredentialId, testKey);
+
+      // 鍵が保存されていることを確認
+      expect(keyCache.getKey(testCredentialId)).toEqual(testKey);
+
+      // 空のオプションを設定
+      keyCache.setCacheOptions({});
+
+      // キャッシュがクリアされないことを確認
+      expect(keyCache.getKey(testCredentialId)).toEqual(testKey);
+    });
   });
 
   describe('isEnabled', () => {
@@ -341,7 +392,7 @@ describe('KeyCache', () => {
       const mockError = new Error('Timer creation failed');
       global.setTimeout = vi.fn(() => {
         throw mockError;
-      }) as any;
+      }) as unknown as typeof setTimeout;
 
       // setKeyでエラーが発生することを確認
       expect(() => {
@@ -365,7 +416,7 @@ describe('KeyCache', () => {
       const originalSetTimeout = global.setTimeout;
       global.setTimeout = vi.fn(() => {
         throw new Error('Timer creation failed');
-      }) as any;
+      }) as unknown as typeof setTimeout;
 
       // 最初のsetKeyでエラーが発生
       expect(() => {
@@ -394,7 +445,7 @@ describe('KeyCache', () => {
         // エラー発生前にキャッシュに保存された鍵の参照を取得
         storedKey = keyCache.getKey(credentialId) || null;
         throw new Error('Timer creation failed');
-      }) as any;
+      }) as unknown as typeof setTimeout;
 
       // setKeyでエラーが発生
       expect(() => {

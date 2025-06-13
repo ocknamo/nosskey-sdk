@@ -46,12 +46,12 @@ export class KeyCache {
    * @param options キャッシュオプション
    */
   setCacheOptions(options: Partial<KeyCacheOptions>): void {
-    this.#cacheOptions = { ...this.#cacheOptions, ...options };
-
-    // キャッシュが無効化された場合は全てのキャッシュをクリア
-    if (options.enabled === false) {
+    // 設定が変更される場合は既存のキャッシュをクリア
+    if (Object.keys(options).length > 0 && this.#cachedEntry !== null) {
       this.clearAllCachedKeys();
     }
+
+    this.#cacheOptions = { ...this.#cacheOptions, ...options };
   }
 
   /**
