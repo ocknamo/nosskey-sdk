@@ -60,7 +60,7 @@ $effect(() => {
   {:else}
     <!-- 認証済みの場合、アカウント情報を表示 -->
     <div class="account-info">
-      <h1>アカウント</h1>
+      <h1>{$i18n.t.navigation.account}</h1>
 
       <!-- 公開鍵情報とリレー状態の表示 -->
       <RelayStatus />
