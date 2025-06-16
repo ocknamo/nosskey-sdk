@@ -8,21 +8,6 @@ let instance: PWKManager | null = null;
 let currentCacheEnabled = true;
 let currentCacheTimeout = 300;
 
-// サブスクリプション設定
-cacheSecrets.subscribe((value) => {
-  currentCacheEnabled = value;
-  if (instance) {
-    updateCacheSettings();
-  }
-});
-
-cacheTimeout.subscribe((value) => {
-  currentCacheTimeout = value;
-  if (instance) {
-    updateCacheSettings();
-  }
-});
-
 // キャッシュ設定の更新関数
 function updateCacheSettings() {
   if (instance) {
@@ -36,6 +21,23 @@ function updateCacheSettings() {
 // PWKManagerのシングルトンインスタンスを取得
 export function getPWKManager(): PWKManager {
   if (!instance) {
+    // 初期化処理
+
+    // サブスクリプション設定
+    cacheSecrets.subscribe((value) => {
+      currentCacheEnabled = value;
+      if (instance) {
+        updateCacheSettings();
+      }
+    });
+
+    cacheTimeout.subscribe((value) => {
+      currentCacheTimeout = value;
+      if (instance) {
+        updateCacheSettings();
+      }
+    });
+
     instance = new PWKManager({
       cacheOptions: {
         enabled: currentCacheEnabled,
