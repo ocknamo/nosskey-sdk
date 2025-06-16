@@ -81,7 +81,7 @@ function navigateTo(target: ScreenName) {
     align-items: center;
     background: none;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 16px 14px;
     font-size: 0.6rem;
     color: #666;
     cursor: pointer;
@@ -113,7 +113,7 @@ function navigateTo(target: ScreenName) {
 
   .icon {
     font-size: 1.5rem;
-    margin-bottom: 4px;
+    margin-bottom: 0;
   }
 
   .icon img {

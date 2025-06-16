@@ -1,68 +1,68 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { i18n } from "../../i18n/i18n-store.js";
-  import { isLoggedIn, publicKey } from "../../store/app-state.js";
-  import { relayService } from "../../store/relay-store.js";
-  import { setTimelineMode, timelineMode } from "../../store/timeline-store.js";
-  import PostForm from "../PostForm.svelte";
-  import Timeline from "../Timeline.svelte";
+import { onMount } from 'svelte';
+import { i18n } from '../../i18n/i18n-store.js';
+import { isLoggedIn, publicKey } from '../../store/app-state.js';
+import { relayService } from '../../store/relay-store.js';
+import { setTimelineMode, timelineMode } from '../../store/timeline-store.js';
+import PostForm from '../PostForm.svelte';
+import Timeline from '../Timeline.svelte';
 
-  // 状態変数
-  let login = $state(false);
-  let currentMode = $state<"global" | "user">("global");
-  let currentPublicKey = $state<string | null>(null);
-  let loading = $state(false);
+// 状態変数
+let login = $state(false);
+let currentMode = $state<'global' | 'user'>('global');
+let currentPublicKey = $state<string | null>(null);
+let loading = $state(false);
 
-  // ストアを監視
-  $effect(() => {
-    login = $isLoggedIn;
-    currentMode = $timelineMode;
-    currentPublicKey = $publicKey;
-  });
+// ストアを監視
+$effect(() => {
+  login = $isLoggedIn;
+  currentMode = $timelineMode;
+  currentPublicKey = $publicKey;
+});
 
-  // グローバルモードに切り替え
-  async function switchToGlobal() {
-    if (currentMode !== "global") {
-      loading = true;
-      setTimelineMode("global");
-      // データを再取得
-      try {
-        await relayService.fetchTimelineByMode("global", null);
-      } finally {
-        loading = false;
-      }
-    }
-  }
-
-  // ユーザーモードに切り替え（認証済みのみ）
-  async function switchToUser() {
-    if (login && currentPublicKey && currentMode !== "user") {
-      loading = true;
-      setTimelineMode("user");
-      // データを再取得
-      try {
-        await relayService.fetchTimelineByMode("user", currentPublicKey);
-      } finally {
-        loading = false;
-      }
-    }
-  }
-
-  onMount(async () => {
-    console.log("TimelineScreen mounted");
-
-    // 初期タイムラインをロード
+// グローバルモードに切り替え
+async function switchToGlobal() {
+  if (currentMode !== 'global') {
     loading = true;
+    setTimelineMode('global');
+    // データを再取得
     try {
-      if (login && currentPublicKey && currentMode === "user") {
-        await relayService.fetchTimelineByMode("user", currentPublicKey);
-      } else {
-        await relayService.fetchTimelineByMode("global", null);
-      }
+      await relayService.fetchTimelineByMode('global', null);
     } finally {
       loading = false;
     }
-  });
+  }
+}
+
+// ユーザーモードに切り替え（認証済みのみ）
+async function switchToUser() {
+  if (login && currentPublicKey && currentMode !== 'user') {
+    loading = true;
+    setTimelineMode('user');
+    // データを再取得
+    try {
+      await relayService.fetchTimelineByMode('user', currentPublicKey);
+    } finally {
+      loading = false;
+    }
+  }
+}
+
+onMount(async () => {
+  console.log('TimelineScreen mounted');
+
+  // 初期タイムラインをロード
+  loading = true;
+  try {
+    if (login && currentPublicKey && currentMode === 'user') {
+      await relayService.fetchTimelineByMode('user', currentPublicKey);
+    } else {
+      await relayService.fetchTimelineByMode('global', null);
+    }
+  } finally {
+    loading = false;
+  }
+});
 </script>
 
 <div class="timeline-screen">
@@ -103,13 +103,7 @@
     max-width: 700px;
     margin: 0 auto;
     padding: 20px;
-    padding-bottom: 80px; /* フッターメニューの高さを確保 */
-  }
-
-  h1 {
-    font-size: 1.8rem;
-    margin-bottom: 20px;
-    text-align: center;
+    padding-bottom: 64px; /* フッターメニューの高さを確保 */
   }
 
   .timeline-tabs {

@@ -1,99 +1,93 @@
 <script lang="ts">
-  import { i18n } from "../../i18n/i18n-store.js";
-  import { getPWKManager } from "../../services/pwk-manager.service.js";
-  import * as appState from "../../store/app-state.js";
-  import { isValidNsec, nsecToHex } from "../../utils/bech32-converter.js";
+import { i18n } from '../../i18n/i18n-store.js';
+import { getPWKManager } from '../../services/pwk-manager.service.js';
+import * as appState from '../../store/app-state.js';
+import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 
-  // 状態変数
-  let secretKey = $state("");
-  let isLoading = $state(false);
-  let errorMessage = $state("");
+// 状態変数
+let secretKey = $state('');
+let isLoading = $state(false);
+let errorMessage = $state('');
 
-  // PWKManagerのシングルトンインスタンスを取得
-  const pwkManager = getPWKManager();
+// PWKManagerのシングルトンインスタンスを取得
+const pwkManager = getPWKManager();
 
-  // 戻るボタン処理
-  function goBack() {
-    appState.currentScreen.set("account");
+// 戻るボタン処理
+function goBack() {
+  appState.currentScreen.set('account');
+}
+
+// 秘密鍵のバリデーション（64文字の16進数文字列またはnsec形式）
+function isValidSecretKey(sk: string): boolean {
+  // nsec形式チェック
+  if (sk.startsWith('nsec1')) {
+    return isValidNsec(sk);
   }
 
-  // 秘密鍵のバリデーション（64文字の16進数文字列またはnsec形式）
-  function isValidSecretKey(sk: string): boolean {
-    // nsec形式チェック
-    if (sk.startsWith("nsec1")) {
-      return isValidNsec(sk);
-    }
+  // 16進数形式チェック
+  return /^[0-9a-f]{64}$/i.test(sk);
+}
 
-    // 16進数形式チェック
-    return /^[0-9a-f]{64}$/i.test(sk);
+// 秘密鍵をHex形式に変換
+function normalizeSecretKey(sk: string): string | null {
+  // nsec形式の場合
+  if (sk.startsWith('nsec1')) {
+    return nsecToHex(sk);
   }
 
-  // 秘密鍵をHex形式に変換
-  function normalizeSecretKey(sk: string): string | null {
-    // nsec形式の場合
-    if (sk.startsWith("nsec1")) {
-      return nsecToHex(sk);
-    }
+  // 既にHex形式の場合はそのまま
+  return sk.toLowerCase();
+}
 
-    // 既にHex形式の場合はそのまま
-    return sk.toLowerCase();
+// Nostr秘密鍵インポート処理
+async function importKey() {
+  // 秘密鍵の簡易バリデーション
+  if (!secretKey || !isValidSecretKey(secretKey)) {
+    errorMessage = '有効な秘密鍵（64文字の16進数またはnsec形式）を入力してください';
+    return;
   }
 
-  // Nostr秘密鍵インポート処理
-  async function importKey() {
-    // 秘密鍵の簡易バリデーション
-    if (!secretKey || !isValidSecretKey(secretKey)) {
-      errorMessage =
-        "有効な秘密鍵（64文字の16進数またはnsec形式）を入力してください";
-      return;
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    // 秘密鍵を正規化
+    const normalizedKey = normalizeSecretKey(secretKey);
+
+    if (!normalizedKey) {
+      throw new Error('秘密鍵の変換に失敗しました');
     }
 
-    isLoading = true;
-    errorMessage = "";
+    // 秘密鍵を16進数文字列からバイト配列に変換
+    const secretKeyBytes = new Uint8Array(
+      normalizedKey.match(/.{1,2}/g)?.map((byte) => Number.parseInt(byte, 16)) || []
+    );
 
-    try {
-      // 秘密鍵を正規化
-      const normalizedKey = normalizeSecretKey(secretKey);
+    // 新しいパスキーを作成
+    const newCredentialId = await pwkManager.createPasskey();
 
-      if (!normalizedKey) {
-        throw new Error("秘密鍵の変換に失敗しました");
-      }
+    // 既存の秘密鍵をインポート
+    const pwk = await pwkManager.importNostrKey(secretKeyBytes, newCredentialId);
 
-      // 秘密鍵を16進数文字列からバイト配列に変換
-      const secretKeyBytes = new Uint8Array(
-        normalizedKey
-          .match(/.{1,2}/g)
-          ?.map((byte) => Number.parseInt(byte, 16)) || [],
-      );
+    // SDKにPWKを設定（内部でストレージにも保存される）
+    pwkManager.setCurrentPWK(pwk);
 
-      // 新しいパスキーを作成
-      const newCredentialId = await pwkManager.createPasskey();
+    // 公開鍵を取得して状態を更新
+    const pubKey = await pwkManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
 
-      // 既存の秘密鍵をインポート
-      const pwk = await pwkManager.importNostrKey(
-        secretKeyBytes,
-        newCredentialId,
-      );
-
-      // SDKにPWKを設定（内部でストレージにも保存される）
-      pwkManager.setCurrentPWK(pwk);
-
-      // 公開鍵を取得して状態を更新
-      const pubKey = await pwkManager.getPublicKey();
-      appState.publicKey.set(pubKey);
-      appState.isLoggedIn.set(true);
-
-      // Nostr画面に遷移
-      appState.currentScreen.set("timeline");
-    } catch (error) {
-      console.error("インポートエラー:", error);
-      errorMessage = `インポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      // 秘密鍵をメモリから消去
-      secretKey = "";
-      isLoading = false;
-    }
+    // Nostr画面に遷移
+    appState.currentScreen.set('timeline');
+  } catch (error) {
+    console.error('インポートエラー:', error);
+    errorMessage = `インポートエラー: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    // 秘密鍵をメモリから消去
+    secretKey = '';
+    isLoading = false;
   }
+}
 </script>
 
 <div class="import-container">
