@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
+import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
 import ImportKeyScreen from './components/screens/ImportKeyScreen.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
@@ -76,6 +77,9 @@ onMount(async () => {
   });
 });
 </script>
+
+<!-- ヘッダーバー -->
+<HeaderBar />
 
 <div class="app-container">
   {#if screen === "account"}

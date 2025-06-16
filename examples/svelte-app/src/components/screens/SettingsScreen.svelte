@@ -11,7 +11,7 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 </script>
 
 <div class="settings-container">
-  <h1>{$i18n.t.settings.title}</h1>
+  <h1 class="screen-title">{$i18n.t.settings.title}</h1>
 
   <RelayManagement />
   <SecretCacheSettings />

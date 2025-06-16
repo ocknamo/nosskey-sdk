@@ -66,7 +66,7 @@ onMount(async () => {
 </script>
 
 <div class="timeline-screen">
-  <h1>{$i18n.t.nostr.timeline.title}</h1>
+  <h1 class="screen-title">{$i18n.t.nostr.timeline.title}</h1>
 
   <!-- モード切り替えタブ -->
   <div class="timeline-tabs">
