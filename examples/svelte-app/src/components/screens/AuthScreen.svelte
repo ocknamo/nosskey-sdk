@@ -1,231 +1,240 @@
 <script lang="ts">
-import { bytesToHex, hexToBytes } from '../../../../src/index.js';
-import NosskeyImage from '../assets/nosskey.svg';
-import { i18n } from '../i18n/i18n-store.js';
-import { getPWKManager } from '../services/pwk-manager.service.js';
-import * as appState from '../store/app-state.js';
-import { currentScreen } from '../store/app-state.js';
+  import { bytesToHex, hexToBytes } from "../../../../../src/index.js";
+  import NosskeyImage from "../../assets/nosskey.svg";
+  import { i18n } from "../../i18n/i18n-store.js";
+  import { getPWKManager } from "../../services/pwk-manager.service.js";
+  import * as appState from "../../store/app-state.js";
+  import { currentScreen } from "../../store/app-state.js";
 
-// 状態変数
-let isSupported = $state(false);
-let isLoading = $state(false);
-let errorMessage = $state('');
-let isPrfChecked = $state(false);
-// biome-ignore lint: svelte
-let username = $state('');
-let createdCredentialId = $state(''); // 新規作成したパスキーのID
-let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
+  // 状態変数
+  let isSupported = $state(false);
+  let isLoading = $state(false);
+  let errorMessage = $state("");
+  let isPrfChecked = $state(false);
+  // biome-ignore lint: svelte
+  let username = $state("");
+  let createdCredentialId = $state(""); // 新規作成したパスキーのID
+  let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
-// PWKインポート関連の状態変数
-// biome-ignore lint: svelte
-let showPWKTextarea = $state(false);
-// biome-ignore lint: svelte
-let pwkTextInput = $state('');
-let pwkImportError = $state('');
+  // PWKインポート関連の状態変数
+  // biome-ignore lint: svelte
+  let showPWKTextarea = $state(false);
+  // biome-ignore lint: svelte
+  let pwkTextInput = $state("");
+  let pwkImportError = $state("");
 
-// PWKManagerのシングルトンインスタンスを取得
-const pwkManager = getPWKManager();
+  // PWKManagerのシングルトンインスタンスを取得
+  const pwkManager = getPWKManager();
 
-// 初期化関数
-async function initialize() {
-  isLoading = true;
-  try {
-    // PWKが存在するか確認
-    if (pwkManager.hasPWK()) {
+  // 初期化関数
+  async function initialize() {
+    isLoading = true;
+    try {
+      // PWKが存在するか確認
+      if (pwkManager.hasPWK()) {
+        // 公開鍵を取得して状態を更新
+        const pubKey = await pwkManager.getPublicKey();
+        appState.publicKey.set(pubKey);
+        appState.isLoggedIn.set(true);
+
+        // PRF拡張対応確認をスキップして認証済み状態に
+        return; // 初期化処理を終了
+      }
+    } catch (error) {
+      console.error("初期化エラー:", error);
+      errorMessage = `${$i18n.t.common.errorMessages.init} ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // PRF対応確認
+  async function checkPrfSupport() {
+    isLoading = true;
+    errorMessage = "";
+    try {
+      // PRF拡張がサポートされているか確認
+      isSupported = await pwkManager.isPrfSupported();
+      isPrfChecked = true;
+    } catch (error) {
+      console.error("PRF対応確認エラー:", error);
+      errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // 新規パスキー作成
+  async function createNew() {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // 新しいパスキーを作成
+      const newCredentialId = await pwkManager.createPasskey({
+        user: {
+          name: username || "user@nosskey",
+          displayName: username || "user@nosskey",
+        },
+      });
+
+      createdCredentialId = bytesToHex(newCredentialId);
+      isPasskeyCreated = true;
+    } catch (error) {
+      console.error("パスキー作成エラー:", error);
+      errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // 特定のcredentialIdでログイン
+  async function login(credentialId: string) {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // PRFを直接Nostrキーとして使用
+      const pwk = await pwkManager.directPrfToNostrKey(
+        hexToBytes(credentialId),
+      );
+
+      // SDKにPWKを設定（内部でストレージにも保存される）
+      pwkManager.setCurrentPWK(pwk);
+
       // 公開鍵を取得して状態を更新
       const pubKey = await pwkManager.getPublicKey();
       appState.publicKey.set(pubKey);
       appState.isLoggedIn.set(true);
 
-      // PRF拡張対応確認をスキップして認証済み状態に
-      return; // 初期化処理を終了
+      // アカウント画面に遷移
+      appState.currentScreen.set("account");
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
     }
-  } catch (error) {
-    console.error('初期化エラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.init} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// PRF対応確認
-async function checkPrfSupport() {
-  isLoading = true;
-  errorMessage = '';
-  try {
-    // PRF拡張がサポートされているか確認
-    isSupported = await pwkManager.isPrfSupported();
-    isPrfChecked = true;
-  } catch (error) {
-    console.error('PRF対応確認エラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 新規パスキー作成
-async function createNew() {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // 新しいパスキーを作成
-    const newCredentialId = await pwkManager.createPasskey({
-      user: {
-        name: username || 'user@nosskey',
-        displayName: username || 'user@nosskey',
-      },
-    });
-
-    createdCredentialId = bytesToHex(newCredentialId);
-    isPasskeyCreated = true;
-  } catch (error) {
-    console.error('パスキー作成エラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 特定のcredentialIdでログイン
-async function login(credentialId: string) {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // PRFを直接Nostrキーとして使用
-    const pwk = await pwkManager.directPrfToNostrKey(hexToBytes(credentialId));
-
-    // SDKにPWKを設定（内部でストレージにも保存される）
-    pwkManager.setCurrentPWK(pwk);
-
-    // 公開鍵を取得して状態を更新
-    const pubKey = await pwkManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('ログインエラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 既存のパスキーでログイン（credentialIdなし）
-async function loginWithExistingPasskey() {
-  isLoading = true;
-  errorMessage = '';
-
-  try {
-    // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
-    const pwk = await pwkManager.directPrfToNostrKey();
-
-    // SDKにPWKを設定（内部でストレージにも保存される）
-    pwkManager.setCurrentPWK(pwk);
-
-    // 公開鍵を取得して状態を更新
-    const pubKey = await pwkManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('ログインエラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// サポート対象外の場合のメッセージ
-function getUnsupportedMessage() {
-  const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
-  const isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
-
-  if (isChrome) {
-    return 'Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。';
   }
 
-  if (isFirefox) {
-    return 'Firefox では about:config から webauthn:enable_prf を true に設定してください。';
+  // 既存のパスキーでログイン（credentialIdなし）
+  async function loginWithExistingPasskey() {
+    isLoading = true;
+    errorMessage = "";
+
+    try {
+      // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
+      const pwk = await pwkManager.directPrfToNostrKey();
+
+      // SDKにPWKを設定（内部でストレージにも保存される）
+      pwkManager.setCurrentPWK(pwk);
+
+      // 公開鍵を取得して状態を更新
+      const pubKey = await pwkManager.getPublicKey();
+      appState.publicKey.set(pubKey);
+      appState.isLoggedIn.set(true);
+
+      // アカウント画面に遷移
+      appState.currentScreen.set("account");
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isLoading = false;
+    }
   }
 
-  return 'お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。';
-}
+  // サポート対象外の場合のメッセージ
+  function getUnsupportedMessage() {
+    const isChrome = navigator.userAgent.indexOf("Chrome") > -1;
+    const isFirefox = navigator.userAgent.indexOf("Firefox") > -1;
 
-// PWKファイルアップロードの処理
-async function handlePWKFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
-
-  const file = input.files[0];
-  isLoading = true;
-  pwkImportError = '';
-
-  try {
-    const fileContent = await file.text();
-    await loginWithPWKData(fileContent);
-  } catch (error) {
-    console.error('PWKファイル読み込みエラー:', error);
-    pwkImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
-    isLoading = false;
-  }
-}
-
-// PWKテキストでのログイン処理
-async function loginWithPWKText() {
-  if (!pwkTextInput) return;
-
-  isLoading = true;
-  pwkImportError = '';
-
-  try {
-    await loginWithPWKData(pwkTextInput);
-  } catch (error) {
-    console.error('PWKテキスト処理エラー:', error);
-    pwkImportError = `PWK処理エラー: ${error instanceof Error ? error.message : String(error)}`;
-    isLoading = false;
-  }
-}
-
-// PWKデータ（JSONテキスト）からのログイン処理
-async function loginWithPWKData(pwkJsonText: string) {
-  try {
-    // JSONをパース
-    const pwkData = JSON.parse(pwkJsonText);
-
-    // PWKが有効かチェック
-    if (!pwkData.v || !pwkData.alg || !pwkData.credentialId || !pwkData.pubkey) {
-      throw new Error('有効なPWKデータではありません');
+    if (isChrome) {
+      return "Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。";
     }
 
-    // PWKをセット
-    pwkManager.setCurrentPWK(pwkData);
+    if (isFirefox) {
+      return "Firefox では about:config から webauthn:enable_prf を true に設定してください。";
+    }
 
-    // 公開鍵を取得して状態を更新
-    const pubKey = await pwkManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('PWKログインエラー:', error);
-    throw new Error(`PWKログインエラー: ${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    isLoading = false;
+    return "お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。";
   }
-}
 
-// コンポーネントのマウント時に初期化
-$effect(() => {
-  initialize();
-});
+  // PWKファイルアップロードの処理
+  async function handlePWKFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    isLoading = true;
+    pwkImportError = "";
+
+    try {
+      const fileContent = await file.text();
+      await loginWithPWKData(fileContent);
+    } catch (error) {
+      console.error("PWKファイル読み込みエラー:", error);
+      pwkImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
+      isLoading = false;
+    }
+  }
+
+  // PWKテキストでのログイン処理
+  async function loginWithPWKText() {
+    if (!pwkTextInput) return;
+
+    isLoading = true;
+    pwkImportError = "";
+
+    try {
+      await loginWithPWKData(pwkTextInput);
+    } catch (error) {
+      console.error("PWKテキスト処理エラー:", error);
+      pwkImportError = `PWK処理エラー: ${error instanceof Error ? error.message : String(error)}`;
+      isLoading = false;
+    }
+  }
+
+  // PWKデータ（JSONテキスト）からのログイン処理
+  async function loginWithPWKData(pwkJsonText: string) {
+    try {
+      // JSONをパース
+      const pwkData = JSON.parse(pwkJsonText);
+
+      // PWKが有効かチェック
+      if (
+        !pwkData.v ||
+        !pwkData.alg ||
+        !pwkData.credentialId ||
+        !pwkData.pubkey
+      ) {
+        throw new Error("有効なPWKデータではありません");
+      }
+
+      // PWKをセット
+      pwkManager.setCurrentPWK(pwkData);
+
+      // 公開鍵を取得して状態を更新
+      const pubKey = await pwkManager.getPublicKey();
+      appState.publicKey.set(pubKey);
+      appState.isLoggedIn.set(true);
+
+      // アカウント画面に遷移
+      appState.currentScreen.set("account");
+    } catch (error) {
+      console.error("PWKログインエラー:", error);
+      throw new Error(
+        `PWKログインエラー: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // コンポーネントのマウント時に初期化
+  $effect(() => {
+    initialize();
+  });
 </script>
 
 <div class="auth-container">
