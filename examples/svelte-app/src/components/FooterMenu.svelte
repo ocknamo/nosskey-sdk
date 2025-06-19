@@ -63,9 +63,13 @@ function navigateTo(target: ScreenName) {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: #ffffff;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-card);
+    box-shadow: 0 -2px 10px var(--color-shadow);
     z-index: 100;
+    border-top: 1px solid var(--color-border);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .footer-content {
@@ -83,7 +87,7 @@ function navigateTo(target: ScreenName) {
     border: none;
     padding: 8px 16px 14px;
     font-size: 0.6rem;
-    color: #666;
+    color: var(--color-text-secondary);
     cursor: pointer;
     flex: 1;
     border-radius: 0px;
@@ -93,18 +97,18 @@ function navigateTo(target: ScreenName) {
   }
 
   button:hover {
-    background-color: rgba(87, 85, 217, 0.08);
+    background-color: var(--color-primary-alpha-08);
   }
 
   button.active {
-    color: #5755d9;
+    color: var(--color-primary);
     font-weight: bold;
-    border-top: solid 1px;
+    border-top: 2px solid var(--color-primary);
   }
 
   button.active .icon img {
-    filter: brightness(0) saturate(100%) invert(40%) sepia(93%) saturate(1352%)
-      hue-rotate(228deg) brightness(99%) contrast(95%);
+    filter: brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%)
+      hue-rotate(225deg) brightness(94%) contrast(89%);
   }
 
   button:disabled {
@@ -120,7 +124,7 @@ function navigateTo(target: ScreenName) {
     width: 24px;
     height: 24px;
     transition: filter 0.2s ease;
-    filter: brightness(0) saturate(100%) invert(40%) sepia(0%) saturate(0%)
-      hue-rotate(0deg) brightness(100%) contrast(60%);
+    filter: brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%)
+      hue-rotate(0deg) brightness(100%) contrast(70%);
   }
 </style>

@@ -2,6 +2,9 @@
 import { i18n } from '../../i18n/i18n-store.js';
 import { defaultRelays } from '../../store/app-state.js';
 import { activeRelays } from '../../store/relay-store.js';
+import Button from '../ui/Button.svelte';
+import DangerButton from '../ui/DangerButton.svelte';
+import SecondaryButton from '../ui/SecondaryButton.svelte';
 import SettingSection from './SettingSection.svelte';
 
 // 状態変数
@@ -85,9 +88,9 @@ function resetRelays() {
         {#each relays as relay}
           <li>
             <span class="relay-url">{relay}</span>
-            <button class="remove-button" onclick={() => removeRelay(relay)}
-              >{$i18n.t.settings.relayManagement.delete}</button
-            >
+            <DangerButton onclick={() => removeRelay(relay)} size="small">
+              {$i18n.t.settings.relayManagement.delete}
+            </DangerButton>
           </li>
         {/each}
       </ul>
@@ -98,11 +101,11 @@ function resetRelays() {
     <h3>{$i18n.t.settings.relayManagement.addRelay}</h3>
     <div class="input-group">
       <input type="text" placeholder="wss://" bind:value={newRelay} />
-      <button onclick={addRelay}>{$i18n.t.settings.relayManagement.add}</button>
+      <Button onclick={addRelay}>{$i18n.t.settings.relayManagement.add}</Button>
     </div>
-    <button class="secondary-button" onclick={resetRelays}
-      >{$i18n.t.settings.relayManagement.reset}</button
-    >
+    <SecondaryButton onclick={resetRelays}>
+      {$i18n.t.settings.relayManagement.reset}
+    </SecondaryButton>
 
     {#if relayMessage}
       <div class="result-message">
@@ -115,7 +118,7 @@ function resetRelays() {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .relay-list {
@@ -134,7 +137,7 @@ function resetRelays() {
     align-items: center;
     padding: 8px;
     margin-bottom: 5px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
   }
 
@@ -145,18 +148,8 @@ function resetRelays() {
     margin-right: 10px;
   }
 
-  .remove-button {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-  }
-
   .empty-message {
-    color: #999;
+    color: var(--color-text-disabled);
     font-style: italic;
   }
 
@@ -168,35 +161,15 @@ function resetRelays() {
   .input-group input {
     flex: 1;
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border-strong);
     border-radius: 4px 0 0 4px;
     font-size: 1rem;
-  }
-
-  .input-group button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-  }
-
-  .secondary-button {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 10px;
   }
 
   .result-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
     font-weight: bold;
   }

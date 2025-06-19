@@ -93,12 +93,15 @@ onMount(() => {
     top: 0;
     left: 0;
     right: 0;
-    background-color: #ffffff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-card);
+    box-shadow: 0 2px 10px var(--color-shadow);
     z-index: 100;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border);
     transform: translateY(-100%);
-    transition: transform 0.3s ease-in-out;
+    transition:
+      transform 0.3s ease-in-out,
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .header-bar.visible {
@@ -122,8 +125,9 @@ onMount(() => {
   .app-title {
     font-size: 1.2rem;
     font-weight: bold;
-    color: #5755d9;
+    color: var(--color-primary);
     margin: 0;
+    transition: color 0.3s ease;
   }
 
   .header-center {
@@ -136,8 +140,9 @@ onMount(() => {
     font-weight: 700;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
       "Helvetica Neue", Arial, sans-serif;
-    color: #333;
+    color: var(--color-titles);
     letter-spacing: -0.02em;
+    transition: color 0.3s ease;
   }
 
   .header-right {

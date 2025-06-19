@@ -2,6 +2,9 @@
 import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
+import Button from '../ui/Button.svelte';
+import IconButton from '../ui/IconButton.svelte';
+import WarningButton from '../ui/WarningButton.svelte';
 import SettingSection from './SettingSection.svelte';
 
 // PWKエクスポート関連の状態変数
@@ -87,11 +90,11 @@ function savePWKToFile() {
     {$i18n.t.settings.exportPWK.warning}
   </p>
 
-  <button class="action-button export-button" onclick={toggleExportKeySection}>
+  <WarningButton onclick={toggleExportKeySection}>
     {showExportSection
       ? $i18n.t.settings.exportPWK.hideExportSection
       : $i18n.t.settings.exportPWK.showExportSection}
-  </button>
+  </WarningButton>
 
   {#if showExportSection}
     <div class="export-section">
@@ -99,11 +102,11 @@ function savePWKToFile() {
         {$i18n.t.settings.exportPWK.restoreWarning}
       </p>
 
-      <button class="action-button" onclick={exportPWK} disabled={isExporting}>
+      <Button onclick={exportPWK} disabled={isExporting}>
         {isExporting
           ? $i18n.t.common.loading
           : $i18n.t.settings.exportPWK.exportButton}
-      </button>
+      </Button>
 
       {#if exportedPWK}
         <div class="key-display">
@@ -112,20 +115,19 @@ function savePWKToFile() {
             <textarea readonly value={exportedPWK} class="pwk-textarea"
             ></textarea>
             <div class="action-buttons">
-              <button
-                class="icon-button"
+              <IconButton
                 onclick={() => copyToClipboard(exportedPWK)}
                 title={$i18n.t.common.copy}
               >
                 <img src={CopyIcon} alt="Copy" />
-              </button>
-              <button
-                class="download-button"
+              </IconButton>
+              <Button
                 onclick={savePWKToFile}
                 title={$i18n.t.settings.exportPWK.saveFileTitle}
+                size="small"
               >
                 {$i18n.t.settings.exportPWK.saveFile}
-              </button>
+              </Button>
             </div>
           </div>
           {#if showCopiedMessage}
@@ -144,41 +146,25 @@ function savePWKToFile() {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .info-text {
-    color: #1890ff;
+    color: var(--color-info);
     font-weight: normal;
   }
 
   .warning-text {
-    color: #ff9800;
+    color: var(--color-button-warning);
     font-weight: normal;
-  }
-
-  .action-button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 10px;
-  }
-
-  .export-button {
-    background-color: #1890ff;
-    color: white;
   }
 
   .export-section {
     margin-top: 15px;
     padding: 15px;
-    border: 1px solid #e6f7ff;
+    border: 1px solid var(--color-info-bg);
     border-radius: 4px;
-    background-color: #f0f9ff;
+    background-color: var(--color-info-bg);
   }
 
   .key-display {
@@ -197,7 +183,7 @@ function savePWKToFile() {
     height: 120px;
     padding: 8px;
     font-family: monospace;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
     font-size: 0.9rem;
     resize: vertical;
@@ -208,40 +194,14 @@ function savePWKToFile() {
     gap: 8px;
   }
 
-  .icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .icon-button:hover {
-    background-color: #eee;
-  }
-
-  .download-button {
-    padding: 4px 8px;
-    background-color: #52c41a;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-  }
-
   .copied-message {
-    color: #28a745;
+    color: var(--color-success);
     font-size: 0.8rem;
     margin-top: 4px;
   }
 
   .error-message {
-    color: #dc3545;
+    color: var(--color-error);
     font-size: 0.9rem;
     margin-top: 10px;
   }

@@ -1,6 +1,7 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { currentScreen, resetState } from '../../store/app-state.js';
+import DangerButton from '../ui/DangerButton.svelte';
 import SettingSection from './SettingSection.svelte';
 
 // 状態変数
@@ -35,9 +36,9 @@ function clearLocalStorage() {
     {$i18n.t.settings.localStorage.description}
   </p>
 
-  <button class="danger-button" onclick={clearLocalStorage}>
+  <DangerButton onclick={clearLocalStorage}>
     {$i18n.t.settings.localStorage.clear}
-  </button>
+  </DangerButton>
 
   {#if clearResult}
     <div class="result-message">
@@ -49,29 +50,21 @@ function clearLocalStorage() {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
-  }
-
-  .danger-button {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    margin-top: 10px;
-  }
-
-  .danger-button:hover {
-    background-color: #c82333;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
   }
 
   .result-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: var(--color-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
     font-weight: bold;
+    color: var(--color-text);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
   }
 </style>

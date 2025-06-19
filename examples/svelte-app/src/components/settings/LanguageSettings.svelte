@@ -52,7 +52,8 @@ function updateLanguage(lang: 'ja' | 'en') {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
   }
 
   .language-selector {
@@ -79,8 +80,14 @@ function updateLanguage(lang: 'ja' | 'en') {
   .result-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    border-radius: 8px;
     font-weight: bold;
+    color: var(--color-success);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
   }
 </style>

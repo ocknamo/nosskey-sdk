@@ -23,6 +23,10 @@ export const publicKey = writable<string | null>(null);
 export const cacheSecrets = writable<boolean>(true); // 秘密鍵情報をキャッシュするかどうか
 export const cacheTimeout = writable<number>(300); // キャッシュのタイムアウト時間（秒）
 
+// テーマ設定
+export type ThemeMode = 'light' | 'dark' | 'auto';
+export const currentTheme = writable<ThemeMode>('dark');
+
 // 秘密鍵情報のキャッシュ設定を読み込む
 function loadCacheSecretsSetting() {
   if (typeof window !== 'undefined') {
@@ -43,10 +47,23 @@ function loadCacheTimeoutSetting() {
   return 300;
 }
 
+// テーマ設定を読み込む
+function loadThemeSetting(): ThemeMode {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('nosskey_theme');
+    // デフォルトは'dark'（ダークモード）
+    if (saved === 'light' || saved === 'dark' || saved === 'auto') {
+      return saved;
+    }
+  }
+  return 'dark';
+}
+
 // 初期化
 try {
   cacheSecrets.set(loadCacheSecretsSetting());
   cacheTimeout.set(loadCacheTimeoutSetting());
+  currentTheme.set(loadThemeSetting());
 
   // 設定が変更されたら保存
   cacheSecrets.subscribe((value) => {
@@ -58,6 +75,12 @@ try {
   cacheTimeout.subscribe((value) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('nosskey_cache_timeout', String(value));
+    }
+  });
+
+  currentTheme.subscribe((value) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nosskey_theme', value);
     }
   });
 } catch (e) {

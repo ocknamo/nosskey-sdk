@@ -3,6 +3,9 @@ import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { hexToNsec } from '../../utils/bech32-converter.js';
+import DangerButton from '../ui/DangerButton.svelte';
+import IconButton from '../ui/IconButton.svelte';
+import WarningButton from '../ui/WarningButton.svelte';
 import SettingSection from './SettingSection.svelte';
 
 // 秘密鍵エクスポート関連の状態変数
@@ -71,23 +74,19 @@ function copyToClipboard(text: string) {
 <SettingSection title={$i18n.t.settings.exportSecretKey}>
   <p class="warning-text">{$i18n.t.settings.exportSecretKeyWarning}</p>
 
-  <button class="action-button export-button" onclick={toggleExportKeySection}>
+  <WarningButton onclick={toggleExportKeySection}>
     {showExportSection
       ? $i18n.t.settings.hideExportSection
       : $i18n.t.settings.showExportSection}
-  </button>
+  </WarningButton>
 
   {#if showExportSection}
     <div class="export-section">
       <p class="warning-text strong">{$i18n.t.settings.exportWarningFinal}</p>
 
-      <button
-        class="action-button danger-button"
-        onclick={exportSecretKey}
-        disabled={isExporting}
-      >
+      <DangerButton onclick={exportSecretKey} disabled={isExporting}>
         {isExporting ? $i18n.t.common.loading : $i18n.t.settings.confirmExport}
-      </button>
+      </DangerButton>
 
       {#if exportedNsec}
         <div class="key-display">
@@ -99,13 +98,12 @@ function copyToClipboard(text: string) {
               value={exportedNsec}
               class="key-input"
             />
-            <button
-              class="icon-button"
+            <IconButton
               onclick={() => copyToClipboard(exportedNsec)}
               title={$i18n.t.common.copy}
             >
               <img src={CopyIcon} alt="Copy" />
-            </button>
+            </IconButton>
           </div>
           {#if showCopiedMessage}
             <p class="copied-message">{$i18n.t.common.copied}</p>
@@ -123,11 +121,11 @@ function copyToClipboard(text: string) {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .warning-text {
-    color: #dc3545;
+    color: var(--color-error);
     font-weight: normal;
   }
 
@@ -135,44 +133,12 @@ function copyToClipboard(text: string) {
     font-weight: bold;
   }
 
-  .action-button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 10px;
-  }
-
-  .export-button {
-    background-color: #ffc107;
-    color: #333;
-  }
-
-  .danger-button {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    margin-top: 10px;
-  }
-
-  .danger-button:disabled {
-    background-color: #e9acb1;
-    cursor: not-allowed;
-  }
-
   .export-section {
     margin-top: 15px;
     padding: 15px;
-    border: 1px solid #f8d7da;
+    border: 1px solid var(--color-error-border);
     border-radius: 4px;
-    background-color: #fff5f5;
+    background-color: var(--color-card) 5f5;
   }
 
   .key-display {
@@ -190,37 +156,21 @@ function copyToClipboard(text: string) {
     flex: 1;
     padding: 8px;
     font-family: monospace;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
     font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .icon-button:hover {
-    background-color: #eee;
-  }
-
   .copied-message {
-    color: #28a745;
+    color: var(--color-success);
     font-size: 0.8rem;
     margin-top: 4px;
   }
 
   .error-message {
-    color: #dc3545;
+    color: var(--color-error);
     font-size: 0.9rem;
     margin-top: 10px;
   }

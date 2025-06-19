@@ -110,23 +110,27 @@ onMount(async () => {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border);
     padding-bottom: 10px;
+    transition: border-color 0.3s ease;
   }
 
   .tab-button {
     padding: 8px 16px;
     background: none;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    color: #333;
+    color: var(--color-text);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .tab-button.active {
-    background-color: #5755d9;
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--color-text-on-primary);
     font-weight: bold;
   }
 

@@ -417,49 +417,50 @@ $effect(() => {
   .app-description {
     margin: 20px 0;
     font-size: 1.1rem;
-    color: #666;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
   }
 
   .auth-section {
     margin-bottom: 30px;
     padding: 20px;
-    border: 1px solid #eee;
+    border: 1px solid var(--color-border-light);
     border-radius: 8px;
-    background-color: #f9f9f9;
+    background-color: var(--color-overlay);
     text-align: left;
   }
 
   .main-section {
-    border-left: 4px solid #5755d9;
-    background-color: #f8f9ff;
+    border-left: 4px solid var(--color-button-primary);
+    background-color: var(--color-info-bg);
   }
 
   .info-box {
     margin: 15px 0;
     padding: 15px;
-    background-color: #e6f7ff;
-    border-left: 4px solid #1890ff;
+    background-color: var(--color-info-bg);
+    border-left: 4px solid var(--color-info);
     border-radius: 4px;
   }
 
   .developer-section {
     margin-top: 30px;
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 0.9rem;
     text-align: left;
   }
 
   .developer-section summary {
     cursor: pointer;
-    color: #888;
+    color: var(--color-text-secondary);
     padding: 10px;
-    background-color: #f0f0f0;
+    background-color: var(--color-surface-hover);
     border-radius: 4px;
   }
 
   .developer-content {
-    background-color: #f0f0f0;
-    border-color: #ddd;
+    background-color: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 
   .username-input {
@@ -472,7 +473,7 @@ $effect(() => {
   .username-input input {
     padding: 10px;
     border-radius: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border-medium);
     font-size: 1rem;
   }
 
@@ -490,7 +491,7 @@ $effect(() => {
   }
 
   .create-button {
-    background-color: #5755d9;
+    background-color: var(--color-button-primary);
     color: white;
     font-weight: bold;
     font-size: 1.2rem;
@@ -500,16 +501,16 @@ $effect(() => {
   }
 
   .import-button {
-    background-color: #eaeaea;
-    color: #333;
+    background-color: var(--color-surface-hover);
+    color: var(--color-text-dark);
     width: 100%;
     margin-bottom: 15px;
   }
 
   .success {
     padding: 10px;
-    background-color: #e6ffed;
-    border-left: 4px solid #52c41a;
+    background-color: var(--color-success-bg);
+    border-left: 4px solid var(--color-button-success);
     border-radius: 4px;
     margin: 10px 0;
   }
@@ -517,27 +518,27 @@ $effect(() => {
   .error-message {
     margin-top: 20px;
     padding: 10px;
-    background-color: #ffdddd;
-    color: #ff0000;
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
     border-radius: 4px;
   }
 
   .success-message {
     padding: 15px;
-    background-color: #f0f9ff;
-    border: 1px solid #d1e9ff;
+    background-color: var(--color-info-bg);
+    border: 1px solid var(--color-info-border);
     border-radius: 8px;
     text-align: center;
     margin: 15px 0;
   }
 
   .success-message h3 {
-    color: #52c41a;
+    color: var(--color-button-success);
     margin-bottom: 10px;
   }
 
   .login-button {
-    background-color: #52c41a;
+    background-color: var(--color-button-success);
     color: white;
     font-weight: bold;
     font-size: 1.1rem;
@@ -547,7 +548,7 @@ $effect(() => {
   }
 
   .login-with-existing-button {
-    background-color: #1890ff;
+    background-color: var(--color-info);
     color: white;
     font-weight: bold;
     font-size: 1.1rem;
@@ -558,14 +559,14 @@ $effect(() => {
   .login-option {
     margin-bottom: 25px;
     padding: 15px;
-    border: 1px solid #eaeaea;
+    border: 1px solid var(--color-surface-hover);
     border-radius: 8px;
-    background-color: #fafafa;
+    background-color: var(--color-surface-light);
   }
 
   .login-option h3 {
     margin-top: 0;
-    color: #5755d9;
+    color: var(--color-button-primary);
     margin-bottom: 10px;
   }
 
@@ -573,8 +574,8 @@ $effect(() => {
   .pwk-import-section {
     margin-top: 20px;
     padding: 15px;
-    background-color: #f8f9ff;
-    border: 1px solid #e6f7ff;
+    background-color: var(--color-info-bg);
+    border: 1px solid var(--color-info-bg);
     border-radius: 8px;
   }
 
@@ -593,7 +594,7 @@ $effect(() => {
   .file-input-label {
     display: inline-block;
     padding: 8px 16px;
-    background-color: #1890ff;
+    background-color: var(--color-info);
     color: white;
     border-radius: 4px;
     cursor: pointer;
@@ -601,8 +602,8 @@ $effect(() => {
   }
 
   .pwk-textarea-toggle {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--color-surface-hover);
+    color: var(--color-text-dark);
     padding: 8px 16px;
     font-size: 0.9rem;
   }
@@ -615,7 +616,7 @@ $effect(() => {
     width: 100%;
     height: 120px;
     padding: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
     font-family: monospace;
     font-size: 0.9rem;
@@ -624,7 +625,7 @@ $effect(() => {
   }
 
   .login-with-pwk-text-button {
-    background-color: #52c41a;
+    background-color: var(--color-button-success);
     color: white;
     width: 100%;
   }
@@ -632,8 +633,8 @@ $effect(() => {
   .pwk-import-error {
     margin-top: 10px;
     padding: 10px;
-    background-color: #ffdddd;
-    color: #ff0000;
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
     border-radius: 4px;
     font-size: 0.9rem;
   }

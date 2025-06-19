@@ -87,15 +87,33 @@ $effect(() => {
 
   /* 警告セクションのスタイル */
   .warning-section {
-    border-left: 4px solid #ffc107;
-    background-color: #fff8e1;
-    padding: 0 8px;
+    border-left: 4px solid var(--color-primary);
+    background-color: var(--color-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
+  }
+
+  .warning-section h2 {
+    color: var(--color-titles);
+    margin-top: 0;
+    margin-bottom: 12px;
+    transition: color 0.3s ease;
   }
 
   .warning-text {
-    color: #856404;
+    color: var(--color-text);
     margin-bottom: 10px;
     line-height: 1.5;
     text-align: left;
+    transition: color 0.3s ease;
+  }
+
+  .warning-text:last-child {
+    margin-bottom: 0;
   }
 </style>

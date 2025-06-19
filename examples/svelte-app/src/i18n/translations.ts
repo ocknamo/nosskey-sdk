@@ -200,6 +200,14 @@ export interface TranslationData {
       englishLabel: string;
       changed: string;
     };
+    theme: {
+      title: string;
+      description: string;
+      light: string;
+      dark: string;
+      auto: string;
+      changed: string;
+    };
   };
   navigation: {
     account: string;
@@ -400,6 +408,14 @@ export const ja: TranslationData = {
       japaneseLabel: '日本語',
       englishLabel: '英語 (English)',
       changed: '言語を変更しました',
+    },
+    theme: {
+      title: 'テーマ設定',
+      description: 'アプリケーションの外観を変更できます。',
+      light: 'ライトモード',
+      dark: 'ダークモード',
+      auto: 'システム設定に従う',
+      changed: 'テーマを変更しました',
     },
     exportPWK: {
       title: 'PWKのエクスポート',
@@ -618,6 +634,14 @@ export const en: TranslationData = {
       japaneseLabel: 'Japanese (日本語)',
       englishLabel: 'English',
       changed: 'Language changed',
+    },
+    theme: {
+      title: 'Theme Settings',
+      description: 'Change the appearance of the application.',
+      light: 'Light Mode',
+      dark: 'Dark Mode',
+      auto: 'Follow System Setting',
+      changed: 'Theme changed',
     },
     exportPWK: {
       title: 'Export PWK',

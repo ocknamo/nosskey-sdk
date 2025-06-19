@@ -5,6 +5,7 @@ import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
+import Button from './ui/Button.svelte';
 
 // 状態変数
 let displayName = $state('');
@@ -273,9 +274,9 @@ async function saveProfile() {
         />
       </div>
 
-      <button class="save-button" onclick={saveProfile} disabled={isLoading}>
+      <Button onclick={saveProfile} disabled={isLoading}>
         {$i18n.t.nostr.profile.save}
-      </button>
+      </Button>
 
       {#if saveMessage}
         <div class="save-message">
@@ -288,24 +289,24 @@ async function saveProfile() {
 
 <style>
   .profile-editor {
-    background-color: #fff;
+    background-color: var(--color-card);
     padding: 20px;
     border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px var(--color-shadow);
     margin-top: 20px;
   }
 
   h2 {
     margin-top: 0;
     margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-light);
     padding-bottom: 10px;
   }
 
   .loading {
     text-align: center;
     padding: 20px;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .form {
@@ -328,38 +329,34 @@ async function saveProfile() {
   input,
   textarea {
     padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 2px solid var(--color-border-medium);
+    border-radius: 8px;
     font-size: 1rem;
+    background-color: var(--color-card);
+    color: var(--color-text);
+    transition: all 0.2s ease;
+  }
+
+  input:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
+  }
+
+  input:hover,
+  textarea:hover {
+    border-color: var(--color-border-strong);
   }
 
   textarea {
     resize: vertical;
   }
 
-  .save-button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-
-  .save-button:hover {
-    background-color: #4240b3;
-  }
-
-  .save-button:disabled {
-    background-color: #ccc;
-  }
-
   .save-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
     text-align: center;
   }

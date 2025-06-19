@@ -2,6 +2,7 @@
 import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getPWKManager } from '../../services/pwk-manager.service.js';
 import { cacheSecrets, cacheTimeout } from '../../store/app-state.js';
+import SecondaryButton from '../ui/SecondaryButton.svelte';
 import SettingSection from './SettingSection.svelte';
 
 // 状態変数
@@ -113,9 +114,9 @@ function clearCache() {
     <div class="cache-clear">
       <h3>{$i18n.t.settings.cacheSettings.clearTitle}</h3>
       <p>{$i18n.t.settings.cacheSettings.clearDescription}</p>
-      <button class="secondary-button" onclick={clearCache}>
+      <SecondaryButton onclick={clearCache}>
         {$i18n.t.settings.cacheSettings.clearButton}
-      </button>
+      </SecondaryButton>
     </div>
 
     {#if cacheSettingMessage}
@@ -129,7 +130,8 @@ function clearCache() {
 <style>
   p {
     margin-bottom: 15px;
-    color: #666;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
   }
 
   .cache-settings {
@@ -162,31 +164,32 @@ function clearCache() {
 
   .timeout-setting input {
     padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-card);
+    color: var(--color-text);
     max-width: 200px;
+    transition:
+      border-color 0.3s ease,
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .cache-clear {
     margin-top: 20px;
   }
 
-  .secondary-button {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 10px;
-  }
-
   .result-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    border-radius: 8px;
     font-weight: bold;
+    color: var(--color-success);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
   }
 </style>

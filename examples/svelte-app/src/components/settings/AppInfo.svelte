@@ -24,7 +24,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
   .info-item {
     display: flex;
     padding: 8px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .info-item:last-child {
@@ -34,7 +34,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
   .label {
     flex: 0 0 140px;
     font-weight: bold;
-    color: #555;
+    color: var(--color-text-primary);
   }
 
   .value {

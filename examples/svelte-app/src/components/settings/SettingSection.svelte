@@ -10,11 +10,15 @@ export let title: string;
 
 <style>
   .settings-section {
-    background-color: #ffffff;
+    background-color: var(--color-card);
     padding: 20px 60px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 4px var(--color-shadow);
     margin-bottom: 20px;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   @media (max-width: 900px) {
@@ -25,5 +29,7 @@ export let title: string;
 
   h2 {
     margin-bottom: 15px;
+    color: var(--color-titles);
+    transition: color 0.3s ease;
   }
 </style>

@@ -147,20 +147,20 @@ async function importKey() {
 
   p {
     margin-bottom: 20px;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .loading {
     margin: 30px 0;
     font-size: 1.2rem;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .import-form {
-    background-color: #f9f9f9;
+    background-color: var(--color-overlay);
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px var(--color-shadow);
     text-align: left;
   }
 
@@ -177,7 +177,7 @@ async function importKey() {
   input[type="password"] {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border-strong);
     border-radius: 4px;
     font-family: monospace;
     font-size: 1rem;
@@ -186,7 +186,7 @@ async function importKey() {
   .help-text {
     margin-top: 8px;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .buttons {
@@ -207,25 +207,25 @@ async function importKey() {
   }
 
   .back-button {
-    background-color: #6c757d;
+    background-color: var(--color-button-secondary);
     color: white;
   }
 
   .import-button {
-    background-color: #5755d9;
+    background-color: var(--color-button-primary);
     color: white;
     font-weight: bold;
   }
 
   button:disabled {
-    background-color: #ccc;
+    background-color: var(--color-border-medium);
   }
 
   .error-message {
     margin-top: 20px;
     padding: 10px;
-    background-color: #ffdddd;
-    color: #ff0000;
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
     border-radius: 4px;
   }
 </style>

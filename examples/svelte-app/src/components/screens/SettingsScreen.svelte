@@ -8,6 +8,7 @@ import LocalStorageSection from '../settings/LocalStorageSection.svelte';
 import LogoutSection from '../settings/LogoutSection.svelte';
 import RelayManagement from '../settings/RelayManagement.svelte';
 import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
+import ThemeSettings from '../settings/theme-settings.svelte';
 </script>
 
 <div class="settings-container">
@@ -16,6 +17,7 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
   <RelayManagement />
   <SecretCacheSettings />
   <LanguageSettings />
+  <ThemeSettings />
   <LogoutSection />
   <LocalStorageSection />
   <ExportPWKComponent />

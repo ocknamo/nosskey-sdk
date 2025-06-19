@@ -6,6 +6,7 @@ import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import { timelineMode } from '../store/timeline-store.js';
+import Button from './ui/Button.svelte';
 
 // 状態変数
 let events = $state<NostrEvent[]>([]);
@@ -111,9 +112,9 @@ async function reloadTimeline() {
 <div class="timeline-container">
   <div class="timeline-header">
     <h2>{$i18n.t.nostr.timeline.title}</h2>
-    <button class="reload-button" onclick={reloadTimeline} disabled={loading}>
+    <Button onclick={reloadTimeline} disabled={loading} size="small">
       {loading ? $i18n.t.nostr.timeline.loading : $i18n.t.nostr.timeline.reload}
-    </button>
+    </Button>
   </div>
 
   {#if loading}
@@ -123,7 +124,9 @@ async function reloadTimeline() {
   {:else if error}
     <div class="error-message">
       <p>{error}</p>
-      <button onclick={reloadTimeline}>{$i18n.t.nostr.timeline.retry}</button>
+      <Button onclick={reloadTimeline} size="small"
+        >{$i18n.t.nostr.timeline.retry}</Button
+      >
     </div>
   {:else if events.length === 0}
     <div class="empty-timeline">
@@ -149,10 +152,14 @@ async function reloadTimeline() {
 <style>
   .timeline-container {
     margin-top: 20px;
-    background-color: #ffffff;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-card);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 4px var(--color-shadow);
     padding: 15px;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .timeline-header {
@@ -161,57 +168,43 @@ async function reloadTimeline() {
     align-items: center;
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border);
+    transition: border-color 0.3s ease;
   }
 
   .timeline-header h2 {
     margin: 0;
     font-size: 1.2rem;
-  }
-
-  .reload-button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .reload-button:disabled {
-    background-color: #cccccc;
+    color: var(--color-titles);
+    transition: color 0.3s ease;
   }
 
   .loading-indicator {
     text-align: center;
     padding: 20px;
-    color: #666;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
   }
 
   .error-message {
-    background-color: #ffdddd;
+    background-color: var(--color-tertiary);
     padding: 15px;
-    border-radius: 4px;
-    color: #ff0000;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
     margin-bottom: 15px;
-  }
-
-  .error-message button {
-    background-color: #5755d9;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    margin-top: 10px;
-    cursor: pointer;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .empty-timeline {
     text-align: center;
     padding: 30px;
-    color: #666;
+    color: var(--color-text-secondary);
     font-style: italic;
+    transition: color 0.3s ease;
   }
 
   .events-list {
@@ -221,24 +214,30 @@ async function reloadTimeline() {
   }
 
   .event-card {
-    border: 1px solid #eee;
-    border-radius: 5px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
     padding: 15px;
-    background-color: #f9f9f9;
+    background-color: var(--color-background);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .event-header {
     display: flex;
     justify-content: space-between;
-    color: #666;
+    color: var(--color-text-secondary);
     font-size: 0.85rem;
     margin-bottom: 10px;
+    transition: color 0.3s ease;
   }
 
   .event-content {
     white-space: pre-wrap;
     word-break: break-word;
     text-align: left;
+    color: var(--color-text);
+    transition: color 0.3s ease;
   }
 
   .event-content p {

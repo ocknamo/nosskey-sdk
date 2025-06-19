@@ -156,16 +156,22 @@ async function publishEvent() {
 
 <style>
   .post-form {
-    background-color: #fff;
+    background-color: var(--color-card);
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 4px var(--color-shadow);
     margin-bottom: 20px;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   h2 {
     font-size: 1.5rem;
     margin-bottom: 15px;
+    color: var(--color-titles);
+    transition: color 0.3s ease;
   }
 
   .form-group {
@@ -176,15 +182,23 @@ async function publishEvent() {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: var(--color-text);
+    transition: color 0.3s ease;
   }
 
   textarea {
-    width: 100%;
+    width: 90%;
     padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
     font-size: 16px;
     resize: vertical;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    transition:
+      border-color 0.3s ease,
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .action-buttons {
@@ -196,39 +210,60 @@ async function publishEvent() {
   button {
     padding: 10px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 16px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .sign-button {
-    background-color: #5755d9;
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--color-text-on-primary);
+  }
+
+  .sign-button:hover {
+    opacity: 0.9;
   }
 
   .publish-button {
-    background-color: #28a745;
-    color: white;
+    background-color: var(--color-success);
+    color: var(--color-text-on-primary);
+  }
+
+  .publish-button:hover {
+    opacity: 0.9;
   }
 
   button:disabled {
-    background-color: #ccc;
+    background-color: var(--color-secondary);
+    opacity: 0.5;
   }
 
   .status-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: var(--color-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text);
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .signed-event {
     margin-top: 20px;
     padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: var(--color-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
     overflow-x: auto;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   pre {

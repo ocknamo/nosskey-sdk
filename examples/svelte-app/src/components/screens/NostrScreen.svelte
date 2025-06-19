@@ -226,7 +226,7 @@ function logout() {
   }
 
   .user-info {
-    background-color: #f5f5f5;
+    background-color: var(--color-surface-alt);
     padding: 15px;
     border-radius: 5px;
     margin-bottom: 20px;
@@ -238,13 +238,13 @@ function logout() {
 
   .npub {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-muted);
   }
 
   .relay-status {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
   }
 
@@ -259,7 +259,7 @@ function logout() {
     justify-content: space-between;
     margin-bottom: 5px;
     padding: 5px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .relay-url {
@@ -276,26 +276,26 @@ function logout() {
   }
 
   .status-active {
-    background-color: #28a745;
+    background-color: var(--color-success);
     color: white;
   }
 
   .status-connecting {
-    background-color: #ffc107;
+    background-color: var(--color-warning);
     color: black;
   }
 
   .status-closed,
   .status-error {
-    background-color: #dc3545;
+    background-color: var(--color-error);
     color: white;
   }
 
   .event-creation {
-    background-color: #fff;
+    background-color: var(--color-card);
     padding: 20px;
     border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px var(--color-shadow);
   }
 
   .form-group {
@@ -311,7 +311,7 @@ function logout() {
   textarea {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border-strong);
     border-radius: 4px;
     font-size: 16px;
   }
@@ -336,30 +336,30 @@ function logout() {
   }
 
   .sign-button {
-    background-color: #5755d9;
+    background-color: var(--color-button-primary);
     color: white;
   }
 
   .publish-button {
-    background-color: #28a745;
+    background-color: var(--color-success);
     color: white;
   }
 
   button:disabled {
-    background-color: #ccc;
+    background-color: var(--color-border-medium);
   }
 
   .status-message {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
   }
 
   .signed-event {
     margin-top: 20px;
     padding: 15px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
     overflow-x: auto;
   }

@@ -6,6 +6,7 @@ import type { RelayInfo } from '../services/relay.service.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
+import IconButton from './ui/IconButton.svelte';
 
 // 状態変数
 let publicKeyShort = $state('');
@@ -71,13 +72,12 @@ function copyNpubToClipboard() {
             ? `${npubAddress.slice(0, 12)}...${npubAddress.slice(-8)}`
             : npubAddress}
         </p>
-        <button
-          class="icon-button"
+        <IconButton
           onclick={copyNpubToClipboard}
           title={$i18n.t.nostr.copyToClipboard}
         >
           <img src={CopyIcon} alt="Copy" />
-        </button>
+        </IconButton>
       </div>
       {#if showCopiedMessage}
         <span class="copied-message">{$i18n.t.nostr.copiedToClipboard}</span>
@@ -108,7 +108,7 @@ function copyNpubToClipboard() {
 
 <style>
   .relay-container {
-    background-color: #f5f5f5;
+    background-color: var(--color-surface-alt);
     padding: 15px;
     border-radius: 5px;
     margin-bottom: 20px;
@@ -134,28 +134,12 @@ function copyNpubToClipboard() {
 
   .npub {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-muted);
     margin: 0;
   }
 
-  .icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .icon-button:hover {
-    background-color: #eee;
-  }
-
   .copied-message {
-    color: #28a745;
+    color: var(--color-success);
     font-size: 0.8rem;
     font-weight: bold;
   }
@@ -163,7 +147,7 @@ function copyNpubToClipboard() {
   .relay-status {
     margin-top: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
     border-radius: 4px;
   }
 
@@ -178,7 +162,7 @@ function copyNpubToClipboard() {
     justify-content: space-between;
     margin-bottom: 5px;
     padding: 5px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .relay-url {
@@ -195,18 +179,18 @@ function copyNpubToClipboard() {
   }
 
   .status-active {
-    background-color: #28a745;
+    background-color: var(--color-success);
     color: white;
   }
 
   .status-connecting {
-    background-color: #ffc107;
+    background-color: var(--color-warning);
     color: black;
   }
 
   .status-closed,
   .status-error {
-    background-color: #dc3545;
+    background-color: var(--color-error);
     color: white;
   }
 
