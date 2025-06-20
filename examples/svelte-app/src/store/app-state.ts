@@ -2,7 +2,12 @@ import { writable } from 'svelte/store';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 
 // デフォルトリレーのリスト
-export const defaultRelays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://nos.lol'];
+export const defaultRelays = [
+  'wss://relay.damus.io',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://yabu.me',
+];
 
 export type ScreenName = 'account' | 'timeline' | 'settings' | 'import';
 
