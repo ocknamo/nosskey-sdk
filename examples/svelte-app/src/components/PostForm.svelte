@@ -6,6 +6,8 @@ import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 
+const { post }: { post?: () => void } = $props();
+
 // 状態変数
 let eventContent = $state('');
 // イベント種類は常にkind=1(テキストノート)
@@ -99,6 +101,9 @@ async function publishEvent() {
     // 投稿後はフォームをクリア
     eventContent = '';
     signedEvent = null;
+
+    // 投稿完了イベントを発行
+    post?.();
   } catch (error) {
     console.error('送信エラー:', error);
     publishStatus = `送信エラー: ${error instanceof Error ? error.message : String(error)}`;

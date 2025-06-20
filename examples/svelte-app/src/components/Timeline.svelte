@@ -1,112 +1,148 @@
 <script lang="ts">
-import type { Subscription } from 'rxjs';
-import { onDestroy, onMount } from 'svelte';
-import type { NostrEvent } from '../../../../src/types.js';
-import { i18n } from '../i18n/i18n-store.js';
-import { publicKey } from '../store/app-state.js';
-import { relayService } from '../store/relay-store.js';
-import { timelineMode } from '../store/timeline-store.js';
-import Button from './ui/Button.svelte';
+  import type { Subscription } from "rxjs";
+  import { onDestroy, onMount } from "svelte";
+  import type { NostrEvent } from "../../../../src/types.js";
+  import { i18n } from "../i18n/i18n-store.js";
+  import { publicKey } from "../store/app-state.js";
+  import { relayService } from "../store/relay-store.js";
+  import { timelineMode } from "../store/timeline-store.js";
+  import Button from "./ui/Button.svelte";
 
-// 状態変数
-let events = $state<NostrEvent[]>([]);
-let loading = $state(true);
-let error = $state<string | null>(null);
-let currentPublicKey = $state<string | null>(null);
-let currentMode = $state<'global' | 'user'>('global');
+  // 状態変数
+  let events = $state<NostrEvent[]>([]);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let currentPublicKey = $state<string | null>(null);
+  let currentMode = $state<"global" | "user">("global");
 
-// サブスクリプション管理
-let timelineSubscription: Subscription | undefined = undefined;
+  // サブスクリプション管理
+  let timelineSubscription: Subscription | undefined = undefined;
 
-// ストアを監視
-$effect(() => {
-  currentPublicKey = $publicKey;
-  currentMode = $timelineMode;
+  // ストアを監視
+  $effect(() => {
+    currentPublicKey = $publicKey;
+    currentMode = $timelineMode;
 
-  // データの再読み込み
-  if ((currentMode === 'user' && currentPublicKey) || currentMode === 'global') {
+    // データの再読み込み
+    if (
+      (currentMode === "user" && currentPublicKey) ||
+      currentMode === "global"
+    ) {
+      loadTimeline();
+    }
+  });
+
+  // relayServiceのtimelineEventsストアを監視
+  const unsubscribe = relayService.timelineEvents.subscribe((value) => {
+    events = value;
+    loading = false;
+  });
+
+  // タイムラインデータの読み込み
+  async function loadTimeline() {
+    // ユーザーモードの場合は公開鍵が必要
+    if (currentMode === "user" && !currentPublicKey) {
+      error = "公開鍵が設定されていません";
+      loading = false;
+      return;
+    }
+
+    // 前回のサブスクリプションがあれば解除
+    if (timelineSubscription) {
+      timelineSubscription.unsubscribe();
+    }
+
+    // 初期化
+    loading = true;
+    error = null;
+
+    try {
+      // モードに応じたタイムラインを取得
+      timelineSubscription = await relayService.fetchTimelineByMode(
+        currentMode,
+        currentPublicKey,
+        {
+          limit: 50,
+          forceRefresh: false,
+        },
+      );
+    } catch (err) {
+      error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
+      loading = false;
+    }
+  }
+
+  // コンポーネント破棄時にサブスクリプションを解除
+  onDestroy(() => {
+    unsubscribe();
+
+    if (timelineSubscription) {
+      timelineSubscription.unsubscribe();
+    }
+  });
+
+  // 初期データ読み込み
+  onMount(() => {
     loadTimeline();
-  }
-});
+  });
 
-// relayServiceのtimelineEventsストアを監視
-const unsubscribe = relayService.timelineEvents.subscribe((value) => {
-  events = value;
-  loading = false;
-});
-
-// タイムラインデータの読み込み
-async function loadTimeline() {
-  // ユーザーモードの場合は公開鍵が必要
-  if (currentMode === 'user' && !currentPublicKey) {
-    error = '公開鍵が設定されていません';
-    loading = false;
-    return;
+  // 日付のフォーマット
+  function formatDate(timestamp: number): string {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString();
   }
 
-  // 前回のサブスクリプションがあれば解除
-  if (timelineSubscription) {
-    timelineSubscription.unsubscribe();
+  // 強制再読み込み処理
+  async function reloadTimeline() {
+    // 前回のサブスクリプションがあれば解除
+    if (timelineSubscription) {
+      timelineSubscription.unsubscribe();
+    }
+
+    // 初期化
+    loading = true;
+    error = null;
+
+    try {
+      // モードに応じたタイムラインを取得（強制更新）
+      timelineSubscription = await relayService.fetchTimelineByMode(
+        currentMode,
+        currentPublicKey,
+        {
+          limit: 50,
+          forceRefresh: true,
+        },
+      );
+    } catch (err) {
+      error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
+      loading = false;
+    }
   }
 
-  // 初期化
-  loading = true;
-  error = null;
+  // 再読込処理
+  export async function syncTimeline() {
+    // 前回のサブスクリプションがあれば解除;
+    if (timelineSubscription) {
+      timelineSubscription.unsubscribe();
+    }
 
-  try {
-    // モードに応じたタイムラインを取得
-    timelineSubscription = await relayService.fetchTimelineByMode(currentMode, currentPublicKey, {
-      limit: 50,
-      forceRefresh: false,
-    });
-  } catch (err) {
-    error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
-    loading = false;
+    // 初期化
+    error = null;
+
+    try {
+      // モードに応じたタイムラインを取得（強制更新）
+      timelineSubscription = await relayService.fetchTimelineByMode(
+        currentMode,
+        currentPublicKey,
+        {
+          limit: 50,
+          forceRefresh: false,
+        },
+      );
+    } catch (err) {
+      error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
-}
-
-// コンポーネント破棄時にサブスクリプションを解除
-onDestroy(() => {
-  unsubscribe();
-
-  if (timelineSubscription) {
-    timelineSubscription.unsubscribe();
-  }
-});
-
-// 初期データ読み込み
-onMount(() => {
-  loadTimeline();
-});
-
-// 日付のフォーマット
-function formatDate(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleString();
-}
-
-// 再読み込み処理
-async function reloadTimeline() {
-  // 前回のサブスクリプションがあれば解除
-  if (timelineSubscription) {
-    timelineSubscription.unsubscribe();
-  }
-
-  // 初期化
-  loading = true;
-  error = null;
-
-  try {
-    // モードに応じたタイムラインを取得（強制更新）
-    timelineSubscription = await relayService.fetchTimelineByMode(currentMode, currentPublicKey, {
-      limit: 50,
-      forceRefresh: true,
-    });
-  } catch (err) {
-    error = `タイムラインの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
-    loading = false;
-  }
-}
 </script>
 
 <div class="timeline-container">

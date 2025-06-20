@@ -449,14 +449,19 @@ export class RelayService {
    * @param authors 投稿を取得するユーザーの公開鍵配列
    * @param options オプション
    */
-  public fetchPostsFromUsers(authors: string[], options = { limit: 50 }): Subscription {
+  public fetchPostsFromUsers(
+    authors: string[],
+    options: { limit: number; forceRefresh: boolean } = { limit: 50, forceRefresh: false }
+  ): Subscription {
     if (authors.length === 0) {
       console.error('著者が指定されていません');
       return {} as Subscription;
     }
 
-    // timelineEventsを初期化
-    this.timelineEvents.set([]);
+    if (options.forceRefresh) {
+      // timelineEventsを初期化
+      this.timelineEvents.set([]);
+    }
 
     // 直近のイベントを取得
     const req = createRxBackwardReq();
@@ -534,7 +539,7 @@ export class RelayService {
       // グローバルフィードの場合はハードコードされたソースを使用
       const followedPubkeys = await this.fetchFollowListsFromSources(GLOBAL_FEED_SOURCES_HEX);
       console.log(`Global timeline with ${followedPubkeys.length} sources`);
-      return this.fetchPostsFromUsers(followedPubkeys, { limit: options.limit });
+      return this.fetchPostsFromUsers(followedPubkeys, options);
     }
 
     // userモードの場合は現在のユーザーを使用
@@ -542,7 +547,7 @@ export class RelayService {
       // フォローリスト取得
       const followedPubkeys = await this.fetchFollowList(currentUserPubkey);
       console.log(`User timeline with ${followedPubkeys.length} sources`);
-      return this.fetchPostsFromUsers(followedPubkeys, { limit: options.limit });
+      return this.fetchPostsFromUsers(followedPubkeys, options);
     }
 
     // それ以外の場合は空のタイムライン

@@ -5,7 +5,9 @@ import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import { relayService } from '../../store/relay-store.js';
 import { setTimelineMode, timelineMode } from '../../store/timeline-store.js';
 import PostForm from '../PostForm.svelte';
-import Timeline from '../Timeline.svelte';
+import type Timeline from '../Timeline.svelte';
+
+let timeline: Timeline;
 
 // 状態変数
 let login = $state(false);
@@ -46,6 +48,10 @@ async function switchToUser() {
       loading = false;
     }
   }
+}
+
+async function sync() {
+  await timeline.syncTimeline();
 }
 
 onMount(async () => {
@@ -91,11 +97,11 @@ onMount(async () => {
 
   {#if login}
     <!-- 認証済みの場合は投稿フォームを表示 -->
-    <PostForm />
+    <PostForm post={sync} />
   {/if}
 
   <!-- タイムライン -->
-  <Timeline />
+  <Timeline bind:this={timeline} />
 </div>
 
 <style>
