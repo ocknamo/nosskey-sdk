@@ -24,19 +24,42 @@ examples/svelte-app/
 │   └── nosskey.svg                # アプリアイコン
 ├── src/
 │   ├── components/
-│   │   ├── AccountScreen.svelte   # アカウント画面
-│   │   ├── AuthScreen.svelte      # 認証コンポーネント
 │   │   ├── FooterMenu.svelte      # フッターナビゲーション
-│   │   ├── ImportKeyScreen.svelte # 鍵インポート画面
-│   │   ├── NostrScreen.svelte     # Nostr機能コンポーネント
+│   │   ├── HeaderBar.svelte       # ヘッダーバー
 │   │   ├── PostForm.svelte        # 投稿フォーム
 │   │   ├── ProfileEditor.svelte   # プロフィール編集
 │   │   ├── RelayStatus.svelte     # リレー接続状態
-│   │   ├── SettingsScreen.svelte  # 設定画面
 │   │   ├── Timeline.svelte        # タイムライン表示
-│   │   ├── TimelineScreen.svelte  # タイムライン画面
-│   │   └── settings/*             # 設定関連コンポーネント
-│   ├── assets/*                    # svgアイコンなど
+│   │   ├── screens/               # 画面コンポーネント
+│   │   │   ├── AccountScreen.svelte    # アカウント画面
+│   │   │   ├── AuthScreen.svelte       # 認証画面
+│   │   │   ├── ImportKeyScreen.svelte  # 鍵インポート画面
+│   │   │   ├── SettingsScreen.svelte   # 設定画面
+│   │   │   └── TimelineScreen.svelte   # タイムライン画面
+│   │   ├── settings/              # 設定関連コンポーネント
+│   │   │   ├── AppInfo.svelte          # アプリ情報
+│   │   │   ├── ExportPWKComponent.svelte # PWKエクスポート
+│   │   │   ├── ExportSecretKey.svelte  # 秘密鍵エクスポート
+│   │   │   ├── LanguageSettings.svelte # 言語設定
+│   │   │   ├── LocalStorageSection.svelte # ローカルストレージ
+│   │   │   ├── LogoutSection.svelte    # ログアウト
+│   │   │   ├── RelayManagement.svelte  # リレー管理
+│   │   │   ├── SecretCacheSettings.svelte # キャッシュ設定
+│   │   │   ├── SettingSection.svelte   # 設定セクション基底
+│   │   │   └── theme-settings.svelte   # テーマ設定
+│   │   └── ui/                    # UIコンポーネント
+│   │       ├── Button.svelte           # 基本ボタン
+│   │       ├── DangerButton.svelte     # 危険操作ボタン
+│   │       ├── IconButton.svelte       # アイコンボタン
+│   │       ├── SecondaryButton.svelte  # セカンダリボタン
+│   │       └── WarningButton.svelte    # 警告ボタン
+│   ├── assets/                    # SVGアイコンなど
+│   │   ├── account-icon.svg
+│   │   ├── copy-icon.svg
+│   │   ├── home-icon.svg
+│   │   ├── nosskey.svg
+│   │   ├── setting-icon.svg
+│   │   └── svelte.svg
 │   ├── i18n/                      # 多言語対応関連
 │   │   ├── i18n-store.ts          # 言語ストア
 │   │   └── translations.ts        # 翻訳データ
@@ -46,12 +69,15 @@ examples/svelte-app/
 │   │   └── test-rxnostr.ts        # テスト用ユーティリティ 
 │   ├── store/
 │   │   ├── app-state.ts           # アプリケーション状態管理
-│   │   └── relay-store.ts         # リレー状態管理
+│   │   ├── relay-store.ts         # リレー状態管理
+│   │   └── timeline-store.ts      # タイムライン状態管理
 │   ├── utils/
 │   │   ├── bech32-converter.ts    # Bech32変換ユーティリティ
 │   │   └── bech32-converter.spec.ts # 変換テスト
+│   ├── app.css                    # グローバルスタイル
 │   ├── App.svelte                 # メインアプリコンポーネント
-│   └── main.ts                    # エントリーポイント
+│   ├── main.ts                    # エントリーポイント
+│   └── vite-env.d.ts              # Vite型定義
 ├── index.html
 ├── package.json
 └── vite.config.ts
@@ -78,6 +104,12 @@ examples/svelte-app/
 - `relayService` - リレーサービスのシングルトンインスタンス
 - リレーリストの初期化・保存機能
 - ストレージとの同期機能
+
+#### timeline-store.ts
+タイムライン関連の状態管理を行うストア：
+- タイムラインイベントの管理
+- イベントの取得・更新・削除機能
+- タイムライン表示状態の管理
 
 ### 3.2 サービス
 
@@ -135,9 +167,11 @@ Nostrリレーとの通信を管理するサービス：
 
 設定画面は複数の独立した設定セクションで構成されています：
 
+- **SettingSection.svelte** - 設定セクションの基底コンポーネント（共通レイアウトとスタイル）
 - **RelayManagement.svelte** - リレーの追加・削除・リセット機能
 - **SecretCacheSettings.svelte** - 秘密鍵キャッシュの設定
 - **LanguageSettings.svelte** - アプリケーション言語の切り替え
+- **theme-settings.svelte** - テーマ設定（ダークモード・ライトモード切り替え）
 - **LogoutSection.svelte** - ログアウト機能
 - **LocalStorageSection.svelte** - ローカルストレージのクリア機能
 - **ExportPWKComponent.svelte** - PWKデータのエクスポート機能
@@ -145,6 +179,12 @@ Nostrリレーとの通信を管理するサービス：
 - **AppInfo.svelte** - アプリケーション情報の表示
 
 ### 3.5 共通コンポーネント
+
+#### HeaderBar.svelte
+アプリケーション上部のヘッダーバーコンポーネント：
+- アプリケーションタイトルとロゴの表示
+- 現在の画面タイトルの表示
+- 統一されたヘッダーデザインの提供
 
 #### FooterMenu.svelte
 アプリケーションナビゲーションを担当するコンポーネント：
@@ -158,11 +198,53 @@ Nostrメッセージ作成・投稿機能を担当するコンポーネント：
 - リレーへのメッセージ送信機能
 - 投稿状態とエラーハンドリング
 
+#### ProfileEditor.svelte
+ユーザープロフィール編集機能を担当するコンポーネント：
+- プロフィール情報の表示・編集
+- プロフィールデータの保存機能
+- プロフィール画像やメタデータの管理
+
 #### RelayStatus.svelte
 リレー接続状態と公開鍵を表示するコンポーネント：
 - 公開鍵情報の表示（短縮形式とnpub形式）
 - リレー接続状態の視覚的な表示
 - ステータスに応じた色分け表示
+
+#### Timeline.svelte
+タイムライン表示機能を担当するコンポーネント：
+- Nostrイベントの時系列表示
+- リアルタイムでのイベント更新
+- イベントの詳細表示機能
+
+### 3.6 UIコンポーネント
+
+アプリケーション全体で統一されたUIコンポーネント群：
+
+#### Button.svelte
+基本的なボタンコンポーネント：
+- 標準的なアクション用ボタン
+- 統一されたスタイルとホバー効果
+- クリックイベントハンドリング
+
+#### SecondaryButton.svelte
+セカンダリアクション用ボタンコンポーネント：
+- サブアクションやキャンセル操作用
+- 控えめなスタイルデザイン
+
+#### WarningButton.svelte
+警告を伴うアクション用ボタンコンポーネント：
+- 注意が必要な操作用（例：データリセット）
+- 警告色を使用したスタイル
+
+#### DangerButton.svelte
+危険なアクション用ボタンコンポーネント：
+- 削除やログアウトなどの重要な操作用
+- 赤色系の警告色を使用
+
+#### IconButton.svelte
+アイコン付きボタンコンポーネント：
+- アイコンとテキストを組み合わせたボタン
+- 視覚的に分かりやすいアクション表現
 
 ## 4. 多言語対応
 

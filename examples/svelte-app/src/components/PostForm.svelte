@@ -117,7 +117,6 @@ async function publishEvent() {
   <h2>{$i18n.t.nostr.eventCreation}</h2>
 
   <div class="form-group">
-    <label for="content">{$i18n.t.nostr.content}</label>
     <textarea
       id="content"
       value={eventContent}
@@ -183,16 +182,8 @@ async function publishEvent() {
     margin-bottom: 15px;
   }
 
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: var(--color-text);
-    transition: color 0.3s ease;
-  }
-
   textarea {
-    width: 90%;
+    width: calc(100% - 20px);
     padding: 10px;
     border: 1px solid var(--color-border);
     border-radius: 8px;

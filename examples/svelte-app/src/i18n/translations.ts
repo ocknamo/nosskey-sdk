@@ -90,7 +90,6 @@ export interface TranslationData {
     copyToClipboard: string;
     copiedToClipboard: string;
     eventCreation: string;
-    content: string;
     contentPlaceholder: string;
     sign: string;
     publish: string;
@@ -307,7 +306,6 @@ export const ja: TranslationData = {
     copyToClipboard: 'クリップボードにコピー',
     copiedToClipboard: 'コピーしました',
     eventCreation: 'イベント作成',
-    content: '内容:',
     contentPlaceholder: 'ここにメッセージを入力...',
     sign: '署名',
     publish: '公開',
@@ -533,7 +531,6 @@ export const en: TranslationData = {
     copyToClipboard: 'Copy to Clipboard',
     copiedToClipboard: 'Copied',
     eventCreation: 'Create Event',
-    content: 'Content:',
     contentPlaceholder: 'Enter your message here...',
     sign: 'Sign',
     publish: 'Publish',

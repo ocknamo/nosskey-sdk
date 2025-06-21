@@ -5,9 +5,10 @@ import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import { relayService } from '../../store/relay-store.js';
 import { setTimelineMode, timelineMode } from '../../store/timeline-store.js';
 import PostForm from '../PostForm.svelte';
+// biome-ignore lint: svelte
 import Timeline from '../Timeline.svelte';
 
-let timeline: any;
+let timeline: Timeline;
 
 // 状態変数
 let login = $state(false);
