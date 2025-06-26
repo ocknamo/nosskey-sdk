@@ -231,7 +231,7 @@ $effect(() => {
 
 <div class="auth-container">
   <img src={NosskeyImage} alt="Nosskey hero" width="100" height="100" />
-  <h1>{$i18n.t.auth.title}</h1>
+  <h1 class="screen-title">{$i18n.t.auth.title}</h1>
   <p>{$i18n.t.auth.subtitle}</p>
 
   <!-- アプリ説明 -->
