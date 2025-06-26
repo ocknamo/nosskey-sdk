@@ -5,6 +5,7 @@ import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import ProfileEditor from '../ProfileEditor.svelte';
 import RelayStatus from '../RelayStatus.svelte';
+import CardSection from '../ui/CardSection.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
 // Svelte v5のrunesモードに対応した記法
@@ -47,11 +48,10 @@ $effect(() => {
 </script>
 
 <!-- デモアプリとドメイン変更の注意喚起セクション -->
-<div class="warning-section">
-  <h2>{$i18n.t.appWarning.title}</h2>
-  <p class="warning-text">{$i18n.t.appWarning.demoDescription}</p>
-  <p class="warning-text">{$i18n.t.appWarning.domainChange}</p>
-</div>
+<CardSection title={$i18n.t.appWarning.title}>
+  <p>{$i18n.t.appWarning.demoDescription}</p>
+  <p>{$i18n.t.appWarning.domainChange}</p>
+</CardSection>
 
 <div class="account-screen">
   {#if !login}
@@ -83,37 +83,5 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
-  }
-
-  /* 警告セクションのスタイル */
-  .warning-section {
-    border-left: 4px solid var(--color-primary);
-    background-color: var(--color-tertiary);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease;
-  }
-
-  .warning-section h2 {
-    color: var(--color-titles);
-    margin-top: 0;
-    margin-bottom: 12px;
-    transition: color 0.3s ease;
-  }
-
-  .warning-text {
-    color: var(--color-text);
-    margin-bottom: 10px;
-    line-height: 1.5;
-    text-align: left;
-    transition: color 0.3s ease;
-  }
-
-  .warning-text:last-child {
-    margin-bottom: 0;
   }
 </style>

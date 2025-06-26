@@ -1,15 +1,15 @@
 <script lang="ts">
-// 共通の設定セクションコンポーネント
+// 共通のカードセクションコンポーネント
 export let title: string;
 </script>
 
-<div class="settings-section">
+<div class="card-section">
   <h2>{title}</h2>
   <slot />
 </div>
 
 <style>
-  .settings-section {
+  .card-section {
     background-color: var(--color-card);
     padding: 20px 60px;
     border-radius: 12px;
@@ -22,7 +22,7 @@ export let title: string;
   }
 
   @media (max-width: 900px) {
-    .settings-section {
+    .card-section {
       padding: 20px;
     }
   }
@@ -30,6 +30,7 @@ export let title: string;
   h2 {
     margin-bottom: 15px;
     color: var(--color-titles);
+    text-align: left;
     transition: color 0.3s ease;
   }
 </style>

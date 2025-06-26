@@ -1,8 +1,8 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { logout } from '../../store/app-state.js';
+import CardSection from '../ui/CardSection.svelte';
 import DangerButton from '../ui/DangerButton.svelte';
-import SettingSection from './SettingSection.svelte';
 
 // 状態変数
 let logoutMessage = $state('');
@@ -19,7 +19,7 @@ function logoutFromApp() {
 }
 </script>
 
-<SettingSection title={$i18n.t.settings.logout.title}>
+<CardSection title={$i18n.t.settings.logout.title}>
   <p>
     {$i18n.t.settings.logout.description}
   </p>
@@ -33,7 +33,7 @@ function logoutFromApp() {
       {logoutMessage}
     </div>
   {/if}
-</SettingSection>
+</CardSection>
 
 <style>
   p {

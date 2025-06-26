@@ -5,6 +5,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { currentScreen } from '../../store/app-state.js';
+import CardSection from '../ui/CardSection.svelte';
 
 // 状態変数
 let isSupported = $state(false);
@@ -242,9 +243,7 @@ $effect(() => {
     <div class="loading">{$i18n.t.auth.loading}</div>
   {:else}
     <!-- メインセクション -->
-    <div class="auth-section main-section">
-      <h2>{$i18n.t.auth.accountTitle}</h2>
-
+    <CardSection title={$i18n.t.auth.accountTitle}>
       <!-- 既存パスキーでログイン -->
       <div class="login-option">
         <h3>{$i18n.t.auth.existingPasskeyTitle}</h3>
@@ -303,11 +302,10 @@ $effect(() => {
           </div>
         {/if}
       </div>
-    </div>
+    </CardSection>
 
     <!-- その他のログインオプション -->
-    <div class="auth-section main-section">
-      <h2>{$i18n.t.auth.importSectionTitle}</h2>
+    <CardSection title={$i18n.t.auth.importSectionTitle}>
       <div class="login-option">
         <h3>{$i18n.t.auth.importSectionDesc}</h3>
         <button
@@ -368,12 +366,12 @@ $effect(() => {
           {/if}
         </div>
       </div>
-    </div>
+    </CardSection>
 
     <!-- 開発者向けセクション（折りたたみ可能） -->
     <details class="developer-section">
       <summary>{$i18n.t.auth.developerSection}</summary>
-      <div class="auth-section developer-content">
+      <CardSection title="">
         <p>{$i18n.t.auth.prfDebugInfo}</p>
 
         {#if !isPrfChecked}
@@ -390,7 +388,7 @@ $effect(() => {
             <p>{$i18n.t.auth.prfSupportedMessage}</p>
           </div>
         {/if}
-      </div>
+      </CardSection>
     </details>
   {/if}
 
@@ -421,20 +419,6 @@ $effect(() => {
     transition: color 0.3s ease;
   }
 
-  .auth-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    border: 1px solid var(--color-border-light);
-    border-radius: 8px;
-    background-color: var(--color-overlay);
-    text-align: left;
-  }
-
-  .main-section {
-    border-left: 4px solid var(--color-button-primary);
-    background-color: var(--color-info-bg);
-  }
-
   .info-box {
     margin: 15px 0;
     padding: 15px;
@@ -456,11 +440,6 @@ $effect(() => {
     padding: 10px;
     background-color: var(--color-surface-hover);
     border-radius: 4px;
-  }
-
-  .developer-content {
-    background-color: var(--color-surface-hover);
-    border-color: var(--color-border-strong);
   }
 
   .username-input {
@@ -642,10 +621,6 @@ $effect(() => {
   @media (max-width: 480px) {
     .auth-container {
       padding: 15px 10px;
-    }
-
-    .auth-section {
-      padding: 15px;
     }
 
     .create-button {

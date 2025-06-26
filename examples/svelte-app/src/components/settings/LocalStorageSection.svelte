@@ -1,8 +1,8 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { currentScreen, resetState } from '../../store/app-state.js';
+import CardSection from '../ui/CardSection.svelte';
 import DangerButton from '../ui/DangerButton.svelte';
-import SettingSection from './SettingSection.svelte';
 
 // 状態変数
 let clearResult = $state('');
@@ -31,7 +31,7 @@ function clearLocalStorage() {
 }
 </script>
 
-<SettingSection title={$i18n.t.settings.localStorage.title}>
+<CardSection title={$i18n.t.settings.localStorage.title}>
   <p>
     {$i18n.t.settings.localStorage.description}
   </p>
@@ -45,7 +45,7 @@ function clearLocalStorage() {
       {clearResult}
     </div>
   {/if}
-</SettingSection>
+</CardSection>
 
 <style>
   p {

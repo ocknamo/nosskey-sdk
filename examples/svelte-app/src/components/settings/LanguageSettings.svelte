@@ -1,6 +1,6 @@
 <script lang="ts">
 import { changeLanguage, i18n } from '../../i18n/i18n-store.js';
-import SettingSection from './SettingSection.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 // 状態変数
 let languageMessage = $state('');
@@ -15,7 +15,7 @@ function updateLanguage(lang: 'ja' | 'en') {
 }
 </script>
 
-<SettingSection title={$i18n.t.settings.language.title}>
+<CardSection title={$i18n.t.settings.language.title}>
   <div class="language-selector">
     <p>{$i18n.t.settings.language.selectLanguage}</p>
     <div class="radio-group">
@@ -47,7 +47,7 @@ function updateLanguage(lang: 'ja' | 'en') {
       </div>
     {/if}
   </div>
-</SettingSection>
+</CardSection>
 
 <style>
   p {

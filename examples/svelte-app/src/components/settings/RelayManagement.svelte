@@ -3,9 +3,9 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { defaultRelays } from '../../store/app-state.js';
 import { activeRelays } from '../../store/relay-store.js';
 import Button from '../ui/Button.svelte';
+import CardSection from '../ui/CardSection.svelte';
 import DangerButton from '../ui/DangerButton.svelte';
 import SecondaryButton from '../ui/SecondaryButton.svelte';
-import SettingSection from './SettingSection.svelte';
 
 // 状態変数
 let newRelay = $state('');
@@ -76,7 +76,7 @@ function resetRelays() {
 }
 </script>
 
-<SettingSection title={$i18n.t.settings.relayManagement.title}>
+<CardSection title={$i18n.t.settings.relayManagement.title}>
   <p>{$i18n.t.settings.relayManagement.description}</p>
 
   <div class="relay-list">
@@ -113,7 +113,7 @@ function resetRelays() {
       </div>
     {/if}
   </div>
-</SettingSection>
+</CardSection>
 
 <style>
   p {

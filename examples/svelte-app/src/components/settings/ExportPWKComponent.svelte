@@ -3,9 +3,9 @@ import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import Button from '../ui/Button.svelte';
+import CardSection from '../ui/CardSection.svelte';
 import IconButton from '../ui/IconButton.svelte';
 import WarningButton from '../ui/WarningButton.svelte';
-import SettingSection from './SettingSection.svelte';
 
 // PWKエクスポート関連の状態変数
 let showExportSection = $state(false);
@@ -82,7 +82,7 @@ function savePWKToFile() {
 }
 </script>
 
-<SettingSection title={$i18n.t.settings.exportPWK.title}>
+<CardSection title={$i18n.t.settings.exportPWK.title}>
   <p class="info-text">
     {$i18n.t.settings.exportPWK.description}
   </p>
@@ -141,7 +141,7 @@ function savePWKToFile() {
       {/if}
     </div>
   {/if}
-</SettingSection>
+</CardSection>
 
 <style>
   p {

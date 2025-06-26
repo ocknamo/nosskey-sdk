@@ -1,11 +1,11 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
-import SettingSection from './SettingSection.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
 </script>
 
-<SettingSection title={$i18n.t.settings.appInfo.title}>
+<CardSection title={$i18n.t.settings.appInfo.title}>
   <div class="info-item">
     <div class="label">{$i18n.t.settings.appInfo.version}</div>
     <div class="value">0.1.0</div>
@@ -18,7 +18,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
     <div class="label">{$i18n.t.settings.appInfo.commitHash}</div>
     <div class="value">{commitHash}</div>
   </div>
-</SettingSection>
+</CardSection>
 
 <style>
   .info-item {

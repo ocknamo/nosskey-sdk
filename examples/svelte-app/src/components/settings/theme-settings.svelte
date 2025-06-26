@@ -1,7 +1,7 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { type ThemeMode, currentTheme } from '../../store/app-state.js';
-import SettingSection from './SettingSection.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 let selectedTheme: ThemeMode = 'auto';
 
@@ -43,7 +43,7 @@ const handleThemeChange = (event: Event) => {
 };
 </script>
 
-<SettingSection title={$i18n.t.settings.theme.title}>
+<CardSection title={$i18n.t.settings.theme.title}>
   <p class="description">{$i18n.t.settings.theme.description}</p>
 
   <div class="theme-selection">
@@ -59,7 +59,7 @@ const handleThemeChange = (event: Event) => {
       <option value="dark">{$i18n.t.settings.theme.dark}</option>
     </select>
   </div>
-</SettingSection>
+</CardSection>
 
 <style>
   .description {
