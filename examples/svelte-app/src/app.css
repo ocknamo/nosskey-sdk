@@ -203,6 +203,21 @@ select:focus {
   box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
 }
 
+/* リストのスタイル */
+ul,
+ol {
+  text-align: left;
+  padding-left: 20px;
+  margin: 16px 0;
+}
+
+ul li,
+ol li {
+  margin-bottom: 8px;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
 /* スクロールバーのスタイル */
 ::-webkit-scrollbar {
   width: 8px;

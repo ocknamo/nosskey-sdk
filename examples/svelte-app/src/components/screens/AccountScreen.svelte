@@ -49,8 +49,12 @@ $effect(() => {
 
 <!-- デモアプリとドメイン変更の注意喚起セクション -->
 <CardSection title={$i18n.t.appWarning.title}>
-  <p>{$i18n.t.appWarning.demoDescription}</p>
-  <p>{$i18n.t.appWarning.domainChange}</p>
+  <ul>
+    <li>{$i18n.t.appWarning.demoDescription}</li>
+    <li>{$i18n.t.appWarning.prfCompatibility}</li>
+    <li>{$i18n.t.appWarning.prfSoftwarePasskey}</li>
+    <li>{$i18n.t.appWarning.domainChange}</li>
+  </ul>
 </CardSection>
 
 <div class="account-screen">

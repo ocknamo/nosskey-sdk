@@ -29,6 +29,8 @@ export interface TranslationData {
     title: string;
     domainChange: string;
     demoDescription: string;
+    prfCompatibility: string;
+    prfSoftwarePasskey: string;
   };
   auth: {
     title: string;
@@ -76,6 +78,14 @@ export interface TranslationData {
     pwkLoginButton: string;
     pwkLoginProcessing: string;
     orText: string;
+    // 改善されたセクション分類
+    quickStartTitle: string;
+    quickStartDesc: string;
+    existingUserTitle: string;
+    existingUserDesc: string;
+    advancedOptionsTitle: string;
+    newUserRecommended: string;
+    returningUserRecommended: string;
   };
   nostr: {
     title: string;
@@ -239,8 +249,13 @@ export const ja: TranslationData = {
   appWarning: {
     title: '注意事項',
     domainChange:
-      'パスキーは異なるドメインでは使用できません。したがってNosskeyに対応していても異なるドメイン下のアプリではPWK(Passkey Wrapped Key)は使えないため、秘密鍵のエクスポートが必要です',
-    demoDescription: 'このアプリはNostr鍵管理のUXのデモンストレーション目的で提供されています。',
+      'パスキーは異なるドメインでは使用できないため、ドメインの異なるアプリで使用するにはこれまで通り秘密鍵のエクスポートが必要です。',
+    demoDescription:
+      'このアプリはパスキーのPRF拡張を用いたNostr鍵管理のUXのデモンストレーションです。そのためクライアントとしての機能は限定的です。',
+    prfCompatibility:
+      '一部の端末・環境ではPRF拡張が**まだ**サポートされていません。Windows HelloやFirefox（デフォルト設定）では利用できません。',
+    prfSoftwarePasskey:
+      'BitwardenなどのソフトウェアパスキーではPRF拡張が対応していない場合があります。',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -292,6 +307,14 @@ export const ja: TranslationData = {
     pwkLoginButton: 'PWKデータでログイン',
     pwkLoginProcessing: '処理中...',
     orText: 'または',
+    // 改善されたセクション分類
+    quickStartTitle: 'はじめる',
+    quickStartDesc: '新規ユーザー向けの最も簡単な方法',
+    existingUserTitle: '既存ユーザー',
+    existingUserDesc: '以前に作成したアカウントでログイン',
+    advancedOptionsTitle: '高度なオプション',
+    newUserRecommended: '新規ユーザーにおすすめ',
+    returningUserRecommended: '既存ユーザーにおすすめ',
   },
   nostr: {
     title: 'Nostr',
@@ -462,9 +485,12 @@ export const en: TranslationData = {
   appWarning: {
     title: 'Important Notice',
     domainChange:
-      'Passkey cannot be used in different domains. Therefore, even if Nosskey is supported, PWK(Passkey Wrapped Key) cannot be used in apps under different domains, so if you want to use them, you must export your private key.',
+      'Passkeys cannot be used across different domains, so traditional private key export is still required to use with applications on different domains.',
     demoDescription:
-      'This application is provided for the purpose of demonstrating the UX of Nostr key management.',
+      'This application is a UX demonstration of Nostr key management using Passkey PRF extension. Therefore, its functionality as a client is limited.',
+    prfCompatibility:
+      'PRF extension is not **yet** supported on some devices and environments. It is not available on Windows Hello or Firefox (default settings).',
+    prfSoftwarePasskey: 'Software passkeys like Bitwarden may not support PRF extension.',
   },
   auth: {
     title: 'Nosskey Demo',
@@ -517,6 +543,14 @@ export const en: TranslationData = {
     pwkLoginButton: 'Login with PWK Data',
     pwkLoginProcessing: 'Processing...',
     orText: 'or',
+    // 改善されたセクション分類
+    quickStartTitle: 'Get Started',
+    quickStartDesc: 'Simplest way for new users',
+    existingUserTitle: 'Returning Users',
+    existingUserDesc: 'Login with previously created account',
+    advancedOptionsTitle: 'Advanced Options',
+    newUserRecommended: 'Recommended for new users',
+    returningUserRecommended: 'Recommended for existing users',
   },
   nostr: {
     title: 'Nostr',
