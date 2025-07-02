@@ -52,7 +52,6 @@ $effect(() => {
   <ul>
     <li>{$i18n.t.appWarning.demoDescription}</li>
     <li>{$i18n.t.appWarning.prfCompatibility}</li>
-    <li>{$i18n.t.appWarning.prfSoftwarePasskey}</li>
     <li>{$i18n.t.appWarning.domainChange}</li>
   </ul>
 </CardSection>

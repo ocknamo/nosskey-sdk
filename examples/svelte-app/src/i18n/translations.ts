@@ -30,7 +30,6 @@ export interface TranslationData {
     domainChange: string;
     demoDescription: string;
     prfCompatibility: string;
-    prfSoftwarePasskey: string;
   };
   auth: {
     title: string;
@@ -253,9 +252,7 @@ export const ja: TranslationData = {
     demoDescription:
       'このアプリはパスキーのPRF拡張を用いたNostr鍵管理のUXのデモンストレーションです。そのためクライアントとしての機能は限定的です。',
     prfCompatibility:
-      '一部の端末・環境ではPRF拡張が**まだ**サポートされていません。Windows HelloやFirefox（デフォルト設定）では利用できません。',
-    prfSoftwarePasskey:
-      'BitwardenなどのソフトウェアパスキーではPRF拡張が対応していない場合があります。',
+      '一部の端末・環境ではPRF拡張が**まだ**サポートされていません。Windows HelloやFirefox（デフォルト設定）では利用できません。また、BitwardenなどのソフトウェアパスキーではPRF拡張が対応していない場合があります。',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -489,8 +486,7 @@ export const en: TranslationData = {
     demoDescription:
       'This application is a UX demonstration of Nostr key management using Passkey PRF extension. Therefore, its functionality as a client is limited.',
     prfCompatibility:
-      'PRF extension is not **yet** supported on some devices and environments. It is not available on Windows Hello or Firefox (default settings).',
-    prfSoftwarePasskey: 'Software passkeys like Bitwarden may not support PRF extension.',
+      'PRF extension is not **yet** supported on some devices and environments. It is not available on Windows Hello or Firefox (default settings). Additionally, software passkeys like Bitwarden may not support PRF extension.',
   },
   auth: {
     title: 'Nosskey Demo',

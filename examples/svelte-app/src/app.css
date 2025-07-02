@@ -216,6 +216,7 @@ ol li {
   margin-bottom: 8px;
   color: var(--color-text);
   line-height: 1.6;
+  font-size: 0.8em;
 }
 
 /* スクロールバーのスタイル */
