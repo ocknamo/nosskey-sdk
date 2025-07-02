@@ -18,9 +18,12 @@ let createdCredentialId = $state(''); // 新規作成したパスキーのID
 let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
 // UI表示制御
-const showAdvancedOptions = $state(false);
-const showDeveloperSection = $state(false);
-const showPWKTextarea = $state(false);
+// biome-ignore lint: svelte
+let showAdvancedOptions = $state(false);
+// biome-ignore lint: svelte
+let showDeveloperSection = $state(false);
+// biome-ignore lint: svelte
+let showPWKTextarea = $state(false);
 
 // PWKインポート関連の状態変数
 // biome-ignore lint: svelte
