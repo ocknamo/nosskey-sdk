@@ -28,7 +28,7 @@ examples/svelte-app/
 │   │   ├── HeaderBar.svelte       # ヘッダーバー
 │   │   ├── PostForm.svelte        # 投稿フォーム
 │   │   ├── ProfileEditor.svelte   # プロフィール編集
-│   │   ├── RelayStatus.svelte     # リレー接続状態
+│   │   ├── PublicKeyDisplay.svelte # 公開鍵表示
 │   │   ├── Timeline.svelte        # タイムライン表示
 │   │   ├── screens/               # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
@@ -43,7 +43,7 @@ examples/svelte-app/
 │   │   │   ├── LanguageSettings.svelte # 言語設定
 │   │   │   ├── LocalStorageSection.svelte # ローカルストレージ
 │   │   │   ├── LogoutSection.svelte    # ログアウト
-│   │   │   ├── RelayManagement.svelte  # リレー管理
+│   │   │   ├── RelayManagement.svelte  # リレー管理（接続状況表示付き）
 │   │   │   ├── SecretCacheSettings.svelte # キャッシュ設定
 │   │   │   ├── SettingSection.svelte   # 設定セクション基底
 │   │   │   └── theme-settings.svelte   # テーマ設定
@@ -139,7 +139,7 @@ Nostrリレーとの通信を管理するサービス：
 アカウント情報と認証を担当するコンポーネント：
 - 認証状態による表示切り替え
   - 未認証時はAuthScreenを表示
-  - 認証済み時はアカウント情報（プロフィール、リレー状態）を表示
+  - 認証済み時はアカウント情報（公開鍵情報、プロフィール）を表示
 - ローカルストレージと認証状態の整合性チェック
 
 #### AuthScreen.svelte
@@ -168,7 +168,7 @@ Nostrリレーとの通信を管理するサービス：
 設定画面は複数の独立した設定セクションで構成されています：
 
 - **SettingSection.svelte** - 設定セクションの基底コンポーネント（共通レイアウトとスタイル）
-- **RelayManagement.svelte** - リレーの追加・削除・リセット機能
+- **RelayManagement.svelte** - リレーの追加・削除・リセット機能、接続状況表示
 - **SecretCacheSettings.svelte** - 秘密鍵キャッシュの設定
 - **LanguageSettings.svelte** - アプリケーション言語の切り替え
 - **theme-settings.svelte** - テーマ設定（ダークモード・ライトモード切り替え）
@@ -204,11 +204,11 @@ Nostrメッセージ作成・投稿機能を担当するコンポーネント：
 - プロフィールデータの保存機能
 - プロフィール画像やメタデータの管理
 
-#### RelayStatus.svelte
-リレー接続状態と公開鍵を表示するコンポーネント：
+#### PublicKeyDisplay.svelte
+公開鍵情報を表示するコンポーネント：
 - 公開鍵情報の表示（短縮形式とnpub形式）
-- リレー接続状態の視覚的な表示
-- ステータスに応じた色分け表示
+- npub形式のクリップボードコピー機能
+- コピー完了メッセージの表示
 
 #### Timeline.svelte
 タイムライン表示機能を担当するコンポーネント：

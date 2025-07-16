@@ -1,28 +1,14 @@
 <script lang="ts">
-import { onDestroy } from 'svelte';
 import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
-import type { RelayInfo } from '../services/relay.service.js';
 import { publicKey } from '../store/app-state.js';
-import { relayService } from '../store/relay-store.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
 import IconButton from './ui/IconButton.svelte';
 
 // 状態変数
 let publicKeyShort = $state('');
 let npubAddress = $state('');
-let relayStatuses = $state<{ [url: string]: RelayInfo }>({});
 let showCopiedMessage = $state(false);
-
-// リレーサービスからの状態をサブスクライブ
-const unsubscribeRelayStatus = relayService.relayStatuses.subscribe((value) => {
-  relayStatuses = value;
-});
-
-// コンポーネント破棄時にサブスクリプションを解除
-onDestroy(() => {
-  unsubscribeRelayStatus();
-});
 
 // パブリックキーを取得
 let publicKeyValue = '';
@@ -61,7 +47,7 @@ function copyNpubToClipboard() {
 }
 </script>
 
-<div class="relay-container">
+<div class="pubkey-container">
   <div class="pubkey-display">
     <h3>{$i18n.t.nostr.publicKey}</h3>
     <p>{publicKeyShort}</p>
@@ -84,30 +70,10 @@ function copyNpubToClipboard() {
       {/if}
     </div>
   </div>
-
-  <div class="relay-status">
-    <h3>{$i18n.t.nostr.relayStatus}</h3>
-    <ul>
-      {#each Object.entries(relayStatuses) as [url, status]}
-        <li>
-          <span class="relay-url">{url}</span>
-          <span class="status-badge status-{status.status}">
-            {status.status === "active"
-              ? $i18n.t.nostr.relayStates.connected
-              : status.status === "connecting"
-                ? $i18n.t.nostr.relayStates.connecting
-                : status.status === "closed"
-                  ? $i18n.t.nostr.relayStates.disconnected
-                  : $i18n.t.nostr.relayStates.unknown}
-          </span>
-        </li>
-      {/each}
-    </ul>
-  </div>
 </div>
 
 <style>
-  .relay-container {
+  .pubkey-container {
     background-color: var(--color-surface-alt);
     padding: 15px;
     border-radius: 5px;
@@ -116,7 +82,6 @@ function copyNpubToClipboard() {
 
   .pubkey-display {
     word-break: break-all;
-    margin-bottom: 20px;
   }
 
   .npub-container {
@@ -142,56 +107,6 @@ function copyNpubToClipboard() {
     color: var(--color-success);
     font-size: 0.8rem;
     font-weight: bold;
-  }
-
-  .relay-status {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: var(--color-surface);
-    border-radius: 4px;
-  }
-
-  .relay-status ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .relay-status li {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    padding: 5px;
-    border-bottom: 1px solid var(--color-border-light);
-  }
-
-  .relay-url {
-    font-family: monospace;
-    word-break: break-all;
-  }
-
-  .status-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    margin-left: 10px;
-    white-space: nowrap;
-  }
-
-  .status-active {
-    background-color: var(--color-success);
-    color: white;
-  }
-
-  .status-connecting {
-    background-color: var(--color-warning);
-    color: black;
-  }
-
-  .status-closed,
-  .status-error {
-    background-color: var(--color-error);
-    color: white;
   }
 
   h3 {

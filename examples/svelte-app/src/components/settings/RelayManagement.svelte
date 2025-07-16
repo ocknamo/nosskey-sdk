@@ -1,7 +1,9 @@
 <script lang="ts">
+import { onDestroy } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
+import type { RelayInfo } from '../../services/relay.service.js';
 import { defaultRelays } from '../../store/app-state.js';
-import { activeRelays } from '../../store/relay-store.js';
+import { activeRelays, relayService } from '../../store/relay-store.js';
 import Button from '../ui/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import DangerButton from '../ui/DangerButton.svelte';
@@ -11,10 +13,21 @@ import SecondaryButton from '../ui/SecondaryButton.svelte';
 let newRelay = $state('');
 let relayMessage = $state('');
 let relays = $state<string[]>([]);
+let relayStatuses = $state<{ [url: string]: RelayInfo }>({});
 
 // ストアを監視して更新
 activeRelays.subscribe((value) => {
   relays = value;
+});
+
+// リレーサービスからの状態をサブスクライブ
+const unsubscribeRelayStatus = relayService.relayStatuses.subscribe((value) => {
+  relayStatuses = value;
+});
+
+// コンポーネント破棄時にサブスクリプションを解除
+onDestroy(() => {
+  unsubscribeRelayStatus();
 });
 
 // リレーを追加する関数
@@ -74,6 +87,27 @@ function resetRelays() {
     relayMessage = '';
   }, 3000);
 }
+
+// リレーの接続状況を取得
+function getRelayStatus(url: string) {
+  const status = relayStatuses[url];
+  if (!status) return 'unknown';
+  return status.status;
+}
+
+// ステータスバッジのテキストを取得
+function getStatusText(status: string) {
+  switch (status) {
+    case 'active':
+      return $i18n.t.nostr.relayStates.connected;
+    case 'connecting':
+      return $i18n.t.nostr.relayStates.connecting;
+    case 'closed':
+      return $i18n.t.nostr.relayStates.disconnected;
+    default:
+      return $i18n.t.nostr.relayStates.unknown;
+  }
+}
 </script>
 
 <CardSection title={$i18n.t.settings.relayManagement.title}>
@@ -88,9 +122,14 @@ function resetRelays() {
         {#each relays as relay}
           <li>
             <span class="relay-url">{relay}</span>
-            <DangerButton onclick={() => removeRelay(relay)} size="small">
-              {$i18n.t.settings.relayManagement.delete}
-            </DangerButton>
+            <div class="relay-actions">
+              <span class="status-badge status-{getRelayStatus(relay)}">
+                {getStatusText(getRelayStatus(relay))}
+              </span>
+              <DangerButton onclick={() => removeRelay(relay)} size="small">
+                {$i18n.t.settings.relayManagement.delete}
+              </DangerButton>
+            </div>
           </li>
         {/each}
       </ul>
@@ -145,7 +184,38 @@ function resetRelays() {
     font-family: monospace;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
     margin-right: 10px;
+  }
+
+  .relay-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .status-active {
+    background-color: var(--color-success);
+    color: white;
+  }
+
+  .status-connecting {
+    background-color: var(--color-warning);
+    color: black;
+  }
+
+  .status-closed,
+  .status-error,
+  .status-unknown {
+    background-color: var(--color-error);
+    color: white;
   }
 
   .empty-message {

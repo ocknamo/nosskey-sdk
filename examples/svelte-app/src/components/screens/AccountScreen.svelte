@@ -4,7 +4,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import ProfileEditor from '../ProfileEditor.svelte';
-import RelayStatus from '../RelayStatus.svelte';
+import PublicKeyDisplay from '../PublicKeyDisplay.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
@@ -65,8 +65,8 @@ $effect(() => {
     <div class="account-info">
       <h1 class="screen-title">{$i18n.t.navigation.account}</h1>
 
-      <!-- 公開鍵情報とリレー状態の表示 -->
-      <RelayStatus />
+      <!-- 公開鍵情報の表示 -->
+      <PublicKeyDisplay />
 
       <!-- プロフィール編集 -->
       <ProfileEditor />
