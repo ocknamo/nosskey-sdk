@@ -1,15 +1,23 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { slide } from 'svelte/transition';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import ProfileEditor from '../ProfileEditor.svelte';
+// biome-ignore lint: svelte
+import ProfileHeader from '../ProfileHeader.svelte';
 import PublicKeyDisplay from '../PublicKeyDisplay.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
 // Svelte v5のrunesモードに対応した記法
 const login = $derived($isLoggedIn);
+
+// 編集モードの状態
+let isEditing = $state(false);
+// biome-ignore lint: svelte
+let profileHeaderRef = $state<ProfileHeader | null>(null);
 
 onMount(async () => {
   console.log('AccountScreen mounted');
@@ -45,6 +53,25 @@ onMount(async () => {
 $effect(() => {
   console.log('認証状態が変更されました:', $isLoggedIn);
 });
+
+// 編集完了時のコールバック
+function handleEditComplete() {
+  isEditing = false;
+  // ProfileHeaderの情報を更新
+  if (profileHeaderRef) {
+    profileHeaderRef.refreshProfile();
+  }
+}
+
+// 編集開始
+function handleEditStart() {
+  isEditing = true;
+}
+
+// 編集キャンセル
+function handleEditCancel() {
+  isEditing = false;
+}
 </script>
 
 <!-- デモアプリとドメイン変更の注意喚起セクション -->
@@ -63,13 +90,25 @@ $effect(() => {
   {:else}
     <!-- 認証済みの場合、アカウント情報を表示 -->
     <div class="account-info">
-      <h1 class="screen-title">{$i18n.t.navigation.account}</h1>
+      <!-- プロフィールヘッダー -->
+      <ProfileHeader
+        bind:this={profileHeaderRef}
+        {isEditing}
+        onEdit={handleEditStart}
+      />
 
       <!-- 公開鍵情報の表示 -->
       <PublicKeyDisplay />
 
-      <!-- プロフィール編集 -->
-      <ProfileEditor />
+      <!-- プロフィール編集（編集モード時のみ表示） -->
+      {#if isEditing}
+        <div transition:slide={{ duration: 300 }}>
+          <ProfileEditor
+            onSave={handleEditComplete}
+            onCancel={handleEditCancel}
+          />
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

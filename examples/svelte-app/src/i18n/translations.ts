@@ -18,6 +18,7 @@ export interface TranslationData {
     copy: string;
     copied: string;
     loading: string;
+    edit: string;
     errorMessages: {
       init: string;
       prfCheck: string;
@@ -238,6 +239,7 @@ export const ja: TranslationData = {
     copy: 'コピー',
     copied: 'コピーしました',
     loading: '読み込み中...',
+    edit: '編集',
     errorMessages: {
       init: '初期化エラー:',
       prfCheck: 'PRF対応確認エラー:',
@@ -472,6 +474,7 @@ export const en: TranslationData = {
     copy: 'Copy',
     copied: 'Copied',
     loading: 'Loading...',
+    edit: 'Edit',
     errorMessages: {
       init: 'Initialization Error:',
       prfCheck: 'PRF Support Check Error:',

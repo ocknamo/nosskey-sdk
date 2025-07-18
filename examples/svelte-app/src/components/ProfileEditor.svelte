@@ -6,6 +6,15 @@ import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import Button from './ui/Button.svelte';
+import SecondaryButton from './ui/SecondaryButton.svelte';
+
+// Props
+interface Props {
+  onSave?: () => void;
+  onCancel?: () => void;
+}
+
+const { onSave, onCancel }: Props = $props();
 
 // 状態変数
 let displayName = $state('');
@@ -204,6 +213,11 @@ async function saveProfile() {
     // LocalStorageにも保存
     saveLocalProfile();
 
+    // 保存成功時のコールバック
+    if (onSave) {
+      onSave();
+    }
+
     // 3秒後にメッセージをクリア
     setTimeout(() => {
       saveMessage = '';
@@ -213,6 +227,13 @@ async function saveProfile() {
     saveMessage = `エラー: ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
+  }
+}
+
+// キャンセル処理
+function handleCancel() {
+  if (onCancel) {
+    onCancel();
   }
 }
 </script>
@@ -274,9 +295,16 @@ async function saveProfile() {
         />
       </div>
 
-      <Button onclick={saveProfile} disabled={isLoading}>
-        {$i18n.t.nostr.profile.save}
-      </Button>
+      <div class="button-group">
+        <Button onclick={saveProfile} disabled={isLoading}>
+          {$i18n.t.nostr.profile.save}
+        </Button>
+        {#if onCancel}
+          <SecondaryButton onclick={handleCancel} disabled={isLoading}>
+            {$i18n.t.common.cancel}
+          </SecondaryButton>
+        {/if}
+      </div>
 
       {#if saveMessage}
         <div class="save-message">
@@ -351,6 +379,12 @@ async function saveProfile() {
 
   textarea {
     resize: vertical;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
   }
 
   .save-message {
