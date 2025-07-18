@@ -244,11 +244,7 @@ function formatWebsite(url: string) {
 
         <!-- 編集ボタン（デスクトップ用位置） -->
         <div class="edit-button desktop">
-          <IconButton
-            className="edit-button desktop"
-            onclick={onEdit}
-            title={$i18n.t.common.edit}
-          >
+          <IconButton onclick={onEdit} title={$i18n.t.common.edit}>
             <img src={editIcon} alt={$i18n.t.common.edit} />
           </IconButton>
         </div>
@@ -339,6 +335,10 @@ function formatWebsite(url: string) {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
+  }
+
+  .edit-button.desktop {
+    display: none;
   }
 
   .edit-button:hover {
