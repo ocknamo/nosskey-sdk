@@ -5,6 +5,7 @@ import editIcon from '../assets/person_edit_24.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
+import PublicKeyDisplay from './PublicKeyDisplay.svelte';
 import IconButton from './ui/IconButton.svelte';
 
 // Props
@@ -270,6 +271,13 @@ function formatWebsite(url: string) {
           </a>
         {/if}
       {/if}
+
+      <!-- 公開鍵情報 -->
+      {#if currentPublicKey}
+        <div class="public-key-wrapper">
+          <PublicKeyDisplay />
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -302,11 +310,7 @@ function formatWebsite(url: string) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      rgba(0, 0, 0, 0.5) 100%
-    );
+    background: var(--banner-overlay-gradient);
   }
 
   .banner-gradient {
@@ -440,6 +444,46 @@ function formatWebsite(url: string) {
   .website:hover {
     opacity: 0.8;
     text-decoration: underline;
+  }
+
+  /* 公開鍵ラッパー */
+  .public-key-wrapper {
+    margin-top: 16px;
+  }
+
+  /* PublicKeyDisplayコンポーネントのスタイル調整 */
+  .public-key-wrapper :global(.pubkey-container) {
+    background-color: transparent;
+    padding: 16px 0 0 0;
+    border-radius: 0;
+    margin-bottom: 0;
+    border-top: 1px solid var(--color-border-light);
+  }
+
+  .public-key-wrapper :global(.pubkey-display h3) {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin: 0 0 8px 0;
+  }
+
+  .public-key-wrapper :global(.pubkey-display p) {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    margin: 0 0 8px 0;
+    font-family: monospace;
+  }
+
+  .public-key-wrapper :global(.npub) {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-family: monospace;
+  }
+
+  .public-key-wrapper :global(.copied-message) {
+    color: var(--color-success);
+    font-size: 0.75rem;
+    font-weight: bold;
   }
 
   /* スケルトンローディング */

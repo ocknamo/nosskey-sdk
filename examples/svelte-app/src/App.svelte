@@ -149,6 +149,15 @@ function applyTheme(theme: ThemeMode) {
     root.style.setProperty('--color-warning-border', '#faad14');
     root.style.setProperty('--color-error-border', '#ff4d4f');
     root.style.setProperty('--color-info-border', '#40a9ff');
+
+    // アイコンフィルター（ダーク）
+    root.style.setProperty('--icon-filter', 'invert(1) brightness(1)');
+
+    // バナーオーバーレイ（ダーク）
+    root.style.setProperty(
+      '--banner-overlay-gradient',
+      'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.3) 100%)'
+    );
   } else {
     // Light Theme (Purple Breeze)
     root.style.setProperty('--color-text', '#535465');
@@ -224,6 +233,15 @@ function applyTheme(theme: ThemeMode) {
     root.style.setProperty('--color-warning-border', '#ffc107');
     root.style.setProperty('--color-error-border', '#dc3545');
     root.style.setProperty('--color-info-border', '#1890ff');
+
+    // アイコンフィルター（ライト）
+    root.style.setProperty('--icon-filter', 'none');
+
+    // バナーオーバーレイ（ライト）
+    root.style.setProperty(
+      '--banner-overlay-gradient',
+      'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%)'
+    );
   }
 }
 

@@ -7,7 +7,6 @@ import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import ProfileEditor from '../ProfileEditor.svelte';
 // biome-ignore lint: svelte
 import ProfileHeader from '../ProfileHeader.svelte';
-import PublicKeyDisplay from '../PublicKeyDisplay.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
@@ -96,9 +95,6 @@ function handleEditCancel() {
         {isEditing}
         onEdit={handleEditStart}
       />
-
-      <!-- 公開鍵情報の表示 -->
-      <PublicKeyDisplay />
 
       <!-- プロフィール編集（編集モード時のみ表示） -->
       {#if isEditing}
