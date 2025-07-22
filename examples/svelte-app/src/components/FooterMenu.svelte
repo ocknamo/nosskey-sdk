@@ -4,6 +4,7 @@ import HomeIcon from '../assets/home-icon.svg';
 import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { type ScreenName, currentScreen } from '../store/app-state.js';
+import NavButton from './ui/NavButton.svelte';
 
 // 現在の画面
 let screen = $state('account');
@@ -21,39 +22,39 @@ function navigateTo(target: ScreenName) {
 
 <footer class="footer-menu" role="navigation" aria-label="メインナビゲーション">
   <div class="footer-content">
-    <button
-      class={screen === "account" ? "active" : ""}
-      aria-current={screen === "account" ? "page" : undefined}
-      aria-label={$i18n.t.navigation.account}
+    <NavButton
+      active={screen === "account"}
+      ariaCurrent={screen === "account" ? "page" : undefined}
+      ariaLabel={$i18n.t.navigation.account}
       onclick={() => navigateTo("account")}
     >
       <div class="icon">
         <img src={AccountIcon} alt="" />
       </div>
       <span>{$i18n.t.navigation.account}</span>
-    </button>
-    <button
-      class={screen === "timeline" ? "active" : ""}
-      aria-current={screen === "timeline" ? "page" : undefined}
-      aria-label={$i18n.t.navigation.timeline}
+    </NavButton>
+    <NavButton
+      active={screen === "timeline"}
+      ariaCurrent={screen === "timeline" ? "page" : undefined}
+      ariaLabel={$i18n.t.navigation.timeline}
       onclick={() => navigateTo("timeline")}
     >
       <div class="icon">
         <img src={HomeIcon} alt="" />
       </div>
       <span>{$i18n.t.navigation.timeline}</span>
-    </button>
-    <button
-      class={screen === "settings" ? "active" : ""}
-      aria-current={screen === "settings" ? "page" : undefined}
-      aria-label={$i18n.t.navigation.settings}
+    </NavButton>
+    <NavButton
+      active={screen === "settings"}
+      ariaCurrent={screen === "settings" ? "page" : undefined}
+      ariaLabel={$i18n.t.navigation.settings}
       onclick={() => navigateTo("settings")}
     >
       <div class="icon">
         <img src={SettingIcon} alt="" />
       </div>
       <span>{$i18n.t.navigation.settings}</span>
-    </button>
+    </NavButton>
   </div>
 </footer>
 

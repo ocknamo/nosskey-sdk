@@ -5,6 +5,8 @@ import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
+import Button from './ui/Button.svelte';
+import SuccessButton from './ui/SuccessButton.svelte';
 
 const { post }: { post?: () => void } = $props();
 
@@ -127,21 +129,21 @@ async function publishEvent() {
   </div>
 
   <div class="action-buttons">
-    <button
-      class="sign-button"
+    <Button
       onclick={signEvent}
       disabled={isLoading || !eventContent.trim()}
+      className="sign-button"
     >
       {$i18n.t.nostr.sign}
-    </button>
+    </Button>
 
-    <button
-      class="publish-button"
+    <SuccessButton
       onclick={publishEvent}
       disabled={isLoading || !signedEvent}
+      className="publish-button"
     >
       {$i18n.t.nostr.publish}
-    </button>
+    </SuccessButton>
   </div>
 
   {#if publishStatus}

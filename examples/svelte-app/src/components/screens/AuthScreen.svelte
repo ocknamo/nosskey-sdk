@@ -5,7 +5,12 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { currentScreen } from '../../store/app-state.js';
+import Button from '../ui/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
+import FileInputButton from '../ui/FileInputButton.svelte';
+import SecondaryButton from '../ui/SecondaryButton.svelte';
+import SuccessButton from '../ui/SuccessButton.svelte';
+import ToggleButton from '../ui/ToggleButton.svelte';
 
 // 状態変数
 let isSupported = $state(false);
@@ -276,25 +281,21 @@ $effect(() => {
         </div>
 
         {#if !isPasskeyCreated}
-          <button
-            class="primary-action-button"
-            onclick={createNew}
-            disabled={isLoading}
-          >
+          <Button onclick={createNew} disabled={isLoading} size="large">
             {$i18n.t.auth.createNew}
-          </button>
+          </Button>
         {:else}
           <div class="success-message">
             <div class="success-icon">✅</div>
             <h4>{$i18n.t.auth.passkeyCreated}</h4>
             <p>{$i18n.t.auth.firstLogin}</p>
-            <button
-              class="success-action-button"
+            <SuccessButton
               onclick={() => login(createdCredentialId)}
               disabled={isLoading}
+              className="success-action-button"
             >
               {$i18n.t.auth.proceedWithLogin}
-            </button>
+            </SuccessButton>
           </div>
         {/if}
       </div>
@@ -310,25 +311,25 @@ $effect(() => {
         <h3>{$i18n.t.auth.existingPasskeyTitle}</h3>
         <p class="section-description">{$i18n.t.auth.existingPasskeyDesc}</p>
 
-        <button
-          class="secondary-action-button"
+        <SecondaryButton
           onclick={loginWithExistingPasskey}
           disabled={isLoading}
+          className="secondary-action-button"
         >
           {$i18n.t.auth.loginWith}
-        </button>
+        </SecondaryButton>
       </div>
     </CardSection>
 
     <!-- 高度なオプション -->
     <div class="advanced-section">
-      <button
-        class="toggle-section-button"
+      <ToggleButton
         onclick={() => (showAdvancedOptions = !showAdvancedOptions)}
+        expanded={showAdvancedOptions}
+        className="toggle-section-button"
       >
-        <span class="toggle-icon" class:expanded={showAdvancedOptions}>▶</span>
         {$i18n.t.auth.advancedOptionsTitle}
-      </button>
+      </ToggleButton>
 
       {#if showAdvancedOptions}
         <div class="advanced-content">
@@ -338,27 +339,27 @@ $effect(() => {
               <p class="section-description">{$i18n.t.auth.pwkImportDesc}</p>
 
               <div class="pwk-input-container">
-                <input
-                  type="file"
-                  id="pwk-file-input"
-                  accept="application/json"
+                <FileInputButton
                   onchange={handlePWKFileUpload}
+                  accept="application/json"
                   disabled={isLoading}
-                />
-                <label for="pwk-file-input" class="file-input-button">
+                  inputId="pwk-file-input"
+                >
                   {$i18n.t.auth.pwkFileSelect}
-                </label>
+                </FileInputButton>
 
                 <div class="divider">
                   <span>{$i18n.t.auth.orText}</span>
                 </div>
 
-                <button
-                  class="toggle-text-input-button"
+                <ToggleButton
                   onclick={() => (showPWKTextarea = !showPWKTextarea)}
+                  expanded={showPWKTextarea}
+                  size="small"
+                  className="toggle-text-input-button"
                 >
                   {$i18n.t.auth.pwkDataInput}
-                </button>
+                </ToggleButton>
               </div>
 
               {#if showPWKTextarea}
@@ -368,15 +369,15 @@ $effect(() => {
                     placeholder={$i18n.t.auth.pwkDataPlaceholder}
                     class="pwk-textarea"
                   ></textarea>
-                  <button
-                    class="pwk-login-button"
+                  <SuccessButton
                     onclick={loginWithPWKText}
                     disabled={isLoading || !pwkTextInput}
+                    className="pwk-login-button"
                   >
                     {isLoading
                       ? $i18n.t.auth.pwkLoginProcessing
                       : $i18n.t.auth.pwkLoginButton}
-                  </button>
+                  </SuccessButton>
                 </div>
               {/if}
 
@@ -395,27 +396,26 @@ $effect(() => {
                 {$i18n.t.auth.importSectionDesc}
               </p>
               <p class="warning-text">{$i18n.t.auth.importNotImplemented}</p>
-              <button
-                class="import-button"
+              <SecondaryButton
                 onclick={() => currentScreen.set("import")}
                 disabled={isLoading}
+                className="import-button"
               >
                 {$i18n.t.auth.importButton}
-              </button>
+              </SecondaryButton>
             </div>
           </CardSection>
 
           <!-- 開発者向けセクション -->
           <div class="developer-section">
-            <button
-              class="toggle-section-button small"
+            <ToggleButton
               onclick={() => (showDeveloperSection = !showDeveloperSection)}
+              expanded={showDeveloperSection}
+              size="small"
+              className="toggle-section-button small"
             >
-              <span class="toggle-icon" class:expanded={showDeveloperSection}
-                >▶</span
-              >
               {$i18n.t.auth.developerSection}
-            </button>
+            </ToggleButton>
 
             {#if showDeveloperSection}
               <CardSection title="">
@@ -425,12 +425,13 @@ $effect(() => {
                   </p>
 
                   {#if !isPrfChecked}
-                    <button
-                      class="developer-action-button"
+                    <SecondaryButton
                       onclick={checkPrfSupport}
+                      size="small"
+                      className="developer-action-button"
                     >
                       {$i18n.t.auth.checkPrf}
-                    </button>
+                    </SecondaryButton>
                   {:else if !isSupported}
                     <div class="error-message">
                       <h4>{$i18n.t.auth.unsupportedTitle}</h4>

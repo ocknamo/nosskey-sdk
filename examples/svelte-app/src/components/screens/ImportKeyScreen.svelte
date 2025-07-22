@@ -3,6 +3,8 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
+import Button from '../ui/Button.svelte';
+import SecondaryButton from '../ui/SecondaryButton.svelte';
 
 // 状態変数
 let secretKey = $state('');
@@ -111,16 +113,20 @@ async function importKey() {
       </div>
 
       <div class="buttons">
-        <button class="back-button" onclick={goBack} disabled={isLoading}>
+        <SecondaryButton
+          onclick={goBack}
+          disabled={isLoading}
+          className="back-button"
+        >
           {$i18n.t.common.back}
-        </button>
-        <button
-          class="import-button"
+        </SecondaryButton>
+        <Button
           onclick={importKey}
           disabled={isLoading || !secretKey}
+          className="import-button"
         >
           {$i18n.t.auth.importButton}
-        </button>
+        </Button>
       </div>
     </div>
   {/if}

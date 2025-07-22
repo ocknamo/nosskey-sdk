@@ -7,6 +7,7 @@ import { setTimelineMode, timelineMode } from '../../store/timeline-store.js';
 import PostForm from '../PostForm.svelte';
 // biome-ignore lint: svelte
 import Timeline from '../Timeline.svelte';
+import TabButton from '../ui/TabButton.svelte';
 
 let timeline: Timeline;
 
@@ -77,22 +78,24 @@ onMount(async () => {
 
   <!-- モード切り替えタブ -->
   <div class="timeline-tabs">
-    <button
-      class="tab-button {currentMode === 'global' ? 'active' : ''}"
+    <TabButton
       onclick={switchToGlobal}
       disabled={loading}
+      active={currentMode === "global"}
+      className="tab-button"
     >
       {$i18n.t.nostr.timeline.globalFeed}
-    </button>
+    </TabButton>
 
     {#if login}
-      <button
-        class="tab-button {currentMode === 'user' ? 'active' : ''}"
+      <TabButton
         onclick={switchToUser}
         disabled={loading}
+        active={currentMode === "user"}
+        className="tab-button"
       >
         {$i18n.t.nostr.timeline.userFeed}
-      </button>
+      </TabButton>
     {/if}
   </div>
 

@@ -197,14 +197,11 @@ function formatWebsite(url: string) {
     {/if}
 
     <!-- 編集ボタン（モバイル用位置） -->
-    <button
-      class="edit-button mobile"
-      onclick={onEdit}
-      title={$i18n.t.common.edit}
-      aria-label={$i18n.t.common.edit}
-    >
-      <img src={editIcon} alt={$i18n.t.common.edit} />
-    </button>
+    <div class="edit-button mobile">
+      <IconButton onclick={onEdit} title={$i18n.t.common.edit}>
+        <img src={editIcon} alt={$i18n.t.common.edit} />
+      </IconButton>
+    </div>
   </div>
 
   <!-- プロフィール情報部分 -->
