@@ -3,8 +3,8 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
-import Button from '../ui/Button.svelte';
-import SecondaryButton from '../ui/SecondaryButton.svelte';
+import Button from '../ui/button/Button.svelte';
+import SecondaryButton from '../ui/button/SecondaryButton.svelte';
 
 // 状態変数
 let secretKey = $state('');
@@ -200,31 +200,6 @@ async function importKey() {
     justify-content: space-between;
     gap: 15px;
     margin-top: 25px;
-  }
-
-  button {
-    flex: 1;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-
-  .back-button {
-    background-color: var(--color-button-secondary);
-    color: white;
-  }
-
-  .import-button {
-    background-color: var(--color-button-primary);
-    color: white;
-    font-weight: bold;
-  }
-
-  button:disabled {
-    background-color: var(--color-border-medium);
   }
 
   .error-message {

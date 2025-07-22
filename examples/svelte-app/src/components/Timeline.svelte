@@ -6,7 +6,7 @@ import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import { timelineMode } from '../store/timeline-store.js';
-import Button from './ui/Button.svelte';
+import Button from './ui/button/Button.svelte';
 
 // 状態変数
 let events = $state<NostrEvent[]>([]);

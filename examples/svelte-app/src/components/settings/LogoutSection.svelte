@@ -2,7 +2,7 @@
 import { i18n } from '../../i18n/i18n-store.js';
 import { logout } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
-import DangerButton from '../ui/DangerButton.svelte';
+import DangerButton from '../ui/button/DangerButton.svelte';
 
 // 状態変数
 let logoutMessage = $state('');

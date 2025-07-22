@@ -7,7 +7,7 @@ import { setTimelineMode, timelineMode } from '../../store/timeline-store.js';
 import PostForm from '../PostForm.svelte';
 // biome-ignore lint: svelte
 import Timeline from '../Timeline.svelte';
-import TabButton from '../ui/TabButton.svelte';
+import TabButton from '../ui/button/TabButton.svelte';
 
 let timeline: Timeline;
 
@@ -123,29 +123,5 @@ onMount(async () => {
     border-bottom: 1px solid var(--color-border);
     padding-bottom: 10px;
     transition: border-color 0.3s ease;
-  }
-
-  .tab-button {
-    padding: 8px 16px;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--color-text);
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  .tab-button.active {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-primary);
-    font-weight: bold;
-  }
-
-  .tab-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 </style>

@@ -4,9 +4,9 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { hexToNsec } from '../../utils/bech32-converter.js';
 import CardSection from '../ui/CardSection.svelte';
-import DangerButton from '../ui/DangerButton.svelte';
-import IconButton from '../ui/IconButton.svelte';
-import WarningButton from '../ui/WarningButton.svelte';
+import DangerButton from '../ui/button/DangerButton.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
+import WarningButton from '../ui/button/WarningButton.svelte';
 
 // 秘密鍵エクスポート関連の状態変数
 let showExportSection = $state(false);

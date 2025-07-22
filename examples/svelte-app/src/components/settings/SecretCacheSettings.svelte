@@ -3,7 +3,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getPWKManager } from '../../services/pwk-manager.service.js';
 import { cacheSecrets, cacheTimeout } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
-import SecondaryButton from '../ui/SecondaryButton.svelte';
+import SecondaryButton from '../ui/button/SecondaryButton.svelte';
 
 // 状態変数
 let cacheSettingMessage = $state('');

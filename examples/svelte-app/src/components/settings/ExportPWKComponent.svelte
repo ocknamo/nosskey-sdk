@@ -2,10 +2,10 @@
 import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
-import Button from '../ui/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
-import IconButton from '../ui/IconButton.svelte';
-import WarningButton from '../ui/WarningButton.svelte';
+import Button from '../ui/button/Button.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
+import WarningButton from '../ui/button/WarningButton.svelte';
 
 // PWKエクスポート関連の状態変数
 let showExportSection = $state(false);

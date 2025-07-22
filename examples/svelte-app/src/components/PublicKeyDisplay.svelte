@@ -3,7 +3,7 @@ import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
-import IconButton from './ui/IconButton.svelte';
+import IconButton from './ui/button/IconButton.svelte';
 
 // 状態変数
 let publicKeyShort = $state('');

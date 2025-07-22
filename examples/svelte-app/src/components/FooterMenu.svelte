@@ -4,7 +4,7 @@ import HomeIcon from '../assets/home-icon.svg';
 import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { type ScreenName, currentScreen } from '../store/app-state.js';
-import NavButton from './ui/NavButton.svelte';
+import NavButton from './ui/button/NavButton.svelte';
 
 // 現在の画面
 let screen = $state('account');
@@ -78,42 +78,6 @@ function navigateTo(target: ScreenName) {
     justify-content: space-around;
     max-width: 800px;
     margin: 0 auto;
-  }
-
-  button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: none;
-    border: none;
-    padding: 8px 16px 14px;
-    font-size: 0.6rem;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    flex: 1;
-    border-radius: 0px;
-    transition: all 0.2s ease;
-    position: relative;
-    outline: none;
-  }
-
-  button:hover {
-    background-color: var(--color-primary-alpha-08);
-  }
-
-  button.active {
-    color: var(--color-primary);
-    font-weight: bold;
-    border-top: 2px solid var(--color-primary);
-  }
-
-  button.active .icon img {
-    filter: brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%)
-      hue-rotate(225deg) brightness(94%) contrast(89%);
-  }
-
-  button:disabled {
-    opacity: 0.5;
   }
 
   .icon {

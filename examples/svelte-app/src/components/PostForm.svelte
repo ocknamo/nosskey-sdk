@@ -5,8 +5,8 @@ import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
-import Button from './ui/Button.svelte';
-import SuccessButton from './ui/SuccessButton.svelte';
+import Button from './ui/button/Button.svelte';
+import SuccessButton from './ui/button/SuccessButton.svelte';
 
 const { post }: { post?: () => void } = $props();
 
@@ -203,40 +203,6 @@ async function publishEvent() {
     display: flex;
     gap: 10px;
     margin-top: 15px;
-  }
-
-  button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  .sign-button {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-primary);
-  }
-
-  .sign-button:hover {
-    opacity: 0.9;
-  }
-
-  .publish-button {
-    background-color: var(--color-success);
-    color: var(--color-text-on-primary);
-  }
-
-  .publish-button:hover {
-    opacity: 0.9;
-  }
-
-  button:disabled {
-    background-color: var(--color-secondary);
-    opacity: 0.5;
   }
 
   .status-message {

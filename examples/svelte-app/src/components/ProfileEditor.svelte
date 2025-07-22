@@ -5,8 +5,8 @@ import { i18n } from '../i18n/i18n-store.js';
 import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
-import Button from './ui/Button.svelte';
-import SecondaryButton from './ui/SecondaryButton.svelte';
+import Button from './ui/button/Button.svelte';
+import SecondaryButton from './ui/button/SecondaryButton.svelte';
 
 // Props
 interface Props {

@@ -5,12 +5,12 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { currentScreen } from '../../store/app-state.js';
-import Button from '../ui/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
-import FileInputButton from '../ui/FileInputButton.svelte';
-import SecondaryButton from '../ui/SecondaryButton.svelte';
-import SuccessButton from '../ui/SuccessButton.svelte';
-import ToggleButton from '../ui/ToggleButton.svelte';
+import Button from '../ui/button/Button.svelte';
+import FileInputButton from '../ui/button/FileInputButton.svelte';
+import SecondaryButton from '../ui/button/SecondaryButton.svelte';
+import SuccessButton from '../ui/button/SuccessButton.svelte';
+import ToggleButton from '../ui/button/ToggleButton.svelte';
 
 // 状態変数
 let isSupported = $state(false);
@@ -604,67 +604,6 @@ $effect(() => {
     border-color: var(--color-button-primary);
   }
 
-  /* ボタンスタイル */
-  .primary-action-button {
-    width: 100%;
-    padding: 16px 24px;
-    background-color: var(--color-button-primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 8px;
-  }
-
-  .primary-action-button:hover:not(:disabled) {
-    background-color: var(--color-button-primary-hover);
-    transform: translateY(-1px);
-  }
-
-  .secondary-action-button {
-    width: 100%;
-    padding: 14px 24px;
-    background-color: var(--color-info);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .secondary-action-button:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-
-  .success-action-button {
-    width: 100%;
-    padding: 12px 24px;
-    background-color: var(--color-button-success);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .success-action-button:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-  }
-
   /* 成功メッセージ */
   .success-message {
     padding: 20px;
@@ -707,42 +646,6 @@ $effect(() => {
     margin-top: 40px;
   }
 
-  .toggle-section-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 16px;
-    background-color: var(--color-surface-hover);
-    border: 1px solid var(--color-border-medium);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    text-align: left;
-    transition: all 0.2s ease;
-  }
-
-  .toggle-section-button.small {
-    padding: 12px;
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
-  }
-
-  .toggle-section-button:hover {
-    background-color: var(--color-surface-light);
-  }
-
-  .toggle-icon {
-    font-size: 0.8rem;
-    transition: transform 0.2s ease;
-  }
-
-  .toggle-icon.expanded {
-    transform: rotate(90deg);
-  }
-
   .advanced-content {
     margin-top: 16px;
     display: flex;
@@ -760,27 +663,6 @@ $effect(() => {
     flex-direction: column;
     gap: 12px;
     margin: 16px 0;
-  }
-
-  .pwk-input-container input[type="file"] {
-    display: none;
-  }
-
-  .file-input-button {
-    display: inline-block;
-    padding: 12px 20px;
-    background-color: var(--color-info);
-    color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 500;
-    text-align: center;
-    transition: opacity 0.2s ease;
-  }
-
-  .file-input-button:hover {
-    opacity: 0.9;
   }
 
   .divider {
@@ -801,21 +683,6 @@ $effect(() => {
   .divider span {
     color: var(--color-text-secondary);
     font-size: 0.9rem;
-  }
-
-  .toggle-text-input-button {
-    padding: 10px 16px;
-    background-color: var(--color-surface-hover);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-  }
-
-  .toggle-text-input-button:hover {
-    background-color: var(--color-surface-light);
   }
 
   .pwk-textarea-container {
@@ -840,23 +707,6 @@ $effect(() => {
     border-color: var(--color-button-primary);
   }
 
-  .pwk-login-button {
-    width: 100%;
-    padding: 12px 20px;
-    background-color: var(--color-button-success);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-  }
-
-  .pwk-login-button:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
   .import-section {
     text-align: left;
   }
@@ -866,22 +716,6 @@ $effect(() => {
     font-size: 0.9rem;
     font-style: italic;
     margin-bottom: 16px;
-  }
-
-  .import-button {
-    width: 100%;
-    padding: 12px 20px;
-    background-color: var(--color-surface-hover);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
-  }
-
-  .import-button:hover:not(:disabled) {
-    background-color: var(--color-surface-light);
   }
 
   .developer-section {
@@ -896,21 +730,6 @@ $effect(() => {
     color: var(--color-text-muted);
     font-size: 0.9rem;
     margin-bottom: 16px;
-  }
-
-  .developer-action-button {
-    padding: 10px 16px;
-    background-color: var(--color-surface-hover);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-  }
-
-  .developer-action-button:hover:not(:disabled) {
-    background-color: var(--color-surface-light);
   }
 
   .error-message {
@@ -944,11 +763,6 @@ $effect(() => {
 
     .screen-title {
       font-size: 1.8rem;
-    }
-
-    .primary-action-button {
-      font-size: 1rem;
-      padding: 14px 20px;
     }
 
     .recommendation-badge {

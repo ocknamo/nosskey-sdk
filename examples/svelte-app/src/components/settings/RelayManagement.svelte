@@ -4,10 +4,10 @@ import { i18n } from '../../i18n/i18n-store.js';
 import type { RelayInfo } from '../../services/relay.service.js';
 import { defaultRelays } from '../../store/app-state.js';
 import { activeRelays, relayService } from '../../store/relay-store.js';
-import Button from '../ui/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
-import DangerButton from '../ui/DangerButton.svelte';
-import SecondaryButton from '../ui/SecondaryButton.svelte';
+import Button from '../ui/button/Button.svelte';
+import DangerButton from '../ui/button/DangerButton.svelte';
+import SecondaryButton from '../ui/button/SecondaryButton.svelte';
 
 // 状態変数
 let newRelay = $state('');

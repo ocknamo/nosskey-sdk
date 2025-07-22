@@ -6,7 +6,7 @@ import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import PublicKeyDisplay from './PublicKeyDisplay.svelte';
-import IconButton from './ui/IconButton.svelte';
+import IconButton from './ui/button/IconButton.svelte';
 
 // Props
 interface Props {
