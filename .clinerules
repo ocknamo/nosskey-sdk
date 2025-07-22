@@ -57,7 +57,7 @@ svelteのファイル以外はすべてケバブケース（kebab-case）で実�
 - "feat:" - 機能追加
 - "fix:" - バグ修正
 - "refactor:" - リファクタリング
-- "doc:" - ドキュメント修正
+- "docs:" - ドキュメント修正
 
 ※pushはユーザーが実行
 
@@ -84,3 +84,12 @@ svelteのファイル以外はすべてケバブケース（kebab-case）で実�
 - 機密ファイルはコミット禁止
 - 秘密情報は環境変数使用
 - ログに認証情報を含めない
+
+## Svelte
+
+Svelteのファイル内(*.svelte)で`$state`を使用する際はbiomeのlintを以下のようにignoreすること
+
+```
+// biome-ignore lint: svelte
+let showAdvancedOptions = $state(false);
+```
