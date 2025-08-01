@@ -6,7 +6,6 @@ import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import Button from './ui/button/Button.svelte';
-import SuccessButton from './ui/button/SuccessButton.svelte';
 
 const { post }: { post?: () => void } = $props();
 
@@ -137,13 +136,14 @@ async function publishEvent() {
       {$i18n.t.nostr.sign}
     </Button>
 
-    <SuccessButton
+    <Button
+      variant="success"
       onclick={publishEvent}
       disabled={isLoading || !signedEvent}
       className="publish-button"
     >
       {$i18n.t.nostr.publish}
-    </SuccessButton>
+    </Button>
   </div>
 
   {#if publishStatus}

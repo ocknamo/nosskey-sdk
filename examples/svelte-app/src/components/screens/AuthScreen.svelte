@@ -8,8 +8,6 @@ import { currentScreen } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import FileInputButton from '../ui/button/FileInputButton.svelte';
-import SecondaryButton from '../ui/button/SecondaryButton.svelte';
-import SuccessButton from '../ui/button/SuccessButton.svelte';
 import ToggleButton from '../ui/button/ToggleButton.svelte';
 
 // 状態変数
@@ -289,13 +287,14 @@ $effect(() => {
             <div class="success-icon">✅</div>
             <h4>{$i18n.t.auth.passkeyCreated}</h4>
             <p>{$i18n.t.auth.firstLogin}</p>
-            <SuccessButton
+            <Button
+              variant="success"
               onclick={() => login(createdCredentialId)}
               disabled={isLoading}
               className="success-action-button"
             >
               {$i18n.t.auth.proceedWithLogin}
-            </SuccessButton>
+            </Button>
           </div>
         {/if}
       </div>
@@ -311,13 +310,14 @@ $effect(() => {
         <h3>{$i18n.t.auth.existingPasskeyTitle}</h3>
         <p class="section-description">{$i18n.t.auth.existingPasskeyDesc}</p>
 
-        <SecondaryButton
+        <Button
+          variant="secondary"
           onclick={loginWithExistingPasskey}
           disabled={isLoading}
           className="secondary-action-button"
         >
           {$i18n.t.auth.loginWith}
-        </SecondaryButton>
+        </Button>
       </div>
     </CardSection>
 
@@ -369,7 +369,8 @@ $effect(() => {
                     placeholder={$i18n.t.auth.pwkDataPlaceholder}
                     class="pwk-textarea"
                   ></textarea>
-                  <SuccessButton
+                  <Button
+                    variant="success"
                     onclick={loginWithPWKText}
                     disabled={isLoading || !pwkTextInput}
                     className="pwk-login-button"
@@ -377,7 +378,7 @@ $effect(() => {
                     {isLoading
                       ? $i18n.t.auth.pwkLoginProcessing
                       : $i18n.t.auth.pwkLoginButton}
-                  </SuccessButton>
+                  </Button>
                 </div>
               {/if}
 
@@ -396,13 +397,14 @@ $effect(() => {
                 {$i18n.t.auth.importSectionDesc}
               </p>
               <p class="warning-text">{$i18n.t.auth.importNotImplemented}</p>
-              <SecondaryButton
+              <Button
+                variant="secondary"
                 onclick={() => currentScreen.set("import")}
                 disabled={isLoading}
                 className="import-button"
               >
                 {$i18n.t.auth.importButton}
-              </SecondaryButton>
+              </Button>
             </div>
           </CardSection>
 
@@ -425,13 +427,14 @@ $effect(() => {
                   </p>
 
                   {#if !isPrfChecked}
-                    <SecondaryButton
+                    <Button
+                      variant="secondary"
                       onclick={checkPrfSupport}
                       size="small"
                       className="developer-action-button"
                     >
                       {$i18n.t.auth.checkPrf}
-                    </SecondaryButton>
+                    </Button>
                   {:else if !isSupported}
                     <div class="error-message">
                       <h4>{$i18n.t.auth.unsupportedTitle}</h4>

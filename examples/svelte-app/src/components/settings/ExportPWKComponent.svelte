@@ -5,7 +5,6 @@ import { getPWKManager } from '../../services/pwk-manager.service.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
-import WarningButton from '../ui/button/WarningButton.svelte';
 
 // PWKエクスポート関連の状態変数
 let showExportSection = $state(false);
@@ -90,11 +89,11 @@ function savePWKToFile() {
     {$i18n.t.settings.exportPWK.warning}
   </p>
 
-  <WarningButton onclick={toggleExportKeySection}>
+  <Button variant="warning" onclick={toggleExportKeySection}>
     {showExportSection
       ? $i18n.t.settings.exportPWK.hideExportSection
       : $i18n.t.settings.exportPWK.showExportSection}
-  </WarningButton>
+  </Button>
 
   {#if showExportSection}
     <div class="export-section">

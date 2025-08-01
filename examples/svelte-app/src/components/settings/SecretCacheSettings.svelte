@@ -3,7 +3,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getPWKManager } from '../../services/pwk-manager.service.js';
 import { cacheSecrets, cacheTimeout } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
-import SecondaryButton from '../ui/button/SecondaryButton.svelte';
+import Button from '../ui/button/Button.svelte';
 
 // 状態変数
 let cacheSettingMessage = $state('');
@@ -114,9 +114,9 @@ function clearCache() {
     <div class="cache-clear">
       <h3>{$i18n.t.settings.cacheSettings.clearTitle}</h3>
       <p>{$i18n.t.settings.cacheSettings.clearDescription}</p>
-      <SecondaryButton onclick={clearCache}>
+      <Button variant="secondary" onclick={clearCache}>
         {$i18n.t.settings.cacheSettings.clearButton}
-      </SecondaryButton>
+      </Button>
     </div>
 
     {#if cacheSettingMessage}

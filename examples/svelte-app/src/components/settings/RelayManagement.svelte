@@ -6,8 +6,6 @@ import { defaultRelays } from '../../store/app-state.js';
 import { activeRelays, relayService } from '../../store/relay-store.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
-import DangerButton from '../ui/button/DangerButton.svelte';
-import SecondaryButton from '../ui/button/SecondaryButton.svelte';
 
 // 状態変数
 let newRelay = $state('');
@@ -126,9 +124,13 @@ function getStatusText(status: string) {
               <span class="status-badge status-{getRelayStatus(relay)}">
                 {getStatusText(getRelayStatus(relay))}
               </span>
-              <DangerButton onclick={() => removeRelay(relay)} size="small">
+              <Button
+                variant="danger"
+                size="small"
+                onclick={() => removeRelay(relay)}
+              >
                 {$i18n.t.settings.relayManagement.delete}
-              </DangerButton>
+              </Button>
             </div>
           </li>
         {/each}
@@ -140,11 +142,15 @@ function getStatusText(status: string) {
     <h3>{$i18n.t.settings.relayManagement.addRelay}</h3>
     <div class="input-group">
       <input type="text" placeholder="wss://" bind:value={newRelay} />
-      <Button onclick={addRelay}>{$i18n.t.settings.relayManagement.add}</Button>
+      <div class="button-wrap">
+        <Button onclick={addRelay}
+          >{$i18n.t.settings.relayManagement.add}</Button
+        >
+      </div>
     </div>
-    <SecondaryButton onclick={resetRelays}>
+    <Button variant="secondary" onclick={resetRelays}>
       {$i18n.t.settings.relayManagement.reset}
-    </SecondaryButton>
+    </Button>
 
     {#if relayMessage}
       <div class="result-message">
@@ -234,6 +240,10 @@ function getStatusText(status: string) {
     border: 1px solid var(--color-border-strong);
     border-radius: 4px 0 0 4px;
     font-size: 1rem;
+  }
+
+  .input-group .button-wrap {
+    width: 8em;
   }
 
   .result-message {

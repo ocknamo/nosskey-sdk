@@ -300,7 +300,7 @@ export const ja: TranslationData = {
     // PWKインポートセクション
     pwkImportTitle: 'バックアップしたPWKでログイン',
     pwkImportDesc: '以前にエクスポートしたPWKファイルまたはデータを使用してログインします。',
-    pwkFileSelect: 'PWKファイルを選択',
+    pwkFileSelect: '📁PWKファイルを選択',
     pwkDataInput: 'PWKデータを入力',
     pwkDataPlaceholder: 'PWKデータをここに貼り付けてください',
     pwkLoginButton: 'PWKデータでログイン',
@@ -536,7 +536,7 @@ export const en: TranslationData = {
     // PWKインポートセクション
     pwkImportTitle: 'Login with Backed Up PWK',
     pwkImportDesc: 'Use a previously exported PWK file or data to login.',
-    pwkFileSelect: 'Select PWK File',
+    pwkFileSelect: '📁Select PWK File',
     pwkDataInput: 'Enter PWK Data',
     pwkDataPlaceholder: 'Paste your PWK data here',
     pwkLoginButton: 'Login with PWK Data',

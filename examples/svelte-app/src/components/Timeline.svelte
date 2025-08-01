@@ -133,9 +133,13 @@ export async function syncTimeline() {
 <div class="timeline-container">
   <div class="timeline-header">
     <h2>{$i18n.t.nostr.timeline.title}</h2>
-    <Button onclick={reloadTimeline} disabled={loading} size="small">
-      {loading ? $i18n.t.nostr.timeline.loading : $i18n.t.nostr.timeline.reload}
-    </Button>
+    <div class="button-wrap">
+      <Button onclick={reloadTimeline} disabled={loading} size="small">
+        {loading
+          ? $i18n.t.nostr.timeline.loading
+          : $i18n.t.nostr.timeline.reload}
+      </Button>
+    </div>
   </div>
 
   {#if loading}
@@ -198,6 +202,11 @@ export async function syncTimeline() {
     font-size: 1.2rem;
     color: var(--color-titles);
     transition: color 0.3s ease;
+    flex-grow: 90%;
+  }
+
+  .timeline-header .button-wrap {
+    width: 8em;
   }
 
   .loading-indicator {

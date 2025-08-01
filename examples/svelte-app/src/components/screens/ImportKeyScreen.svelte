@@ -4,7 +4,6 @@ import { getPWKManager } from '../../services/pwk-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import Button from '../ui/button/Button.svelte';
-import SecondaryButton from '../ui/button/SecondaryButton.svelte';
 
 // 状態変数
 let secretKey = $state('');
@@ -113,13 +112,14 @@ async function importKey() {
       </div>
 
       <div class="buttons">
-        <SecondaryButton
+        <Button
+          variant="secondary"
           onclick={goBack}
           disabled={isLoading}
           className="back-button"
         >
           {$i18n.t.common.back}
-        </SecondaryButton>
+        </Button>
         <Button
           onclick={importKey}
           disabled={isLoading || !secretKey}

@@ -6,7 +6,6 @@ import { getPWKManager } from '../services/pwk-manager.service.js';
 import * as appState from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
 import Button from './ui/button/Button.svelte';
-import SecondaryButton from './ui/button/SecondaryButton.svelte';
 
 // Props
 interface Props {
@@ -300,9 +299,13 @@ function handleCancel() {
           {$i18n.t.nostr.profile.save}
         </Button>
         {#if onCancel}
-          <SecondaryButton onclick={handleCancel} disabled={isLoading}>
+          <Button
+            variant="secondary"
+            onclick={handleCancel}
+            disabled={isLoading}
+          >
             {$i18n.t.common.cancel}
-          </SecondaryButton>
+          </Button>
         {/if}
       </div>
 

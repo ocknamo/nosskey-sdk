@@ -1,9 +1,11 @@
 <script lang="ts">
 type ButtonSize = 'small' | 'medium' | 'large';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning';
 
 const {
   disabled = false,
   size = 'medium' as ButtonSize,
+  variant = 'primary' as ButtonVariant,
   onclick = undefined,
   buttonType = 'button' as 'button' | 'submit' | 'reset',
   title = undefined,
@@ -22,7 +24,7 @@ function handleClick() {
   type={buttonType as "button" | "submit" | "reset"}
   {disabled}
   {title}
-  class={`btn btn-primary btn-${size} ${className}`}
+  class={`btn btn-${variant} btn-${size} ${className}`}
   onclick={handleClick}
 >
   {@render children?.()}
@@ -41,6 +43,8 @@ function handleClick() {
     justify-content: center;
     text-decoration: none;
     line-height: 1;
+    width: 100%;
+    max-width: 360px;
   }
 
   .btn:focus {
@@ -64,6 +68,63 @@ function handleClick() {
   }
 
   .btn-primary:disabled {
+    background-color: var(--color-button-disabled);
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    background-color: var(--color-button-secondary);
+    color: var(--color-text-on-primary);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-button-secondary-hover);
+  }
+
+  .btn-secondary:disabled {
+    background-color: var(--color-button-disabled);
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    background-color: var(--color-error);
+    color: var(--color-text-on-primary);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--color-button-danger-hover);
+  }
+
+  .btn-danger:disabled {
+    background-color: var(--color-button-danger-disabled);
+  }
+
+  /* Success Button */
+  .btn-success {
+    background-color: var(--color-button-success);
+    color: var(--color-text-on-primary);
+  }
+
+  .btn-success:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .btn-success:disabled {
+    background-color: var(--color-button-disabled);
+  }
+
+  /* Warning Button */
+  .btn-warning {
+    background-color: var(--color-warning);
+    color: var(--color-text-inverse);
+  }
+
+  .btn-warning:hover:not(:disabled) {
+    background-color: var(--color-button-warning-hover);
+  }
+
+  .btn-warning:disabled {
     background-color: var(--color-button-disabled);
   }
 

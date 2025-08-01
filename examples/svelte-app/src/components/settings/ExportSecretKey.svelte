@@ -4,9 +4,8 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getPWKManager } from '../../services/pwk-manager.service.js';
 import { hexToNsec } from '../../utils/bech32-converter.js';
 import CardSection from '../ui/CardSection.svelte';
-import DangerButton from '../ui/button/DangerButton.svelte';
+import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
-import WarningButton from '../ui/button/WarningButton.svelte';
 
 // 秘密鍵エクスポート関連の状態変数
 let showExportSection = $state(false);
@@ -74,19 +73,19 @@ function copyToClipboard(text: string) {
 <CardSection title={$i18n.t.settings.exportSecretKey}>
   <p class="warning-text">{$i18n.t.settings.exportSecretKeyWarning}</p>
 
-  <WarningButton onclick={toggleExportKeySection}>
+  <Button variant="warning" onclick={toggleExportKeySection}>
     {showExportSection
       ? $i18n.t.settings.hideExportSection
       : $i18n.t.settings.showExportSection}
-  </WarningButton>
+  </Button>
 
   {#if showExportSection}
     <div class="export-section">
       <p class="warning-text strong">{$i18n.t.settings.exportWarningFinal}</p>
 
-      <DangerButton onclick={exportSecretKey} disabled={isExporting}>
+      <Button variant="danger" onclick={exportSecretKey} disabled={isExporting}>
         {isExporting ? $i18n.t.common.loading : $i18n.t.settings.confirmExport}
-      </DangerButton>
+      </Button>
 
       {#if exportedNsec}
         <div class="key-display">
