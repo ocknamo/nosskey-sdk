@@ -4,6 +4,7 @@ import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
 import ImportKeyScreen from './components/screens/ImportKeyScreen.svelte';
+import KeyManagementScreen from './components/screens/KeyManagement.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
 import TimelineScreen from './components/screens/TimelineScreen.svelte';
 import {
@@ -295,6 +296,8 @@ $effect(() => {
 <div class="app-container">
   {#if screen === "account"}
     <AccountScreen />
+  {:else if screen === "key"}
+    <KeyManagementScreen />
   {:else if screen === "timeline"}
     <TimelineScreen />
   {:else if screen === "settings"}

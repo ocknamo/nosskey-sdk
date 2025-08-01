@@ -130,6 +130,9 @@ export interface TranslationData {
       picturePlaceholder: string;
     };
   };
+  key: {
+    title: string;
+  };
   settings: {
     title: string;
     exportSecretKey: string;
@@ -221,8 +224,9 @@ export interface TranslationData {
   navigation: {
     account: string;
     timeline: string;
+    key: string;
     settings: string;
-    logout?: string; // 後方互換性のためにオプショナル
+    import: string; // 後方互換性のためにオプショナル
   };
 }
 
@@ -358,6 +362,9 @@ export const ja: TranslationData = {
       picturePlaceholder: 'https://example.com/avatar.jpg',
     },
   },
+  key: {
+    title: '鍵管理',
+  },
   settings: {
     title: '設定',
     exportSecretKey: '秘密鍵のエクスポート',
@@ -456,8 +463,10 @@ export const ja: TranslationData = {
   },
   navigation: {
     account: 'アカウント',
+    key: '鍵管理',
     timeline: 'タイムライン',
     settings: '設定',
+    import: 'インポート',
   },
 };
 
@@ -594,6 +603,9 @@ export const en: TranslationData = {
       picturePlaceholder: 'https://example.com/avatar.jpg',
     },
   },
+  key: {
+    title: 'Key Management',
+  },
   settings: {
     title: 'Settings',
     exportSecretKey: 'Export Secret Key',
@@ -693,8 +705,9 @@ export const en: TranslationData = {
   navigation: {
     account: 'Account',
     timeline: 'Timeline',
+    key: 'Key',
     settings: 'Settings',
-    logout: 'Logout',
+    import: 'Import',
   },
 };
 

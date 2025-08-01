@@ -1,6 +1,7 @@
 <script lang="ts">
 import AccountIcon from '../assets/account-icon.svg';
 import HomeIcon from '../assets/home-icon.svg';
+import KeyIcon from '../assets/key-icon.svg';
 import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { type ScreenName, currentScreen } from '../store/app-state.js';
@@ -32,6 +33,17 @@ function navigateTo(target: ScreenName) {
         <img src={AccountIcon} alt="" />
       </div>
       <span>{$i18n.t.navigation.account}</span>
+    </NavButton>
+    <NavButton
+      active={screen === "key"}
+      ariaCurrent={screen === "key" ? "page" : undefined}
+      ariaLabel={$i18n.t.navigation.key}
+      onclick={() => navigateTo("key")}
+    >
+      <div class="icon">
+        <img src={KeyIcon} alt="" />
+      </div>
+      <span>{$i18n.t.navigation.key}</span>
     </NavButton>
     <NavButton
       active={screen === "timeline"}

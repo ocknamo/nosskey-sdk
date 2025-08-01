@@ -16,12 +16,14 @@ function getPageTitle(screenName: string): string {
   switch (screenName) {
     case 'account':
       return $i18n.t.navigation.account;
+    case 'key':
+      return $i18n.t.navigation.key;
     case 'timeline':
       return $i18n.t.navigation.timeline;
     case 'settings':
       return $i18n.t.navigation.settings;
     case 'import':
-      return 'インポート'; // 追加画面用
+      return $i18n.t.navigation.import; // 追加画面用
     default:
       return 'Nosskey';
   }

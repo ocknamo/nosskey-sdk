@@ -9,7 +9,7 @@ export const defaultRelays = [
   'wss://yabu.me',
 ];
 
-export type ScreenName = 'account' | 'timeline' | 'settings' | 'import';
+export type ScreenName = 'account' | 'timeline' | 'settings' | 'key' | 'import';
 
 export function isScreenName(hash: string): hash is ScreenName {
   return new Set(['account', 'timeline', 'settings', 'import']).has(hash);
