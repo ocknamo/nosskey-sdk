@@ -69,18 +69,6 @@ For example:
 
 ```jsonc
 {
-  v: 1; // Version
-  alg: "aes-gcm-256", // Encryption algorithm
-  salt: "a61c7..f645a", // Salt (hex format, 16 bytes)
-  iv: "98f29..28d01", // Initialization vector (hex format, 12 bytes)
-  ct: "517a2..8c140", // Encrypted private key (hex format, 32 bytes)
-  tag: "01eb6..bbfb0", // Authentication tag (hex format, 16 bytes)
-  credentialId: "3a13e..a592d", // Passkey identifier (hex format)
-  pubkey: "2b458..0c480", // Nostr public key (hex format)
-  username: "jack" // Username when creating the passkey (optional)
-}
-
-{
   "v": 1, // Version
   "alg": "aes-256-gcm", // Encryption algorithm
   "credentialId": "b7d4e9f0aa...cc", // Passkey identifier (hex format)
