@@ -49,11 +49,14 @@ For example:
 
 ```jsonc
 {
-  v: 1, // Version
-  alg: "prf-direct", // Algorithm identifier
-  credentialId: "3a13e..a592d", // Passkey identifier (hex format)
-  pubkey: "2b458..0c480", // Nostr public key (hex format)
-  username: "jone"
+  "v": 1, // Version
+  "alg": "prf-direct", // Algorithm identifier
+  "credentialId": "a3f5b8c12d...9f", // Passkey identifier (hex format)
+  "pubkey": "02ab34cd56...ef", // Nostr public key (hex format)
+  "username": "jone", // Optional
+  "algParams": {
+    "salt": "9a1bcf34d8e7..." // salt（hex format）
+  }
 }
 ```
 
@@ -75,6 +78,20 @@ For example:
   credentialId: "3a13e..a592d", // Passkey identifier (hex format)
   pubkey: "2b458..0c480", // Nostr public key (hex format)
   username: "jack" // Username when creating the passkey (optional)
+}
+
+{
+  "v": 1, // Version
+  "alg": "aes-256-gcm", // Encryption algorithm
+  "credentialId": "b7d4e9f0aa...cc", // Passkey identifier (hex format)
+  "pubkey": "03cd45ef67...12", // Nostr public key (hex format)
+  "username": "jack", // Username when creating the passkey (optional)
+  "algParams": {
+    "salt": "1a2b3c4d5e6f...", // Salt (hex format, 16 bytes)
+    "iv": "abcdef123456...", // Initialization vector (hex format, 12 bytes)
+    "ct": "99887766aabb...", // Encrypted private key (hex format, 32 bytes)
+    "tag": "112233445566..." // Authentication tag (hex format, 16 bytes)
+  }
 }
 ```
 

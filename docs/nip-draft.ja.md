@@ -49,11 +49,14 @@ For example:
 
 ```jsonc
 {
-  v: 1, // バージョン
-  alg: "prf-direct", // アルゴリズム識別子
-  credentialId: "3a13e..a592d", // パスキーの識別子（hex形式）
-  pubkey: "2b458..0c480", // Nostr公開鍵（hex形式）
-  username: "jone"
+  "v": 1, // バージョン
+  "alg": "prf-direct", // アルゴリズム識別子
+  "credentialId": "a3f5b8c12d...9f",  // パスキーの識別子（hex形式）
+  "pubkey": "02ab34cd56...ef", // Nostr公開鍵（hex形式）
+  "username": "jone",
+  "algParams": {
+    "salt": "9a1bcf34d8e7..." // salt（hex形式）
+  }
 }
 ```
 
@@ -66,15 +69,17 @@ For example:
 
 ```jsonc
 {
-  v: 1; // バージョン
-  alg: "aes-gcm-256", // 暗号化アルゴリズム
-  salt: "a61c7..f645a", // ソルト（hex形式、16バイト）
-  iv: "98f29..28d01", // 初期化ベクトル（hex形式、12バイト）
-  ct: "517a2..8c140", // 暗号化された秘密鍵（hex形式、32バイト）
-  tag: "01eb6..bbfb0", // 認証タグ（hex形式、16バイト）
-  credentialId: "3a13e..a592d", // パスキーの識別子（hex形式）
-  pubkey: "2b458..0c480", // Nostr公開鍵（hex形式）
-  username: "jack" // パスキー作成時のユーザー名（オプション）
+  "v": 1, // バージョン
+  "alg": "aes-256-gcm", // 暗号化アルゴリズム
+  "credentialId": "b7d4e9f0aa...cc", // パスキーの識別子（hex形式））
+  "pubkey": "03cd45ef67...12", // Nostr公開鍵（hex形式）
+  "username": "jack", // ユーザ名（オプショナル）
+  "algParams": {
+    "salt": "1a2b3c4d5e6f...", // salt（hex形式）
+    "iv": "abcdef123456...", // 初期化ベクトル（hex形式、12バイト）
+    "ct": "99887766aabb...", // 暗号化された秘密鍵（hex形式、32バイト）
+    "tag": "112233445566..." // 認証タグ（hex形式、16バイト）
+  }
 }
 ```
 
