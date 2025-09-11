@@ -92,17 +92,9 @@ Since PWKBlobEncrypted contains an encrypted private key, it is recommended to s
 ```jsonc
 {
   "kind": 30100,  // Dedicated event kind for PWKBlob
-  "content": "{
-    "pwkBlob": {      // PWKBlob object
-      // PWKBlob contents
-    },
-    "description": "My primary device passkey", // Optional description
-    "deviceInfo": {  // Optional device information for passkey restoration hints
-      "name": "iPhone",
-      "os": "iOS 18.0",
-      "browser": "Safari 18"
-    }
-  }",
+  "content": "
+    // PWKBlob contents
+    ",
   "tags": [
     ["d", "<alg>:<credentialId>"],   // Set a combination of PWKBlob algorithm and credentialId as dtag to avoid duplicate backups of the same PWK
     ["p", "2b458..0c480"],   // Often matches the event creator

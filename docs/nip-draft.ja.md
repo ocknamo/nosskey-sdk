@@ -92,17 +92,9 @@ PWKBlobEncryptedは暗号化された秘密鍵を含むため、デバイスの�
 ```jsonc
 {
   "kind": 30100,  // PWKBlob専用のevent kind
-  "content": "{
-    "pwkBlob": {      // PWKBlobオブジェクト
-      // PWKBlobの内容
-    },
-    "description": "My primary device passkey", // オプショナルな説明
-    "deviceInfo": {  // パスキー復元のヒントのためのオプショナルなデバイス情報
-      "name": "iPhone",
-      "os": "iOS 18.0",
-      "browser": "Safari 18"
-    }
-  }",
+  "content": "
+    // PWKBlobの内容
+    ",
   "tags": [
     ["d", "<alg>:<credentialId>"],   // 同じPWKの重複したバックアップを避けるためPWKBlobのアルゴリズムとcredentialIdを組み合わせてdtagに設定
     ["p", "2b458..0c480"],   // 多くの場合イベント作成者と一致
