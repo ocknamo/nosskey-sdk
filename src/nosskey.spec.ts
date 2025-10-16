@@ -4,8 +4,8 @@ import { seckeySigner } from 'rx-nostr-crypto';
  * @packageDocumentation
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PWKManager } from './nosskey.js';
-import type { NostrEvent, PWKBlob } from './types.js';
+import { NosskeyManager } from './nosskey.js';
+import type { NostrEvent, NostrKeyInfo } from './types.js';
 import { bytesToHex } from './utils.js';
 
 // rx-nostr-crypto のモック
@@ -22,7 +22,7 @@ vi.mock('rx-nostr-crypto', () => {
   };
 });
 
-describe('PWKManager', () => {
+describe('NosskeyManager', () => {
   // WebAuthn APIのモック
   const mockPrfResultValue = 42;
   const mockPrfResult = new Uint8Array(32).fill(mockPrfResultValue).buffer;
@@ -98,8 +98,8 @@ describe('PWKManager', () => {
 
   describe('isPrfSupported', () => {
     it('PRF拡張が利用可能な場合にtrueを返す', async () => {
-      const pwkManager = new PWKManager();
-      const result = await pwkManager.isPrfSupported();
+      const nosskey = new NosskeyManager();
+      const result = await nosskey.isPrfSupported();
       expect(result).toBe(true);
       expect(navigator.credentials.get).toHaveBeenCalled();
     });
@@ -115,16 +115,16 @@ describe('PWKManager', () => {
         configurable: true,
       });
 
-      const pwkManager = new PWKManager();
-      const result = await pwkManager.isPrfSupported();
+      const nosskey = new NosskeyManager();
+      const result = await nosskey.isPrfSupported();
       expect(result).toBe(false);
     });
   });
 
   describe('createPasskey', () => {
     it('パスキーを作成してCredentialIDを返す', async () => {
-      const pwkManager = new PWKManager();
-      const credentialId = await pwkManager.createPasskey();
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
 
       expect(credentialId).toBeInstanceOf(Uint8Array);
       expect(credentialId.length).toBeGreaterThan(0);
@@ -132,70 +132,29 @@ describe('PWKManager', () => {
     });
   });
 
-  describe('importNostrKey', () => {
-    it('既存のNostr秘密鍵をパスキーでラップできる', async () => {
-      const pwkManager = new PWKManager();
-      const credentialId = new Uint8Array(16).fill(1);
-      const secretKey = new Uint8Array(32).fill(55);
-
-      const result = await pwkManager.importNostrKey(credentialId, secretKey);
-
-      expect(result).toHaveProperty('v');
-      expect(result).toHaveProperty('alg');
-      expect(result).toHaveProperty('credentialId');
-      expect(result).toHaveProperty('pubkey');
-      expect(result.v).toBe(1);
-      expect(result.alg).toBe('aes-gcm-256');
-      expect(result.pubkey).toBe('test-pubkey');
-
-      expect(crypto.subtle.encrypt).toHaveBeenCalled();
-      expect(seckeySigner).toHaveBeenCalled();
-    });
-  });
-
-  describe('generateNostrKey', () => {
-    it('新しいNostr秘密鍵を生成してパスキーでラップできる', async () => {
-      const pwkManager = new PWKManager();
-      const credentialId = new Uint8Array(16).fill(1);
-
-      const result = await pwkManager.generateNostrKey(credentialId);
-
-      expect(result).toHaveProperty('v');
-      expect(result).toHaveProperty('alg');
-      expect(result).toHaveProperty('credentialId');
-      expect(result).toHaveProperty('pubkey');
-      expect(result.v).toBe(1);
-      expect(result.alg).toBe('aes-gcm-256');
-      expect(result.pubkey).toBe('test-pubkey');
-
-      expect(crypto.getRandomValues).toHaveBeenCalled();
-    });
-  });
-
-  describe('directPrfToNostrKey', () => {
+  describe('createNostrKey', () => {
     it('PRF値を直接Nostrシークレットキーとして使用できる', async () => {
-      const pwkManager = new PWKManager();
+      const nosskey = new NosskeyManager();
       const credentialId = new Uint8Array(16).fill(1);
 
-      const result = await pwkManager.directPrfToNostrKey(credentialId);
+      const result = await nosskey.createNostrKey(credentialId);
 
-      expect(result).toHaveProperty('v');
-      expect(result).toHaveProperty('alg');
       expect(result).toHaveProperty('credentialId');
       expect(result).toHaveProperty('pubkey');
-      expect(result.v).toBe(1);
-      expect(result.alg).toBe('prf-direct');
+      expect(result).toHaveProperty('salt');
       expect(result.pubkey).toBe('test-pubkey');
+      expect(result.salt).toBe('6e6f7374722d6b6579'); // "nostr-key"のhex
     });
 
     it('PRF値がゼロの場合はエラーを投げる', async () => {
-      const pwkManager = new PWKManager();
+      const nosskey = new NosskeyManager();
       const credentialId = new Uint8Array(16).fill(1);
 
       // PRFの結果がすべて0の場合をモック
       Object.defineProperty(globalThis.navigator, 'credentials', {
         value: {
           get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
             getClientExtensionResults: vi.fn(() => ({
               prf: {
                 results: {
@@ -208,24 +167,17 @@ describe('PWKManager', () => {
         configurable: true,
       });
 
-      await expect(pwkManager.directPrfToNostrKey(credentialId)).rejects.toThrow(
-        'Invalid PRF output'
-      );
+      await expect(nosskey.createNostrKey(credentialId)).rejects.toThrow('Invalid PRF output');
     });
   });
 
-  describe('signEventWithPWK', () => {
-    it('暗号化された秘密鍵を使ってイベントに署名できる', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
+  describe('signEventWithKeyInfo', () => {
+    it('NostrKeyInfoを使ってイベントに署名できる', async () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -233,72 +185,28 @@ describe('PWKManager', () => {
         tags: [],
       };
 
-      const signedEvent = await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob, {
+      const signedEvent = await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo, {
         tags: [['t', 'test']],
       });
 
       expect(signedEvent).toHaveProperty('id', 'test-event-id');
       expect(signedEvent).toHaveProperty('sig', 'test-signature');
-      expect(crypto.subtle.decrypt).toHaveBeenCalled();
-    });
-
-    it('PRF直接使用方式でイベントに署名できる', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const, // const assertion to match the exact type
-        alg: 'prf-direct' as const, // const assertion to match the exact type
-        credentialId: bytesToHex(mockCredentialId),
-        pubkey: 'test-pubkey',
-      };
-      const mockEvent: NostrEvent = {
-        kind: 1,
-        content: 'Hello, Nostr with PRF!',
-        tags: [],
-      };
-
-      const signedEvent = await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
-
-      expect(signedEvent).toHaveProperty('id', 'test-event-id');
-      expect(signedEvent).toHaveProperty('sig', 'test-signature');
-      // PRF直接使用では復号処理は行われない
-      expect(crypto.subtle.decrypt).not.toHaveBeenCalled();
     });
   });
 
   describe('exportNostrKey', () => {
-    it('暗号化された秘密鍵をエクスポートできる（aes-gcm-256）', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
-        credentialId: bytesToHex(mockCredentialId),
-        pubkey: 'test-pubkey',
-      };
-
-      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob);
-
-      // 復号された秘密鍵（モックでは32バイトの66で埋められたもの）
-      expect(secretKey).toBe(bytesToHex(new Uint8Array(32).fill(66)));
-      expect(crypto.subtle.decrypt).toHaveBeenCalled();
-    });
-
     it('PRF直接使用方式の秘密鍵をエクスポートできる', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
 
       // PRF値自体がシークレットキー
-      // テスト用に特別なモックを作成
       const testPrfResult = new Uint8Array(32).fill(mockPrfResultValue);
       const mockCredential = {
+        rawId: mockCredentialId.buffer,
         getClientExtensionResults: vi.fn(() => ({
           prf: {
             results: {
@@ -313,16 +221,14 @@ describe('PWKManager', () => {
         mockCredential as unknown as Credential | null
       );
 
-      const secretKey = await pwkManager.exportNostrKey(mockPwkBlob);
+      const secretKey = await nosskey.exportNostrKey(mockKeyInfo);
 
       // PRF値自体がシークレットキー（32バイトの42で埋められたもの）
       expect(secretKey).toBe(bytesToHex(testPrfResult));
-      // 復号処理は行われない
-      expect(crypto.subtle.decrypt).not.toHaveBeenCalled();
     });
   });
 
-  describe('PWK保存機能', () => {
+  describe('NostrKeyInfo保存機能', () => {
     let mockLocalStorage: { [key: string]: string };
 
     beforeEach(() => {
@@ -342,140 +248,134 @@ describe('PWKManager', () => {
       });
     });
 
-    it('デフォルトでPWK保存が有効', () => {
-      const pwkManager = new PWKManager();
-      const options = pwkManager.getStorageOptions();
+    it('デフォルトでNostrKeyInfo保存が有効', () => {
+      const nosskey = new NosskeyManager();
+      const options = nosskey.getStorageOptions();
       expect(options.enabled).toBe(true);
-      expect(options.storageKey).toBe('nosskey_pwk');
+      expect(options.storageKey).toBe('nosskey_keyinfo');
     });
 
-    it('コンストラクタでPWK保存設定を指定できる', () => {
-      const pwkManager = new PWKManager({
+    it('コンストラクタでNostrKeyInfo保存設定を指定できる', () => {
+      const nosskey = new NosskeyManager({
         storageOptions: { enabled: false, storageKey: 'custom_key' },
       });
-      const options = pwkManager.getStorageOptions();
+      const options = nosskey.getStorageOptions();
       expect(options.enabled).toBe(false);
       expect(options.storageKey).toBe('custom_key');
     });
 
-    it('setStorageOptions でPWK保存設定を更新できる', () => {
-      const pwkManager = new PWKManager();
-      pwkManager.setStorageOptions({ enabled: false, storageKey: 'updated_key' });
-      const options = pwkManager.getStorageOptions();
+    it('setStorageOptions でNostrKeyInfo保存設定を更新できる', () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setStorageOptions({ enabled: false, storageKey: 'updated_key' });
+      const options = nosskey.getStorageOptions();
       expect(options.enabled).toBe(false);
       expect(options.storageKey).toBe('updated_key');
     });
 
-    it('setCurrentPWK で現在のPWKを設定できる', () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+    it('setCurrentKeyInfo で現在のNostrKeyInfoを設定できる', () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
 
-      pwkManager.setCurrentPWK(mockPwkBlob);
+      nosskey.setCurrentKeyInfo(mockKeyInfo);
 
       // localStorage に保存されていることを確認
       expect(localStorage.setItem).toHaveBeenCalled();
-      expect(mockLocalStorage['nosskey_pwk']).toBeDefined();
+      expect(mockLocalStorage['nosskey_keyinfo']).toBeDefined();
 
       // 保存された値を検証
-      const storedValue = JSON.parse(mockLocalStorage['nosskey_pwk']);
+      const storedValue = JSON.parse(mockLocalStorage['nosskey_keyinfo']);
       expect(storedValue.pubkey).toBe('test-pubkey');
     });
 
-    it('getCurrentPWK で現在のPWKを取得できる', () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+    it('getCurrentKeyInfo で現在のNostrKeyInfoを取得できる', () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
 
-      pwkManager.setCurrentPWK(mockPwkBlob);
-      const currentPWK = pwkManager.getCurrentPWK();
+      nosskey.setCurrentKeyInfo(mockKeyInfo);
+      const currentKeyInfo = nosskey.getCurrentKeyInfo();
 
-      expect(currentPWK).not.toBeNull();
-      expect(currentPWK?.pubkey).toBe('test-pubkey');
+      expect(currentKeyInfo).not.toBeNull();
+      expect(currentKeyInfo?.pubkey).toBe('test-pubkey');
     });
 
-    it('ストレージから現在のPWKを読み込める', () => {
+    it('ストレージから現在のNostrKeyInfoを読み込める', () => {
       // 事前にstorageに保存
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
-      mockLocalStorage['nosskey_pwk'] = JSON.stringify(mockPwkBlob);
+      mockLocalStorage['nosskey_keyinfo'] = JSON.stringify(mockKeyInfo);
 
       // 新しいインスタンスを作成（コンストラクタでストレージから読み込み）
-      const pwkManager = new PWKManager();
-      const currentPWK = pwkManager.getCurrentPWK();
+      const nosskey = new NosskeyManager();
+      const currentKeyInfo = nosskey.getCurrentKeyInfo();
 
-      expect(currentPWK).not.toBeNull();
-      expect(currentPWK?.pubkey).toBe('test-pubkey');
+      expect(currentKeyInfo).not.toBeNull();
+      expect(currentKeyInfo?.pubkey).toBe('test-pubkey');
       expect(localStorage.getItem).toHaveBeenCalled();
     });
 
-    it('clearStoredPWK でストレージのPWKをクリアできる', () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+    it('clearStoredKeyInfo でストレージのNostrKeyInfoをクリアできる', () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
 
-      // PWKを設定してストレージに保存
-      pwkManager.setCurrentPWK(mockPwkBlob);
+      // NostrKeyInfoを設定してストレージに保存
+      nosskey.setCurrentKeyInfo(mockKeyInfo);
 
       // ストレージをクリア
-      pwkManager.clearStoredPWK();
+      nosskey.clearStoredKeyInfo();
 
       // localStorage から削除されていることを確認
-      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_pwk');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_keyinfo');
 
-      // 現在のPWKも消去されていることを確認
-      expect(pwkManager.getCurrentPWK()).toBeNull();
+      // 現在のNostrKeyInfoも消去されていることを確認
+      expect(nosskey.getCurrentKeyInfo()).toBeNull();
     });
   });
 
   describe('NIP-07互換メソッド', () => {
-    it('getPublicKey で現在のPWKから公開鍵を取得できる', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+    it('getPublicKey で現在のNostrKeyInfoから公開鍵を取得できる', async () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
 
-      pwkManager.setCurrentPWK(mockPwkBlob);
-      const pubkey = await pwkManager.getPublicKey();
+      nosskey.setCurrentKeyInfo(mockKeyInfo);
+      const pubkey = await nosskey.getPublicKey();
 
       expect(pubkey).toBe('test-pubkey');
     });
 
-    it('現在のPWKが未設定の場合、getPublicKey はエラーを投げる', async () => {
-      const pwkManager = new PWKManager();
+    it('現在のNostrKeyInfoが未設定の場合、getPublicKey はエラーを投げる', async () => {
+      const nosskey = new NosskeyManager();
 
-      // getCurrentPWKをモック化してnullを返すようにする
-      vi.spyOn(pwkManager, 'getCurrentPWK').mockReturnValue(null);
+      // getCurrentKeyInfoをモック化してnullを返すようにする
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
 
-      await expect(pwkManager.getPublicKey()).rejects.toThrow('No current PWK set');
+      await expect(nosskey.getPublicKey()).rejects.toThrow('No current NostrKeyInfo set');
     });
 
-    it('signEvent で現在のPWKを使ってイベントに署名できる', async () => {
-      const pwkManager = new PWKManager();
-      const mockPwkBlob: PWKBlob = {
-        v: 1 as const,
-        alg: 'prf-direct' as const,
+    it('signEvent で現在のNostrKeyInfoを使ってイベントに署名できる', async () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -484,71 +384,66 @@ describe('PWKManager', () => {
       };
 
       // スパイを設定
-      const signEventWithPWKSpy = vi.spyOn(pwkManager, 'signEventWithPWK');
+      const signEventWithKeyInfoSpy = vi.spyOn(nosskey, 'signEventWithKeyInfo');
 
-      pwkManager.setCurrentPWK(mockPwkBlob);
-      const signedEvent = await pwkManager.signEvent(mockEvent);
+      nosskey.setCurrentKeyInfo(mockKeyInfo);
+      const signedEvent = await nosskey.signEvent(mockEvent);
 
-      // 既存のsignEventWithPWKメソッドが呼ばれたことを確認
-      expect(signEventWithPWKSpy).toHaveBeenCalledWith(mockEvent, mockPwkBlob);
+      // 既存のsignEventWithKeyInfoメソッドが呼ばれたことを確認
+      expect(signEventWithKeyInfoSpy).toHaveBeenCalledWith(mockEvent, mockKeyInfo);
 
       // 署名されたイベントを検証
       expect(signedEvent).toHaveProperty('id', 'test-event-id');
       expect(signedEvent).toHaveProperty('sig', 'test-signature');
     });
 
-    it('現在のPWKが未設定の場合、signEvent はエラーを投げる', async () => {
-      const pwkManager = new PWKManager();
+    it('現在のNostrKeyInfoが未設定の場合、signEvent はエラーを投げる', async () => {
+      const nosskey = new NosskeyManager();
       const mockEvent: NostrEvent = {
         kind: 1,
         content: 'Hello, Nostr!',
         tags: [],
       };
 
-      // getCurrentPWKをモック化してnullを返すようにする
-      vi.spyOn(pwkManager, 'getCurrentPWK').mockReturnValue(null);
+      // getCurrentKeyInfoをモック化してnullを返すようにする
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
 
-      await expect(pwkManager.signEvent(mockEvent)).rejects.toThrow('No current PWK set');
+      await expect(nosskey.signEvent(mockEvent)).rejects.toThrow('No current NostrKeyInfo set');
     });
   });
 
   describe('キャッシュ機能', () => {
     it('デフォルトではキャッシュが無効', () => {
-      const pwkManager = new PWKManager();
-      const options = pwkManager.getCacheOptions();
+      const nosskey = new NosskeyManager();
+      const options = nosskey.getCacheOptions();
       expect(options.enabled).toBe(false);
     });
 
     it('コンストラクタでキャッシュ設定を指定できる', () => {
-      const pwkManager = new PWKManager({
+      const nosskey = new NosskeyManager({
         cacheOptions: { enabled: true, timeoutMs: 10000 },
       });
-      const options = pwkManager.getCacheOptions();
+      const options = nosskey.getCacheOptions();
       expect(options.enabled).toBe(true);
       expect(options.timeoutMs).toBe(10000);
     });
 
     it('setCacheOptions でキャッシュ設定を更新できる', () => {
-      const pwkManager = new PWKManager();
-      pwkManager.setCacheOptions({ enabled: true, timeoutMs: 20000 });
-      const options = pwkManager.getCacheOptions();
+      const nosskey = new NosskeyManager();
+      nosskey.setCacheOptions({ enabled: true, timeoutMs: 20000 });
+      const options = nosskey.getCacheOptions();
       expect(options.enabled).toBe(true);
       expect(options.timeoutMs).toBe(20000);
     });
 
     it('キャッシュが有効な場合、2回目の署名で認証が不要', async () => {
-      const pwkManager = new PWKManager();
-      pwkManager.setCacheOptions({ enabled: true });
+      const nosskey = new NosskeyManager();
+      nosskey.setCacheOptions({ enabled: true });
 
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -557,29 +452,24 @@ describe('PWKManager', () => {
       };
 
       // 1回目の署名（PRF認証必要）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // navigator.credentials.get の呼び出し回数をリセット
       vi.clearAllMocks();
 
       // 2回目の署名（キャッシュから取得）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // PRF認証が呼ばれていないことを確認
       expect(navigator.credentials.get).not.toHaveBeenCalled();
     });
 
     it('clearCachedKey で特定の鍵のキャッシュをクリアできる', async () => {
-      const pwkManager = new PWKManager({ cacheOptions: { enabled: true } });
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -588,31 +478,26 @@ describe('PWKManager', () => {
       };
 
       // キャッシュを利用して署名
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // 特定の鍵のキャッシュをクリア
-      pwkManager.clearCachedKey(mockCredentialId);
+      nosskey.clearCachedKey(mockCredentialId);
 
       vi.clearAllMocks();
 
       // 再度署名（キャッシュがクリアされているため認証が必要）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // PRF認証が呼ばれていることを確認
       expect(navigator.credentials.get).toHaveBeenCalled();
     });
 
     it('clearAllCachedKeys で全てのキャッシュをクリアできる', async () => {
-      const pwkManager = new PWKManager({ cacheOptions: { enabled: true } });
-      const mockPwkBlob: PWKBlob = {
-        v: 1,
-        alg: 'aes-gcm-256',
-        salt: bytesToHex(new Uint8Array(16).fill(11)),
-        iv: bytesToHex(new Uint8Array(12).fill(22)),
-        ct: bytesToHex(new Uint8Array(32).fill(33)),
-        tag: bytesToHex(new Uint8Array(16).fill(44)),
+      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -621,18 +506,19 @@ describe('PWKManager', () => {
       };
 
       // キャッシュを利用して署名
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // 全てのキャッシュをクリア
-      pwkManager.clearAllCachedKeys();
+      nosskey.clearAllCachedKeys();
 
       vi.clearAllMocks();
 
       // 再度署名（キャッシュがクリアされているため認証が必要）
-      await pwkManager.signEventWithPWK(mockEvent, mockPwkBlob);
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       // PRF認証が呼ばれていることを確認
       expect(navigator.credentials.get).toHaveBeenCalled();
     });
   });
+
 });

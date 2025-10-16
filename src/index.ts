@@ -7,7 +7,7 @@
 export * from './types.js';
 
 // クラスとユーティリティのエクスポート
-export { PWKManager } from './nosskey.js';
+export { NosskeyManager } from './nosskey.js';
 
 // ユーティリティのエクスポート
 export { bytesToHex, hexToBytes } from './utils.js';
