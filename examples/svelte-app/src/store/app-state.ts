@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { getPWKManager } from '../services/pwk-manager.service.js';
+import { getNosskeyManager } from '../services/nosskey-manager.service.js';
 
 // デフォルトリレーのリスト
 export const defaultRelays = [
@@ -101,9 +101,9 @@ export const resetState = () => {
 
 // ログアウト関数
 export const logout = () => {
-  // PWKManagerを使用してSDK側の保存PWKをクリア
-  const pwkManager = getPWKManager();
-  pwkManager.clearStoredPWK();
+  // SDK側のアカウント情報をクリア
+  const nosskeyManager = getNosskeyManager();
+  nosskeyManager.clearStoredKeyInfo()
 
   // 公開鍵情報をクリア
   publicKey.set(null);

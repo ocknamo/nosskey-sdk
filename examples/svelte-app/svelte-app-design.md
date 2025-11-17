@@ -33,7 +33,6 @@ examples/svelte-app/
 │   │   ├── screens/               # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
 │   │   │   ├── AuthScreen.svelte       # 認証画面
-│   │   │   ├── ImportKeyScreen.svelte  # 鍵インポート画面
 │   │   │   ├── SettingsScreen.svelte   # 設定画面
 │   │   │   └── TimelineScreen.svelte   # タイムライン画面
 │   │   ├── settings/              # 設定関連コンポーネント
@@ -115,7 +114,7 @@ examples/svelte-app/
 
 #### pwk-manager.service.ts
 PWK（Passkey Wrapped Key）管理サービス：
-- `getPWKManager()` - PWKManagerのシングルトンインスタンスを取得
+- `getNosskeyManager()` - NosskeyManagerのシングルトンインスタンスを取得
 - キャッシュ設定の動的更新機能
 - シークレットキーのキャッシュクリア機能
 - PWKの保存・復元機能
@@ -132,7 +131,7 @@ Nostrリレーとの通信を管理するサービス：
 #### App.svelte
 アプリケーションのメインコンポーネント：
 - URLハッシュに基づく画面初期化と切り替え
-- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen、ImportKeyScreen）
+- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen）
 - グローバルスタイルの定義
 
 #### AccountScreen.svelte
@@ -148,11 +147,6 @@ Nostrリレーとの通信を管理するサービス：
 - 既存パスキーでのログイン機能
 - インポート画面への遷移機能
 - PRF拡張対応確認機能
-
-#### ImportKeyScreen.svelte
-既存のNostr秘密鍵をインポートするコンポーネント：
-- nsecまたは16進数形式の秘密鍵入力
-- 秘密鍵の検証とインポート
 
 #### TimelineScreen.svelte
 タイムライン表示と投稿機能を担当するコンポーネント：

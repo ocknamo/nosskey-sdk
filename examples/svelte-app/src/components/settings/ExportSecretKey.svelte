@@ -1,73 +1,73 @@
 <script lang="ts">
-import CopyIcon from '../../assets/copy-icon.svg';
-import { i18n } from '../../i18n/i18n-store.js';
-import { getPWKManager } from '../../services/pwk-manager.service.js';
-import { hexToNsec } from '../../utils/bech32-converter.js';
-import CardSection from '../ui/CardSection.svelte';
-import Button from '../ui/button/Button.svelte';
-import IconButton from '../ui/button/IconButton.svelte';
+  import CopyIcon from "../../assets/copy-icon.svg";
+  import { i18n } from "../../i18n/i18n-store.js";
+  import { getNosskeyManager } from "../../services/nosskey-manager.service.js";
+  import { hexToNsec } from "../../utils/bech32-converter.js";
+  import CardSection from "../ui/CardSection.svelte";
+  import Button from "../ui/button/Button.svelte";
+  import IconButton from "../ui/button/IconButton.svelte";
 
-// 秘密鍵エクスポート関連の状態変数
-let showExportSection = $state(false);
-let isExporting = $state(false);
-let exportedNsec = $state('');
-let exportError = $state('');
-let showCopiedMessage = $state(false);
+  // 秘密鍵エクスポート関連の状態変数
+  let showExportSection = $state(false);
+  let isExporting = $state(false);
+  let exportedNsec = $state("");
+  let exportError = $state("");
+  let showCopiedMessage = $state(false);
 
-// PWKManagerのシングルトンインスタンスを取得
-const pwkManager = getPWKManager();
+  // NosskeyManagerのシングルトンインスタンスを取得
+  const keyManager = getNosskeyManager();
 
-// エクスポートセクションの表示トグル
-function toggleExportKeySection() {
-  showExportSection = !showExportSection;
-  // セクションを隠す際は内容もクリア
-  if (!showExportSection) {
-    exportedNsec = '';
-    exportError = '';
-  }
-}
-
-// 秘密鍵をエクスポート
-async function exportSecretKey() {
-  // PWKが存在するか確認
-  const currentPWK = pwkManager.getCurrentPWK();
-  if (!currentPWK) {
-    exportError = $i18n.t.settings.noKeyToExport;
-    return;
+  // エクスポートセクションの表示トグル
+  function toggleExportKeySection() {
+    showExportSection = !showExportSection;
+    // セクションを隠す際は内容もクリア
+    if (!showExportSection) {
+      exportedNsec = "";
+      exportError = "";
+    }
   }
 
-  isExporting = true;
-  exportedNsec = '';
-  exportError = '';
+  // 秘密鍵をエクスポート
+  async function exportSecretKey() {
+    // PWKが存在するか確認
+    const currentPWK = keyManager.getCurrentPWK();
+    if (!currentPWK) {
+      exportError = $i18n.t.settings.noKeyToExport;
+      return;
+    }
 
-  try {
-    // PWKManagerのexportNostrKey関数を使用して秘密鍵を取得
-    const hexPrivkey = await pwkManager.exportNostrKey(currentPWK);
+    isExporting = true;
+    exportedNsec = "";
+    exportError = "";
 
-    // 16進数からnsec形式に変換
-    exportedNsec = hexToNsec(hexPrivkey);
-  } catch (error) {
-    console.error('秘密鍵エクスポートエラー:', error);
-    exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isExporting = false;
+    try {
+      // PWKManagerのexportNostrKey関数を使用して秘密鍵を取得
+      const hexPrivkey = await keyManager.exportNostrKey(currentPWK);
+
+      // 16進数からnsec形式に変換
+      exportedNsec = hexToNsec(hexPrivkey);
+    } catch (error) {
+      console.error("秘密鍵エクスポートエラー:", error);
+      exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isExporting = false;
+    }
   }
-}
 
-// クリップボードにコピー
-function copyToClipboard(text: string) {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      showCopiedMessage = true;
-      setTimeout(() => {
-        showCopiedMessage = false;
-      }, 2000);
-    })
-    .catch((err) => {
-      console.error('クリップボードコピーエラー:', err);
-    });
-}
+  // クリップボードにコピー
+  function copyToClipboard(text: string) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showCopiedMessage = true;
+        setTimeout(() => {
+          showCopiedMessage = false;
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("クリップボードコピーエラー:", err);
+      });
+  }
 </script>
 
 <CardSection title={$i18n.t.settings.exportSecretKey}>

@@ -1,8 +1,8 @@
-import { PWKManager } from '../../../../src/index.js';
+import { NosskeyManager } from '../../../../src/index.js';
 import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
 
 // シングルトンインスタンス
-let instance: PWKManager | null = null;
+let instance: NosskeyManager | null = null;
 
 // 設定の現在の値
 let currentCacheEnabled = true;
@@ -18,8 +18,8 @@ function updateCacheSettings() {
   }
 }
 
-// PWKManagerのシングルトンインスタンスを取得
-export function getPWKManager(): PWKManager {
+// NosskeyManagerのシングルトンインスタンスを取得
+export function getNosskeyManager(): NosskeyManager {
   if (!instance) {
     // 初期化処理
 
@@ -38,7 +38,7 @@ export function getPWKManager(): PWKManager {
       }
     });
 
-    instance = new PWKManager({
+    instance = new NosskeyManager({
       cacheOptions: {
         enabled: currentCacheEnabled,
         timeoutMs: currentCacheTimeout * 1000, // 秒をミリ秒に変換
@@ -53,7 +53,7 @@ export function getPWKManager(): PWKManager {
 }
 
 // インスタンスのリセット（主にテスト用）
-export function resetPWKManager(): void {
+export function resetNosskeyManager(): void {
   instance = null;
 }
 

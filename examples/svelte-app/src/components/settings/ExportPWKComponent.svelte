@@ -1,84 +1,84 @@
 <script lang="ts">
-import CopyIcon from '../../assets/copy-icon.svg';
-import { i18n } from '../../i18n/i18n-store.js';
-import { getPWKManager } from '../../services/pwk-manager.service.js';
-import CardSection from '../ui/CardSection.svelte';
-import Button from '../ui/button/Button.svelte';
-import IconButton from '../ui/button/IconButton.svelte';
+  import CopyIcon from "../../assets/copy-icon.svg";
+  import { i18n } from "../../i18n/i18n-store.js";
+  import { getNosskeyManager } from "../../services/nosskey-manager.service.js";
+  import CardSection from "../ui/CardSection.svelte";
+  import Button from "../ui/button/Button.svelte";
+  import IconButton from "../ui/button/IconButton.svelte";
 
-// PWKエクスポート関連の状態変数
-let showExportSection = $state(false);
-let isExporting = $state(false);
-let exportedPWK = $state('');
-let exportError = $state('');
-let showCopiedMessage = $state(false);
+  // PWKエクスポート関連の状態変数
+  let showExportSection = $state(false);
+  let isExporting = $state(false);
+  let exportedPWK = $state("");
+  let exportError = $state("");
+  let showCopiedMessage = $state(false);
 
-// PWKManagerのシングルトンインスタンスを取得
-const pwkManager = getPWKManager();
+  // NosskeyManagerのシングルトンインスタンスを取得
+  const keyManager = getNosskeyManager();
 
-// エクスポートセクションの表示トグル
-function toggleExportKeySection() {
-  showExportSection = !showExportSection;
-  // セクションを隠す際は内容もクリア
-  if (!showExportSection) {
-    exportedPWK = '';
-    exportError = '';
-  }
-}
-
-// PWKをエクスポート
-async function exportPWK() {
-  // PWKが存在するか確認
-  const currentPWK = pwkManager.getCurrentPWK();
-  if (!currentPWK) {
-    exportError = $i18n.t.settings.exportPWK.noCurrentPWK;
-    return;
+  // エクスポートセクションの表示トグル
+  function toggleExportKeySection() {
+    showExportSection = !showExportSection;
+    // セクションを隠す際は内容もクリア
+    if (!showExportSection) {
+      exportedPWK = "";
+      exportError = "";
+    }
   }
 
-  isExporting = true;
-  exportedPWK = '';
-  exportError = '';
+  // PWKをエクスポート
+  async function exportPWK() {
+    // PWKが存在するか確認
+    const currentPWK = keyManager.getCurrentPWK();
+    if (!currentPWK) {
+      exportError = $i18n.t.settings.exportPWK.noCurrentPWK;
+      return;
+    }
 
-  try {
-    // PWKをJSON文字列に変換
-    exportedPWK = JSON.stringify(currentPWK, null, 2);
-  } catch (error) {
-    console.error('PWKエクスポートエラー:', error);
-    exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isExporting = false;
+    isExporting = true;
+    exportedPWK = "";
+    exportError = "";
+
+    try {
+      // PWKをJSON文字列に変換
+      exportedPWK = JSON.stringify(currentPWK, null, 2);
+    } catch (error) {
+      console.error("PWKエクスポートエラー:", error);
+      exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isExporting = false;
+    }
   }
-}
 
-// クリップボードにコピー
-function copyToClipboard(text: string) {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      showCopiedMessage = true;
-      setTimeout(() => {
-        showCopiedMessage = false;
-      }, 2000);
-    })
-    .catch((err) => {
-      console.error('クリップボードコピーエラー:', err);
-    });
-}
+  // クリップボードにコピー
+  function copyToClipboard(text: string) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showCopiedMessage = true;
+        setTimeout(() => {
+          showCopiedMessage = false;
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("クリップボードコピーエラー:", err);
+      });
+  }
 
-// PWKをファイルとして保存
-function savePWKToFile() {
-  if (!exportedPWK) return;
+  // PWKをファイルとして保存
+  function savePWKToFile() {
+    if (!exportedPWK) return;
 
-  const blob = new Blob([exportedPWK], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+    const blob = new Blob([exportedPWK], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
 
-  a.href = url;
-  a.download = 'nosskey-pwk-backup.json';
-  a.click();
+    a.href = url;
+    a.download = "nosskey-pwk-backup.json";
+    a.click();
 
-  URL.revokeObjectURL(url);
-}
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <CardSection title={$i18n.t.settings.exportPWK.title}>
