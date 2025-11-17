@@ -63,7 +63,7 @@ examples/svelte-app/
 │   │   ├── i18n-store.ts          # 言語ストア
 │   │   └── translations.ts        # 翻訳データ
 │   ├── services/
-│   │   ├── pwk-manager.service.ts # PWK管理サービス
+│   │   ├── nosskey-manager.service.ts # PWK管理サービス
 │   │   ├── relay.service.ts       # リレー接続サービス
 │   │   └── test-rxnostr.ts        # テスト用ユーティリティ 
 │   ├── store/
@@ -112,12 +112,12 @@ examples/svelte-app/
 
 ### 3.2 サービス
 
-#### pwk-manager.service.ts
-PWK（Passkey Wrapped Key）管理サービス：
+#### nosskey-manager.service.ts
+Nosskey管理サービス：
 - `getNosskeyManager()` - NosskeyManagerのシングルトンインスタンスを取得
 - キャッシュ設定の動的更新機能
 - シークレットキーのキャッシュクリア機能
-- PWKの保存・復元機能
+- 鍵情報の保存・復元機能
 
 #### relay.service.ts
 Nostrリレーとの通信を管理するサービス：

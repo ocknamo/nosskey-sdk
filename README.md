@@ -39,19 +39,19 @@ npm install nosskey-sdk
 ### Creating a Passkey and Generating a New Nostr Key (Recommended Approach)
 
 ```javascript
-import { PWKManager } from 'nosskey-sdk';
+import { NosskeyManager } from 'nosskey-sdk';
 
-const pwkMgr = new PWKManager();
+const keyMgr = new NosskeyManager();
 
 // Create a passkey (displays browser's passkey UI)
-const credentialId = await pwkMgr.createPasskey();
+const credentialId = await keyMgr.createPasskey();
 
 // Use PRF value directly as a Nostr key
-const pwk = await pwkMgr.directPrfToNostrKey(credentialId);
-pwkMgr.setCurrentPWK(pwk);
+const key = await keyMgr.directPrfToNostrKey(credentialId);
+keyMgr.setCurrentKeyInfo(key);
 
 // Get the public key
-const publicKey = await pwkMgr.getPublicKey();
+const publicKey = await keyMgr.getPublicKey();
 console.log(`Public key: ${publicKey}`);
 
 // Sign an event
@@ -61,24 +61,24 @@ const event = {
   tags: [],
   created_at: Math.floor(Date.now() / 1000)
 };
-const signedEvent = await pwkMgr.signEvent(event);
+const signedEvent = await keyMgr.signEvent(event);
 ```
 
 ### Importing an Existing Key (Alternative Approach)
 
 ```javascript
-import { PWKManager } from 'nosskey-sdk';
+import { NosskeyManager } from 'nosskey-sdk';
 import { hexToBytes } from 'nosskey-sdk';
 
-const pwkMgr = new PWKManager();
+const keyMgr = new NosskeyManager();
 
 // Create a passkey
-const credentialId = await pwkMgr.createPasskey();
+const credentialId = await keyMgr.createPasskey();
 
 // Import an existing Nsec private key
 const existingSecretKey = hexToBytes('7f...'); // 32-byte private key
-const pwk = await pwkMgr.importNostrKey(existingSecretKey, credentialId);
-pwkMgr.setCurrentPWK(pwk);
+const key = await keyMgr.importNostrKey(existingSecretKey, credentialId);
+keyMgr.setCurrentKeyInfo(key);
 ```
 
 ## Supported Environments
