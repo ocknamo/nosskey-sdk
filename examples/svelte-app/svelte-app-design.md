@@ -37,7 +37,7 @@ examples/svelte-app/
 │   │   │   └── TimelineScreen.svelte   # タイムライン画面
 │   │   ├── settings/              # 設定関連コンポーネント
 │   │   │   ├── AppInfo.svelte          # アプリ情報
-│   │   │   ├── ExportPWKComponent.svelte # PWKエクスポート
+│   │   │   ├── ExportKeyInfoComponent.svelte # PWKエクスポート
 │   │   │   ├── ExportSecretKey.svelte  # 秘密鍵エクスポート
 │   │   │   ├── LanguageSettings.svelte # 言語設定
 │   │   │   ├── LocalStorageSection.svelte # ローカルストレージ
@@ -168,7 +168,7 @@ Nostrリレーとの通信を管理するサービス：
 - **theme-settings.svelte** - テーマ設定（ダークモード・ライトモード切り替え）
 - **LogoutSection.svelte** - ログアウト機能
 - **LocalStorageSection.svelte** - ローカルストレージのクリア機能
-- **ExportPWKComponent.svelte** - PWKデータのエクスポート機能
+- **ExportKeyInfoComponent.svelte** - PWKデータのエクスポート機能
 - **ExportSecretKey.svelte** - 秘密鍵のエクスポート機能
 - **AppInfo.svelte** - アプリケーション情報の表示
 
