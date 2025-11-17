@@ -73,8 +73,8 @@ export interface TranslationData {
     pwkImportTitle: string;
     pwkImportDesc: string;
     pwkFileSelect: string;
-    pwkDataInput: string;
-    pwkDataPlaceholder: string;
+    keyDataInput: string;
+    keyDataPlaceholder: string;
     pwkLoginButton: string;
     pwkLoginProcessing: string;
     orText: string;
@@ -143,7 +143,7 @@ export interface TranslationData {
     confirmExport: string;
     yourSecretKey: string;
     noKeyToExport: string;
-    exportPWK: {
+    exportKeyInfo: {
       title: string;
       description: string;
       warning: string;
@@ -305,8 +305,8 @@ export const ja: TranslationData = {
     pwkImportTitle: 'バックアップしたPWKでログイン',
     pwkImportDesc: '以前にエクスポートしたPWKファイルまたはデータを使用してログインします。',
     pwkFileSelect: '📁PWKファイルを選択',
-    pwkDataInput: 'PWKデータを入力',
-    pwkDataPlaceholder: 'PWKデータをここに貼り付けてください',
+    keyDataInput: 'PWKデータを入力',
+    keyDataPlaceholder: 'PWKデータをここに貼り付けてください',
     pwkLoginButton: 'PWKデータでログイン',
     pwkLoginProcessing: '処理中...',
     orText: 'または',
@@ -444,7 +444,7 @@ export const ja: TranslationData = {
       auto: 'システム設定に従う',
       changed: 'テーマを変更しました',
     },
-    exportPWK: {
+    exportKeyInfo: {
       title: 'PWKのエクスポート',
       description:
         'PWKをバックアップして別のデバイスで利用したり、ブラウザデータが消去された場合に復元することができます。',
@@ -546,8 +546,8 @@ export const en: TranslationData = {
     pwkImportTitle: 'Login with Backed Up PWK',
     pwkImportDesc: 'Use a previously exported PWK file or data to login.',
     pwkFileSelect: '📁Select PWK File',
-    pwkDataInput: 'Enter PWK Data',
-    pwkDataPlaceholder: 'Paste your PWK data here',
+    keyDataInput: 'Enter PWK Data',
+    keyDataPlaceholder: 'Paste your PWK data here',
     pwkLoginButton: 'Login with PWK Data',
     pwkLoginProcessing: 'Processing...',
     orText: 'or',
@@ -685,7 +685,7 @@ export const en: TranslationData = {
       auto: 'Follow System Setting',
       changed: 'Theme changed',
     },
-    exportPWK: {
+    exportKeyInfo: {
       title: 'Export PWK',
       description:
         'You can backup your PWK to use on another device or restore it if your browser data is erased.',

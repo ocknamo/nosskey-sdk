@@ -9,7 +9,7 @@
   // PWKエクスポート関連の状態変数
   let showExportSection = $state(false);
   let isExporting = $state(false);
-  let exportedPWK = $state("");
+  let exportedKeyInfo = $state("");
   let exportError = $state("");
   let showCopiedMessage = $state(false);
 
@@ -21,27 +21,27 @@
     showExportSection = !showExportSection;
     // セクションを隠す際は内容もクリア
     if (!showExportSection) {
-      exportedPWK = "";
+      exportedKeyInfo = "";
       exportError = "";
     }
   }
 
-  // PWKをエクスポート
-  async function exportPWK() {
-    // PWKが存在するか確認
-    const currentPWK = keyManager.getCurrentPWK();
-    if (!currentPWK) {
-      exportError = $i18n.t.settings.exportPWK.noCurrentPWK;
+  // 鍵情報をエクスポート
+  async function exportKeyInfo() {
+    // 鍵情報が存在するか確認
+    const currentKeyInfo = keyManager.getCurrentKeyInfo();
+    if (!currentKeyInfo) {
+      exportError = $i18n.t.settings.exportKeyInfo.noCurrentPWK;
       return;
     }
 
     isExporting = true;
-    exportedPWK = "";
+    exportedKeyInfo = "";
     exportError = "";
 
     try {
-      // PWKをJSON文字列に変換
-      exportedPWK = JSON.stringify(currentPWK, null, 2);
+      // 鍵情報をJSON文字列に変換
+      exportedKeyInfo = JSON.stringify(exportKeyInfo, null, 2);
     } catch (error) {
       console.error("PWKエクスポートエラー:", error);
       exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
@@ -67,9 +67,9 @@
 
   // PWKをファイルとして保存
   function savePWKToFile() {
-    if (!exportedPWK) return;
+    if (!exportedKeyInfo) return;
 
-    const blob = new Blob([exportedPWK], { type: "application/json" });
+    const blob = new Blob([exportedKeyInfo], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
 
@@ -81,51 +81,51 @@
   }
 </script>
 
-<CardSection title={$i18n.t.settings.exportPWK.title}>
+<CardSection title={$i18n.t.settings.exportKeyInfo.title}>
   <p class="info-text">
-    {$i18n.t.settings.exportPWK.description}
+    {$i18n.t.settings.exportKeyInfo.description}
   </p>
   <p class="warning-text">
-    {$i18n.t.settings.exportPWK.warning}
+    {$i18n.t.settings.exportKeyInfo.warning}
   </p>
 
   <Button variant="warning" onclick={toggleExportKeySection}>
     {showExportSection
-      ? $i18n.t.settings.exportPWK.hideExportSection
-      : $i18n.t.settings.exportPWK.showExportSection}
+      ? $i18n.t.settings.exportKeyInfo.hideExportSection
+      : $i18n.t.settings.exportKeyInfo.showExportSection}
   </Button>
 
   {#if showExportSection}
     <div class="export-section">
       <p class="warning-text">
-        {$i18n.t.settings.exportPWK.restoreWarning}
+        {$i18n.t.settings.exportKeyInfo.restoreWarning}
       </p>
 
-      <Button onclick={exportPWK} disabled={isExporting}>
+      <Button onclick={exportKeyInfo} disabled={isExporting}>
         {isExporting
           ? $i18n.t.common.loading
-          : $i18n.t.settings.exportPWK.exportButton}
+          : $i18n.t.settings.exportKeyInfo.exportButton}
       </Button>
 
-      {#if exportedPWK}
+      {#if exportedKeyInfo}
         <div class="key-display">
-          <p>{$i18n.t.settings.exportPWK.backupData}</p>
+          <p>{$i18n.t.settings.exportKeyInfo.backupData}</p>
           <div class="key-container">
-            <textarea readonly value={exportedPWK} class="pwk-textarea"
+            <textarea readonly value={exportedKeyInfo} class="pwk-textarea"
             ></textarea>
             <div class="action-buttons">
               <IconButton
-                onclick={() => copyToClipboard(exportedPWK)}
+                onclick={() => copyToClipboard(exportedKeyInfo)}
                 title={$i18n.t.common.copy}
               >
                 <img src={CopyIcon} alt="Copy" />
               </IconButton>
               <Button
                 onclick={savePWKToFile}
-                title={$i18n.t.settings.exportPWK.saveFileTitle}
+                title={$i18n.t.settings.exportKeyInfo.saveFileTitle}
                 size="small"
               >
-                {$i18n.t.settings.exportPWK.saveFile}
+                {$i18n.t.settings.exportKeyInfo.saveFile}
               </Button>
             </div>
           </div>

@@ -26,9 +26,9 @@
   // biome-ignore lint: svelte
   let showDeveloperSection = $state(false);
   // biome-ignore lint: svelte
-  let showPWKTextarea = $state(false);
+  let showKeyInfoTextarea = $state(false);
 
-  // PWKインポート関連の状態変数
+  // KeyInfoインポート関連の状態変数
   // biome-ignore lint: svelte
   let pwkTextInput = $state("");
   let pwkImportError = $state("");
@@ -105,12 +105,10 @@
 
     try {
       // PRFを直接Nostrキーとして使用
-      const pwk = await keyManager.directPrfToNostrKey(
-        hexToBytes(credentialId),
-      );
+      const keyInfo = await keyManager.createNostrKey(hexToBytes(credentialId));
 
-      // SDKにPWKを設定（内部でストレージにも保存される）
-      keyManager.setCurrentPWK(pwk);
+      // SDKにKeyInfoを設定（内部でストレージにも保存される）
+      keyManager.setCurrentKeyInfo(keyInfo);
 
       // 公開鍵を取得して状態を更新
       const pubKey = await keyManager.getPublicKey();
@@ -134,10 +132,10 @@
 
     try {
       // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
-      const pwk = await keyManager.directPrfToNostrKey();
+      const keyInfo = await keyManager.createNostrKey();
 
-      // SDKにPWKを設定（内部でストレージにも保存される）
-      keyManager.setCurrentPWK(pwk);
+      // SDKに鍵情報を設定（内部でストレージにも保存される）
+      keyManager.setCurrentKeyInfo(keyInfo);
 
       // 公開鍵を取得して状態を更新
       const pubKey = await keyManager.getPublicKey();
@@ -170,8 +168,8 @@
     return "お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。";
   }
 
-  // PWKファイルアップロードの処理
-  async function handlePWKFileUpload(event: Event) {
+  // KeyInfoファイルアップロードの処理
+  async function handleKeyInfoFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
 
@@ -181,48 +179,48 @@
 
     try {
       const fileContent = await file.text();
-      await loginWithPWKData(fileContent);
+      await loginWithKeyInfoData(fileContent);
     } catch (error) {
-      console.error("PWKファイル読み込みエラー:", error);
+      console.error("KeyInfoファイル読み込みエラー:", error);
       pwkImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
       isLoading = false;
     }
   }
 
-  // PWKテキストでのログイン処理
-  async function loginWithPWKText() {
+  // KeyInfoテキストでのログイン処理
+  async function loginWithKeyInfoText() {
     if (!pwkTextInput) return;
 
     isLoading = true;
     pwkImportError = "";
 
     try {
-      await loginWithPWKData(pwkTextInput);
+      await loginWithKeyInfoData(pwkTextInput);
     } catch (error) {
-      console.error("PWKテキスト処理エラー:", error);
-      pwkImportError = `PWK処理エラー: ${error instanceof Error ? error.message : String(error)}`;
+      console.error("KeyInfoテキスト処理エラー:", error);
+      pwkImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
       isLoading = false;
     }
   }
 
-  // PWKデータ（JSONテキスト）からのログイン処理
-  async function loginWithPWKData(pwkJsonText: string) {
+  // KeyInfoデータ（JSONテキスト）からのログイン処理
+  async function loginWithKeyInfoData(pwkJsonText: string) {
     try {
       // JSONをパース
-      const pwkData = JSON.parse(pwkJsonText);
+      const keyData = JSON.parse(pwkJsonText);
 
-      // PWKが有効かチェック
+      // KeyInfoが有効かチェック
       if (
-        !pwkData.v ||
-        !pwkData.alg ||
-        !pwkData.credentialId ||
-        !pwkData.pubkey
+        !keyData.v ||
+        !keyData.alg ||
+        !keyData.credentialId ||
+        !keyData.pubkey
       ) {
-        throw new Error("有効なPWKデータではありません");
+        throw new Error("有効なKeyInfoデータではありません");
       }
 
-      // PWKをセット
-      keyManager.setCurrentPWK(pwkData);
+      // KeyInfoをセット
+      keyManager.setCurrentKeyInfo(keyData);
 
       // 公開鍵を取得して状態を更新
       const pubKey = await keyManager.getPublicKey();
@@ -232,9 +230,9 @@
       // アカウント画面に遷移
       appState.currentScreen.set("account");
     } catch (error) {
-      console.error("PWKログインエラー:", error);
+      console.error("KeyInfoログインエラー:", error);
       throw new Error(
-        `PWKログインエラー: ${error instanceof Error ? error.message : String(error)}`,
+        `KeyInfoログインエラー: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
       isLoading = false;
@@ -342,17 +340,17 @@
 
       {#if showAdvancedOptions}
         <div class="advanced-content">
-          <!-- PWKインポートセクション -->
+          <!-- KeyInfoインポートセクション -->
           <CardSection title={$i18n.t.auth.pwkImportTitle}>
-            <div class="pwk-import-section">
+            <div class="key-info-import-section">
               <p class="section-description">{$i18n.t.auth.pwkImportDesc}</p>
 
-              <div class="pwk-input-container">
+              <div class="key-info-input-container">
                 <FileInputButton
-                  onchange={handlePWKFileUpload}
+                  onchange={handleKeyInfoFileUpload}
                   accept="application/json"
                   disabled={isLoading}
-                  inputId="pwk-file-input"
+                  inputId="key-info-file-input"
                 >
                   {$i18n.t.auth.pwkFileSelect}
                 </FileInputButton>
@@ -362,27 +360,27 @@
                 </div>
 
                 <ToggleButton
-                  onclick={() => (showPWKTextarea = !showPWKTextarea)}
-                  expanded={showPWKTextarea}
+                  onclick={() => (showKeyInfoTextarea = !showKeyInfoTextarea)}
+                  expanded={showKeyInfoTextarea}
                   size="small"
                   className="toggle-text-input-button"
                 >
-                  {$i18n.t.auth.pwkDataInput}
+                  {$i18n.t.auth.keyDataInput}
                 </ToggleButton>
               </div>
 
-              {#if showPWKTextarea}
-                <div class="pwk-textarea-container">
+              {#if showKeyInfoTextarea}
+                <div class="key-info-textarea-container">
                   <textarea
                     bind:value={pwkTextInput}
-                    placeholder={$i18n.t.auth.pwkDataPlaceholder}
-                    class="pwk-textarea"
+                    placeholder={$i18n.t.auth.keyDataPlaceholder}
+                    class="key-info-textarea"
                   ></textarea>
                   <Button
                     variant="success"
-                    onclick={loginWithPWKText}
+                    onclick={loginWithKeyInfoText}
                     disabled={isLoading || !pwkTextInput}
-                    className="pwk-login-button"
+                    className="key-info-login-button"
                   >
                     {isLoading
                       ? $i18n.t.auth.pwkLoginProcessing
@@ -665,12 +663,12 @@
     gap: 16px;
   }
 
-  /* PWKインポートセクション */
-  .pwk-import-section {
+  /* KeyInfoインポートセクション */
+  .key-info-import-section {
     text-align: left;
   }
 
-  .pwk-input-container {
+  .key-info-input-container {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -697,11 +695,11 @@
     font-size: 0.9rem;
   }
 
-  .pwk-textarea-container {
+  .key-info-textarea-container {
     margin-top: 16px;
   }
 
-  .pwk-textarea {
+  .key-info-textarea {
     width: 100%;
     height: 120px;
     padding: 12px;
@@ -714,7 +712,7 @@
     transition: border-color 0.2s ease;
   }
 
-  .pwk-textarea:focus {
+  .key-info-textarea:focus {
     outline: none;
     border-color: var(--color-button-primary);
   }

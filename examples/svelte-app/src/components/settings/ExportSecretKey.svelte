@@ -30,7 +30,7 @@
   // 秘密鍵をエクスポート
   async function exportSecretKey() {
     // PWKが存在するか確認
-    const currentPWK = keyManager.getCurrentPWK();
+    const currentPWK = keyManager.getCurrentKeyInfo();
     if (!currentPWK) {
       exportError = $i18n.t.settings.noKeyToExport;
       return;
