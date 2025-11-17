@@ -65,18 +65,14 @@ export interface TranslationData {
     firstLogin: string;
     passkeyCreated: string;
     proceedWithLogin: string;
-    // インポートセクション
-    importSectionTitle: string;
-    importSectionDesc: string;
-    importNotImplemented: string;
-    // PWKインポートセクション
-    pwkImportTitle: string;
-    pwkImportDesc: string;
-    pwkFileSelect: string;
+    // KeyInfoインポートセクション
+    keyInfoImportTitle: string;
+    keyInfoImportDesc: string;
+    keyInfoFileSelect: string;
     keyDataInput: string;
     keyDataPlaceholder: string;
-    pwkLoginButton: string;
-    pwkLoginProcessing: string;
+    keyInfoLoginButton: string;
+    keyInfoLoginProcessing: string;
     orText: string;
     // 改善されたセクション分類
     quickStartTitle: string;
@@ -154,7 +150,7 @@ export interface TranslationData {
       backupData: string;
       saveFile: string;
       saveFileTitle: string;
-      noCurrentPWK: string;
+      noCurrentKeyInfo: string;
     };
     relayManagement: {
       title: string;
@@ -262,7 +258,7 @@ export const ja: TranslationData = {
   },
   auth: {
     title: 'Nosskey デモ',
-    subtitle: 'パスキーにラップされたNostr秘密鍵(PWK)を活用したクライアント',
+    subtitle: 'パスキーで保管するNostr秘密鍵を活用したクライアント',
     checkPrf: 'PRF拡張対応確認',
     unsupportedTitle: 'PRF拡張がサポートされていません',
     createNew: '新規作成',
@@ -297,18 +293,14 @@ export const ja: TranslationData = {
     developerSection: '開発者向け',
     prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
     prfSupportedMessage: 'PRF拡張がサポートされています',
-    // インポートセクション
-    importSectionTitle: 'Nostrアカウント（インポート）',
-    importSectionDesc: '既存のNostrアカウントをインポート',
-    importNotImplemented: '※インポート鍵による再ログイン機能は未実装です',
-    // PWKインポートセクション
-    pwkImportTitle: 'バックアップしたPWKでログイン',
-    pwkImportDesc: '以前にエクスポートしたPWKファイルまたはデータを使用してログインします。',
-    pwkFileSelect: '📁PWKファイルを選択',
-    keyDataInput: 'PWKデータを入力',
-    keyDataPlaceholder: 'PWKデータをここに貼り付けてください',
-    pwkLoginButton: 'PWKデータでログイン',
-    pwkLoginProcessing: '処理中...',
+    // 鍵情報インポートセクション
+    keyInfoImportTitle: 'バックアップした鍵情報でログイン',
+    keyInfoImportDesc: '以前にエクスポートした鍵情報ファイルまたはデータを使用してログインします。',
+    keyInfoFileSelect: '📁鍵情報ファイルを選択',
+    keyDataInput: '鍵情報データを入力',
+    keyDataPlaceholder: '鍵情報データをここに貼り付けてください',
+    keyInfoLoginButton: '鍵情報データでログイン',
+    keyInfoLoginProcessing: '処理中...',
     orText: 'または',
     // 改善されたセクション分類
     quickStartTitle: 'はじめる',
@@ -445,20 +437,20 @@ export const ja: TranslationData = {
       changed: 'テーマを変更しました',
     },
     exportKeyInfo: {
-      title: 'PWKのエクスポート',
+      title: '鍵情報のエクスポート',
       description:
-        'PWKをバックアップして別のデバイスで利用したり、ブラウザデータが消去された場合に復元することができます。',
+        '鍵情報をバックアップして別のデバイスで利用したり、ブラウザデータが消去された場合に復元することができます。',
       warning:
-        '注意: このPWKを紛失するとアカウントへのアクセスができなくなる場合があります。安全な場所に保管してください。',
-      showExportSection: 'PWKをエクスポート',
+        '注意: この鍵情報を紛失するとアカウントへのアクセスができなくなる場合があります。安全な場所に保管してください。',
+      showExportSection: '鍵情報をエクスポート',
       hideExportSection: 'エクスポートセクションを隠す',
       restoreWarning:
-        'このPWKファイルは、同じパスキーと同じユーザー名でログインできない場合の復元に使用できます。',
-      exportButton: 'PWKをエクスポート',
-      backupData: 'PWKのバックアップデータ:',
+        'この鍵情報ファイルは、同じパスキーと同じユーザー名でログインできない場合の復元に使用できます。',
+      exportButton: '鍵情報をエクスポート',
+      backupData: '鍵情報のバックアップデータ:',
       saveFile: '保存',
       saveFileTitle: 'ファイルに保存',
-      noCurrentPWK: '現在のPWKが見つかりません。ログイン状態を確認してください。',
+      noCurrentKeyInfo: '現在の鍵情報が見つかりません。ログイン状態を確認してください。',
     },
   },
   navigation: {
@@ -502,7 +494,7 @@ export const en: TranslationData = {
   },
   auth: {
     title: 'Nosskey Demo',
-    subtitle: 'Client using Passkey Wrapped Nostr private Key(PWK)',
+    subtitle: 'Client using Nosskey',
     checkPrf: 'Check PRF Extension Support',
     unsupportedTitle: 'PRF Extension Not Supported',
     createNew: 'Create New',
@@ -538,18 +530,14 @@ export const en: TranslationData = {
     firstLogin: 'First Login',
     passkeyCreated: 'Passkey Created Successfully',
     proceedWithLogin: 'Proceed with Login',
-    // インポートセクション
-    importSectionTitle: 'Nostr Account (Import)',
-    importSectionDesc: 'Import Existing Nostr Account',
-    importNotImplemented: '* Re-login with imported key is not implemented yet',
-    // PWKインポートセクション
-    pwkImportTitle: 'Login with Backed Up PWK',
-    pwkImportDesc: 'Use a previously exported PWK file or data to login.',
-    pwkFileSelect: '📁Select PWK File',
-    keyDataInput: 'Enter PWK Data',
-    keyDataPlaceholder: 'Paste your PWK data here',
-    pwkLoginButton: 'Login with PWK Data',
-    pwkLoginProcessing: 'Processing...',
+    // KeyInfoインポートセクション
+    keyInfoImportTitle: 'Login with Backed Up KeyInfo',
+    keyInfoImportDesc: 'Use a previously exported KeyInfo file or data to login.',
+    keyInfoFileSelect: '📁Select KeyInfo File',
+    keyDataInput: 'Enter KeyInfo Data',
+    keyDataPlaceholder: 'Paste your Key data here',
+    keyInfoLoginButton: 'Login with Key Data',
+    keyInfoLoginProcessing: 'Processing...',
     orText: 'or',
     // 改善されたセクション分類
     quickStartTitle: 'Get Started',
@@ -686,20 +674,20 @@ export const en: TranslationData = {
       changed: 'Theme changed',
     },
     exportKeyInfo: {
-      title: 'Export PWK',
+      title: 'Export KeyInfo',
       description:
-        'You can backup your PWK to use on another device or restore it if your browser data is erased.',
+        'You can backup your KeyInfo to use on another device or restore it if your browser data is erased.',
       warning:
-        'Warning: Losing this PWK may result in loss of access to your account. Store it in a safe place.',
-      showExportSection: 'Export PWK',
+        'Warning: Losing this KeyInfo may result in loss of access to your account. Store it in a safe place.',
+      showExportSection: 'Export KeyInfo',
       hideExportSection: 'Hide Export Section',
       restoreWarning:
-        'This PWK file can be used for recovery when you cannot login with the same passkey and the same username.',
-      exportButton: 'Export PWK',
-      backupData: 'PWK Backup Data:',
+        'This KeyInfo file can be used for recovery when you cannot login with the same passkey and the same username.',
+      exportButton: 'Export KeyInfo',
+      backupData: 'KeyInfo Backup Data:',
       saveFile: 'Save',
       saveFileTitle: 'Save to file',
-      noCurrentPWK: 'Current PWK not found. Please check your login status.',
+      noCurrentKeyInfo: 'Current KeyInfo not found. Please check your login status.',
     },
   },
   navigation: {

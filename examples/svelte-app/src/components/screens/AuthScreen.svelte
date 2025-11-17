@@ -30,8 +30,8 @@
 
   // KeyInfoインポート関連の状態変数
   // biome-ignore lint: svelte
-  let pwkTextInput = $state("");
-  let pwkImportError = $state("");
+  let keyInfoTextInput = $state("");
+  let keyInfoImportError = $state("");
 
   // NosskeyManagerのシングルトンインスタンスを取得
   const keyManager = getNosskeyManager();
@@ -175,39 +175,39 @@
 
     const file = input.files[0];
     isLoading = true;
-    pwkImportError = "";
+    keyInfoImportError = "";
 
     try {
       const fileContent = await file.text();
       await loginWithKeyInfoData(fileContent);
     } catch (error) {
       console.error("KeyInfoファイル読み込みエラー:", error);
-      pwkImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
+      keyInfoImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
       isLoading = false;
     }
   }
 
   // KeyInfoテキストでのログイン処理
   async function loginWithKeyInfoText() {
-    if (!pwkTextInput) return;
+    if (!keyInfoTextInput) return;
 
     isLoading = true;
-    pwkImportError = "";
+    keyInfoImportError = "";
 
     try {
-      await loginWithKeyInfoData(pwkTextInput);
+      await loginWithKeyInfoData(keyInfoTextInput);
     } catch (error) {
       console.error("KeyInfoテキスト処理エラー:", error);
-      pwkImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
+      keyInfoImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
       isLoading = false;
     }
   }
 
   // KeyInfoデータ（JSONテキスト）からのログイン処理
-  async function loginWithKeyInfoData(pwkJsonText: string) {
+  async function loginWithKeyInfoData(keyInfoJsonText: string) {
     try {
       // JSONをパース
-      const keyData = JSON.parse(pwkJsonText);
+      const keyData = JSON.parse(keyInfoJsonText);
 
       // KeyInfoが有効かチェック
       if (
@@ -341,9 +341,11 @@
       {#if showAdvancedOptions}
         <div class="advanced-content">
           <!-- KeyInfoインポートセクション -->
-          <CardSection title={$i18n.t.auth.pwkImportTitle}>
+          <CardSection title={$i18n.t.auth.keyInfoImportTitle}>
             <div class="key-info-import-section">
-              <p class="section-description">{$i18n.t.auth.pwkImportDesc}</p>
+              <p class="section-description">
+                {$i18n.t.auth.keyInfoImportDesc}
+              </p>
 
               <div class="key-info-input-container">
                 <FileInputButton
@@ -352,7 +354,7 @@
                   disabled={isLoading}
                   inputId="key-info-file-input"
                 >
-                  {$i18n.t.auth.pwkFileSelect}
+                  {$i18n.t.auth.keyInfoFileSelect}
                 </FileInputButton>
 
                 <div class="divider">
@@ -372,46 +374,28 @@
               {#if showKeyInfoTextarea}
                 <div class="key-info-textarea-container">
                   <textarea
-                    bind:value={pwkTextInput}
+                    bind:value={keyInfoTextInput}
                     placeholder={$i18n.t.auth.keyDataPlaceholder}
                     class="key-info-textarea"
                   ></textarea>
                   <Button
                     variant="success"
                     onclick={loginWithKeyInfoText}
-                    disabled={isLoading || !pwkTextInput}
+                    disabled={isLoading || !keyInfoTextInput}
                     className="key-info-login-button"
                   >
                     {isLoading
-                      ? $i18n.t.auth.pwkLoginProcessing
-                      : $i18n.t.auth.pwkLoginButton}
+                      ? $i18n.t.auth.keyInfoLoginProcessing
+                      : $i18n.t.auth.keyInfoLoginButton}
                   </Button>
                 </div>
               {/if}
 
-              {#if pwkImportError}
+              {#if keyInfoImportError}
                 <div class="error-message">
-                  {pwkImportError}
+                  {keyInfoImportError}
                 </div>
               {/if}
-            </div>
-          </CardSection>
-
-          <!-- Nostr秘密鍵インポート -->
-          <CardSection title={$i18n.t.auth.importSectionTitle}>
-            <div class="import-section">
-              <p class="section-description">
-                {$i18n.t.auth.importSectionDesc}
-              </p>
-              <p class="warning-text">{$i18n.t.auth.importNotImplemented}</p>
-              <Button
-                variant="secondary"
-                onclick={() => currentScreen.set("import")}
-                disabled={isLoading}
-                className="import-button"
-              >
-                {$i18n.t.auth.importButton}
-              </Button>
             </div>
           </CardSection>
 
@@ -715,17 +699,6 @@
   .key-info-textarea:focus {
     outline: none;
     border-color: var(--color-button-primary);
-  }
-
-  .import-section {
-    text-align: left;
-  }
-
-  .warning-text {
-    color: var(--color-warning);
-    font-size: 0.9rem;
-    font-style: italic;
-    margin-bottom: 16px;
   }
 
   .developer-section {

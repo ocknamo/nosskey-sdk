@@ -6,7 +6,7 @@
   import Button from "../ui/button/Button.svelte";
   import IconButton from "../ui/button/IconButton.svelte";
 
-  // PWKエクスポート関連の状態変数
+  // KeyInfoエクスポート関連の状態変数
   let showExportSection = $state(false);
   let isExporting = $state(false);
   let exportedKeyInfo = $state("");
@@ -31,7 +31,7 @@
     // 鍵情報が存在するか確認
     const currentKeyInfo = keyManager.getCurrentKeyInfo();
     if (!currentKeyInfo) {
-      exportError = $i18n.t.settings.exportKeyInfo.noCurrentPWK;
+      exportError = $i18n.t.settings.exportKeyInfo.noCurrentKeyInfo;
       return;
     }
 
@@ -43,7 +43,7 @@
       // 鍵情報をJSON文字列に変換
       exportedKeyInfo = JSON.stringify(exportKeyInfo, null, 2);
     } catch (error) {
-      console.error("PWKエクスポートエラー:", error);
+      console.error("KeyInfoエクスポートエラー:", error);
       exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       isExporting = false;
@@ -65,8 +65,8 @@
       });
   }
 
-  // PWKをファイルとして保存
-  function savePWKToFile() {
+  // KeyInfoをファイルとして保存
+  function saveKeyInfoToFile() {
     if (!exportedKeyInfo) return;
 
     const blob = new Blob([exportedKeyInfo], { type: "application/json" });
@@ -74,7 +74,7 @@
     const a = document.createElement("a");
 
     a.href = url;
-    a.download = "nosskey-pwk-backup.json";
+    a.download = "nosskey-key-info-backup.json";
     a.click();
 
     URL.revokeObjectURL(url);
@@ -111,7 +111,7 @@
         <div class="key-display">
           <p>{$i18n.t.settings.exportKeyInfo.backupData}</p>
           <div class="key-container">
-            <textarea readonly value={exportedKeyInfo} class="pwk-textarea"
+            <textarea readonly value={exportedKeyInfo} class="key-info-textarea"
             ></textarea>
             <div class="action-buttons">
               <IconButton
@@ -121,7 +121,7 @@
                 <img src={CopyIcon} alt="Copy" />
               </IconButton>
               <Button
-                onclick={savePWKToFile}
+                onclick={saveKeyInfoToFile}
                 title={$i18n.t.settings.exportKeyInfo.saveFileTitle}
                 size="small"
               >
@@ -177,7 +177,7 @@
     gap: 8px;
   }
 
-  .pwk-textarea {
+  .key-info-textarea {
     width: 100%;
     height: 120px;
     padding: 8px;
