@@ -33,12 +33,11 @@ examples/svelte-app/
 │   │   ├── screens/               # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
 │   │   │   ├── AuthScreen.svelte       # 認証画面
-│   │   │   ├── ImportKeyScreen.svelte  # 鍵インポート画面
 │   │   │   ├── SettingsScreen.svelte   # 設定画面
 │   │   │   └── TimelineScreen.svelte   # タイムライン画面
 │   │   ├── settings/              # 設定関連コンポーネント
 │   │   │   ├── AppInfo.svelte          # アプリ情報
-│   │   │   ├── ExportPWKComponent.svelte # PWKエクスポート
+│   │   │   ├── ExportKeyInfoComponent.svelte # PWKエクスポート
 │   │   │   ├── ExportSecretKey.svelte  # 秘密鍵エクスポート
 │   │   │   ├── LanguageSettings.svelte # 言語設定
 │   │   │   ├── LocalStorageSection.svelte # ローカルストレージ
@@ -64,7 +63,7 @@ examples/svelte-app/
 │   │   ├── i18n-store.ts          # 言語ストア
 │   │   └── translations.ts        # 翻訳データ
 │   ├── services/
-│   │   ├── pwk-manager.service.ts # PWK管理サービス
+│   │   ├── nosskey-manager.service.ts # PWK管理サービス
 │   │   ├── relay.service.ts       # リレー接続サービス
 │   │   └── test-rxnostr.ts        # テスト用ユーティリティ 
 │   ├── store/
@@ -113,12 +112,12 @@ examples/svelte-app/
 
 ### 3.2 サービス
 
-#### pwk-manager.service.ts
-PWK（Passkey Wrapped Key）管理サービス：
-- `getPWKManager()` - PWKManagerのシングルトンインスタンスを取得
+#### nosskey-manager.service.ts
+Nosskey管理サービス：
+- `getNosskeyManager()` - NosskeyManagerのシングルトンインスタンスを取得
 - キャッシュ設定の動的更新機能
 - シークレットキーのキャッシュクリア機能
-- PWKの保存・復元機能
+- 鍵情報の保存・復元機能
 
 #### relay.service.ts
 Nostrリレーとの通信を管理するサービス：
@@ -132,7 +131,7 @@ Nostrリレーとの通信を管理するサービス：
 #### App.svelte
 アプリケーションのメインコンポーネント：
 - URLハッシュに基づく画面初期化と切り替え
-- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen、ImportKeyScreen）
+- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen）
 - グローバルスタイルの定義
 
 #### AccountScreen.svelte
@@ -148,11 +147,6 @@ Nostrリレーとの通信を管理するサービス：
 - 既存パスキーでのログイン機能
 - インポート画面への遷移機能
 - PRF拡張対応確認機能
-
-#### ImportKeyScreen.svelte
-既存のNostr秘密鍵をインポートするコンポーネント：
-- nsecまたは16進数形式の秘密鍵入力
-- 秘密鍵の検証とインポート
 
 #### TimelineScreen.svelte
 タイムライン表示と投稿機能を担当するコンポーネント：
@@ -174,7 +168,7 @@ Nostrリレーとの通信を管理するサービス：
 - **theme-settings.svelte** - テーマ設定（ダークモード・ライトモード切り替え）
 - **LogoutSection.svelte** - ログアウト機能
 - **LocalStorageSection.svelte** - ローカルストレージのクリア機能
-- **ExportPWKComponent.svelte** - PWKデータのエクスポート機能
+- **ExportKeyInfoComponent.svelte** - PWKデータのエクスポート機能
 - **ExportSecretKey.svelte** - 秘密鍵のエクスポート機能
 - **AppInfo.svelte** - アプリケーション情報の表示
 

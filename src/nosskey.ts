@@ -1,16 +1,13 @@
 import { seckeySigner } from 'rx-nostr-crypto';
-import { aesGcmDecrypt, aesGcmEncrypt, deriveAesGcmKey } from './crypto-utils.js';
 import { KeyCache } from './key-cache.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import type {
   KeyCacheOptions,
   KeyOptions,
+  NosskeyManagerLike,
   NostrEvent,
-  PWKBlob,
-  PWKBlobDirect,
-  PWKBlobEncrypted,
-  PWKManagerLike,
-  PWKStorageOptions,
+  NostrKeyInfo,
+  NostrKeyStorageOptions,
   PasskeyCreationOptions,
   SignOptions,
 } from './types.js';
@@ -20,29 +17,32 @@ import type {
  */
 import { bytesToHex, hexToBytes } from './utils.js';
 
+// 標準salt値（"nostr-key"のUTF-8バイト）
+const STANDARD_SALT = '6e6f7374722d6b6579';
+
 /**
- * Nosskey - Passkey-Wrapped Key for Nostr
+ * Nosskey - Passkey-Derived Nostr Keys
  */
-export class PWKManager implements PWKManagerLike {
+export class NosskeyManager implements NosskeyManagerLike {
   // キーキャッシュ管理
   #keyCache: KeyCache;
 
-  // 現在のPWK
-  #currentPWK: PWKBlob | null = null;
+  // 現在のNostrKeyInfo
+  #currentKeyInfo: NostrKeyInfo | null = null;
 
-  // PWK保存の設定
-  #storageOptions: PWKStorageOptions = {
+  // NostrKeyInfo保存の設定
+  #storageOptions: NostrKeyStorageOptions = {
     enabled: true,
-    storageKey: 'nosskey_pwk',
+    storageKey: 'nosskey_keyinfo',
   };
 
   /**
-   * PWKManager コンストラクタ
+   * NosskeyManager コンストラクタ
    * @param options 初期化オプション
    */
   constructor(options?: {
     cacheOptions?: Partial<KeyCacheOptions>;
-    storageOptions?: Partial<PWKStorageOptions>;
+    storageOptions?: Partial<NostrKeyStorageOptions>;
   }) {
     // KeyCacheを初期化
     this.#keyCache = new KeyCache(options?.cacheOptions);
@@ -51,78 +51,78 @@ export class PWKManager implements PWKManagerLike {
       this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
     }
 
-    // ストレージが有効な場合、PWKの読み込みを試みる
+    // ストレージが有効な場合、NostrKeyInfoの読み込みを試みる
     if (this.#storageOptions.enabled) {
-      const loadedPWK = this.#loadPWKFromStorage();
-      if (loadedPWK) {
-        this.#currentPWK = loadedPWK;
+      const loadedKeyInfo = this.#loadKeyInfoFromStorage();
+      if (loadedKeyInfo) {
+        this.#currentKeyInfo = loadedKeyInfo;
       }
     }
   }
 
   /**
-   * PWKストレージの設定を更新
+   * NostrKeyInfoストレージの設定を更新
    * @param options ストレージオプション
    */
-  setStorageOptions(options: Partial<PWKStorageOptions>): void {
+  setStorageOptions(options: Partial<NostrKeyStorageOptions>): void {
     this.#storageOptions = { ...this.#storageOptions, ...options };
 
-    // ストレージが無効化された場合はストレージからPWKを削除
+    // ストレージが無効化された場合はストレージからNostrKeyInfoを削除
     if (options.enabled === false) {
-      this.clearStoredPWK();
+      this.clearStoredKeyInfo();
     }
   }
 
   /**
-   * 現在のPWKストレージ設定を取得
+   * 現在のNostrKeyInfoストレージ設定を取得
    */
-  getStorageOptions(): PWKStorageOptions {
+  getStorageOptions(): NostrKeyStorageOptions {
     return { ...this.#storageOptions };
   }
 
   /**
-   * 現在のPWKを設定
+   * 現在のNostrKeyInfoを設定
    * ストレージが有効な場合は保存も行う
-   * @param pwk 設定するPWK
+   * @param keyInfo 設定するNostrKeyInfo
    */
-  setCurrentPWK(pwk: PWKBlob): void {
-    this.#currentPWK = pwk;
+  setCurrentKeyInfo(keyInfo: NostrKeyInfo): void {
+    this.#currentKeyInfo = keyInfo;
 
     // ストレージが有効な場合は保存
     if (this.#storageOptions.enabled) {
-      void this.#savePWKToStorage(pwk);
+      void this.#saveKeyInfoToStorage(keyInfo);
     }
   }
 
   /**
-   * 現在のPWKを取得
+   * 現在のNostrKeyInfoを取得
    * 未設定の場合はストレージからの読み込みを試みる
    */
-  getCurrentPWK(): PWKBlob | null {
-    // 現在のPWKがない場合はストレージからの読み込みを試みる
-    if (!this.#currentPWK && this.#storageOptions.enabled) {
-      this.#currentPWK = this.#loadPWKFromStorage();
+  getCurrentKeyInfo(): NostrKeyInfo | null {
+    // 現在のNostrKeyInfoがない場合はストレージからの読み込みを試みる
+    if (!this.#currentKeyInfo && this.#storageOptions.enabled) {
+      this.#currentKeyInfo = this.#loadKeyInfoFromStorage();
     }
-    return this.#currentPWK;
+    return this.#currentKeyInfo;
   }
 
   /**
-   * PWKが存在するかどうかを確認
+   * NostrKeyInfoが存在するかどうかを確認
    * ストレージの設定に応じてメモリやストレージから検索
-   * @returns PWKが存在するかどうか
+   * @returns NostrKeyInfoが存在するかどうか
    */
-  hasPWK(): boolean {
+  hasKeyInfo(): boolean {
     // メモリに保持しているか確認
-    if (this.#currentPWK) {
+    if (this.#currentKeyInfo) {
       return true;
     }
 
     // ストレージが有効なら、そこから読み込みを試みる
     if (this.#storageOptions.enabled) {
-      const loadedPWK = this.#loadPWKFromStorage();
-      if (loadedPWK) {
+      const loadedKeyInfo = this.#loadKeyInfoFromStorage();
+      if (loadedKeyInfo) {
         // 副作用: メモリにもロードする
-        this.#currentPWK = loadedPWK;
+        this.#currentKeyInfo = loadedKeyInfo;
         return true;
       }
     }
@@ -131,10 +131,10 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
-   * PWKをストレージに保存（内部メソッド）
-   * @param pwk 保存するPWK
+   * NostrKeyInfoをストレージに保存（内部メソッド）
+   * @param keyInfo 保存するNostrKeyInfo
    */
-  async #savePWKToStorage(pwk: PWKBlob): Promise<void> {
+  async #saveKeyInfoToStorage(keyInfo: NostrKeyInfo): Promise<void> {
     if (!this.#storageOptions.enabled) return;
 
     const storage =
@@ -142,14 +142,14 @@ export class PWKManager implements PWKManagerLike {
 
     if (!storage) return;
 
-    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
-    storage.setItem(key, JSON.stringify(pwk));
+    const key = this.#storageOptions.storageKey || 'nosskey_keyinfo';
+    storage.setItem(key, JSON.stringify(keyInfo));
   }
 
   /**
-   * ストレージからPWKを読み込み（内部メソッド）
+   * ストレージからNostrKeyInfoを読み込み（内部メソッド）
    */
-  #loadPWKFromStorage(): PWKBlob | null {
+  #loadKeyInfoFromStorage(): NostrKeyInfo | null {
     if (!this.#storageOptions.enabled) return null;
 
     const storage =
@@ -157,58 +157,58 @@ export class PWKManager implements PWKManagerLike {
 
     if (!storage) return null;
 
-    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
+    const key = this.#storageOptions.storageKey || 'nosskey_keyinfo';
     const data = storage.getItem(key);
 
     if (!data) return null;
 
     try {
-      return JSON.parse(data) as PWKBlob;
+      return JSON.parse(data) as NostrKeyInfo;
     } catch (e) {
-      console.error('Failed to parse stored PWK', e);
+      console.error('Failed to parse stored NostrKeyInfo', e);
       return null;
     }
   }
 
   /**
-   * ストレージに保存されたPWKをクリア
+   * ストレージに保存されたNostrKeyInfoをクリア
    */
-  clearStoredPWK(): void {
+  clearStoredKeyInfo(): void {
     const storage =
       this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
 
     if (!storage) return;
 
-    const key = this.#storageOptions.storageKey || 'nosskey_pwk';
+    const key = this.#storageOptions.storageKey || 'nosskey_keyinfo';
     storage.removeItem(key);
 
-    // 現在のPWKも消去
-    this.#currentPWK = null;
+    // 現在のNostrKeyInfoも消去
+    this.#currentKeyInfo = null;
   }
 
   /**
    * NIP-07互換: 公開鍵を取得
-   * 現在設定されているPWKから公開鍵を返す
+   * 現在設定されているNostrKeyInfoから公開鍵を返す
    */
   async getPublicKey(): Promise<string> {
-    const pwk = this.getCurrentPWK();
-    if (!pwk) {
-      throw new Error('No current PWK set');
+    const keyInfo = this.getCurrentKeyInfo();
+    if (!keyInfo) {
+      throw new Error('No current NostrKeyInfo set');
     }
-    return pwk.pubkey;
+    return keyInfo.pubkey;
   }
 
   /**
    * NIP-07互換: イベント署名
-   * 現在設定されているPWKでイベントに署名
+   * 現在設定されているNostrKeyInfoでイベントに署名
    * @param event 署名するNostrイベント
    */
   async signEvent(event: NostrEvent): Promise<NostrEvent> {
-    const pwk = this.getCurrentPWK();
-    if (!pwk) {
-      throw new Error('No current PWK set');
+    const keyInfo = this.getCurrentKeyInfo();
+    if (!keyInfo) {
+      throw new Error('No current NostrKeyInfo set');
     }
-    return this.signEventWithPWK(event, pwk);
+    return this.signEventWithKeyInfo(event, keyInfo);
   }
 
   /**
@@ -258,80 +258,11 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
-   * 既存のNostr秘密鍵をパスキーでラップして保護
-   * @param secretKey インポートする既存の秘密鍵
+   * PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを作成
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */
-  async importNostrKey(
-    secretKey: Uint8Array,
-    credentialId?: Uint8Array,
-    options: KeyOptions = {}
-  ): Promise<PWKBlob> {
-    const { clearMemory = true } = options;
-
-    // PRF秘密を取得
-    const { secret, id: responseId } = await getPrfSecret(credentialId);
-
-    // 秘密鍵HEX文字列を取得
-    const skHex = bytesToHex(secretKey);
-
-    // rx-nostr-cryptoを使用して公開鍵を取得
-    const signer = seckeySigner(skHex);
-    const publicKey = await signer.getPublicKey();
-
-    // 秘密鍵を暗号化
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const aes = await deriveAesGcmKey(secret, salt);
-
-    const { ciphertext, tag } = await aesGcmEncrypt(aes, iv, secretKey);
-
-    // 必要に応じて平文の秘密鍵を消去
-    if (clearMemory) {
-      this.#clearKey(secretKey);
-    }
-
-    // レスポンスで使用するcredentialIdを取得
-    // navigator.credentials.getのレスポンスからcredentialIdを取得するのが理想だが、
-    // このAPIではレスポンスから直接credentialIdを取得することができない
-
-    // PWKBlobのデータ構築
-    const pwkBlob: PWKBlobEncrypted = {
-      v: 1,
-      alg: 'aes-gcm-256',
-      salt: bytesToHex(salt),
-      iv: bytesToHex(iv),
-      ct: bytesToHex(ciphertext),
-      tag: bytesToHex(tag),
-      credentialId: bytesToHex(credentialId || responseId), // 指定されたIDかresponseから取得したIDを使用
-      pubkey: publicKey, // 公開鍵を追加
-      ...(options.username && { username: options.username }), // usernameがあれば追加
-    };
-
-    // 結果を返却
-    return pwkBlob;
-  }
-
-  /**
-   * 新しいNostr秘密鍵を生成してパスキーでラップ
-   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
-   * @param options オプション
-   */
-  async generateNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<PWKBlob> {
-    // 新しいNostr秘密鍵を生成
-    const nostrSK = crypto.getRandomValues(new Uint8Array(32));
-
-    // importNostrKeyを利用して処理を共通化
-    return this.importNostrKey(nostrSK, credentialId, options);
-  }
-
-  /**
-   * PRF値を直接Nostrシークレットキーとして使用（PoC実装）
-   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
-   * @param options オプション
-   */
-  async directPrfToNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<PWKBlob> {
+  async createNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<NostrKeyInfo> {
     // PRF秘密を取得（これが直接シークレットキーになる）
     const { secret: sk, id: responseId } = await getPrfSecret(credentialId);
 
@@ -348,28 +279,27 @@ export class PWKManager implements PWKManagerLike {
     const signer = seckeySigner(skHex);
     const publicKey = await signer.getPublicKey();
 
-    // PWKBlob構築（'prf-direct'タイプ）
-    const pwkBlob: PWKBlobDirect = {
-      v: 1 as const,
-      alg: 'prf-direct' as const,
+    // NostrKeyInfo構築
+    const keyInfo: NostrKeyInfo = {
       credentialId: bytesToHex(credentialId || responseId),
-      pubkey: publicKey, // 公開鍵を追加
+      pubkey: publicKey,
+      salt: STANDARD_SALT, // 標準salt値を使用
       ...(options.username && { username: options.username }), // usernameがあれば追加
     };
 
     // 結果を返却
-    return pwkBlob;
+    return keyInfo;
   }
 
   /**
    * イベントに署名
    * @param event 署名するNostrイベント
-   * @param pwk 暗号化された秘密鍵またはPRF直接使用（credentialIdを含む）
+   * @param keyInfo NostrKeyInfo
    * @param options 署名オプション
    */
-  async signEventWithPWK(
+  async signEventWithKeyInfo(
     event: NostrEvent,
-    pwk: PWKBlob,
+    keyInfo: NostrKeyInfo,
     options: SignOptions = {}
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags } = options;
@@ -381,34 +311,18 @@ export class PWKManager implements PWKManagerLike {
 
     // キャッシュが有効で、クレデンシャルIDがあり、キャッシュに鍵がある場合はそれを使用
     if (shouldUseCache) {
-      sk = this.#keyCache.getKey(pwk.credentialId);
+      sk = this.#keyCache.getKey(keyInfo.credentialId);
     }
 
     // キャッシュがない場合は通常の処理
     if (!sk) {
-      // PRF値を取得
-      const { secret: prfSecret, id: responseId } = await getPrfSecret(
-        hexToBytes(pwk.credentialId)
-      );
+      // PRF値を取得（これが直接シークレットキー）
+      const { secret: prfSecret } = await getPrfSecret(hexToBytes(keyInfo.credentialId));
+      sk = prfSecret;
 
-      // PWKの種類によって処理を分岐
-      if (pwk.alg === 'prf-direct') {
-        // PRF値を直接シークレットキーとして使用
-        sk = prfSecret;
-      } else {
-        // PWKBlobEncryptedとして扱い、暗号化された秘密鍵を復号
-        const pwkV1 = pwk as PWKBlobEncrypted;
-        const salt = hexToBytes(pwkV1.salt);
-        const iv = hexToBytes(pwkV1.iv);
-        const ct = hexToBytes(pwkV1.ct);
-        const tag = hexToBytes(pwkV1.tag);
-
-        const aes = await deriveAesGcmKey(prfSecret, salt);
-        sk = await aesGcmDecrypt(aes, iv, ct, tag);
-      }
       // キャッシュが有効な場合は保存
       if (shouldUseCache) {
-        this.#keyCache.setKey(pwk.credentialId, sk);
+        this.#keyCache.setKey(keyInfo.credentialId, sk);
       }
     }
 
@@ -428,48 +342,25 @@ export class PWKManager implements PWKManagerLike {
   }
 
   /**
-   * 暗号化された秘密鍵をエクスポート
-   * @param pwk PWKBlob形式の暗号化された秘密鍵
-   * @param credentialId 使用するクレデンシャルID（省略時はPWKBlobのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * 秘密鍵をエクスポート
+   * @param keyInfo NostrKeyInfo
+   * @param credentialId 使用するクレデンシャルID（省略時はNostrKeyInfoのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  async exportNostrKey(pwk: PWKBlob, credentialId?: Uint8Array): Promise<string> {
-    // PWKBlobからcredentialIdを取得（指定がある場合）
+  async exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string> {
+    // NostrKeyInfoからcredentialIdを取得（指定がある場合）
     let usedCredentialId = credentialId;
 
-    // credentialIdが指定されていない場合はPWKBlobから取得を試みる
-    if (!usedCredentialId && pwk.credentialId) {
-      usedCredentialId = hexToBytes(pwk.credentialId);
+    // credentialIdが指定されていない場合はNostrKeyInfoから取得を試みる
+    if (!usedCredentialId && keyInfo.credentialId) {
+      usedCredentialId = hexToBytes(keyInfo.credentialId);
     }
 
-    // PRF値を取得
-    const { secret: prfSecret, id: responseId } = await getPrfSecret(usedCredentialId);
-
-    let sk: Uint8Array;
-
-    // PWKの種類によって処理を分岐
-    if (pwk.alg === 'prf-direct') {
-      // PRF値を直接シークレットキーとして使用
-      sk = new Uint8Array(prfSecret);
-    } else {
-      // PWKBlobEncryptedとして扱い、暗号化された秘密鍵を復号
-      const pwkV1 = pwk as PWKBlobEncrypted;
-      const salt = hexToBytes(pwkV1.salt);
-      const iv = hexToBytes(pwkV1.iv);
-      const ct = hexToBytes(pwkV1.ct);
-      const tag = hexToBytes(pwkV1.tag);
-
-      const aes = await deriveAesGcmKey(prfSecret, salt);
-      sk = await aesGcmDecrypt(aes, iv, ct, tag);
-    }
+    // PRF値を取得（これが直接シークレットキー）
+    const { secret: sk } = await getPrfSecret(usedCredentialId);
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
-
-    // メモリからのクリアは、リターン後に元の参照が失われるため必要ない
-    // テスト環境では関数が完了した後も保持されるため意図的にスキップ
-    // 実際のブラウザ環境では問題ない
-    // this.#clearKey(sk);
 
     return skHex;
   }

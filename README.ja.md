@@ -39,19 +39,19 @@ npm install nosskey-sdk
 ### パスキー作成と新規Nostr鍵生成（推奨アプローチ）
 
 ```javascript
-import { PWKManager } from 'nosskey-sdk';
+import { NosskeyManager } from 'nosskey-sdk';
 
-const pwkMgr = new PWKManager();
+const keyMgr = new NosskeyManager();
 
 // パスキーの作成（ブラウザのパスキーUI表示）
-const credentialId = await pwkMgr.createPasskey();
+const credentialId = await keyMgr.createPasskey();
 
 // PRF値を直接Nostrキーとして使用
-const pwk = await pwkMgr.directPrfToNostrKey(credentialId);
-pwkMgr.setCurrentPWK(pwk);
+const key = await keyMgr.directPrfToNostrKey(credentialId);
+keyMgr.setCurrentKeyInfo(key);
 
 // 公開鍵の取得
-const publicKey = await pwkMgr.getPublicKey();
+const publicKey = await keyMgr.getPublicKey();
 console.log(`公開鍵: ${publicKey}`);
 
 // イベントの署名
@@ -61,24 +61,24 @@ const event = {
   tags: [],
   created_at: Math.floor(Date.now() / 1000)
 };
-const signedEvent = await pwkMgr.signEvent(event);
+const signedEvent = await keyMgr.signEvent(event);
 ```
 
 ### 既存鍵のインポート（代替アプローチ）
 
 ```javascript
-import { PWKManager } from 'nosskey-sdk';
+import { NosskeyManager } from 'nosskey-sdk';
 import { hexToBytes } from 'nosskey-sdk';
 
-const pwkMgr = new PWKManager();
+const keyMgr = new NosskeyManager();
 
 // パスキーの作成
-const credentialId = await pwkMgr.createPasskey();
+const credentialId = await keyMgr.createPasskey();
 
 // 既存のNsec秘密鍵をインポート
 const existingSecretKey = hexToBytes('7f...'); // 32バイトの秘密鍵
-const pwk = await pwkMgr.importNostrKey(existingSecretKey, credentialId);
-pwkMgr.setCurrentPWK(pwk);
+const key = await keyMgr.importNostrKey(existingSecretKey, credentialId);
+keyMgr.setCurrentKeyInfo(key);
 ```
 
 ## サポート環境

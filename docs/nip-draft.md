@@ -6,10 +6,7 @@ Passkey-Wrapped Keys
 
 This NIP defines a method for managing Nostr private keys using WebAuthn passkeys (FIDO2/WebAuthn credentials). By using passkeys, there is no need for private key backup or complex password management, enabling users to use Nostr with intuitive operations such as biometric authentication or simply touching a physical device.
 
-Two implementation approaches are proposed:
-
-1. **PRF Direct Usage Method**: Directly use values obtained from WebAuthn's PRF extension as Nostr private keys
-2. **Encryption Method**: Encrypt existing Nostr private keys with keys derived from passkeys
+This NIP uses the **PRF Direct Usage Method**: directly use values obtained from WebAuthn's PRF extension as Nostr private keys.
 
 ## About WebAuthn PRF Extension
 
@@ -37,94 +34,30 @@ Reference: [PRF Support Status](https://github.com/ocknamo/nosskey-sdk/blob/main
 For a 32-byte value obtained from the PRF extension to be used as a Nostr private key, it must be within the valid private key range of secp256k1 (from 1 to n-1, where n is the order of the curve).
 It is recommended to perform range checking and regenerate or adjust if out of range, but since the theoretical probability of being out of range is approximately 2^-224, which is extremely low, range checking can be omitted in practice.
 
-## PWKBlob Data Structure
+## PRF Direct Usage Method
 
-PWKBlob (Passkey-Wrapped Key Blob) is a data structure for Nostr private keys protected by passkeys.
+A major feature of the PRF direct usage method is that **the private key is not explicitly stored**. Instead, a private key is temporarily derived from the PRF value obtained from the passkey when signing is needed. Since the same Nostr key is always generated from the same passkey and the same salt, even if the key information is lost, it can be restored with the same passkey.
 
-### PWKBlobDirect (PRF Direct Usage Method)
+### Data Structure
 
-A major feature of the PRF direct usage method is that **the private key is not explicitly stored**. Instead, a private key is temporarily derived from the PRF value obtained from the passkey when signing is needed. Since the same Nostr key is always generated from the same passkey and the same salt, even if the PWKBlob is lost, it can be restored with the same passkey.
-
-For example:
+Only the minimum information needed to associate with the passkey is stored:
 
 ```jsonc
 {
-  "v": 1, // Version
-  "alg": "prf-direct", // Algorithm identifier
   "credentialId": "a3f5b8c12d...9f", // Passkey identifier (hex format)
   "pubkey": "02ab34cd56...ef", // Nostr public key (hex format)
-  "username": "jone", // Optional
-  "algParams": {
-    "salt": "9a1bcf34d8e7..." // salt（hex format）
-  }
+  "salt": "6e6f7374722d6b6579", // Salt for PRF derivation (hex format, fixed value)
+  "username": "alice" // Username when creating the passkey (optional)
 }
 ```
 
-### PWKBlobEncrypted (Encryption Method)
+### Salt Value Specification
 
-In the encryption method, the Nostr private key is encrypted using a PRF value obtained from the passkey and stored in the PWKBlob.
-This NIP does not specify the encryption algorithm.
+To generate the same Nostr key, the salt value must be unified across implementations. Standard salt value:
 
-For example:
-
-```jsonc
-{
-  "v": 1, // Version
-  "alg": "aes-256-gcm", // Encryption algorithm
-  "credentialId": "b7d4e9f0aa...cc", // Passkey identifier (hex format)
-  "pubkey": "03cd45ef67...12", // Nostr public key (hex format)
-  "username": "jack", // Username when creating the passkey (optional)
-  "algParams": {
-    "salt": "1a2b3c4d5e6f...", // Salt (hex format, 16 bytes)
-    "iv": "abcdef123456...", // Initialization vector (hex format, 12 bytes)
-    "ct": "99887766aabb...", // Encrypted private key (hex format, 32 bytes)
-    "tag": "112233445566..." // Authentication tag (hex format, 16 bytes)
-  }
-}
 ```
-
-## PWKBlob Relay Backup
-
-Since PWKBlobEncrypted contains an encrypted private key, it is recommended to save it as an event on Nostr relays in case device storage is lost.
-
-### Example Event
-
-```jsonc
-{
-  "kind": 30100,  // Dedicated event kind for PWKBlob
-  "content": "
-    // PWKBlob contents
-    ",
-  "tags": [
-    ["d", "<alg>:<credentialId>"],   // Set a combination of PWKBlob algorithm and credentialId as dtag to avoid duplicate backups of the same PWK
-    ["p", "2b458..0c480"],   // Often matches the event creator
-    ["t", "pwkblob"],         // Tag for searching
-    ["client", "nosskey.app"]  // Optional client identification tag (NIP-89)
-  ],
-  // other fields...
-}
+"nostr-key" (UTF-8 bytes: 0x6e6f7374722d6b6579)
 ```
-
-### Restoration Process
-
-1. Launch the application on a new device
-2. Retrieve the latest kind 30100 event addressed to the target pubkey from relays
-3. Extract the PWKBlob and decrypt it with the passkey's PRF value
-4. Enable signing of Nostr events with the decrypted private key
-
-### Multiple Device Support
-
-When registering and backing up multiple passkeys, it is possible to create a PWKBlob for each passkey and store them in separate events on relays. This way, even if some passkeys are lost, you can still access your account with other passkeys.
-
-## Comparison of Both Methods
-
-| Characteristic | PRF Direct Usage (Recommended) | Encryption Method |
-|:---------------|:------------------------------|:------------------|
-| UX Improvement | ★★★★★ | ★★★ |
-| Existing Key Support | ✗ Not possible | ✓ Possible |
-| Management Effort | Minimal (automatic management) | Moderate (relay backup recommended) |
-| Ease of Restoration | High (restoration with the same passkey) | Moderate (PWKBlob and passkey required) |
-| Optimal Users | New users | Existing key holders |
 
 ## Security Considerations
 
