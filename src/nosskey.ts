@@ -131,7 +131,7 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * NostrKeyInfoをストレージに保存（内部メソッド）
+   * NostrKeyInfoをストレージに保存
    * @param keyInfo 保存するNostrKeyInfo
    */
   async #saveKeyInfoToStorage(keyInfo: NostrKeyInfo): Promise<void> {
@@ -147,7 +147,7 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * ストレージからNostrKeyInfoを読み込み（内部メソッド）
+   * ストレージからNostrKeyInfoを読み込み
    */
   #loadKeyInfoFromStorage(): NostrKeyInfo | null {
     if (!this.#storageOptions.enabled) return null;
