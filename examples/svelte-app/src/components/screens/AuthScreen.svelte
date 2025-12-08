@@ -1,248 +1,243 @@
 <script lang="ts">
-  import { bytesToHex, hexToBytes } from "../../../../../src/index.js";
-  import NosskeyImage from "../../assets/nosskey.svg";
-  import { i18n } from "../../i18n/i18n-store.js";
-  import { getNosskeyManager } from "../../services/nosskey-manager.service.js";
-  import * as appState from "../../store/app-state.js";
-  import { currentScreen } from "../../store/app-state.js";
-  import CardSection from "../ui/CardSection.svelte";
-  import Button from "../ui/button/Button.svelte";
-  import FileInputButton from "../ui/button/FileInputButton.svelte";
-  import ToggleButton from "../ui/button/ToggleButton.svelte";
+import { bytesToHex, hexToBytes } from '../../../../../src/index.js';
+import NosskeyImage from '../../assets/nosskey.svg';
+import { i18n } from '../../i18n/i18n-store.js';
+import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import * as appState from '../../store/app-state.js';
+import { currentScreen } from '../../store/app-state.js';
+import CardSection from '../ui/CardSection.svelte';
+import Button from '../ui/button/Button.svelte';
+import FileInputButton from '../ui/button/FileInputButton.svelte';
+import ToggleButton from '../ui/button/ToggleButton.svelte';
 
-  // 状態変数
-  let isSupported = $state(false);
-  let isLoading = $state(false);
-  let errorMessage = $state("");
-  let isPrfChecked = $state(false);
-  // biome-ignore lint: svelte
-  let username = $state("");
-  let createdCredentialId = $state(""); // 新規作成したパスキーのID
-  let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
+// 状態変数
+let isSupported = $state(false);
+let isLoading = $state(false);
+let errorMessage = $state('');
+let isPrfChecked = $state(false);
+// biome-ignore lint: svelte
+let username = $state('');
+let createdCredentialId = $state(''); // 新規作成したパスキーのID
+let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
 
-  // UI表示制御
-  // biome-ignore lint: svelte
-  let showAdvancedOptions = $state(false);
-  // biome-ignore lint: svelte
-  let showDeveloperSection = $state(false);
-  // biome-ignore lint: svelte
-  let showKeyInfoTextarea = $state(false);
+// UI表示制御
+// biome-ignore lint: svelte
+let showAdvancedOptions = $state(false);
+// biome-ignore lint: svelte
+let showDeveloperSection = $state(false);
+// biome-ignore lint: svelte
+let showKeyInfoTextarea = $state(false);
 
-  // KeyInfoインポート関連の状態変数
-  // biome-ignore lint: svelte
-  let keyInfoTextInput = $state("");
-  let keyInfoImportError = $state("");
+// KeyInfoインポート関連の状態変数
+// biome-ignore lint: svelte
+let keyInfoTextInput = $state('');
+let keyInfoImportError = $state('');
 
-  // NosskeyManagerのシングルトンインスタンスを取得
-  const keyManager = getNosskeyManager();
+// NosskeyManagerのシングルトンインスタンスを取得
+const keyManager = getNosskeyManager();
 
-  // 初期化関数
-  async function initialize() {
-    isLoading = true;
-    try {
-      // 鍵情報が存在するか確認
-      if (keyManager.hasKeyInfo()) {
-        // 公開鍵を取得して状態を更新
-        const pubKey = await keyManager.getPublicKey();
-        appState.publicKey.set(pubKey);
-        appState.isLoggedIn.set(true);
-
-        // PRF拡張対応確認をスキップして認証済み状態に
-        return; // 初期化処理を終了
-      }
-    } catch (error) {
-      console.error("初期化エラー:", error);
-      errorMessage = `${$i18n.t.common.errorMessages.init} ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // PRF対応確認
-  async function checkPrfSupport() {
-    isLoading = true;
-    errorMessage = "";
-    try {
-      // PRF拡張がサポートされているか確認
-      isSupported = await keyManager.isPrfSupported();
-      isPrfChecked = true;
-    } catch (error) {
-      console.error("PRF対応確認エラー:", error);
-      errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // 新規パスキー作成
-  async function createNew() {
-    isLoading = true;
-    errorMessage = "";
-
-    try {
-      // 新しいパスキーを作成
-      const newCredentialId = await keyManager.createPasskey({
-        user: {
-          name: username || "user@nosskey",
-          displayName: username || "user@nosskey",
-        },
-      });
-
-      createdCredentialId = bytesToHex(newCredentialId);
-      isPasskeyCreated = true;
-    } catch (error) {
-      console.error("パスキー作成エラー:", error);
-      errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // 特定のcredentialIdでログイン
-  async function login(credentialId: string) {
-    isLoading = true;
-    errorMessage = "";
-
-    try {
-      // PRFを直接Nostrキーとして使用
-      const keyInfo = await keyManager.createNostrKey(hexToBytes(credentialId));
-
-      // SDKにKeyInfoを設定（内部でストレージにも保存される）
-      keyManager.setCurrentKeyInfo(keyInfo);
-
+// 初期化関数
+async function initialize() {
+  isLoading = true;
+  try {
+    // 鍵情報が存在するか確認
+    if (keyManager.hasKeyInfo()) {
       // 公開鍵を取得して状態を更新
       const pubKey = await keyManager.getPublicKey();
       appState.publicKey.set(pubKey);
       appState.isLoggedIn.set(true);
 
-      // アカウント画面に遷移
-      appState.currentScreen.set("account");
-    } catch (error) {
-      console.error("ログインエラー:", error);
-      errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
+      // PRF拡張対応確認をスキップして認証済み状態に
+      return; // 初期化処理を終了
     }
+  } catch (error) {
+    console.error('初期化エラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.init} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+// PRF対応確認
+async function checkPrfSupport() {
+  isLoading = true;
+  errorMessage = '';
+  try {
+    // PRF拡張がサポートされているか確認
+    isSupported = await keyManager.isPrfSupported();
+    isPrfChecked = true;
+  } catch (error) {
+    console.error('PRF対応確認エラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+// 新規パスキー作成
+async function createNew() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    // 新しいパスキーを作成
+    const newCredentialId = await keyManager.createPasskey({
+      user: {
+        name: username || 'user@nosskey',
+        displayName: username || 'user@nosskey',
+      },
+    });
+
+    createdCredentialId = bytesToHex(newCredentialId);
+    isPasskeyCreated = true;
+  } catch (error) {
+    console.error('パスキー作成エラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+// 特定のcredentialIdでログイン
+async function login(credentialId: string) {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    // PRFを直接Nostrキーとして使用
+    const keyInfo = await keyManager.createNostrKey(hexToBytes(credentialId));
+
+    // SDKにKeyInfoを設定（内部でストレージにも保存される）
+    keyManager.setCurrentKeyInfo(keyInfo);
+
+    // 公開鍵を取得して状態を更新
+    const pubKey = await keyManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
+
+    // アカウント画面に遷移
+    appState.currentScreen.set('account');
+  } catch (error) {
+    console.error('ログインエラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+// 既存のパスキーでログイン（credentialIdなし）
+async function loginWithExistingPasskey() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
+    const keyInfo = await keyManager.createNostrKey();
+
+    // SDKに鍵情報を設定（内部でストレージにも保存される）
+    keyManager.setCurrentKeyInfo(keyInfo);
+
+    // 公開鍵を取得して状態を更新
+    const pubKey = await keyManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
+
+    // アカウント画面に遷移
+    appState.currentScreen.set('account');
+  } catch (error) {
+    console.error('ログインエラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+// サポート対象外の場合のメッセージ
+function getUnsupportedMessage() {
+  const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+  const isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
+
+  if (isChrome) {
+    return 'Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。';
   }
 
-  // 既存のパスキーでログイン（credentialIdなし）
-  async function loginWithExistingPasskey() {
-    isLoading = true;
-    errorMessage = "";
-
-    try {
-      // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
-      const keyInfo = await keyManager.createNostrKey();
-
-      // SDKに鍵情報を設定（内部でストレージにも保存される）
-      keyManager.setCurrentKeyInfo(keyInfo);
-
-      // 公開鍵を取得して状態を更新
-      const pubKey = await keyManager.getPublicKey();
-      appState.publicKey.set(pubKey);
-      appState.isLoggedIn.set(true);
-
-      // アカウント画面に遷移
-      appState.currentScreen.set("account");
-    } catch (error) {
-      console.error("ログインエラー:", error);
-      errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isLoading = false;
-    }
+  if (isFirefox) {
+    return 'Firefox では about:config から webauthn:enable_prf を true に設定してください。';
   }
 
-  // サポート対象外の場合のメッセージ
-  function getUnsupportedMessage() {
-    const isChrome = navigator.userAgent.indexOf("Chrome") > -1;
-    const isFirefox = navigator.userAgent.indexOf("Firefox") > -1;
+  return 'お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。';
+}
 
-    if (isChrome) {
-      return "Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。";
-    }
+// KeyInfoファイルアップロードの処理
+async function handleKeyInfoFileUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) return;
 
-    if (isFirefox) {
-      return "Firefox では about:config から webauthn:enable_prf を true に設定してください。";
-    }
+  const file = input.files[0];
+  isLoading = true;
+  keyInfoImportError = '';
 
-    return "お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。";
+  try {
+    const fileContent = await file.text();
+    await loginWithKeyInfoData(fileContent);
+  } catch (error) {
+    console.error('KeyInfoファイル読み込みエラー:', error);
+    keyInfoImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
+    isLoading = false;
   }
+}
 
-  // KeyInfoファイルアップロードの処理
-  async function handleKeyInfoFileUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
+// KeyInfoテキストでのログイン処理
+async function loginWithKeyInfoText() {
+  if (!keyInfoTextInput) return;
 
-    const file = input.files[0];
-    isLoading = true;
-    keyInfoImportError = "";
+  isLoading = true;
+  keyInfoImportError = '';
 
-    try {
-      const fileContent = await file.text();
-      await loginWithKeyInfoData(fileContent);
-    } catch (error) {
-      console.error("KeyInfoファイル読み込みエラー:", error);
-      keyInfoImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
-      isLoading = false;
-    }
+  try {
+    await loginWithKeyInfoData(keyInfoTextInput);
+  } catch (error) {
+    console.error('KeyInfoテキスト処理エラー:', error);
+    keyInfoImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
+    isLoading = false;
   }
+}
 
-  // KeyInfoテキストでのログイン処理
-  async function loginWithKeyInfoText() {
-    if (!keyInfoTextInput) return;
+// KeyInfoデータ（JSONテキスト）からのログイン処理
+async function loginWithKeyInfoData(keyInfoJsonText: string) {
+  try {
+    // JSONをパース
+    const keyData = JSON.parse(keyInfoJsonText);
 
-    isLoading = true;
-    keyInfoImportError = "";
-
-    try {
-      await loginWithKeyInfoData(keyInfoTextInput);
-    } catch (error) {
-      console.error("KeyInfoテキスト処理エラー:", error);
-      keyInfoImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
-      isLoading = false;
+    // KeyInfoが有効かチェック
+    if (!keyData.v || !keyData.alg || !keyData.credentialId || !keyData.pubkey) {
+      throw new Error('有効なKeyInfoデータではありません');
     }
+
+    // KeyInfoをセット
+    keyManager.setCurrentKeyInfo(keyData);
+
+    // 公開鍵を取得して状態を更新
+    const pubKey = await keyManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
+
+    // アカウント画面に遷移
+    appState.currentScreen.set('account');
+  } catch (error) {
+    console.error('KeyInfoログインエラー:', error);
+    throw new Error(
+      `KeyInfoログインエラー: ${error instanceof Error ? error.message : String(error)}`
+    );
+  } finally {
+    isLoading = false;
   }
+}
 
-  // KeyInfoデータ（JSONテキスト）からのログイン処理
-  async function loginWithKeyInfoData(keyInfoJsonText: string) {
-    try {
-      // JSONをパース
-      const keyData = JSON.parse(keyInfoJsonText);
-
-      // KeyInfoが有効かチェック
-      if (
-        !keyData.v ||
-        !keyData.alg ||
-        !keyData.credentialId ||
-        !keyData.pubkey
-      ) {
-        throw new Error("有効なKeyInfoデータではありません");
-      }
-
-      // KeyInfoをセット
-      keyManager.setCurrentKeyInfo(keyData);
-
-      // 公開鍵を取得して状態を更新
-      const pubKey = await keyManager.getPublicKey();
-      appState.publicKey.set(pubKey);
-      appState.isLoggedIn.set(true);
-
-      // アカウント画面に遷移
-      appState.currentScreen.set("account");
-    } catch (error) {
-      console.error("KeyInfoログインエラー:", error);
-      throw new Error(
-        `KeyInfoログインエラー: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // コンポーネントのマウント時に初期化
-  $effect(() => {
-    initialize();
-  });
+// コンポーネントのマウント時に初期化
+$effect(() => {
+  initialize();
+});
 </script>
 
 <div class="auth-container">

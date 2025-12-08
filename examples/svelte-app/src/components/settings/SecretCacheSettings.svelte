@@ -1,72 +1,69 @@
 <script lang="ts">
-  import { i18n } from "../../i18n/i18n-store.js";
-  import {
-    clearSecretCache,
-    getNosskeyManager,
-  } from "../../services/nosskey-manager.service.js";
-  import { cacheSecrets, cacheTimeout } from "../../store/app-state.js";
-  import CardSection from "../ui/CardSection.svelte";
-  import Button from "../ui/button/Button.svelte";
+import { i18n } from '../../i18n/i18n-store.js';
+import { clearSecretCache, getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { cacheSecrets, cacheTimeout } from '../../store/app-state.js';
+import CardSection from '../ui/CardSection.svelte';
+import Button from '../ui/button/Button.svelte';
 
-  // 状態変数
-  let cacheSettingMessage = $state("");
-  let isCaching = $state(true);
-  let timeoutSeconds = $state(300); // デフォルト5分（300秒）
+// 状態変数
+let cacheSettingMessage = $state('');
+let isCaching = $state(true);
+let timeoutSeconds = $state(300); // デフォルト5分（300秒）
 
-  // ストアを監視して更新
-  cacheSecrets.subscribe((value) => {
-    isCaching = value;
-  });
+// ストアを監視して更新
+cacheSecrets.subscribe((value) => {
+  isCaching = value;
+});
 
-  cacheTimeout.subscribe((value) => {
+cacheTimeout.subscribe((value) => {
+  timeoutSeconds = value;
+});
+
+// NosskeyManagerのシングルトンインスタンスを取得
+const keyManager = getNosskeyManager();
+
+// キャッシュ設定を更新する関数
+function updateCacheSetting(value: boolean) {
+  // storeを更新（keyManager.serviceがサブスクライブして自動的に反映）
+  cacheSecrets.set(value);
+
+  cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
+}
+
+// タイムアウト設定を更新
+function updateTimeoutSetting(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const value = Number.parseInt(input.value, 10);
+
+  if (!Number.isNaN(value) && value > 0) {
     timeoutSeconds = value;
-  });
-
-  // NosskeyManagerのシングルトンインスタンスを取得
-  const keyManager = getNosskeyManager();
-
-  // キャッシュ設定を更新する関数
-  function updateCacheSetting(value: boolean) {
-    // storeを更新（keyManager.serviceがサブスクライブして自動的に反映）
-    cacheSecrets.set(value);
+    cacheTimeout.set(value); // keyManager.serviceがサブスクライブして自動的に反映
 
     cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
     setTimeout(() => {
-      cacheSettingMessage = "";
+      cacheSettingMessage = '';
     }, 3000);
   }
+}
 
-  // タイムアウト設定を更新
-  function updateTimeoutSetting(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const value = Number.parseInt(input.value, 10);
+// キャッシュをクリアする関数
+function clearCache() {
+  const success = clearSecretCache();
 
-    if (!Number.isNaN(value) && value > 0) {
-      timeoutSeconds = value;
-      cacheTimeout.set(value); // keyManager.serviceがサブスクライブして自動的に反映
-
-      cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
-      setTimeout(() => {
-        cacheSettingMessage = "";
-      }, 3000);
-    }
+  if (success) {
+    cacheSettingMessage = $i18n.t.settings.cacheSettings.clearSuccess;
+  } else {
+    cacheSettingMessage = $i18n.t.settings.cacheSettings.clearError;
   }
 
-  // キャッシュをクリアする関数
-  function clearCache() {
-    const success = clearSecretCache();
-
-    if (success) {
-      cacheSettingMessage = $i18n.t.settings.cacheSettings.clearSuccess;
-    } else {
-      cacheSettingMessage = $i18n.t.settings.cacheSettings.clearError;
-    }
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      cacheSettingMessage = "";
-    }, 3000);
-  }
+  // 3秒後にメッセージをクリア
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
+}
 </script>
 
 <CardSection title={$i18n.t.settings.cacheSettings.title}>

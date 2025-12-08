@@ -1,84 +1,84 @@
 <script lang="ts">
-  import CopyIcon from "../../assets/copy-icon.svg";
-  import { i18n } from "../../i18n/i18n-store.js";
-  import { getNosskeyManager } from "../../services/nosskey-manager.service.js";
-  import CardSection from "../ui/CardSection.svelte";
-  import Button from "../ui/button/Button.svelte";
-  import IconButton from "../ui/button/IconButton.svelte";
+import CopyIcon from '../../assets/copy-icon.svg';
+import { i18n } from '../../i18n/i18n-store.js';
+import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import CardSection from '../ui/CardSection.svelte';
+import Button from '../ui/button/Button.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
 
-  // KeyInfoエクスポート関連の状態変数
-  let showExportSection = $state(false);
-  let isExporting = $state(false);
-  let exportedKeyInfo = $state("");
-  let exportError = $state("");
-  let showCopiedMessage = $state(false);
+// KeyInfoエクスポート関連の状態変数
+let showExportSection = $state(false);
+let isExporting = $state(false);
+let exportedKeyInfo = $state('');
+let exportError = $state('');
+let showCopiedMessage = $state(false);
 
-  // NosskeyManagerのシングルトンインスタンスを取得
-  const keyManager = getNosskeyManager();
+// NosskeyManagerのシングルトンインスタンスを取得
+const keyManager = getNosskeyManager();
 
-  // エクスポートセクションの表示トグル
-  function toggleExportKeySection() {
-    showExportSection = !showExportSection;
-    // セクションを隠す際は内容もクリア
-    if (!showExportSection) {
-      exportedKeyInfo = "";
-      exportError = "";
-    }
+// エクスポートセクションの表示トグル
+function toggleExportKeySection() {
+  showExportSection = !showExportSection;
+  // セクションを隠す際は内容もクリア
+  if (!showExportSection) {
+    exportedKeyInfo = '';
+    exportError = '';
+  }
+}
+
+// 鍵情報をエクスポート
+async function exportKeyInfo() {
+  // 鍵情報が存在するか確認
+  const currentKeyInfo = keyManager.getCurrentKeyInfo();
+  if (!currentKeyInfo) {
+    exportError = $i18n.t.settings.exportKeyInfo.noCurrentKeyInfo;
+    return;
   }
 
-  // 鍵情報をエクスポート
-  async function exportKeyInfo() {
-    // 鍵情報が存在するか確認
-    const currentKeyInfo = keyManager.getCurrentKeyInfo();
-    if (!currentKeyInfo) {
-      exportError = $i18n.t.settings.exportKeyInfo.noCurrentKeyInfo;
-      return;
-    }
+  isExporting = true;
+  exportedKeyInfo = '';
+  exportError = '';
 
-    isExporting = true;
-    exportedKeyInfo = "";
-    exportError = "";
-
-    try {
-      // 鍵情報をJSON文字列に変換
-      exportedKeyInfo = JSON.stringify(exportKeyInfo, null, 2);
-    } catch (error) {
-      console.error("KeyInfoエクスポートエラー:", error);
-      exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-    } finally {
-      isExporting = false;
-    }
+  try {
+    // 鍵情報をJSON文字列に変換
+    exportedKeyInfo = JSON.stringify(exportKeyInfo, null, 2);
+  } catch (error) {
+    console.error('KeyInfoエクスポートエラー:', error);
+    exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isExporting = false;
   }
+}
 
-  // クリップボードにコピー
-  function copyToClipboard(text: string) {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        showCopiedMessage = true;
-        setTimeout(() => {
-          showCopiedMessage = false;
-        }, 2000);
-      })
-      .catch((err) => {
-        console.error("クリップボードコピーエラー:", err);
-      });
-  }
+// クリップボードにコピー
+function copyToClipboard(text: string) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      showCopiedMessage = true;
+      setTimeout(() => {
+        showCopiedMessage = false;
+      }, 2000);
+    })
+    .catch((err) => {
+      console.error('クリップボードコピーエラー:', err);
+    });
+}
 
-  // KeyInfoをファイルとして保存
-  function saveKeyInfoToFile() {
-    if (!exportedKeyInfo) return;
+// KeyInfoをファイルとして保存
+function saveKeyInfoToFile() {
+  if (!exportedKeyInfo) return;
 
-    const blob = new Blob([exportedKeyInfo], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+  const blob = new Blob([exportedKeyInfo], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
 
-    a.href = url;
-    a.download = "nosskey-key-info-backup.json";
-    a.click();
+  a.href = url;
+  a.download = 'nosskey-key-info-backup.json';
+  a.click();
 
-    URL.revokeObjectURL(url);
-  }
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <CardSection title={$i18n.t.settings.exportKeyInfo.title}>

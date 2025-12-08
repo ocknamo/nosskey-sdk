@@ -520,5 +520,4 @@ describe('NosskeyManager', () => {
       expect(navigator.credentials.get).toHaveBeenCalled();
     });
   });
-
 });

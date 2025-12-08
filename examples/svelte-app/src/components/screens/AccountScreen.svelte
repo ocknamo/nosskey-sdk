@@ -1,78 +1,76 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { slide } from "svelte/transition";
-  import { i18n } from "../../i18n/i18n-store.js";
-  import { getNosskeyManager } from "../../services/nosskey-manager.service.js";
-  import { isLoggedIn, publicKey } from "../../store/app-state.js";
-  import ProfileEditor from "../ProfileEditor.svelte";
-  // biome-ignore lint: svelte
-  import ProfileHeader from "../ProfileHeader.svelte";
-  import CardSection from "../ui/CardSection.svelte";
-  import AuthScreen from "./AuthScreen.svelte";
+import { onMount } from 'svelte';
+import { slide } from 'svelte/transition';
+import { i18n } from '../../i18n/i18n-store.js';
+import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { isLoggedIn, publicKey } from '../../store/app-state.js';
+import ProfileEditor from '../ProfileEditor.svelte';
+// biome-ignore lint: svelte
+import ProfileHeader from '../ProfileHeader.svelte';
+import CardSection from '../ui/CardSection.svelte';
+import AuthScreen from './AuthScreen.svelte';
 
-  // Svelte v5のrunesモードに対応した記法
-  const login = $derived($isLoggedIn);
+// Svelte v5のrunesモードに対応した記法
+const login = $derived($isLoggedIn);
 
-  // 編集モードの状態
-  let isEditing = $state(false);
-  // biome-ignore lint: svelte
-  let profileHeaderRef = $state<ProfileHeader | null>(null);
+// 編集モードの状態
+let isEditing = $state(false);
+// biome-ignore lint: svelte
+let profileHeaderRef = $state<ProfileHeader | null>(null);
 
-  onMount(async () => {
-    console.log("AccountScreen mounted");
+onMount(async () => {
+  console.log('AccountScreen mounted');
 
-    // PWKManagerからインスタンスを取得
-    const keyManager = getNosskeyManager();
+  // PWKManagerからインスタンスを取得
+  const keyManager = getNosskeyManager();
 
-    // PWKが存在するか確認
-    if (keyManager.hasKeyInfo()) {
-      // 認証状態がfalseの場合は修正
-      if (!$isLoggedIn) {
-        console.log(
-          "鍵情報が見つかりましたが、認証状態がfalseでした。修正します。",
-        );
-        try {
-          // 公開鍵を取得して状態を更新
-          const pubKey = await keyManager.getPublicKey();
-          publicKey.set(pubKey);
-          isLoggedIn.set(true);
-        } catch (error) {
-          console.error("公開鍵の取得に失敗しました:", error);
-        }
-      }
-    } else {
-      // 逆に鍵情報がないのに認証状態がtrueの場合も修正
-      if ($isLoggedIn) {
-        console.log("鍵情報がありませんが、認証状態がtrueでした。修正します。");
-        isLoggedIn.set(false);
-        publicKey.set(null);
+  // PWKが存在するか確認
+  if (keyManager.hasKeyInfo()) {
+    // 認証状態がfalseの場合は修正
+    if (!$isLoggedIn) {
+      console.log('鍵情報が見つかりましたが、認証状態がfalseでした。修正します。');
+      try {
+        // 公開鍵を取得して状態を更新
+        const pubKey = await keyManager.getPublicKey();
+        publicKey.set(pubKey);
+        isLoggedIn.set(true);
+      } catch (error) {
+        console.error('公開鍵の取得に失敗しました:', error);
       }
     }
-  });
-
-  // 認証状態の変更を記録
-  $effect(() => {
-    console.log("認証状態が変更されました:", $isLoggedIn);
-  });
-
-  // 編集完了時のコールバック
-  function handleEditComplete() {
-    isEditing = false;
-    // ProfileHeaderの情報を更新
-    if (profileHeaderRef) {
-      profileHeaderRef.refreshProfile();
+  } else {
+    // 逆に鍵情報がないのに認証状態がtrueの場合も修正
+    if ($isLoggedIn) {
+      console.log('鍵情報がありませんが、認証状態がtrueでした。修正します。');
+      isLoggedIn.set(false);
+      publicKey.set(null);
     }
   }
+});
 
-  // 編集開始
-  function handleEditStart() {
-    isEditing = true;
-  }
+// 認証状態の変更を記録
+$effect(() => {
+  console.log('認証状態が変更されました:', $isLoggedIn);
+});
 
-  // 編集キャンセル
-  function handleEditCancel() {
-    isEditing = false;
+// 編集完了時のコールバック
+function handleEditComplete() {
+  isEditing = false;
+  // ProfileHeaderの情報を更新
+  if (profileHeaderRef) {
+    profileHeaderRef.refreshProfile();
   }
+}
+
+// 編集開始
+function handleEditStart() {
+  isEditing = true;
+}
+
+// 編集キャンセル
+function handleEditCancel() {
+  isEditing = false;
+}
 </script>
 
 <!-- デモアプリとドメイン変更の注意喚起セクション -->

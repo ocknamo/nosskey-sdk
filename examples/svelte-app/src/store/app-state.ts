@@ -103,7 +103,7 @@ export const resetState = () => {
 export const logout = () => {
   // SDK側のアカウント情報をクリア
   const nosskeyManager = getNosskeyManager();
-  nosskeyManager.clearStoredKeyInfo()
+  nosskeyManager.clearStoredKeyInfo();
 
   // 公開鍵情報をクリア
   publicKey.set(null);
