@@ -10,8 +10,6 @@ Nosskey (a portmanteau of "**Nos**tr" and "pass**key**") is a securely managing 
 
 This SDK inherits the concept from the previously developed [nosskey](https://github.com/ocknamo/nosskey), but represents a completely different approach thanks to a breakthrough made possible by utilizing the WebAuthn PRF extension.
 
-This approach is planned to be proposed as a Nostr Implementation Possibility (NIP).
-
 ## Benefits of Integrating Passkeys (WebAuthn) with Nostr
 
 Traditional Nostr private key management methods, such as plaintext storage or password-protected format (NIP-49), have presented challenges in terms of security and convenience. Using WebAuthn offers the following benefits:
@@ -26,7 +24,6 @@ Traditional Nostr private key management methods, such as plaintext storage or p
 - 🔐 **Phishing Resistance**: Domain validation prevents unauthorized use on phishing sites
 - ⚡ **Fast Processing**: Efficient implementation utilizing WebAuthn PRF extension
 - 🔄 **Cross-Device Support**: Available on multiple devices through OS passkey synchronization
-- 🔧 **Flexible Approach**: Supports both direct PRF value utilization and encryption/decryption methods
 
 ## Installation
 
@@ -36,7 +33,7 @@ npm install nosskey-sdk
 
 ## Basic Usage Examples
 
-### Creating a Passkey and Generating a New Nostr Key (Recommended Approach)
+### Creating a Passkey and Generating a New Nostr Key
 
 ```javascript
 import { NosskeyManager } from 'nosskey-sdk';
@@ -47,8 +44,8 @@ const keyMgr = new NosskeyManager();
 const credentialId = await keyMgr.createPasskey();
 
 // Use PRF value directly as a Nostr key
-const key = await keyMgr.directPrfToNostrKey(credentialId);
-keyMgr.setCurrentKeyInfo(key);
+const keyInfo = await keyMgr.createNostrKey(credentialId);
+keyMgr.setCurrentKeyInfo(keyInfo);
 
 // Get the public key
 const publicKey = await keyMgr.getPublicKey();
@@ -62,23 +59,6 @@ const event = {
   created_at: Math.floor(Date.now() / 1000)
 };
 const signedEvent = await keyMgr.signEvent(event);
-```
-
-### Importing an Existing Key (Alternative Approach)
-
-```javascript
-import { NosskeyManager } from 'nosskey-sdk';
-import { hexToBytes } from 'nosskey-sdk';
-
-const keyMgr = new NosskeyManager();
-
-// Create a passkey
-const credentialId = await keyMgr.createPasskey();
-
-// Import an existing Nsec private key
-const existingSecretKey = hexToBytes('7f...'); // 32-byte private key
-const key = await keyMgr.importNostrKey(existingSecretKey, credentialId);
-keyMgr.setCurrentKeyInfo(key);
 ```
 
 ## Supported Environments

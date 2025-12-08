@@ -10,8 +10,6 @@ Nosskey（"**Nos**tr"と"pass**key**"を組み合わせた造語）は、WebAuth
 
 このSDKは、以前開発が進められていた[nosskey](https://github.com/ocknamo/nosskey)のコンセプトを継承していますが、WebAuthnのPRF拡張を活用することでブレイクスルーが行われ、全く異なるアプローチになりました。
 
-このアプローチはNostr実装仕様（NIP）として提案予定です。
-
 ## パスキー（WebAuthn）とNostrの連携の利点
 
 従来のNostr秘密鍵管理では、平文保存やパスワード保護形式（NIP-49）が一般的でしたが、セキュリティと利便性の面で課題がありました。WebAuthnを活用することで以下の利点が得られます：
@@ -26,7 +24,6 @@ Nosskey（"**Nos**tr"と"pass**key**"を組み合わせた造語）は、WebAuth
 - 🔐 **フィッシング耐性**: ドメイン検証によりフィッシングサイトでの不正利用を防止
 - ⚡ **高速な処理**: WebAuthn PRF拡張を活用した効率的な実装
 - 🔄 **クロスデバイス対応**: OSのパスキー同期機能で複数デバイスでも利用可能
-- 🔧 **柔軟なアプローチ**: PRF値直接利用方式と暗号化/復号方式の両方をサポート
 
 ## インストール方法
 
@@ -36,7 +33,7 @@ npm install nosskey-sdk
 
 ## 基本的な使用例
 
-### パスキー作成と新規Nostr鍵生成（推奨アプローチ）
+### パスキー作成と新規Nostr鍵生成
 
 ```javascript
 import { NosskeyManager } from 'nosskey-sdk';
@@ -47,8 +44,8 @@ const keyMgr = new NosskeyManager();
 const credentialId = await keyMgr.createPasskey();
 
 // PRF値を直接Nostrキーとして使用
-const key = await keyMgr.directPrfToNostrKey(credentialId);
-keyMgr.setCurrentKeyInfo(key);
+const keyInfo = await keyMgr.createNostrKey(credentialId);
+keyMgr.setCurrentKeyInfo(keyInfo);
 
 // 公開鍵の取得
 const publicKey = await keyMgr.getPublicKey();
@@ -62,23 +59,6 @@ const event = {
   created_at: Math.floor(Date.now() / 1000)
 };
 const signedEvent = await keyMgr.signEvent(event);
-```
-
-### 既存鍵のインポート（代替アプローチ）
-
-```javascript
-import { NosskeyManager } from 'nosskey-sdk';
-import { hexToBytes } from 'nosskey-sdk';
-
-const keyMgr = new NosskeyManager();
-
-// パスキーの作成
-const credentialId = await keyMgr.createPasskey();
-
-// 既存のNsec秘密鍵をインポート
-const existingSecretKey = hexToBytes('7f...'); // 32バイトの秘密鍵
-const key = await keyMgr.importNostrKey(existingSecretKey, credentialId);
-keyMgr.setCurrentKeyInfo(key);
 ```
 
 ## サポート環境
