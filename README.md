@@ -61,6 +61,42 @@ const event = {
 const signedEvent = await keyMgr.signEvent(event);
 ```
 
+## API Reference
+
+### NosskeyManager Methods
+
+#### Constructor
+- `constructor(options?)` - Initialize NosskeyManager with optional cache and storage options
+
+#### Key Management
+- `createPasskey(options?)` - Create a new passkey with PRF extension
+- `createNostrKey(credentialId?, options?)` - Generate NostrKeyInfo using PRF value as the private key
+- `exportNostrKey(keyInfo, credentialId?)` - Export the private key in hexadecimal format
+
+#### Key Information Management
+- `setCurrentKeyInfo(keyInfo)` - Set the current NostrKeyInfo and save to storage if enabled
+- `getCurrentKeyInfo()` - Get the current NostrKeyInfo from memory or storage
+- `hasKeyInfo()` - Check if NostrKeyInfo exists in memory or storage
+- `clearStoredKeyInfo()` - Clear NostrKeyInfo from storage and memory
+
+#### NIP-07 Compatible Methods
+- `getPublicKey()` - Get the public key from the current NostrKeyInfo
+- `signEvent(event)` - Sign a Nostr event using the current NostrKeyInfo
+- `signEventWithKeyInfo(event, keyInfo, options?)` - Sign a Nostr event with specified NostrKeyInfo
+
+#### Cache Management
+- `setCacheOptions(options)` - Update cache configuration
+- `getCacheOptions()` - Get current cache configuration
+- `clearCachedKey(credentialId)` - Clear cache for a specific key
+- `clearAllCachedKeys()` - Clear all cached keys
+
+#### Storage Management
+- `setStorageOptions(options)` - Update storage configuration for NostrKeyInfo
+- `getStorageOptions()` - Get current storage configuration
+
+#### Utility Methods
+- `isPrfSupported()` - Check if the PRF extension is supported in the current environment
+
 ## Supported Environments
 
 Nosskey SDK works in browser environments that support WebAuthn and the PRF extension. Passkey generation and authentication also require authenticators from compatible OS/devices. The main compatibility status is as follows:

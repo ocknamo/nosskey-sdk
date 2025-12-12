@@ -61,6 +61,42 @@ const event = {
 const signedEvent = await keyMgr.signEvent(event);
 ```
 
+## APIリファレンス
+
+### NosskeyManagerメソッド
+
+#### コンストラクタ
+- `constructor(options?)` - キャッシュとストレージのオプションを指定してNosskeyManagerを初期化
+
+#### 鍵管理
+- `createPasskey(options?)` - PRF拡張を使用した新しいパスキーを作成
+- `createNostrKey(credentialId?, options?)` - PRF値を秘密鍵として使用してNostrKeyInfoを生成
+- `exportNostrKey(keyInfo, credentialId?)` - 秘密鍵を16進数形式でエクスポート
+
+#### 鍵情報管理
+- `setCurrentKeyInfo(keyInfo)` - 現在のNostrKeyInfoを設定し、有効な場合はストレージに保存
+- `getCurrentKeyInfo()` - メモリまたはストレージから現在のNostrKeyInfoを取得
+- `hasKeyInfo()` - メモリまたはストレージにNostrKeyInfoが存在するか確認
+- `clearStoredKeyInfo()` - ストレージとメモリからNostrKeyInfoをクリア
+
+#### NIP-07互換メソッド
+- `getPublicKey()` - 現在のNostrKeyInfoから公開鍵を取得
+- `signEvent(event)` - 現在のNostrKeyInfoを使用してNostrイベントに署名
+- `signEventWithKeyInfo(event, keyInfo, options?)` - 指定されたNostrKeyInfoでNostrイベントに署名
+
+#### キャッシュ管理
+- `setCacheOptions(options)` - キャッシュ設定を更新
+- `getCacheOptions()` - 現在のキャッシュ設定を取得
+- `clearCachedKey(credentialId)` - 特定の鍵のキャッシュをクリア
+- `clearAllCachedKeys()` - すべてのキャッシュをクリア
+
+#### ストレージ管理
+- `setStorageOptions(options)` - NostrKeyInfoのストレージ設定を更新
+- `getStorageOptions()` - 現在のストレージ設定を取得
+
+#### ユーティリティメソッド
+- `isPrfSupported()` - 現在の環境でPRF拡張がサポートされているか確認
+
 ## サポート環境
 
 Nosskey SDKはWebAuthnとPRF拡張をサポートするブラウザ環境で動作します。また、パスキーの生成と認証には対応するOS・デバイスの認証器が必要です。主な対応状況は以下の通りです：
