@@ -242,13 +242,6 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * PRF拡張機能がサポートされているかチェック
-   */
-  async isPrfSupported(): Promise<boolean> {
-    return isPrfSupported();
-  }
-
-  /**
    * パスキーを作成（PRF拡張もリクエスト）
    * @param options パスキー作成オプション
    * @returns Credentialの識別子を返す
@@ -264,7 +257,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    */
   async createNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<NostrKeyInfo> {
     // PRF秘密を取得（これが直接シークレットキーになる）
-    const { secret: sk, id: responseId } = await getPrfSecret(credentialId);
+    const { secret: sk, id: responseId } = await getPrfSecret(credentialId, options.prfOptions);
 
     // secp256k1の有効範囲チェック(ここでは0チェックのみ)
     // 注: 実用上は確率が非常に低いため省略可能
@@ -317,7 +310,10 @@ export class NosskeyManager implements NosskeyManagerLike {
     // キャッシュがない場合は通常の処理
     if (!sk) {
       // PRF値を取得（これが直接シークレットキー）
-      const { secret: prfSecret } = await getPrfSecret(hexToBytes(keyInfo.credentialId));
+      const { secret: prfSecret } = await getPrfSecret(
+        hexToBytes(keyInfo.credentialId),
+        options.prfOptions
+      );
       sk = prfSecret;
 
       // キャッシュが有効な場合は保存
@@ -345,9 +341,14 @@ export class NosskeyManager implements NosskeyManagerLike {
    * 秘密鍵をエクスポート
    * @param keyInfo NostrKeyInfo
    * @param credentialId 使用するクレデンシャルID（省略時はNostrKeyInfoのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param options オプション
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  async exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string> {
+  async exportNostrKey(
+    keyInfo: NostrKeyInfo,
+    credentialId?: Uint8Array,
+    options: KeyOptions = {}
+  ): Promise<string> {
     // NostrKeyInfoからcredentialIdを取得（指定がある場合）
     let usedCredentialId = credentialId;
 
@@ -357,12 +358,19 @@ export class NosskeyManager implements NosskeyManagerLike {
     }
 
     // PRF値を取得（これが直接シークレットキー）
-    const { secret: sk } = await getPrfSecret(usedCredentialId);
+    const { secret: sk } = await getPrfSecret(usedCredentialId, options.prfOptions);
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
 
     return skHex;
+  }
+
+  /**
+   * PRF拡張機能がサポートされているかチェック
+   */
+  async isPrfSupported(): Promise<boolean> {
+    return isPrfSupported();
   }
 
   /**

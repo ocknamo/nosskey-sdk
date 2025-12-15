@@ -203,7 +203,7 @@ describe('prf-handler', () => {
 
       expect(publicKey.rp.name).toBe('example.com');
       expect(publicKey.user.name).toBe('user@example.com');
-      expect(publicKey.user.displayName).toBe('PWK user');
+      expect(publicKey.user.displayName).toBe('Nosskey user');
       expect(publicKey.extensions).toEqual({ prf: {} });
     });
 
@@ -219,7 +219,7 @@ describe('prf-handler', () => {
       expect(credentialId).toEqual(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
       const callArgs = (navigator.credentials.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(callArgs.publicKey.rp.name).toBe('Nostr PWK');
+      expect(callArgs.publicKey.rp.name).toBe('Nosskey');
     });
 
     it('カスタムオプションを適用できる', async () => {
@@ -449,6 +449,63 @@ describe('prf-handler', () => {
 
       // レスポンスのcredentialIdが返されることを確認
       expect(result.id).toEqual(differentCredentialId);
+    });
+
+    it('rpIdオプションを設定できる', async () => {
+      const options = {
+        rpId: 'example.com',
+      };
+
+      await getPrfSecret(mockCredentialId, options);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.rpId).toBe('example.com');
+    });
+
+    it('timeoutオプションを設定できる', async () => {
+      const options = {
+        timeout: 60000,
+      };
+
+      await getPrfSecret(mockCredentialId, options);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.timeout).toBe(60000);
+    });
+
+    it('userVerificationオプションを設定できる', async () => {
+      const options = {
+        userVerification: 'preferred' as UserVerificationRequirement,
+      };
+
+      await getPrfSecret(mockCredentialId, options);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.userVerification).toBe('preferred');
+    });
+
+    it('複数のオプションを同時に設定できる', async () => {
+      const options = {
+        rpId: 'myapp.com',
+        timeout: 30000,
+        userVerification: 'discouraged' as UserVerificationRequirement,
+      };
+
+      await getPrfSecret(mockCredentialId, options);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.rpId).toBe('myapp.com');
+      expect(callArgs.publicKey.timeout).toBe(30000);
+      expect(callArgs.publicKey.userVerification).toBe('discouraged');
+    });
+
+    it('オプション未指定時はデフォルト値が使用される', async () => {
+      await getPrfSecret(mockCredentialId);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.rpId).toBeUndefined();
+      expect(callArgs.publicKey.timeout).toBeUndefined();
+      expect(callArgs.publicKey.userVerification).toBe('required');
     });
   });
 

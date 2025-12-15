@@ -50,6 +50,19 @@ export interface PasskeyCreationOptions {
 export interface KeyOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   username?: string; // パスキー作成時のユーザー名
+  prfOptions?: GetPrfSecretOptions; // PRF取得時のオプション
+}
+
+/**
+ * PRF secret取得のためのオプション
+ */
+export interface GetPrfSecretOptions {
+  /** Relying Party ID */
+  rpId?: string;
+  /** タイムアウト時間（ミリ秒） */
+  timeout?: number;
+  /** ユーザー検証要件 */
+  userVerification?: UserVerificationRequirement;
 }
 
 /**
@@ -80,6 +93,7 @@ export interface NostrKeyStorageOptions {
 export interface SignOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   tags?: string[][]; // 追加のタグ
+  prfOptions?: GetPrfSecretOptions; // PRF取得時のオプション
 }
 
 /**
@@ -192,7 +206,12 @@ export interface NosskeyManagerLike {
    * 秘密鍵をエクスポート
    * @param keyInfo NostrKeyInfo
    * @param credentialId 使用するクレデンシャルID（省略時はNostrKeyInfoのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）
+   * @param options オプション
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string>;
+  exportNostrKey(
+    keyInfo: NostrKeyInfo,
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<string>;
 }

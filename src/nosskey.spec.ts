@@ -146,6 +146,27 @@ describe('NosskeyManager', () => {
       expect(result.salt).toBe('6e6f7374722d6b6579'); // "nostr-key"のhex
     });
 
+    it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = new Uint8Array(16).fill(1);
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+
+      await nosskey.createNostrKey(credentialId, {
+        prfOptions: {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+      });
+
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(credentialId, {
+        rpId: 'example.com',
+        timeout: 60000,
+        userVerification: 'preferred',
+      });
+    });
+
     it('PRF値がゼロの場合はエラーを投げる', async () => {
       const nosskey = new NosskeyManager();
       const credentialId = new Uint8Array(16).fill(1);
@@ -192,6 +213,36 @@ describe('NosskeyManager', () => {
       expect(signedEvent).toHaveProperty('id', 'test-event-id');
       expect(signedEvent).toHaveProperty('sig', 'test-signature');
     });
+
+    it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      const mockEvent: NostrEvent = {
+        kind: 1,
+        content: 'Hello, Nostr!',
+        tags: [],
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo, {
+        prfOptions: {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+      });
+
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
+        rpId: 'example.com',
+        timeout: 60000,
+        userVerification: 'preferred',
+      });
+    });
   });
 
   describe('exportNostrKey', () => {
@@ -225,6 +276,31 @@ describe('NosskeyManager', () => {
 
       // PRF値自体がシークレットキー（32バイトの42で埋められたもの）
       expect(secretKey).toBe(bytesToHex(testPrfResult));
+    });
+
+    it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
+      const nosskey = new NosskeyManager();
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+
+      await nosskey.exportNostrKey(mockKeyInfo, undefined, {
+        prfOptions: {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+      });
+
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
+        rpId: 'example.com',
+        timeout: 60000,
+        userVerification: 'preferred',
+      });
     });
   });
 
