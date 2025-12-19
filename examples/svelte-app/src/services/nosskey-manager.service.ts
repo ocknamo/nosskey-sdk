@@ -38,6 +38,9 @@ export function getNosskeyManager(): NosskeyManager {
       }
     });
 
+    // 開発環境ではnosskey-sdk.pages.devを使用その他の環境ではhostをそのまま使用
+    const rpId = location.host.includes('nosskey-sdk.pages.dev') ? 'nosskey-sdk.pages.dev' : location.host;
+
     instance = new NosskeyManager({
       cacheOptions: {
         enabled: currentCacheEnabled,
@@ -47,6 +50,10 @@ export function getNosskeyManager(): NosskeyManager {
         enabled: true, // PWKの自動保存を有効化
         storageKey: 'nosskey_pwk', // SDKのデフォルト値を使用
       },
+      prfOptions: {
+        rpId,
+        userVerification: 'required',
+      }
     });
   }
   return instance;
