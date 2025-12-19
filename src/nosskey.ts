@@ -53,8 +53,12 @@ export class NosskeyManager implements NosskeyManagerLike {
       this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
     }
 
+    // 重要なoptionなので外れないようにデフォルト値を設定
+    const userVerification = options?.prfOptions?.userVerification ?? 'required';
     if (options?.prfOptions) {
-      this.#prfOptions = options.prfOptions;
+      this.#prfOptions = { ...options.prfOptions, userVerification };
+    } else {
+      this.#prfOptions = { userVerification };
     }
 
     // ストレージが有効な場合、NostrKeyInfoの読み込みを試みる

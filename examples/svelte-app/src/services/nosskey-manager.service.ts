@@ -43,9 +43,6 @@ export function getNosskeyManager(): NosskeyManager {
       ? 'nosskey-sdk.pages.dev'
       : location.host;
 
-    console.log('DEBUG: rpid:' + rpId);
-    console.log('DEBUG: host:' + location.host);
-
     instance = new NosskeyManager({
       cacheOptions: {
         enabled: currentCacheEnabled,
