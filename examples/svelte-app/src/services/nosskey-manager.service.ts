@@ -39,7 +39,9 @@ export function getNosskeyManager(): NosskeyManager {
     });
 
     // 開発環境ではnosskey-sdk.pages.devを使用その他の環境ではhostをそのまま使用
-    const rpId = location.host.includes('nosskey-sdk.pages.dev') ? 'nosskey-sdk.pages.dev' : location.host;
+    const rpId = location.host.includes('nosskey-sdk.pages.dev')
+      ? 'nosskey-sdk.pages.dev'
+      : location.host;
 
     console.log('DEBUG: rpid:' + rpId);
     console.log('DEBUG: host:' + location.host);
@@ -56,7 +58,7 @@ export function getNosskeyManager(): NosskeyManager {
       prfOptions: {
         rpId,
         userVerification: 'required',
-      }
+      },
     });
   }
   return instance;

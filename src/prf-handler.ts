@@ -77,7 +77,7 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
     } as PublicKeyCredentialCreationOptions,
   };
 
-  console.log('DEBGU credentialCreationOptions:', credentialCreationOptions )
+  console.log('DEBGU credentialCreationOptions:', credentialCreationOptions);
 
   const cred = (await navigator.credentials.create(
     credentialCreationOptions
