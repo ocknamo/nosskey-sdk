@@ -50,7 +50,6 @@ export interface PasskeyCreationOptions {
 export interface KeyOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   username?: string; // パスキー作成時のユーザー名
-  prfOptions?: GetPrfSecretOptions; // PRF取得時のオプション
 }
 
 /**
@@ -93,7 +92,18 @@ export interface NostrKeyStorageOptions {
 export interface SignOptions {
   clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   tags?: string[][]; // 追加のタグ
-  prfOptions?: GetPrfSecretOptions; // PRF取得時のオプション
+}
+
+/**
+ * NosskeyManager コンストラクタオプション
+ */
+export interface NosskeyManagerOptions {
+  /** キャッシュオプション */
+  cacheOptions?: Partial<KeyCacheOptions>;
+  /** ストレージオプション */
+  storageOptions?: Partial<NostrKeyStorageOptions>;
+  /** PRF取得時のオプション */
+  prfOptions?: GetPrfSecretOptions;
 }
 
 /**
@@ -190,6 +200,17 @@ export interface NosskeyManagerLike {
    * 現在のキャッシュ設定を取得
    */
   getCacheOptions(): KeyCacheOptions;
+
+  /**
+   * PRF取得オプションを設定
+   * @param options PRF取得オプション
+   */
+  setPrfOptions(options: GetPrfSecretOptions): void;
+
+  /**
+   * 現在のPRF取得オプションを取得
+   */
+  getPrfOptions(): GetPrfSecretOptions;
 
   /**
    * 特定の鍵のキャッシュをクリア

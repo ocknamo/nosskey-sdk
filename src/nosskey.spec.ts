@@ -147,18 +147,18 @@ describe('NosskeyManager', () => {
     });
 
     it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
-      const nosskey = new NosskeyManager();
-      const credentialId = new Uint8Array(16).fill(1);
-
-      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
-
-      await nosskey.createNostrKey(credentialId, {
+      const nosskey = new NosskeyManager({
         prfOptions: {
           rpId: 'example.com',
           timeout: 60000,
           userVerification: 'preferred',
         },
       });
+      const credentialId = new Uint8Array(16).fill(1);
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+
+      await nosskey.createNostrKey(credentialId);
 
       expect(getPrfSecretSpy).toHaveBeenCalledWith(credentialId, {
         rpId: 'example.com',
@@ -215,7 +215,13 @@ describe('NosskeyManager', () => {
     });
 
     it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
-      const nosskey = new NosskeyManager();
+      const nosskey = new NosskeyManager({
+        prfOptions: {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+      });
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
@@ -229,13 +235,7 @@ describe('NosskeyManager', () => {
 
       const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
 
-      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo, {
-        prfOptions: {
-          rpId: 'example.com',
-          timeout: 60000,
-          userVerification: 'preferred',
-        },
-      });
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
       expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
         rpId: 'example.com',
@@ -279,7 +279,13 @@ describe('NosskeyManager', () => {
     });
 
     it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
-      const nosskey = new NosskeyManager();
+      const nosskey = new NosskeyManager({
+        prfOptions: {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+      });
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
@@ -288,13 +294,7 @@ describe('NosskeyManager', () => {
 
       const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
 
-      await nosskey.exportNostrKey(mockKeyInfo, undefined, {
-        prfOptions: {
-          rpId: 'example.com',
-          timeout: 60000,
-          userVerification: 'preferred',
-        },
-      });
+      await nosskey.exportNostrKey(mockKeyInfo);
 
       expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
         rpId: 'example.com',

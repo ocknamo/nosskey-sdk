@@ -2,9 +2,11 @@ import { seckeySigner } from 'rx-nostr-crypto';
 import { KeyCache } from './key-cache.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import type {
+  GetPrfSecretOptions,
   KeyCacheOptions,
   KeyOptions,
   NosskeyManagerLike,
+  NosskeyManagerOptions,
   NostrEvent,
   NostrKeyInfo,
   NostrKeyStorageOptions,
@@ -36,19 +38,23 @@ export class NosskeyManager implements NosskeyManagerLike {
     storageKey: 'nosskey_keyinfo',
   };
 
+  // PRF取得時のオプション
+  #prfOptions: GetPrfSecretOptions = {};
+
   /**
    * NosskeyManager コンストラクタ
    * @param options 初期化オプション
    */
-  constructor(options?: {
-    cacheOptions?: Partial<KeyCacheOptions>;
-    storageOptions?: Partial<NostrKeyStorageOptions>;
-  }) {
+  constructor(options?: NosskeyManagerOptions) {
     // KeyCacheを初期化
     this.#keyCache = new KeyCache(options?.cacheOptions);
 
     if (options?.storageOptions) {
       this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
+    }
+
+    if (options?.prfOptions) {
+      this.#prfOptions = options.prfOptions;
     }
 
     // ストレージが有効な場合、NostrKeyInfoの読み込みを試みる
@@ -227,6 +233,21 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * PRF取得オプションを設定
+   * @param options PRF取得オプション
+   */
+  setPrfOptions(options: GetPrfSecretOptions): void {
+    this.#prfOptions = options;
+  }
+
+  /**
+   * 現在のPRF取得オプションを取得
+   */
+  getPrfOptions(): GetPrfSecretOptions {
+    return { ...this.#prfOptions };
+  }
+
+  /**
    * 特定の鍵のキャッシュをクリア
    * @param credentialId クレデンシャルID
    */
@@ -257,7 +278,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    */
   async createNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<NostrKeyInfo> {
     // PRF秘密を取得（これが直接シークレットキーになる）
-    const { secret: sk, id: responseId } = await getPrfSecret(credentialId, options.prfOptions);
+    const { secret: sk, id: responseId } = await getPrfSecret(credentialId, this.#prfOptions);
 
     // secp256k1の有効範囲チェック(ここでは0チェックのみ)
     // 注: 実用上は確率が非常に低いため省略可能
@@ -312,7 +333,7 @@ export class NosskeyManager implements NosskeyManagerLike {
       // PRF値を取得（これが直接シークレットキー）
       const { secret: prfSecret } = await getPrfSecret(
         hexToBytes(keyInfo.credentialId),
-        options.prfOptions
+        this.#prfOptions
       );
       sk = prfSecret;
 
@@ -358,7 +379,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     }
 
     // PRF値を取得（これが直接シークレットキー）
-    const { secret: sk } = await getPrfSecret(usedCredentialId, options.prfOptions);
+    const { secret: sk } = await getPrfSecret(usedCredentialId, this.#prfOptions);
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
