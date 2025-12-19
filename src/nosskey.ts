@@ -249,10 +249,21 @@ export class NosskeyManager implements NosskeyManagerLike {
 
   /**
    * パスキーを作成（PRF拡張もリクエスト）
-   * @param options パスキー作成オプション
+   * @param options パスキー作成オプション。なければコンストラクタで設定された値を設定する。
    * @returns Credentialの識別子を返す
    */
   async createPasskey(options: PasskeyCreationOptions = {}): Promise<Uint8Array> {
+    if (Object.keys(options).length === 0) {
+      return createPasskey({
+        rp: {
+          id: this.#prfOptions.rpId,
+        },
+        authenticatorSelection: {
+          userVerification: this.#prfOptions.userVerification,
+        },
+      });
+    }
+
     return createPasskey(options);
   }
 
@@ -350,11 +361,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @param options オプション
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  async exportNostrKey(
-    keyInfo: NostrKeyInfo,
-    credentialId?: Uint8Array,
-    options: KeyOptions = {}
-  ): Promise<string> {
+  async exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string> {
     // NostrKeyInfoからcredentialIdを取得（指定がある場合）
     let usedCredentialId = credentialId;
 

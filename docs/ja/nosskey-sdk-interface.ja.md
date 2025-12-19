@@ -117,7 +117,6 @@ PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを
 ```typescript
 async createNostrKey(
   credentialId?: Uint8Array,
-  options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
 
@@ -217,7 +216,6 @@ export interface NostrKeyStorageOptions {
 
 ```typescript
 export interface KeyOptions {
-  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   username?: string; // パスキー作成時のユーザー名
 }
 ```

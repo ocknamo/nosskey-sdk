@@ -9,19 +9,6 @@ import type { GetPrfSecretOptions, PasskeyCreationOptions } from './types.js';
 const PRF_EVAL_INPUT = new TextEncoder().encode('nostr-pwk');
 
 /**
- * WebAuthn PRF 拡張のレスポンス型
- */
-type PRFExtensionResponse = {
-  getClientExtensionResults(): {
-    prf?: {
-      results?: {
-        first?: ArrayBuffer;
-      };
-    };
-  };
-};
-
-/**
  * PRF拡張機能がサポートされているかチェック
  * @returns PRF拡張がサポートされているかどうか
  */
