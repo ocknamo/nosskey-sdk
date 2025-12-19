@@ -217,7 +217,6 @@ export interface NostrKeyStorageOptions {
 
 ```typescript
 export interface KeyOptions {
-  clearMemory?: boolean; // Whether to clear private key from memory after operation (default: true)
   username?: string; // Username when creating passkey
 }
 ```

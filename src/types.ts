@@ -48,7 +48,6 @@ export interface PasskeyCreationOptions {
  * Key options
  */
 export interface KeyOptions {
-  clearMemory?: boolean; // 操作後にメモリから秘密鍵を消去するか（デフォルト: true）
   username?: string; // パスキー作成時のユーザー名
 }
 

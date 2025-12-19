@@ -353,7 +353,6 @@ export class NosskeyManager implements NosskeyManagerLike {
   async exportNostrKey(
     keyInfo: NostrKeyInfo,
     credentialId?: Uint8Array,
-    options: KeyOptions = {}
   ): Promise<string> {
     // NostrKeyInfoからcredentialIdを取得（指定がある場合）
     let usedCredentialId = credentialId;
