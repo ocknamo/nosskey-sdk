@@ -77,8 +77,6 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
     } as PublicKeyCredentialCreationOptions,
   };
 
-  console.log('DEBGU credentialCreationOptions:', credentialCreationOptions);
-
   const cred = (await navigator.credentials.create(
     credentialCreationOptions
   )) as PublicKeyCredential;
@@ -114,8 +112,6 @@ export async function getPrfSecret(
   if (options?.timeout) {
     requestOptions.timeout = options.timeout;
   }
-
-  console.log('DEBUG requestOptions', requestOptions);
 
   const response = await navigator.credentials.get({
     publicKey: requestOptions,
