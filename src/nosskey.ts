@@ -257,6 +257,7 @@ export class NosskeyManager implements NosskeyManagerLike {
       return createPasskey({
         rp: {
           id: this.#prfOptions.rpId,
+          name: this.#prfOptions.rpId,
         },
         authenticatorSelection: {
           userVerification: this.#prfOptions.userVerification,
