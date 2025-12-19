@@ -76,7 +76,6 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
       extensions: options.extensions || { prf: {} }, // PRF拡張を要求
     } as PublicKeyCredentialCreationOptions,
   };
-
   const cred = (await navigator.credentials.create(
     credentialCreationOptions
   )) as PublicKeyCredential;
