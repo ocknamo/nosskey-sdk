@@ -60,7 +60,7 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
     publicKey: {
       rp: {
         name: rpName,
-        ...(rpId && { id: rpId }),
+        id: rpId,
       },
       user: {
         id: crypto.getRandomValues(new Uint8Array(16)),

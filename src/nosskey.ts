@@ -53,8 +53,12 @@ export class NosskeyManager implements NosskeyManagerLike {
       this.#storageOptions = { ...this.#storageOptions, ...options.storageOptions };
     }
 
+    // 重要なoptionなので外れないようにデフォルト値を設定
+    const userVerification = options?.prfOptions?.userVerification ?? 'required';
     if (options?.prfOptions) {
-      this.#prfOptions = options.prfOptions;
+      this.#prfOptions = { ...options.prfOptions, userVerification };
+    } else {
+      this.#prfOptions = { userVerification };
     }
 
     // ストレージが有効な場合、NostrKeyInfoの読み込みを試みる
@@ -253,18 +257,16 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @returns Credentialの識別子を返す
    */
   async createPasskey(options: PasskeyCreationOptions = {}): Promise<Uint8Array> {
-    if (Object.keys(options).length === 0) {
-      return createPasskey({
-        rp: {
-          id: this.#prfOptions.rpId,
-        },
-        authenticatorSelection: {
-          userVerification: this.#prfOptions.userVerification,
-        },
-      });
-    }
-
-    return createPasskey(options);
+    return createPasskey({
+      rp: {
+        id: this.#prfOptions.rpId,
+        name: this.#prfOptions.rpId,
+      },
+      authenticatorSelection: {
+        userVerification: this.#prfOptions.userVerification,
+      },
+      ...options,
+    });
   }
 
   /**
