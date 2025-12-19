@@ -202,17 +202,6 @@ export interface NosskeyManagerLike {
   getCacheOptions(): KeyCacheOptions;
 
   /**
-   * PRF取得オプションを設定
-   * @param options PRF取得オプション
-   */
-  setPrfOptions(options: GetPrfSecretOptions): void;
-
-  /**
-   * 現在のPRF取得オプションを取得
-   */
-  getPrfOptions(): GetPrfSecretOptions;
-
-  /**
    * 特定の鍵のキャッシュをクリア
    * @param credentialId クレデンシャルID
    */

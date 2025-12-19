@@ -233,21 +233,6 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * PRF取得オプションを設定
-   * @param options PRF取得オプション
-   */
-  setPrfOptions(options: GetPrfSecretOptions): void {
-    this.#prfOptions = options;
-  }
-
-  /**
-   * 現在のPRF取得オプションを取得
-   */
-  getPrfOptions(): GetPrfSecretOptions {
-    return { ...this.#prfOptions };
-  }
-
-  /**
    * 特定の鍵のキャッシュをクリア
    * @param credentialId クレデンシャルID
    */
