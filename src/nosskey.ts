@@ -350,10 +350,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @param options オプション
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
-  async exportNostrKey(
-    keyInfo: NostrKeyInfo,
-    credentialId?: Uint8Array,
-  ): Promise<string> {
+  async exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string> {
     // NostrKeyInfoからcredentialIdを取得（指定がある場合）
     let usedCredentialId = credentialId;
 
