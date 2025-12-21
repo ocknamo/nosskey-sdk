@@ -38,10 +38,14 @@ export function getNosskeyManager(): NosskeyManager {
       }
     });
 
-    // 開発環境ではnosskey-sdk.pages.devを使用その他の環境ではhostをそのまま使用
-    const rpId = location.host.includes('nosskey-sdk.pages.dev')
-      ? 'nosskey-sdk.pages.dev'
-      : location.host;
+    // 開発環境ではnosskey-sdk.pages.devを使用
+    let rpId = location.host;
+    if (location.host.includes('nosskey-sdk.pages.dev')) {
+      rpId = 'nosskey-sdk.pages.dev';
+      // サブドメイン(www.nosskey.app'など)ではなく'nosskey.app'を使用
+    } else if (location.host.includes('nosskey.app')) {
+      rpId = 'nosskey.app';
+    }
 
     instance = new NosskeyManager({
       cacheOptions: {

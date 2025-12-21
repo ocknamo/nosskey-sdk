@@ -4,7 +4,6 @@ import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import * as appState from '../../store/app-state.js';
-import { currentScreen } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import FileInputButton from '../ui/button/FileInputButton.svelte';
