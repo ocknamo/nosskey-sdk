@@ -61,6 +61,38 @@ const event = {
 const signedEvent = await keyMgr.signEvent(event);
 ```
 
+### 詳細な設定例
+
+```javascript
+// 開発環境ではnosskey-sdk.pages.devを使用
+let rpId = location.host;
+if (location.host.includes('nosskey-sdk.pages.dev')) {
+  rpId = 'nosskey-sdk.pages.dev';
+// サブドメイン(www.nosskey.app'など)ではなく'nosskey.app'を使用
+} else if (location.host.includes('nosskey.app')) {
+  rpId = 'nosskey.app';
+}
+
+// より詳細な設定でNosskeyManagerを初期化
+const keyMgr = new NosskeyManager({
+  // キャッシュオプション
+  cacheOptions: {
+    enabled: true,              // キャッシュを有効化
+    timeoutMs: 60 * 1000,       // キャッシュ有効期限 (60秒)
+  },
+  // ストレージオプション
+  storageOptions: {
+    enabled: true,              // NostrKeyInfoの自動保存を有効化
+    storageKey: 'nosskey_pwk',  // 保存に使用するキー名
+  },
+  // PRFオプション (初期化時のみ設定可能)
+  prfOptions: {
+    rpId,                       // Relying Party ID（ドメイン）
+    userVerification: 'required', // ユーザー認証を必須に設定
+  },
+});
+```
+
 ## APIリファレンス
 
 ### NosskeyManagerメソッド

@@ -61,6 +61,38 @@ const event = {
 const signedEvent = await keyMgr.signEvent(event);
 ```
 
+### Advanced Configuration Examples
+
+```javascript
+// Use nosskey-sdk.pages.dev for development environment
+let rpId = location.host;
+if (location.host.includes('nosskey-sdk.pages.dev')) {
+  rpId = 'nosskey-sdk.pages.dev';
+// Use 'nosskey.app' instead of subdomains (like 'www.nosskey.app')
+} else if (location.host.includes('nosskey.app')) {
+  rpId = 'nosskey.app';
+}
+
+// Initialize NosskeyManager with detailed configuration
+const keyMgr = new NosskeyManager({
+  // Cache options
+  cacheOptions: {
+    enabled: true,              // Enable caching
+    timeoutMs: 60 * 1000,       // Cache timeout (60 seconds)
+  },
+  // Storage options
+  storageOptions: {
+    enabled: true,              // Enable automatic NostrKeyInfo storage
+    storageKey: 'nosskey_pwk',  // Storage key name
+  },
+  // PRF options (can only be set during initialization)
+  prfOptions: {
+    rpId,                       // Relying Party ID (domain)
+    userVerification: 'required', // Require user verification
+  },
+});
+```
+
 ## API Reference
 
 ### NosskeyManager Methods
