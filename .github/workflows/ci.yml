@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   test:
-    name: Test, Lint, Build
+    name: SDK - Test, Lint, Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,4 +34,30 @@ jobs:
         run: npm test
 
       - name: Build (tsup)
+        run: npm run build
+
+  svelte-app:
+    name: Sample App - Check, Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/svelte-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: examples/svelte-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check (svelte-check)
+        run: npm run check
+
+      - name: Build (vite)
         run: npm run build

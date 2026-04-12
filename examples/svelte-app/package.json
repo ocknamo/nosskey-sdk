@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "lint": "cd ../.. && biome check ./examples/svelte-app/src",
+    "format": "cd ../.. && biome check --write ./examples/svelte-app/src",
+    "format:check": "cd ../.. && biome check ./examples/svelte-app/src"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",

@@ -38,7 +38,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "format": "biome format --write && biome check --write",
-    "format:check": "biome check ./src",
+    "format:check": "biome check ./src ./examples",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "fix": "npm run lint:fix && npm run format",
