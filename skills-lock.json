@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "genshijin": {
+      "source": "InterfaceX-co-jp/genshijin",
+      "sourceType": "github",
+      "computedHash": "9c226530a5528fb1f1b4e1cd8aa5f77ce53b6093468d45159e40727ca4039a81"
+    }
+  }
+}
