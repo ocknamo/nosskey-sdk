@@ -596,4 +596,340 @@ describe('NosskeyManager', () => {
       expect(navigator.credentials.get).toHaveBeenCalled();
     });
   });
+
+  describe('hasKeyInfo', () => {
+    let mockLocalStorage: { [key: string]: string };
+
+    beforeEach(() => {
+      mockLocalStorage = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          setItem: vi.fn((key, value) => {
+            mockLocalStorage[key] = value;
+          }),
+          getItem: vi.fn((key) => mockLocalStorage[key] || null),
+          removeItem: vi.fn((key) => {
+            delete mockLocalStorage[key];
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    it('メモリにNostrKeyInfoが設定されている場合はtrueを返す', () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      nosskey.setCurrentKeyInfo({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+      expect(nosskey.hasKeyInfo()).toBe(true);
+    });
+
+    it('メモリ空 かつ ストレージ無効 の場合はfalseを返す', () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      expect(nosskey.hasKeyInfo()).toBe(false);
+    });
+
+    it('メモリ空 かつ ストレージ有効 かつ ストレージにデータがある場合はtrueを返しメモリにロードする', () => {
+      // コンストラクタのロードを回避するためストレージ無効で作成
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+
+      // ストレージ有効化（コンストラクタロードは既に終わっている）
+      nosskey.setStorageOptions({ enabled: true });
+
+      // 有効化後にストレージにデータを入れる
+      mockLocalStorage['nosskey_keyinfo'] = JSON.stringify({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'stored-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+
+      // hasKeyInfo がストレージから読み込むパスを通る
+      expect(nosskey.hasKeyInfo()).toBe(true);
+      // 副作用でメモリにロードされていることを確認
+      expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('stored-pubkey');
+    });
+
+    it('メモリ空 かつ ストレージ有効 でデータがない場合はfalseを返す', () => {
+      const nosskey = new NosskeyManager();
+      expect(nosskey.hasKeyInfo()).toBe(false);
+    });
+  });
+
+  describe('カスタム Storage オプション', () => {
+    const createMockStorage = (): Storage => ({
+      length: 0,
+      clear: vi.fn(),
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      key: vi.fn(() => null),
+    });
+
+    it('コンストラクタで指定したカスタムstorageが使用される', () => {
+      const customStorage = createMockStorage();
+      const nosskey = new NosskeyManager({
+        storageOptions: { enabled: true, storage: customStorage },
+      });
+
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      nosskey.setCurrentKeyInfo(keyInfo);
+
+      expect(customStorage.setItem).toHaveBeenCalledWith(
+        'nosskey_keyinfo',
+        JSON.stringify(keyInfo)
+      );
+    });
+
+    it('setStorageOptionsで後から指定したカスタムstorageが使用される', () => {
+      const customStorage = createMockStorage();
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      nosskey.setStorageOptions({ enabled: true, storage: customStorage });
+
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      nosskey.setCurrentKeyInfo(keyInfo);
+
+      expect(customStorage.setItem).toHaveBeenCalled();
+    });
+
+    it('カスタムstorageからのロードが動作する', () => {
+      const storedKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'from-custom-storage',
+        salt: '6e6f7374722d6b6579',
+      };
+      const customStorage = createMockStorage();
+      (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'nosskey_keyinfo' ? JSON.stringify(storedKeyInfo) : null
+      );
+
+      const nosskey = new NosskeyManager({
+        storageOptions: { enabled: true, storage: customStorage },
+      });
+
+      expect(customStorage.getItem).toHaveBeenCalledWith('nosskey_keyinfo');
+      expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('from-custom-storage');
+    });
+  });
+
+  describe('createNostrKey with username オプション', () => {
+    // NOTE: 既存の `signEventWithKeyInfo` テストで共有 `mockPrfResult` ArrayBuffer が
+    // fill(0) 汚染されるため、getPrfSecret を直接 spyOn で差し替えて独立した Uint8Array を返す
+    it('usernameを指定するとNostrKeyInfoにusernameが含まれる', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
+      });
+
+      const result = await nosskey.createNostrKey(mockCredentialId, { username: 'alice' });
+
+      expect(result.username).toBe('alice');
+    });
+
+    it('usernameを省略するとNostrKeyInfoにusernameプロパティが含まれない', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
+      });
+
+      const result = await nosskey.createNostrKey(mockCredentialId);
+
+      expect('username' in result).toBe(false);
+    });
+  });
+
+  describe('signEventWithKeyInfo - clearMemoryとキャッシュの相互作用', () => {
+    const mockKeyInfo: NostrKeyInfo = {
+      credentialId: bytesToHex(mockCredentialId),
+      pubkey: 'test-pubkey',
+      salt: '6e6f7374722d6b6579',
+    };
+    const mockEvent: NostrEvent = { kind: 1, content: 'test', tags: [] };
+
+    it('キャッシュ無効 + clearMemory=true (デフォルト) で署名後に秘密鍵がメモリクリアされる', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const prfSecret = new Uint8Array(32).fill(42);
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({ secret: prfSecret, id: mockCredentialId });
+
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
+
+      // 全バイトが0埋めされていることを確認
+      expect(Array.from(prfSecret)).toEqual(new Array(32).fill(0));
+    });
+
+    it('キャッシュ無効 + clearMemory=false で署名後も秘密鍵はクリアされない', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const prfSecret = new Uint8Array(32).fill(42);
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({ secret: prfSecret, id: mockCredentialId });
+
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo, { clearMemory: false });
+
+      expect(Array.from(prfSecret)).toEqual(new Array(32).fill(42));
+    });
+
+    it('キャッシュ有効 + clearMemory=true でも元の秘密鍵バッファはクリアされない（キャッシュ優先）', async () => {
+      const nosskey = new NosskeyManager({
+        cacheOptions: { enabled: true },
+        storageOptions: { enabled: false },
+      });
+      const prfSecret = new Uint8Array(32).fill(42);
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({ secret: prfSecret, id: mockCredentialId });
+
+      await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo, { clearMemory: true });
+
+      // キャッシュが有効なので #clearKey は呼ばれず、元バッファは保持される
+      expect(Array.from(prfSecret)).toEqual(new Array(32).fill(42));
+    });
+  });
+
+  describe('exportNostrKey - credentialId省略時挙動', () => {
+    it('credentialId省略時、keyInfo.credentialIdをhexToBytesして getPrfSecret に渡す', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+
+      await nosskey.exportNostrKey(mockKeyInfo);
+
+      // 引数で hexToBytes された Uint8Array が渡されているか確認
+      const [calledCredentialId] = getPrfSecretSpy.mock.calls[0];
+      expect(calledCredentialId).toBeInstanceOf(Uint8Array);
+      expect(Array.from(calledCredentialId as Uint8Array)).toEqual(Array.from(mockCredentialId));
+    });
+  });
+
+  describe('setStorageOptions で enabled:false にするとストレージがクリアされる', () => {
+    let mockLocalStorage: { [key: string]: string };
+
+    beforeEach(() => {
+      mockLocalStorage = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          setItem: vi.fn((key, value) => {
+            mockLocalStorage[key] = value;
+          }),
+          getItem: vi.fn((key) => mockLocalStorage[key] || null),
+          removeItem: vi.fn((key) => {
+            delete mockLocalStorage[key];
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    it('setStorageOptions({enabled:false}) で clearStoredKeyInfo が呼ばれる', () => {
+      const nosskey = new NosskeyManager();
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      nosskey.setCurrentKeyInfo(keyInfo);
+      expect(mockLocalStorage['nosskey_keyinfo']).toBeDefined();
+
+      nosskey.setStorageOptions({ enabled: false });
+
+      expect(mockLocalStorage['nosskey_keyinfo']).toBeUndefined();
+      expect(nosskey.getCurrentKeyInfo()).toBeNull();
+    });
+  });
+
+  describe('#loadKeyInfoFromStorageのエラーハンドリング', () => {
+    let mockLocalStorage: { [key: string]: string };
+
+    beforeEach(() => {
+      mockLocalStorage = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          setItem: vi.fn((key, value) => {
+            mockLocalStorage[key] = value;
+          }),
+          getItem: vi.fn((key) => mockLocalStorage[key] || null),
+          removeItem: vi.fn((key) => {
+            delete mockLocalStorage[key];
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    it('壊れたJSONが保存されている場合、nullを返しconsole.errorを呼ぶ', () => {
+      mockLocalStorage['nosskey_keyinfo'] = '{not-json';
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const nosskey = new NosskeyManager();
+
+      expect(nosskey.getCurrentKeyInfo()).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to parse stored NostrKeyInfo',
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('localStorage非搭載環境での挙動', () => {
+    let originalLocalStorage: typeof globalThis.localStorage | undefined;
+
+    beforeEach(() => {
+      originalLocalStorage = (globalThis as { localStorage?: Storage }).localStorage;
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: undefined,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      if (originalLocalStorage !== undefined) {
+        Object.defineProperty(globalThis, 'localStorage', {
+          value: originalLocalStorage,
+          configurable: true,
+        });
+      }
+    });
+
+    it('localStorage未定義でもsetCurrentKeyInfoが例外を投げない', () => {
+      const nosskey = new NosskeyManager();
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+
+      expect(() => nosskey.setCurrentKeyInfo(keyInfo)).not.toThrow();
+      // メモリには保持される
+      expect(nosskey.getCurrentKeyInfo()).toEqual(keyInfo);
+    });
+
+    it('localStorage未定義でもclearStoredKeyInfoが例外を投げない', () => {
+      const nosskey = new NosskeyManager();
+      expect(() => nosskey.clearStoredKeyInfo()).not.toThrow();
+    });
+  });
 });
