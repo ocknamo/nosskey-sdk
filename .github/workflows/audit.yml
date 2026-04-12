@@ -1,0 +1,26 @@
+name: Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 毎週月曜 UTC 00:00 に定期実行
+    - cron: '0 0 * * 1'
+
+jobs:
+  audit:
+    name: npm audit (production)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
