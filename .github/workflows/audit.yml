@@ -11,7 +11,7 @@ on:
 
 jobs:
   audit:
-    name: npm audit (production)
+    name: npm audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,5 +22,5 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
