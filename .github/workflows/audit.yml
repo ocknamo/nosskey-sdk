@@ -23,4 +23,4 @@ jobs:
           node-version: '22'
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm audit
