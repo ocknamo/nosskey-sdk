@@ -14,6 +14,9 @@ jobs:
   test:
     name: SDK - Test, Lint, Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +33,23 @@ jobs:
       - name: Format & Lint check (biome)
         run: npm run format:check
 
-      - name: Test (vitest)
-        run: npm test
+      - name: Test with coverage (vitest)
+        run: npm run test:coverage
+
+      - name: Report coverage
+        if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: ./coverage/coverage-summary.json
+          json-final-path: ./coverage/coverage-final.json
+
+      - name: Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          retention-days: 14
 
       - name: Build (tsup)
         run: npm run build
