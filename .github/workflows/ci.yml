@@ -39,9 +39,6 @@ jobs:
   svelte-app:
     name: Sample App - Check, Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: examples/svelte-app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,13 +48,21 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: examples/svelte-app/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            examples/svelte-app/package-lock.json
 
-      - name: Install dependencies
+      - name: Install root dependencies (for SDK type resolution)
         run: npm ci
+
+      - name: Install sample app dependencies
+        run: npm ci
+        working-directory: examples/svelte-app
 
       - name: Type check (svelte-check)
         run: npm run check
+        working-directory: examples/svelte-app
 
       - name: Build (vite)
         run: npm run build
+        working-directory: examples/svelte-app
