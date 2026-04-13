@@ -37,8 +37,9 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "format": "biome format --write && biome check --write",
-    "format:check": "biome check ./src",
+    "format:check": "biome check ./src ./examples",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "fix": "npm run lint:fix && npm run format",
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.14.1",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
