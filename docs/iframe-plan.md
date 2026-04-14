@@ -10,6 +10,24 @@ Nosskey SDK は WebAuthn PRF 拡張で Nostr 秘密鍵を生成する。WebAuthn
 
 ---
 
+## ブラウザ対応方針
+
+### 対応ブラウザ
+
+| ブラウザ | PRF 拡張 | iframe + WebAuthn | 判定 |
+|----------|----------|-------------------|------|
+| Chrome 118+ | ✅ | ✅ (Permissions Policy 設定で可) | **サポート** |
+| Firefox (最新) | 部分的 | 仕様準拠 | 限定サポート |
+| Safari / iOS | ⚠️ Safari 18 で部分サポート | 不安定・非推奨 | **非サポート** |
+
+### Safari / iOS について
+
+Safari は iframe 内での WebAuthn 実行に設計上の制限があり、クロスオリジン環境では動作保証ができない。ただし **PRF 拡張自体の Safari サポートも現時点で限定的**であるため、iframe の有無以前に Nosskey 全体が動作しないケースが多い。よって Safari は現スコープの非サポートとして割り切り、ドキュメントに明記する。
+
+> 将来的に Safari の PRF サポートが安定した際は、`window.open()` ポップアップ方式へのフォールバックを検討する。
+
+---
+
 ## スコープ
 
 ### やる
@@ -165,6 +183,7 @@ export class NosskeyIframeClient {
 ```
 
 - 内部で `<iframe src="...">` を動的生成 (`display:none` 可、ただし user gesture 必要時は表示切替)
+- **`allow="publickey-credentials-get; publickey-credentials-create"` 属性を必ず付与する** (Chrome での WebAuthn 有効化に必須)
 - リクエスト毎に UUID を発行、Promise を map 保持、応答受信時に解決
 - タイムアウト超過で reject
 - ユーザー承認ダイアログ表示が必要な場合は iframe を可視化 (CSS クラス切替)
@@ -289,6 +308,8 @@ examples/svelte-app/src/services/test-rxnostr.ts
 | User consent | `signEvent` 毎に iframe 内 UI で承認取得 (`requireUserConsent: true` 既定) |
 | Replay 対策 | `id` の UUID 一意性 + 応答後に map から削除 |
 | 鍵流出防止 | 秘密鍵は iframe 内のみで保持。親には公開鍵/署名済みイベントしか渡さない |
+| Permissions Policy | `nosskey.app` サーバーは `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*` ヘッダを返す必要あり |
+| `allow` 属性 vs `sandbox` | `allow="publickey-credentials-get; publickey-credentials-create"` と `sandbox` は併用可能。`sandbox` を使う場合は `allow-scripts allow-same-origin` が最小要件 |
 | XSS 対策 | iframe は `sandbox` 属性考慮 (`allow-scripts allow-same-origin` 最小) |
 | 未設定時 UX | `NO_KEY` エラー時、親アプリは `nosskey.app` 設定ページを別タブで開くよう誘導 |
 
@@ -338,7 +359,7 @@ npx biome check .
 4. **`client.ts` 実装** + テスト
 5. **Svelte アプリ改造** — ルーティング、`iframe-mode.ts`、`ConsentDialog`
 6. **Svelte アプリ不要機能削除**
-7. **README 追記**、`docs/todo.md` 更新
+7. **README 追記**、`docs/todo.md` 更新 (ブラウザ対応状況・非サポート環境を明記)
 8. **全体ビルド / 手動検証**
 
 > 各段階でコミット
