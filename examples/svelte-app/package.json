@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "bech32": "^2.0.0",
+    "nosskey-sdk": "*",
     "rx-nostr": "^3.6.1",
     "rx-nostr-crypto": "^3.1.3"
   }

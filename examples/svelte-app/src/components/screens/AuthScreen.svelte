@@ -1,5 +1,5 @@
 <script lang="ts">
-import { bytesToHex, hexToBytes } from '../../../../../src/index.js';
+import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';

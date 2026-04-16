@@ -1,5 +1,5 @@
 import { bech32 } from 'bech32';
-import { bytesToHex, hexToBytes } from '../../../../src/utils.js';
+import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 
 /**
  * 8ビットから5ビットへの変換（16進数からbech32準備）

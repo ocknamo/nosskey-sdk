@@ -1,7 +1,7 @@
 <script lang="ts">
+import type { NostrEvent } from 'nosskey-sdk';
 import type { Subscription } from 'rxjs';
 import { onDestroy, onMount } from 'svelte';
-import type { NostrEvent } from '../../../../src/types.js';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { relayService } from '../store/relay-store.js';
