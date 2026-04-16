@@ -1,0 +1,240 @@
+/**
+ * NosskeyIframeClient — parent-page helper that mounts the Nosskey signing
+ * iframe and bridges NIP-07 requests across {@link Window.postMessage}.
+ *
+ * @packageDocumentation
+ */
+import type { NostrEvent } from 'nosskey-sdk';
+import {
+  type NosskeyRequest,
+  type NosskeyResponse,
+  isNosskeyReady,
+  isNosskeyResponse,
+} from './protocol.js';
+
+/** WebAuthn permission policy required for the iframe to use passkeys. */
+const IFRAME_ALLOW = 'publickey-credentials-get; publickey-credentials-create';
+
+export interface NosskeyIframeClientOptions {
+  /** Absolute URL of the Nosskey iframe (e.g. `https://nosskey.app/#/iframe`). */
+  iframeUrl: string;
+  /** Where to append the iframe element. Defaults to `document.body`. */
+  container?: HTMLElement;
+  /** Request timeout in milliseconds. Defaults to 60000. */
+  timeout?: number;
+  /**
+   * Override the window used to install the message listener.
+   * Defaults to `globalThis.window`. Primarily useful for tests.
+   */
+  window?: Window;
+  /** Override `document` for iframe creation. Primarily useful for tests. */
+  document?: Document;
+}
+
+interface ResolvedOptions {
+  iframeUrl: string;
+  iframeOrigin: string;
+  container: HTMLElement;
+  timeout: number;
+  window: Window;
+  document: Document;
+}
+
+interface Pending {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+function resolveOptions(options: NosskeyIframeClientOptions): ResolvedOptions {
+  const win = options.window ?? (globalThis as unknown as { window?: Window }).window;
+  if (!win) {
+    throw new Error('NosskeyIframeClient requires a Window (provide options.window).');
+  }
+  const doc = options.document ?? win.document;
+  if (!doc) {
+    throw new Error('NosskeyIframeClient requires a Document (provide options.document).');
+  }
+  const container = options.container ?? doc.body;
+  if (!container) {
+    throw new Error('NosskeyIframeClient could not determine a container element.');
+  }
+  const iframeOrigin = new URL(options.iframeUrl, win.location?.href ?? 'http://localhost/').origin;
+  return {
+    iframeUrl: options.iframeUrl,
+    iframeOrigin,
+    container,
+    timeout: options.timeout ?? 60000,
+    window: win,
+    document: doc,
+  };
+}
+
+function makeId(win: Window): string {
+  const cryptoObj = (win as unknown as { crypto?: Crypto }).crypto ?? globalThis.crypto;
+  if (cryptoObj?.randomUUID) {
+    return cryptoObj.randomUUID();
+  }
+  // Deterministic but unique-enough fallback used only when crypto.randomUUID is absent.
+  return `nosskey-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Parent-page façade over the Nosskey iframe. Call {@link ready} once, then
+ * {@link getPublicKey} / {@link signEvent}. Call {@link destroy} when done.
+ */
+export class NosskeyIframeClient {
+  readonly #options: ResolvedOptions;
+  readonly #iframe: HTMLIFrameElement;
+  readonly #pending = new Map<string, Pending>();
+  readonly #listener: (event: MessageEvent) => void;
+  #readyResolve: (() => void) | null = null;
+  #readyReject: ((reason: unknown) => void) | null = null;
+  readonly #readyPromise: Promise<void>;
+  #isReady = false;
+  #destroyed = false;
+
+  constructor(options: NosskeyIframeClientOptions) {
+    this.#options = resolveOptions(options);
+
+    const iframe = this.#options.document.createElement('iframe');
+    iframe.src = this.#options.iframeUrl;
+    iframe.setAttribute('allow', IFRAME_ALLOW);
+    iframe.style.display = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.setAttribute('title', 'Nosskey signing iframe');
+    this.#options.container.appendChild(iframe);
+    this.#iframe = iframe;
+
+    this.#readyPromise = new Promise<void>((resolve, reject) => {
+      this.#readyResolve = resolve;
+      this.#readyReject = reject;
+    });
+    // Attach a no-op handler so "destroyed before ready" rejections don't
+    // surface as unhandled for callers who never await ready().
+    this.#readyPromise.catch(() => undefined);
+
+    this.#listener = (event: MessageEvent) => this.#handleMessage(event);
+    this.#options.window.addEventListener('message', this.#listener);
+  }
+
+  /** The underlying iframe element (exposed for styling/visibility control). */
+  get iframe(): HTMLIFrameElement {
+    return this.#iframe;
+  }
+
+  /** Resolves when the iframe has signalled `nosskey:ready`. */
+  ready(): Promise<void> {
+    return this.#readyPromise;
+  }
+
+  /** Send a `getPublicKey` request and await the response. */
+  async getPublicKey(): Promise<string> {
+    const result = await this.#request({ method: 'getPublicKey' });
+    if (typeof result !== 'string') {
+      throw new Error('getPublicKey: expected string result from iframe.');
+    }
+    return result;
+  }
+
+  /** Send a `signEvent` request and await the signed event. */
+  async signEvent(event: NostrEvent): Promise<NostrEvent> {
+    const result = await this.#request({ method: 'signEvent', params: { event } });
+    if (!result || typeof result !== 'object') {
+      throw new Error('signEvent: expected NostrEvent result from iframe.');
+    }
+    return result as NostrEvent;
+  }
+
+  /** Remove the iframe, detach the listener, reject any pending requests. */
+  destroy(): void {
+    if (this.#destroyed) return;
+    this.#destroyed = true;
+    this.#options.window.removeEventListener('message', this.#listener);
+    for (const [, pending] of this.#pending) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error('NosskeyIframeClient destroyed.'));
+    }
+    this.#pending.clear();
+    if (!this.#isReady && this.#readyReject) {
+      this.#readyReject(new Error('NosskeyIframeClient destroyed before ready.'));
+    }
+    if (this.#iframe.parentNode) {
+      this.#iframe.parentNode.removeChild(this.#iframe);
+    }
+  }
+
+  #request(partial: {
+    method: NosskeyRequest['method'];
+    params?: NosskeyRequest['params'];
+  }): Promise<unknown> {
+    if (this.#destroyed) {
+      return Promise.reject(new Error('NosskeyIframeClient has been destroyed.'));
+    }
+    const id = makeId(this.#options.window);
+    const request: NosskeyRequest = {
+      type: 'nosskey:request',
+      id,
+      method: partial.method,
+      ...(partial.params ? { params: partial.params } : {}),
+    };
+    return new Promise<unknown>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.#pending.delete(id);
+        reject(new Error(`Nosskey iframe request timed out after ${this.#options.timeout}ms.`));
+      }, this.#options.timeout);
+      this.#pending.set(id, { resolve, reject, timer });
+
+      const target = this.#iframe.contentWindow;
+      if (!target) {
+        clearTimeout(timer);
+        this.#pending.delete(id);
+        reject(new Error('Nosskey iframe is not ready to receive messages.'));
+        return;
+      }
+      target.postMessage(request, this.#options.iframeOrigin);
+    });
+  }
+
+  #handleMessage(event: MessageEvent): void {
+    if (event.source !== this.#iframe.contentWindow) {
+      return;
+    }
+    if (event.origin && event.origin !== this.#options.iframeOrigin) {
+      return;
+    }
+    if (isNosskeyReady(event.data)) {
+      if (!this.#isReady) {
+        this.#isReady = true;
+        this.#readyResolve?.();
+      }
+      return;
+    }
+    if (isNosskeyResponse(event.data)) {
+      this.#resolveResponse(event.data);
+    }
+  }
+
+  #resolveResponse(response: NosskeyResponse): void {
+    const pending = this.#pending.get(response.id);
+    if (!pending) return;
+    this.#pending.delete(response.id);
+    clearTimeout(pending.timer);
+    if (response.error) {
+      const err = new NosskeyIframeError(response.error.code, response.error.message);
+      pending.reject(err);
+    } else {
+      pending.resolve(response.result);
+    }
+  }
+}
+
+/** Error surfaced to callers when the iframe returns an `error` response. */
+export class NosskeyIframeError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'NosskeyIframeError';
+    this.code = code;
+  }
+}

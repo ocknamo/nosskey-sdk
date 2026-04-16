@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+export { NosskeyIframeClient, NosskeyIframeError } from './client.js';
+export type { NosskeyIframeClientOptions } from './client.js';
 export { NosskeyIframeHost } from './host.js';
 export type { ConsentRequest, NosskeyIframeHostOptions } from './host.js';
 export {
