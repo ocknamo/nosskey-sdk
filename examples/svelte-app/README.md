@@ -10,7 +10,7 @@ PRF拡張の出力値を直接Nostrのシークレットキーとして使用す
 - **フレームワーク**: Svelte v5
 - **言語**: TypeScript
 - **ビルドツール**: Vite
-- **Nostr関連**: rx-nostr、rx-nostr-crypto
+- **Nostr関連**: rx-nostr、@rx-nostr/crypto
 - **鍵管理**: Nosskey SDK
 
 ## 主な機能
