@@ -1,7 +1,7 @@
+import type { NostrEvent } from 'nosskey-sdk';
 import { type RxNostr, createRxBackwardReq, createRxNostr, noopVerifier, uniq } from 'rx-nostr';
 import type { Observable, Subscription } from 'rxjs';
 import { type Writable, get, writable } from 'svelte/store';
-import type { NostrEvent } from '../../../../src/types.js';
 import {
   GLOBAL_FEED_SOURCES_HEX,
   followListCache,

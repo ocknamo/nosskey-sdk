@@ -1,0 +1,47 @@
+{
+  "name": "nosskey-sdk",
+  "version": "0.0.5",
+  "description": "SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ocknamo/nosskey-sdk.git"
+  },
+  "keywords": [
+    "nostr"
+  ],
+  "author": "ocknamo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ocknamo/nosskey-sdk/issues"
+  },
+  "homepage": "https://github.com/ocknamo/nosskey-sdk#readme",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "rx-nostr": "^3.6.1",
+    "rx-nostr-crypto": "^3.1.3"
+  }
+}

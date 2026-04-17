@@ -1,0 +1,53 @@
+{
+  "name": "nosskey-iframe",
+  "version": "0.0.1",
+  "description": "iframe signing provider for Nosskey (postMessage bridge for NIP-07 compatible API)",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ocknamo/nosskey-sdk.git"
+  },
+  "keywords": [
+    "nostr",
+    "iframe",
+    "nip-07",
+    "passkey",
+    "webauthn"
+  ],
+  "author": "ocknamo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ocknamo/nosskey-sdk/issues"
+  },
+  "homepage": "https://github.com/ocknamo/nosskey-sdk#readme",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "nosskey-sdk": "*"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.9.0"
+  }
+}

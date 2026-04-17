@@ -1,4 +1,4 @@
-import { NosskeyManager } from '../../../../src/index.js';
+import { NosskeyManager } from 'nosskey-sdk';
 import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
 
 // シングルトンインスタンス

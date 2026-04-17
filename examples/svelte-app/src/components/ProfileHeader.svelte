@@ -1,6 +1,6 @@
 <script lang="ts">
+import type { NostrEvent } from 'nosskey-sdk';
 import { completeOnTimeout, createRxBackwardReq, latest, uniq } from 'rx-nostr';
-import type { NostrEvent } from '../../../../src/types.js';
 import editIcon from '../assets/person_edit_24.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';

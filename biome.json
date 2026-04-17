@@ -4,10 +4,12 @@
     "enabled": true
   },
   "files": {
-    "include": ["./src/*", "./examples/*"],
+    "include": ["./packages/*/src/**", "./examples/*"],
     "ignore": [
       "./examples/svelte-app/dist",
       "examples/svelte-app/node_modules",
+      "./packages/*/dist",
+      "./packages/*/node_modules",
       "./dist",
       "./node_modules"
     ]
