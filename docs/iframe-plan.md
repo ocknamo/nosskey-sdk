@@ -363,3 +363,45 @@ npx biome check .
 8. **全体ビルド / 手動検証**
 
 > 各段階でコミット
+
+---
+
+## 実装進捗
+
+作業ブランチ: `claude/add-iframe-support-2tKuX`
+
+| 段階 | 内容 | 状態 | コミット |
+|------|------|------|----------|
+| 1 | モノレポ化 (npm workspaces, SDK を `packages/nosskey-sdk/` に移動) | ✅ 完了 | `16c6753 chore: convert repo to npm workspaces monorepo` |
+| 2 | `nosskey-iframe` パッケージ雛形 + `protocol.ts` + テスト (30 tests) | ✅ 完了 | `df1cd66 feat(iframe): add nosskey-iframe package skeleton and protocol module` |
+| 3 | `host.ts` (NosskeyIframeHost) + テスト (12 tests) | ✅ 完了 | `d2f3c7e feat(iframe): implement NosskeyIframeHost with postMessage handler` |
+| 4 | `client.ts` (NosskeyIframeClient) + テスト (10 tests) | ✅ 完了 | `8026b9b feat(iframe): implement NosskeyIframeClient with iframe auto-mount` |
+| 5 | Svelte アプリ改造 (ルーティング, iframe-mode, ConsentDialog) | 未着手 | — |
+| 6 | Svelte アプリ不要機能削除 (TimelineScreen, relay.service 等) | 未着手 | — |
+| 7 | README 追記, `docs/todo.md` 更新 | 未着手 | — |
+| 8 | 全体ビルド / E2E 手動検証 | 未着手 | — |
+
+### 段階1〜4 完了時点の確認結果
+
+- **テスト:** 全 181 テスト通過 (nosskey-sdk: 129, nosskey-iframe: 52)
+- **ビルド:** 全ワークスペース成功 (nosskey-sdk, nosskey-iframe, svelte-app)
+- **Lint:** `npx biome check .` エラーなし
+
+### 段階1〜4 で判明した技術的注意点
+
+- **TypeScript バージョン:** `~5.8.3` にピン留め必須。`^5.8.3` だと 5.9.x に解決され、`crypto-utils.ts` の DTS ビルドで `ArrayBufferLike` 型不整合が発生する
+- **EventListener キャスト:** `host.ts` で async listener を `addEventListener` に渡す際、`as unknown as EventListener` のダブルキャストが必要
+- **unhandled rejection 回避:** `client.ts` の `#readyPromise` に内部 `.catch(() => undefined)` を付与し、`ready()` を await せずに `destroy()` した場合の unhandled rejection を防止
+
+### 段階5以降の着手ガイド
+
+段階5〜8は **別ブランチ** での作業を推奨（`claude/add-iframe-support-2tKuX` から派生 or 新規）。
+
+主な作業:
+1. `examples/svelte-app/src/App.svelte` に hash routing (`#/iframe`, `#/settings`) を追加
+2. `src/iframe-mode.ts` を新規作成: `NosskeyIframeHost` を `nosskey-manager.service.ts` のシングルトンと接続
+3. `src/components/ConsentDialog.svelte` を新規作成: `onConsent` コールバック用 UI
+4. 不要ファイル削除: `relay.service.ts`, `test-rxnostr.ts`, Timeline 関連
+5. `nosskey-iframe` パッケージの依存を svelte-app に追加: `"nosskey-iframe": "*"`
+6. E2E 手動検証 (別ポートでダミー親HTML → iframe 埋込テスト)
+7. README 追記 (ブラウザ対応表, 利用例コード)
