@@ -368,7 +368,7 @@ npx biome check .
 
 ## 実装進捗
 
-作業ブランチ: `claude/add-iframe-support-2tKuX`
+作業ブランチ: 段階1〜4 は `claude/add-iframe-support-2tKuX`、段階5〜7 は `claude/continue-iframe-support-mCrAL`
 
 | 段階 | 内容 | 状態 | コミット |
 |------|------|------|----------|
@@ -376,9 +376,9 @@ npx biome check .
 | 2 | `nosskey-iframe` パッケージ雛形 + `protocol.ts` + テスト (30 tests) | ✅ 完了 | `df1cd66 feat(iframe): add nosskey-iframe package skeleton and protocol module` |
 | 3 | `host.ts` (NosskeyIframeHost) + テスト (12 tests) | ✅ 完了 | `d2f3c7e feat(iframe): implement NosskeyIframeHost with postMessage handler` |
 | 4 | `client.ts` (NosskeyIframeClient) + テスト (10 tests) | ✅ 完了 | `8026b9b feat(iframe): implement NosskeyIframeClient with iframe auto-mount` |
-| 5 | Svelte アプリ改造 (ルーティング, iframe-mode, ConsentDialog) | 未着手 | — |
-| 6 | Svelte アプリ不要機能削除 (TimelineScreen, relay.service 等) | 未着手 | — |
-| 7 | README 追記, `docs/todo.md` 更新 | 未着手 | — |
+| 5 | Svelte アプリ改造 (`#/iframe` ルート, `iframe-mode.ts`, `ConsentDialog`, `IframeHostScreen`) | ✅ 完了 | ブランチ `claude/continue-iframe-support-mCrAL` |
+| 6 | Svelte アプリ不要機能削除 (Timeline / Post / Profile / relay / rx-nostr 関連一式) | ✅ 完了 | 同上 |
+| 7 | README / README.ja 追記 (ブラウザ対応表・iframe 利用例), `docs/todo.md` 更新 | ✅ 完了 | 同上 |
 | 8 | 全体ビルド / E2E 手動検証 | 未着手 | — |
 
 ### 段階1〜4 完了時点の確認結果
