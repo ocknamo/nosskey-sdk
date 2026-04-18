@@ -10,6 +10,7 @@ import {
   type NosskeyResponse,
   isNosskeyReady,
   isNosskeyResponse,
+  isNosskeyVisibility,
 } from './protocol.js';
 
 /** WebAuthn permission policy required for the iframe to use passkeys. */
@@ -210,8 +211,21 @@ export class NosskeyIframeClient {
       }
       return;
     }
+    if (isNosskeyVisibility(event.data)) {
+      this.#applyVisibility(event.data.visible);
+      return;
+    }
     if (isNosskeyResponse(event.data)) {
       this.#resolveResponse(event.data);
+    }
+  }
+
+  #applyVisibility(visible: boolean): void {
+    this.#iframe.style.display = visible ? 'block' : 'none';
+    if (visible) {
+      this.#iframe.removeAttribute('aria-hidden');
+    } else {
+      this.#iframe.setAttribute('aria-hidden', 'true');
     }
   }
 

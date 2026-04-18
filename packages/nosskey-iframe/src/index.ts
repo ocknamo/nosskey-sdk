@@ -12,6 +12,7 @@ export {
   isNosskeyReady,
   isNosskeyRequest,
   isNosskeyResponse,
+  isNosskeyVisibility,
 } from './protocol.js';
 export type {
   NosskeyErrorCode,
@@ -21,4 +22,5 @@ export type {
   NosskeyRequest,
   NosskeyRequestParams,
   NosskeyResponse,
+  NosskeyVisibility,
 } from './protocol.js';

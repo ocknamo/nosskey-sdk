@@ -174,6 +174,12 @@ export interface TranslationData {
   iframeHost: {
     running: string;
     noKey: string;
+    partitionedWarning: string;
+    grantStorageAccess: string;
+    storageAccessGranted: string;
+    storageAccessDenied: string;
+    storageAccessUnsupported: string;
+    retry: string;
   };
 }
 
@@ -362,6 +368,14 @@ export const ja: TranslationData = {
   iframeHost: {
     running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
     noKey: '鍵が設定されていません。別タブで設定画面を開き、パスキーでログインしてください。',
+    partitionedWarning:
+      'このサイトは別ドメインから埋め込まれています。鍵にアクセスするには、下のボタンを押してストレージアクセスを許可してください。',
+    grantStorageAccess: 'ストレージアクセスを許可',
+    storageAccessGranted: 'アクセスが許可されました。鍵を読み込みました。',
+    storageAccessDenied:
+      'ストレージアクセスが拒否されました。もう一度試すか、別タブで nosskey.app を開いてください。',
+    storageAccessUnsupported: 'このブラウザは Storage Access API をサポートしていません。',
+    retry: '再試行',
   },
 };
 
@@ -550,6 +564,14 @@ export const en: TranslationData = {
   iframeHost: {
     running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',
     noKey: 'No key configured. Open the settings page in another tab and sign in with a passkey.',
+    partitionedWarning:
+      'This page is embedded from a different domain. Grant storage access with the button below to reach your key.',
+    grantStorageAccess: 'Grant storage access',
+    storageAccessGranted: 'Access granted. Key loaded.',
+    storageAccessDenied:
+      'Storage access was denied. Retry, or open nosskey.app in another tab to create or unlock your key.',
+    storageAccessUnsupported: 'This browser does not support the Storage Access API.',
+    retry: 'Retry',
   },
 };
 
