@@ -166,7 +166,7 @@ window.nostr = {
 サーバは `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`
 を返す必要があります。
 
-参照実装は `examples/svelte-app/#/iframe` にあります。
+参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。
 
 ## サポート環境
 
