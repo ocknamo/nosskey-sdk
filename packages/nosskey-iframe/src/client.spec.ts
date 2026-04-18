@@ -15,6 +15,7 @@ interface FakeIframe {
   parentNode: FakeElement | null;
   setAttribute(name: string, value: string): void;
   getAttribute(name: string): string | null;
+  removeAttribute(name: string): void;
 }
 
 interface FakeElement {
@@ -51,6 +52,9 @@ function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
       },
       getAttribute(name) {
         return iframe.attributes[name] ?? null;
+      },
+      removeAttribute(name) {
+        delete iframe.attributes[name];
       },
     };
     iframes.push(iframe);
@@ -312,6 +316,44 @@ describe('NosskeyIframeClient', () => {
     // Post-destroy: further messages must not resolve anything.
     harness.dispatchAsIframe({ type: 'nosskey:response', id: 'test-id-1', result: 'late' });
     // No assertion needed — absence of unhandled rejections is the check.
+  });
+
+  it('toggles iframe visibility when a nosskey:visibility message arrives', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/iframe',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+    const iframe = harness.iframes[0];
+    expect(iframe.style.display).toBe('none');
+    expect(iframe.getAttribute('aria-hidden')).toBe('true');
+
+    harness.dispatchAsIframe({ type: 'nosskey:visibility', visible: true });
+    expect(iframe.style.display).toBe('block');
+    expect(iframe.getAttribute('aria-hidden')).toBeNull();
+
+    harness.dispatchAsIframe({ type: 'nosskey:visibility', visible: false });
+    expect(iframe.style.display).toBe('none');
+    expect(iframe.getAttribute('aria-hidden')).toBe('true');
+
+    client.destroy();
+  });
+
+  it('ignores nosskey:visibility messages from unrelated sources', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/iframe',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+    const iframe = harness.iframes[0];
+
+    harness.dispatch({ type: 'nosskey:visibility', visible: true }, 'https://nosskey.example', {
+      unrelated: true,
+    });
+    expect(iframe.style.display).toBe('none');
+    client.destroy();
   });
 
   it('request rejects when the iframe has no contentWindow', async () => {

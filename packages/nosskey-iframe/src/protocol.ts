@@ -59,8 +59,18 @@ export interface NosskeyReady {
   type: 'nosskey:ready';
 }
 
+/**
+ * Visibility request from iframe → parent, asking the parent to show or hide
+ * the iframe element. Used when the iframe needs a user gesture (e.g. the
+ * Storage Access API prompt for partitioned storage recovery).
+ */
+export interface NosskeyVisibility {
+  type: 'nosskey:visibility';
+  visible: boolean;
+}
+
 /** Any message defined by this protocol. */
-export type NosskeyMessage = NosskeyRequest | NosskeyResponse | NosskeyReady;
+export type NosskeyMessage = NosskeyRequest | NosskeyResponse | NosskeyReady | NosskeyVisibility;
 
 function isPlainObject(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
@@ -103,4 +113,11 @@ export function isNosskeyResponse(value: unknown): value is NosskeyResponse {
 /** Type guard: does the value look like a {@link NosskeyReady}? */
 export function isNosskeyReady(value: unknown): value is NosskeyReady {
   return isPlainObject(value) && value.type === 'nosskey:ready';
+}
+
+/** Type guard: does the value look like a {@link NosskeyVisibility}? */
+export function isNosskeyVisibility(value: unknown): value is NosskeyVisibility {
+  if (!isPlainObject(value)) return false;
+  if (value.type !== 'nosskey:visibility') return false;
+  return typeof value.visible === 'boolean';
 }

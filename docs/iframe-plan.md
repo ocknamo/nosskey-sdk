@@ -315,6 +315,49 @@ examples/svelte-app/src/services/test-rxnostr.ts
 
 ---
 
+## Storage Partitioning 対応
+
+### 問題
+
+Chrome 115+ (および Firefox の総合的保護機能) は、**サードパーティ iframe の `localStorage` を top-level 親オリジンごとに分離 (partition)** する。
+
+- ユーザーが `https://nosskey.app/#/settings` を直接開いて作成したキー情報 (`localStorage['nosskey_pwk']`) はファーストパーティ領域 (パーティション無し) に保存される
+- 別ドメインの親ページ (例: `https://parent.example`) に `https://nosskey.app/#/iframe` を埋め込むと、iframe 内の `localStorage` は **`(parent.example, nosskey.app)` のパーティション領域** を参照する
+- 結果: パーティション領域には鍵情報が無いので `hasKeyInfo()` が false を返し、`getPublicKey` / `signEvent` は `NO_KEY` エラーを返す
+
+**補足**: WebAuthn credential 自体はブラウザの passkey store に保存されパーティションされない。問題は Nosskey が `credentialId / pubkey / salt` を保持する localStorage JSON だけ。
+
+### 解決策: Storage Access API
+
+`IframeHostScreen.svelte` で以下のフローを実装:
+
+1. マウント時に `hasKeyInfo()` が false、かつ `document.hasStorageAccess()` も false ならパーティション状態と判定
+2. `nosskey:visibility { visible: true }` メッセージを `window.parent.postMessage` で通知 → `NosskeyIframeClient` が iframe を自動的に可視化
+3. iframe 内に「ストレージアクセスを許可」ボタンを表示
+4. ボタン押下 (ユーザージェスチャ) で `document.requestStorageAccess({ all: true })` を呼ぶ
+5. 成功時、`hasKeyInfo()` を再実行すると `#currentKeyInfo` は null のままなので localStorage (今度は unpartitioned) から再読込され、鍵が取得される
+6. `nosskey:visibility { visible: false }` で iframe を非表示に戻す
+7. 親はユーザー操作後に `getPublicKey` / `signEvent` をリトライして成功する
+
+### 新プロトコルメッセージ
+
+```ts
+export interface NosskeyVisibility {
+  type: 'nosskey:visibility';
+  visible: boolean;
+}
+```
+
+Host 側 (iframe) が発行、Client 側 (parent) が受信して `iframe.style.display` と `aria-hidden` を切り替える。メッセージ内容は非機密 (bool のみ) なので targetOrigin は `'*'`。
+
+### 非サポート時の挙動
+
+- `document.requestStorageAccess` 未実装 → `'unsupported'` 状態。ユーザーには `nosskey.app` を別タブで開くよう誘導
+- `{ all: true }` 引数を拒否するブラウザ → `TypeError` を捕捉して引数なしにフォールバック
+- ユーザーが拒否 → `'denied'` 状態でリトライボタンを表示
+
+---
+
 ## 検証
 
 ### 単体テスト

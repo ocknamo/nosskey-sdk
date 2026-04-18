@@ -47,6 +47,30 @@ Open <http://localhost:5174/> in Chrome and click **Connect**, then
 - **Safari / iOS** — not supported at this time. See
   [`docs/iframe-plan.md`](../../docs/iframe-plan.md) for the rationale.
 
+## First-run: storage partitioning
+
+Modern browsers (Chrome 115+, Firefox) **partition third-party iframe storage
+per top-level origin**. When the parent page lives on a different origin than
+the Nosskey iframe host (e.g. `parent.example` embedding `nosskey.app`), the
+iframe's `localStorage` is isolated from the first-party `nosskey.app` storage
+where the passkey info was saved. The iframe cannot see the key and responds
+with `NO_KEY`.
+
+The host page handles this automatically via the Storage Access API:
+
+1. `getPublicKey()` returns `NO_KEY`.
+2. The iframe detects the partitioned state and requests the parent to show
+   it (a `nosskey:visibility` message handled inside `NosskeyIframeClient`).
+3. The user clicks **Grant storage access** inside the now-visible iframe.
+4. The browser prompts for permission. On approval, the iframe reloads the
+   key from unpartitioned storage and signals the parent to hide itself.
+5. The parent retries `getPublicKey()` / `signEvent()` and they succeed.
+
+If the user denies storage access, or uses a browser without the Storage
+Access API, the fallback is to open the host origin directly
+(`https://nosskey.app/#/settings`) in a separate tab and create a key there;
+the parent iframe will still need storage access to read that key.
+
 ## Notes
 
 - The `allow="publickey-credentials-get; publickey-credentials-create"`

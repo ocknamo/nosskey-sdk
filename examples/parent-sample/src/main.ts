@@ -162,6 +162,14 @@ async function getPubkey(): Promise<void> {
     log(`pubkey: ${pubkey}`);
   } catch (err) {
     log(`getPublicKey failed: ${formatError(err)}`);
+    if (err instanceof NosskeyIframeError && err.code === 'NO_KEY') {
+      log(
+        'Hint: browser storage may be partitioned for this cross-origin iframe. ' +
+          'If the iframe became visible above, click "Grant storage access" in it, ' +
+          'then retry Get public key. Otherwise, open the host URL directly in a ' +
+          'tab, create a passkey, and try again.'
+      );
+    }
   }
 }
 

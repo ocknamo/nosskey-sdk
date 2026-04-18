@@ -5,6 +5,7 @@ import {
   isNosskeyReady,
   isNosskeyRequest,
   isNosskeyResponse,
+  isNosskeyVisibility,
 } from './protocol.js';
 
 describe('protocol: isNosskeyRequest', () => {
@@ -140,6 +141,32 @@ describe('protocol: isNosskeyReady', () => {
 
   it.each([null, undefined, 'nosskey:ready', 42, []])('rejects %s', (value) => {
     expect(isNosskeyReady(value)).toBe(false);
+  });
+});
+
+describe('protocol: isNosskeyVisibility', () => {
+  it('accepts visible=true', () => {
+    expect(isNosskeyVisibility({ type: 'nosskey:visibility', visible: true })).toBe(true);
+  });
+
+  it('accepts visible=false', () => {
+    expect(isNosskeyVisibility({ type: 'nosskey:visibility', visible: false })).toBe(true);
+  });
+
+  it('rejects wrong type tag', () => {
+    expect(isNosskeyVisibility({ type: 'nosskey:ready', visible: true })).toBe(false);
+  });
+
+  it('rejects missing visible flag', () => {
+    expect(isNosskeyVisibility({ type: 'nosskey:visibility' })).toBe(false);
+  });
+
+  it('rejects non-boolean visible flag', () => {
+    expect(isNosskeyVisibility({ type: 'nosskey:visibility', visible: 'yes' })).toBe(false);
+  });
+
+  it.each([null, undefined, 'nosskey:visibility', 0, []])('rejects %s', (value) => {
+    expect(isNosskeyVisibility(value)).toBe(false);
   });
 });
 

@@ -168,6 +168,20 @@ window.nostr = {
 
 参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
 
+#### Storage Partitioning への対応
+
+Chrome 115+ や Firefox の Total Cookie Protection では、**サードパーティ iframe の
+`localStorage` が top-level 親オリジンごとに分離 (partition)** されます。
+`nosskey.app` をトップレベルで開いて保存したキー情報は、別ドメインの親ページに
+埋め込まれた iframe からは参照できず、最初の呼び出しで `NO_KEY` が返ります。
+
+参照ホスト (`#/iframe`) はこれをユーザージェスチャで
+`document.requestStorageAccess({ all: true })` を呼ぶことでリカバーします。
+また `nosskey:visibility` postMessage で自身の表示/非表示を親に要求し、
+`NosskeyIframeClient` が自動で iframe の表示を切り替えます。詳細は
+[`docs/iframe-plan.md`](docs/iframe-plan.md#storage-partitioning-%E5%AF%BE%E5%BF%9C)
+を参照してください。独自ホストを実装する場合は同じフローを実装してください。
+
 ## サポート環境
 
 Nosskey SDKはWebAuthnとPRF拡張をサポートするブラウザ環境で動作します。また、パスキーの生成と認証には対応するOS・デバイスの認証器が必要です。主な対応状況は以下の通りです：

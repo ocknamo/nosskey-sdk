@@ -168,6 +168,20 @@ server must also return
 
 See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation. The host architecture is documented in detail at [docs/en/iframe-host.en.md](docs/en/iframe-host.en.md).
 
+#### Storage partitioning
+
+Chrome 115+ and Firefox's Total Cookie Protection **partition third-party
+iframe `localStorage` per top-level origin**. A passkey info record saved at
+`nosskey.app` (first-party) is not visible to the iframe embedded in a
+different parent origin, so the first call returns `NO_KEY`.
+
+The reference host (`#/iframe`) recovers by calling
+`document.requestStorageAccess({ all: true })` on a user gesture and
+auto-toggles the iframe's visibility via a `nosskey:visibility` postMessage
+(handled inside `NosskeyIframeClient`). See
+[`docs/iframe-plan.md`](docs/iframe-plan.md#storage-partitioning-%E5%AF%BE%E5%BF%9C)
+for details. If you build a custom host, implement the same flow.
+
 ## Supported Environments
 
 Nosskey SDK works in browser environments that support WebAuthn and the PRF extension. Passkey generation and authentication also require authenticators from compatible OS/devices. The main compatibility status is as follows:
