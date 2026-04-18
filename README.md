@@ -166,7 +166,7 @@ required for Chrome to execute WebAuthn inside the embedded frame. The host
 server must also return
 `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`.
 
-See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation.
+See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation. The host architecture is documented in detail at [docs/en/iframe-host.en.md](docs/en/iframe-host.en.md).
 
 ## Supported Environments
 
