@@ -57,6 +57,7 @@ npm run dev
 ## 技術的詳細
 
 - [設計](svelte-app-design.md)
+- [iframe ホスト機能の解説](../../docs/ja/iframe-host.ja.md) — `#/iframe` ルートで動作する署名プロバイダ iframe モードの仕組み
 
 ## 制限事項
 

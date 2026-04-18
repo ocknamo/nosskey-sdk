@@ -129,6 +129,45 @@ const keyMgr = new NosskeyManager({
 #### ユーティリティメソッド
 - `isPrfSupported()` - 現在の環境でPRF拡張がサポートされているか確認
 
+## iframe モード（クロスオリジン署名）
+
+Nosskey を iframe 署名プロバイダとして埋め込むことで、複数の Nostr ウェブアプリ
+が Nosskey ホスト Origin に紐づく単一のパスキーを共有できます。
+コンパニオンパッケージ [`nosskey-iframe`](packages/nosskey-iframe) が
+ホスト側ブリッジと親ページ用クライアントの両方を提供します。
+
+### ブラウザ対応
+
+| ブラウザ | PRF 拡張 | iframe + WebAuthn | 状態 |
+|----------|----------|-------------------|------|
+| Chrome 118+ | ✅ | ✅ (Permissions Policy 設定が必要) | サポート |
+| Firefox (最新) | 部分的 | 仕様準拠 | 限定サポート |
+| Safari / iOS | 部分的 (Safari 18) | iframe 内は不安定 | **非サポート** |
+
+### 親ページでの利用例
+
+```ts
+import { NosskeyIframeClient } from 'nosskey-iframe';
+
+const client = new NosskeyIframeClient({
+  iframeUrl: 'https://nosskey.app/#/iframe',
+});
+await client.ready();
+
+window.nostr = {
+  getPublicKey: () => client.getPublicKey(),
+  signEvent:    (event) => client.signEvent(event),
+};
+```
+
+`NosskeyIframeClient` は iframe に
+`allow="publickey-credentials-get; publickey-credentials-create"` を付けて
+マウントします。これは Chrome で iframe 内の WebAuthn 実行に必須です。ホスト側
+サーバは `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`
+を返す必要があります。
+
+参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
+
 ## サポート環境
 
 Nosskey SDKはWebAuthnとPRF拡張をサポートするブラウザ環境で動作します。また、パスキーの生成と認証には対応するOS・デバイスの認証器が必要です。主な対応状況は以下の通りです：

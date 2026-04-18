@@ -3,26 +3,18 @@ import { onMount } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
+import IframeHostScreen from './components/screens/IframeHostScreen.svelte';
 import KeyManagementScreen from './components/screens/KeyManagement.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
-import TimelineScreen from './components/screens/TimelineScreen.svelte';
-import {
-  type ThemeMode,
-  currentScreen,
-  currentTheme,
-  isLoggedIn,
-  isScreenName,
-  publicKey,
-} from './store/app-state.js';
-import { relayService } from './store/relay-store.js';
-import { timelineMode } from './store/timeline-store.js';
+import { type ThemeMode, currentScreen, currentTheme, isScreenName } from './store/app-state.js';
 
 let screen = $state('account');
 
 // URLのハッシュからページを初期化
 function initializeFromHash() {
   const hash = window.location.hash.substring(1);
-  screen = hash.substring(1); // 先頭の'/'を削除
+  const name = hash.startsWith('/') ? hash.substring(1) : hash;
+  screen = name || 'account';
 
   if (isScreenName(screen)) {
     currentScreen.set(screen);
@@ -246,9 +238,7 @@ function applyTheme(theme: ThemeMode) {
 }
 
 // アプリの初期化
-onMount(async () => {
-  console.log('App initialized, preloading global timeline data');
-
+onMount(() => {
   // 初期テーマの適用
   applyTheme($currentTheme);
 
@@ -269,43 +259,28 @@ onMount(async () => {
   currentTheme.subscribe((theme) => {
     applyTheme(theme);
   });
-
-  try {
-    // グローバルタイムラインの初期データをプリロード
-    await relayService.fetchTimelineByMode('global', null);
-  } catch (error) {
-    console.error('Error preloading timeline data:', error);
-  }
-});
-
-// 認証状態の監視
-$effect(() => {
-  if ($isLoggedIn && $publicKey && $timelineMode === 'user') {
-    // 認証済みユーザーのタイムラインデータをロード
-    relayService.fetchTimelineByMode('user', $publicKey).catch((error) => {
-      console.error('Error loading user timeline:', error);
-    });
-  }
 });
 </script>
 
-<!-- ヘッダーバー -->
-<HeaderBar />
+{#if screen === "iframe"}
+  <IframeHostScreen />
+{:else}
+  <!-- ヘッダーバー -->
+  <HeaderBar />
 
-<div class="app-container">
-  {#if screen === "account"}
-    <AccountScreen />
-  {:else if screen === "key"}
-    <KeyManagementScreen />
-  {:else if screen === "timeline"}
-    <TimelineScreen />
-  {:else if screen === "settings"}
-    <SettingsScreen />
-  {/if}
+  <div class="app-container">
+    {#if screen === "account"}
+      <AccountScreen />
+    {:else if screen === "key"}
+      <KeyManagementScreen />
+    {:else if screen === "settings"}
+      <SettingsScreen />
+    {/if}
 
-  <!-- フッターメニュー -->
-  <FooterMenu />
-</div>
+    <!-- フッターメニュー -->
+    <FooterMenu />
+  </div>
+{/if}
 
 <style>
   .app-container {

@@ -1,22 +1,14 @@
 import { writable } from 'svelte/store';
 import { getNosskeyManager } from '../services/nosskey-manager.service.js';
 
-// デフォルトリレーのリスト
-export const defaultRelays = [
-  'wss://relay.damus.io',
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://yabu.me',
-];
-
-export type ScreenName = 'account' | 'timeline' | 'settings' | 'key' | 'import';
+export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
 export function isScreenName(hash: string): hash is ScreenName {
-  return new Set(['account', 'timeline', 'settings', 'import']).has(hash);
+  return new Set<string>(['account', 'settings', 'key', 'iframe']).has(hash);
 }
 
 // 画面状態
-export const currentScreen = writable<ScreenName>('account'); // 'account' または 'timeline' または 'settings'
+export const currentScreen = writable<ScreenName>('account');
 
 // 認証状態
 export const isLoggedIn = writable(false);

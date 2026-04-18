@@ -129,6 +129,45 @@ const keyMgr = new NosskeyManager({
 #### Utility Methods
 - `isPrfSupported()` - Check if the PRF extension is supported in the current environment
 
+## iframe Mode (Cross-origin Signing)
+
+Nosskey can be embedded as an iframe signing provider so that multiple Nostr
+web apps share a single passkey bound to the Nosskey host origin. The
+companion package [`nosskey-iframe`](packages/nosskey-iframe) ships both the
+host-side bridge and a parent-page client.
+
+### Browser Support
+
+| Browser | PRF extension | iframe + WebAuthn | Status |
+|---------|---------------|-------------------|--------|
+| Chrome 118+ | ✅ | ✅ (with Permissions Policy) | Supported |
+| Firefox (latest) | partial | spec-compliant | Limited |
+| Safari / iOS | partial (Safari 18) | unstable in iframes | **Not supported** |
+
+### Parent-side usage
+
+```ts
+import { NosskeyIframeClient } from 'nosskey-iframe';
+
+const client = new NosskeyIframeClient({
+  iframeUrl: 'https://nosskey.app/#/iframe',
+});
+await client.ready();
+
+window.nostr = {
+  getPublicKey: () => client.getPublicKey(),
+  signEvent:    (event) => client.signEvent(event),
+};
+```
+
+`NosskeyIframeClient` mounts the iframe with
+`allow="publickey-credentials-get; publickey-credentials-create"`, which is
+required for Chrome to execute WebAuthn inside the embedded frame. The host
+server must also return
+`Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`.
+
+See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation. The host architecture is documented in detail at [docs/en/iframe-host.en.md](docs/en/iframe-host.en.md).
+
 ## Supported Environments
 
 Nosskey SDK works in browser environments that support WebAuthn and the PRF extension. Passkey generation and authentication also require authenticators from compatible OS/devices. The main compatibility status is as follows:

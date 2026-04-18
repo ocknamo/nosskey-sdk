@@ -48,7 +48,6 @@ export interface TranslationData {
     secretKey: string;
     secretKeyHelp: string;
     importButton: string;
-    // 新規追加
     accountTitle: string;
     appDescription: string;
     passkeySectionTitle: string;
@@ -57,15 +56,12 @@ export interface TranslationData {
     crossDeviceDesc: string;
     existingPasskeyTitle: string;
     existingPasskeyDesc: string;
-    // 開発者向け
     developerSection: string;
     prfDebugInfo: string;
     prfSupportedMessage: string;
-    // 初回ログイン
     firstLogin: string;
     passkeyCreated: string;
     proceedWithLogin: string;
-    // KeyInfoインポートセクション
     keyInfoImportTitle: string;
     keyInfoImportDesc: string;
     keyInfoFileSelect: string;
@@ -74,7 +70,6 @@ export interface TranslationData {
     keyInfoLoginButton: string;
     keyInfoLoginProcessing: string;
     orText: string;
-    // 改善されたセクション分類
     quickStartTitle: string;
     quickStartDesc: string;
     existingUserTitle: string;
@@ -84,47 +79,9 @@ export interface TranslationData {
     returningUserRecommended: string;
   };
   nostr: {
-    title: string;
     publicKey: string;
-    relayStatus: string;
-    relayStates: {
-      connected: string;
-      connecting: string;
-      disconnected: string;
-      unknown: string;
-    };
     copyToClipboard: string;
     copiedToClipboard: string;
-    eventCreation: string;
-    contentPlaceholder: string;
-    sign: string;
-    publish: string;
-    signedEvent: string;
-    timeline: {
-      title: string;
-      loading: string;
-      reload: string;
-      retry: string;
-      empty: string;
-      globalFeed: string;
-      userFeed: string;
-    };
-    profile: {
-      title: string;
-      loading: string;
-      save: string;
-      saved: string;
-      displayName: string;
-      displayNamePlaceholder: string;
-      username: string;
-      usernamePlaceholder: string;
-      about: string;
-      aboutPlaceholder: string;
-      website: string;
-      websitePlaceholder: string;
-      picture: string;
-      picturePlaceholder: string;
-    };
   };
   key: {
     title: string;
@@ -151,24 +108,6 @@ export interface TranslationData {
       saveFile: string;
       saveFileTitle: string;
       noCurrentKeyInfo: string;
-    };
-    relayManagement: {
-      title: string;
-      description: string;
-      currentRelays: string;
-      noRelays: string;
-      delete: string;
-      addRelay: string;
-      add: string;
-      reset: string;
-      messages: {
-        enterUrl: string;
-        startWithWss: string;
-        alreadyExists: string;
-        added: string;
-        deleted: string;
-        reset: string;
-      };
     };
     localStorage: {
       title: string;
@@ -219,10 +158,22 @@ export interface TranslationData {
   };
   navigation: {
     account: string;
-    timeline: string;
     key: string;
     settings: string;
-    import: string; // 後方互換性のためにオプショナル
+  };
+  consent: {
+    title: string;
+    origin: string;
+    eventKind: string;
+    eventContent: string;
+    eventTags: string;
+    noTags: string;
+    approve: string;
+    reject: string;
+  };
+  iframeHost: {
+    running: string;
+    noKey: string;
   };
 }
 
@@ -276,7 +227,6 @@ export const ja: TranslationData = {
     secretKey: 'Nostr秘密鍵',
     secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
     importButton: 'インポート',
-    // 新規追加
     accountTitle: 'Nostrアカウント',
     appDescription:
       'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。パスキーはプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となります',
@@ -289,11 +239,9 @@ export const ja: TranslationData = {
     existingPasskeyTitle: '既存のパスキーでログイン',
     existingPasskeyDesc:
       '以前作成したパスキーで再度ログイン。インポートしたNostr Keyの復元は"まだ"サポートされていません',
-    // 開発者向け
     developerSection: '開発者向け',
     prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
     prfSupportedMessage: 'PRF拡張がサポートされています',
-    // 鍵情報インポートセクション
     keyInfoImportTitle: 'バックアップした鍵情報でログイン',
     keyInfoImportDesc: '以前にエクスポートした鍵情報ファイルまたはデータを使用してログインします。',
     keyInfoFileSelect: '📁鍵情報ファイルを選択',
@@ -302,7 +250,6 @@ export const ja: TranslationData = {
     keyInfoLoginButton: '鍵情報データでログイン',
     keyInfoLoginProcessing: '処理中...',
     orText: 'または',
-    // 改善されたセクション分類
     quickStartTitle: 'はじめる',
     quickStartDesc: '新規ユーザー向けの最も簡単な方法',
     existingUserTitle: '既存ユーザー',
@@ -312,47 +259,9 @@ export const ja: TranslationData = {
     returningUserRecommended: '既存ユーザーにおすすめ',
   },
   nostr: {
-    title: 'Nostr',
     publicKey: '公開鍵',
-    relayStatus: 'リレー接続状態',
-    relayStates: {
-      connected: '接続済み',
-      connecting: '接続中',
-      disconnected: '切断',
-      unknown: '不明',
-    },
     copyToClipboard: 'クリップボードにコピー',
     copiedToClipboard: 'コピーしました',
-    eventCreation: 'イベント作成',
-    contentPlaceholder: 'ここにメッセージを入力...',
-    sign: '署名',
-    publish: '公開',
-    signedEvent: '署名済みイベント',
-    timeline: {
-      title: 'タイムライン',
-      loading: '読み込み中...',
-      reload: '更新',
-      retry: '再試行',
-      empty: '表示するイベントがありません',
-      globalFeed: 'グローバル',
-      userFeed: 'フォロー中',
-    },
-    profile: {
-      title: 'プロフィール編集',
-      loading: '読み込み中...',
-      save: '保存',
-      saved: '保存しました',
-      displayName: '表示名',
-      displayNamePlaceholder: '表示される名前を入力',
-      username: 'ユーザー名',
-      usernamePlaceholder: '@username など',
-      about: '自己紹介',
-      aboutPlaceholder: '自己紹介文を入力',
-      website: 'ウェブサイト',
-      websitePlaceholder: 'https://example.com',
-      picture: 'プロフィール画像URL',
-      picturePlaceholder: 'https://example.com/avatar.jpg',
-    },
   },
   key: {
     title: '鍵管理',
@@ -369,24 +278,6 @@ export const ja: TranslationData = {
     confirmExport: '秘密鍵をエクスポートする（nsec形式）',
     yourSecretKey: 'あなたの秘密鍵：',
     noKeyToExport: 'エクスポートする鍵がありません。ログイン状態を確認してください。',
-    relayManagement: {
-      title: 'リレー管理',
-      description: 'Nostrメッセージを送信するリレーを追加・削除できます。',
-      currentRelays: '現在のリレー',
-      noRelays: 'リレーが設定されていません',
-      delete: '削除',
-      addRelay: 'リレーを追加',
-      add: '追加',
-      reset: 'デフォルトに戻す',
-      messages: {
-        enterUrl: 'リレーURLを入力してください',
-        startWithWss: "リレーURLは 'wss://' で始める必要があります",
-        alreadyExists: 'このリレーは既に追加されています',
-        added: 'リレーを追加しました',
-        deleted: 'リレーを削除しました',
-        reset: 'リレーをデフォルト設定にリセットしました',
-      },
-    },
     localStorage: {
       title: 'ローカルストレージ',
       description:
@@ -456,9 +347,21 @@ export const ja: TranslationData = {
   navigation: {
     account: 'アカウント',
     key: '鍵管理',
-    timeline: 'タイムライン',
     settings: '設定',
-    import: 'インポート',
+  },
+  consent: {
+    title: '署名リクエストの確認',
+    origin: 'リクエスト元:',
+    eventKind: 'イベント種別',
+    eventContent: '本文',
+    eventTags: 'タグ',
+    noTags: '(タグなし)',
+    approve: '承認',
+    reject: '拒否',
+  },
+  iframeHost: {
+    running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
+    noKey: '鍵が設定されていません。別タブで設定画面を開き、パスキーでログインしてください。',
   },
 };
 
@@ -509,7 +412,6 @@ export const en: TranslationData = {
     secretKey: 'Nostr Secret Key',
     secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
     importButton: 'Import',
-    // 新規追加
     accountTitle: 'Nostr account',
     appDescription:
       'This app uses passkey authentication to securely manage your Nostr keys. Passkey is cloud-backed by the platform, eliminating the need for cumbersome private key management.',
@@ -522,15 +424,12 @@ export const en: TranslationData = {
     existingPasskeyTitle: 'Login with Existing Passkey',
     existingPasskeyDesc:
       'Login again with previously created passkey. Recovery of imported Nostr Key is not "yet" supported.',
-    // 開発者向け
     developerSection: 'For Developers',
     prfDebugInfo: 'PRF extension check is for debugging purposes',
     prfSupportedMessage: 'PRF extension is supported',
-    // 初回ログイン
     firstLogin: 'First Login',
     passkeyCreated: 'Passkey Created Successfully',
     proceedWithLogin: 'Proceed with Login',
-    // KeyInfoインポートセクション
     keyInfoImportTitle: 'Login with Backed Up KeyInfo',
     keyInfoImportDesc: 'Use a previously exported KeyInfo file or data to login.',
     keyInfoFileSelect: '📁Select KeyInfo File',
@@ -539,7 +438,6 @@ export const en: TranslationData = {
     keyInfoLoginButton: 'Login with Key Data',
     keyInfoLoginProcessing: 'Processing...',
     orText: 'or',
-    // 改善されたセクション分類
     quickStartTitle: 'Get Started',
     quickStartDesc: 'Simplest way for new users',
     existingUserTitle: 'Returning Users',
@@ -549,47 +447,9 @@ export const en: TranslationData = {
     returningUserRecommended: 'Recommended for existing users',
   },
   nostr: {
-    title: 'Nostr',
     publicKey: 'Public Key',
-    relayStatus: 'Relay Connection Status',
-    relayStates: {
-      connected: 'Connected',
-      connecting: 'Connecting',
-      disconnected: 'Disconnected',
-      unknown: 'Unknown',
-    },
     copyToClipboard: 'Copy to Clipboard',
     copiedToClipboard: 'Copied',
-    eventCreation: 'Create Event',
-    contentPlaceholder: 'Enter your message here...',
-    sign: 'Sign',
-    publish: 'Publish',
-    signedEvent: 'Signed Event',
-    timeline: {
-      title: 'Timeline',
-      loading: 'Loading...',
-      reload: 'Reload',
-      retry: 'Retry',
-      empty: 'No events to display',
-      globalFeed: 'Global',
-      userFeed: 'Following',
-    },
-    profile: {
-      title: 'Edit Profile',
-      loading: 'Loading...',
-      save: 'Save',
-      saved: 'Profile saved',
-      displayName: 'Display Name',
-      displayNamePlaceholder: 'Enter your display name',
-      username: 'Username',
-      usernamePlaceholder: '@username etc',
-      about: 'About',
-      aboutPlaceholder: 'Tell something about yourself',
-      website: 'Website',
-      websitePlaceholder: 'https://example.com',
-      picture: 'Profile Picture URL',
-      picturePlaceholder: 'https://example.com/avatar.jpg',
-    },
   },
   key: {
     title: 'Key Management',
@@ -606,24 +466,6 @@ export const en: TranslationData = {
     confirmExport: 'Export Secret Key (nsec format)',
     yourSecretKey: 'Your Secret Key:',
     noKeyToExport: 'No key to export. Please check your login status.',
-    relayManagement: {
-      title: 'Relay Management',
-      description: 'Add or remove relays to send Nostr messages.',
-      currentRelays: 'Current Relays',
-      noRelays: 'No relays configured',
-      delete: 'Delete',
-      addRelay: 'Add Relay',
-      add: 'Add',
-      reset: 'Reset to Default',
-      messages: {
-        enterUrl: 'Please enter a relay URL',
-        startWithWss: "Relay URL must start with 'wss://'",
-        alreadyExists: 'This relay is already added',
-        added: 'Relay added successfully',
-        deleted: 'Relay deleted',
-        reset: 'Relays reset to default settings',
-      },
-    },
     localStorage: {
       title: 'Local Storage',
       description:
@@ -692,10 +534,22 @@ export const en: TranslationData = {
   },
   navigation: {
     account: 'Account',
-    timeline: 'Timeline',
     key: 'Key',
     settings: 'Settings',
-    import: 'Import',
+  },
+  consent: {
+    title: 'Signing request',
+    origin: 'Requesting origin:',
+    eventKind: 'Event kind',
+    eventContent: 'Content',
+    eventTags: 'Tags',
+    noTags: '(no tags)',
+    approve: 'Approve',
+    reject: 'Reject',
+  },
+  iframeHost: {
+    running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',
+    noKey: 'No key configured. Open the settings page in another tab and sign in with a passkey.',
   },
 };
 

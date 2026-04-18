@@ -7,7 +7,8 @@
 ## 実装関連
 - [ ] PWKのリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする）
 - [x] iframeでNosskeyを使用できるNosskey-iframe(仮)の作成 — 段階1〜4完了 (`nosskey-iframe` パッケージ: protocol / host / client)。ブランチ `claude/add-iframe-support-2tKuX`
-- [ ] Nosskey-iframe(仮)の参照実装の作成 — 段階5〜8 (Svelteアプリ改造・E2E検証・README追記) が残作業
+- [x] Nosskey-iframe(仮)の参照実装の作成 — 段階5〜7完了 (Svelteアプリの `#/iframe` ルート、ConsentDialog、Timeline/relay 機能削除、README 追記)。ブランチ `claude/continue-iframe-support-mCrAL`。段階8 (E2E 手動検証) は別途
+- [ ] iframe を埋め込む親ページ側のサンプル実装 (`NosskeyIframeClient` を使った最小デモ) を `examples/` 配下に追加
 
 ## テスト関連
 - [ ] テストの完全性確認：すべての機能とエッジケースのカバレッジ
