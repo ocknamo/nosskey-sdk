@@ -4,7 +4,6 @@ import ExportKeyInfoComponent from '../settings/ExportKeyInfoComponent.svelte';
 import ExportSecretKey from '../settings/ExportSecretKey.svelte';
 import LocalStorageSection from '../settings/LocalStorageSection.svelte';
 import LogoutSection from '../settings/LogoutSection.svelte';
-import RelayManagement from '../settings/RelayManagement.svelte';
 import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 </script>
 
@@ -14,7 +13,6 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
   <SecretCacheSettings />
   <ExportKeyInfoComponent />
   <ExportSecretKey />
-  <RelayManagement />
   <LogoutSection />
   <LocalStorageSection />
 </div>
