@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-const DEFAULT_IFRAME_URL = 'http://localhost:5173/#/iframe';
+const DEFAULT_IFRAME_URL = 'https://nosskey.app/#/iframe';
 const DEFAULT_RELAY_URL = 'wss://relay.damus.io';
 const DEFAULT_NOTE = 'Hello from Nosskey iframe parent sample!';
 const PUBLISH_ACK_TIMEOUT_MS = 8000;

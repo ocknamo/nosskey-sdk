@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/nosskey-sdk/' : '/',
   server: {
     port: 5174,
     strictPort: true,
@@ -9,4 +10,4 @@ export default defineConfig({
     port: 5174,
     strictPort: true,
   },
-});
+}));
