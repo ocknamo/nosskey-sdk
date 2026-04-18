@@ -73,6 +73,9 @@ jobs:
       - name: Build SDK (type resolution)
         run: npm run build -w nosskey-sdk
 
+      - name: Build iframe package (type resolution)
+        run: npm run build -w nosskey-iframe
+
       - name: Type check (svelte-check)
         run: npm run check
         working-directory: examples/svelte-app
