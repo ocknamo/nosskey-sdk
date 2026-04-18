@@ -35,13 +35,15 @@ function updateHash(value: string) {
   screen = value;
 }
 
-// 初期化とイベントリスナー設定
+// subscribe の初回同期コールバックで URL ハッシュが上書きされないよう、
+// 購読前にハッシュからストアを初期化しておく。
+if (typeof window !== 'undefined') {
+  initializeFromHash();
+}
+
+// ハッシュ変更のイベントリスナーを設定
 $effect(() => {
   if (typeof window !== 'undefined') {
-    // ページ読み込み時に初期化
-    initializeFromHash();
-
-    // ハッシュの変更を監視
     window.addEventListener('hashchange', handleHashChange);
 
     // コンポーネント破棄時にイベントリスナーを削除
