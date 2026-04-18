@@ -7,13 +7,13 @@ import ConsentDialog from '../ConsentDialog.svelte';
 
 type UiState = 'running' | 'partitioned' | 'denied' | 'granted' | 'noKeyExists' | 'unsupported';
 
-interface StorageAccessDocument extends Document {
-  requestStorageAccess?: (options?: { all?: boolean }) => Promise<void>;
-  hasStorageAccess?: () => Promise<boolean>;
-}
+// Newer Storage Access API options (`{ all: true }`) are not in the default
+// lib.dom yet. Define the call signature locally rather than augmenting
+// Document, which would conflict with the existing zero-arg declaration.
+type RequestStorageAccessFn = (options?: { all?: boolean }) => Promise<void>;
 
 let stopHost: (() => void) | null = null;
-let state = $state<UiState>('running');
+let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);
 
@@ -26,31 +26,31 @@ function postVisibility(visible: boolean): void {
 async function detectInitialState(): Promise<void> {
   const manager = getNosskeyManager();
   if (manager.hasKeyInfo()) {
-    state = 'running';
+    uiState = 'running';
     return;
   }
-  const doc = document as StorageAccessDocument;
-  if (typeof doc.requestStorageAccess !== 'function') {
-    state = 'unsupported';
+  if (typeof document.requestStorageAccess !== 'function') {
+    uiState = 'unsupported';
     postVisibility(true);
     return;
   }
   try {
-    const hasSA = typeof doc.hasStorageAccess === 'function' ? await doc.hasStorageAccess() : false;
+    const hasSA =
+      typeof document.hasStorageAccess === 'function' ? await document.hasStorageAccess() : false;
     if (hasSA) {
-      state = 'noKeyExists';
+      uiState = 'noKeyExists';
       postVisibility(true);
       return;
     }
   } catch {
     // Treat hasStorageAccess failures as "not granted" and proceed to request.
   }
-  state = 'partitioned';
+  uiState = 'partitioned';
   postVisibility(true);
 }
 
-async function callRequestStorageAccess(doc: StorageAccessDocument): Promise<void> {
-  const fn = doc.requestStorageAccess;
+async function callRequestStorageAccess(): Promise<void> {
+  const fn = document.requestStorageAccess as RequestStorageAccessFn | undefined;
   if (typeof fn !== 'function') {
     throw new Error('Storage Access API is not available.');
   }
@@ -69,20 +69,19 @@ async function callRequestStorageAccess(doc: StorageAccessDocument): Promise<voi
 }
 
 async function requestAccess(): Promise<void> {
-  const doc = document as StorageAccessDocument;
   working = true;
   errorMessage = '';
   try {
-    await callRequestStorageAccess(doc);
+    await callRequestStorageAccess();
     const manager = getNosskeyManager();
     if (manager.hasKeyInfo()) {
-      state = 'granted';
+      uiState = 'granted';
       postVisibility(false);
     } else {
-      state = 'noKeyExists';
+      uiState = 'noKeyExists';
     }
   } catch (err) {
-    state = 'denied';
+    uiState = 'denied';
     errorMessage = err instanceof Error ? err.message : String(err);
   } finally {
     working = false;
@@ -102,12 +101,12 @@ onDestroy(() => {
 
 <div class="iframe-host">
   <p class="status">{$i18n.t.iframeHost.running}</p>
-  {#if state === 'partitioned'}
+  {#if uiState === 'partitioned'}
     <p class="warning">{$i18n.t.iframeHost.partitionedWarning}</p>
     <button type="button" onclick={requestAccess} disabled={working}>
       {$i18n.t.iframeHost.grantStorageAccess}
     </button>
-  {:else if state === 'denied'}
+  {:else if uiState === 'denied'}
     <p class="warning">{$i18n.t.iframeHost.storageAccessDenied}</p>
     {#if errorMessage}
       <p class="error-detail">{errorMessage}</p>
@@ -115,11 +114,11 @@ onDestroy(() => {
     <button type="button" onclick={requestAccess} disabled={working}>
       {$i18n.t.iframeHost.retry}
     </button>
-  {:else if state === 'granted'}
+  {:else if uiState === 'granted'}
     <p class="success">{$i18n.t.iframeHost.storageAccessGranted}</p>
-  {:else if state === 'noKeyExists'}
+  {:else if uiState === 'noKeyExists'}
     <p class="warning">{$i18n.t.iframeHost.noKey}</p>
-  {:else if state === 'unsupported'}
+  {:else if uiState === 'unsupported'}
     <p class="warning">{$i18n.t.iframeHost.storageAccessUnsupported}</p>
     <p class="warning">{$i18n.t.iframeHost.noKey}</p>
   {/if}
