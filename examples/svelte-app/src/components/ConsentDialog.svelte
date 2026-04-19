@@ -134,4 +134,21 @@ function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
   .consent-actions :global(.btn) {
     width: auto;
   }
+
+  /* Embedded mode: parent modal already provides the backdrop and card frame,
+     so suppress this component's own dim overlay and let the card fill the
+     iframe viewport seamlessly. */
+  :global(body.nosskey-embedded) .consent-backdrop {
+    background: transparent;
+    padding: 0;
+  }
+
+  :global(body.nosskey-embedded) .consent-card {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
 </style>

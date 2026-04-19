@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
-import { startIframeHost } from '../../iframe-mode.js';
+import { isEmbeddedIframeMode, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 
@@ -108,11 +108,15 @@ async function requestAccess(): Promise<void> {
 }
 
 onMount(() => {
+  if (isEmbeddedIframeMode()) {
+    document.body.classList.add('nosskey-embedded');
+  }
   stopHost = startIframeHost();
   detectInitialState();
 });
 
 onDestroy(() => {
+  document.body.classList.remove('nosskey-embedded');
   stopHost?.();
   stopHost = null;
 });
