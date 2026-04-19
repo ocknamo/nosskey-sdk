@@ -29,6 +29,12 @@ export function rejectConsent(): void {
   });
 }
 
+export function isEmbeddedIframeMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('embedded') === '1';
+}
+
 export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {}): () => void {
   const host = new NosskeyIframeHost({
     manager: getNosskeyManager(),

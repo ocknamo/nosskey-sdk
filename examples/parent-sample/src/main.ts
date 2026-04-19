@@ -22,6 +22,37 @@ if (!app) {
   throw new Error('#app element missing from index.html');
 }
 
+const modal = document.querySelector<HTMLDivElement>('#iframe-modal');
+const modalCard = modal?.querySelector<HTMLDivElement>('.iframe-modal__card') ?? null;
+if (!modal || !modalCard) {
+  throw new Error('#iframe-modal markup missing from index.html');
+}
+
+function setModalVisible(visible: boolean): void {
+  modal?.setAttribute('aria-hidden', visible ? 'false' : 'true');
+}
+
+function withEmbeddedParam(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl, window.location.href);
+    url.searchParams.set('embedded', '1');
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+window.addEventListener('message', (event) => {
+  const data = event.data as unknown;
+  if (
+    data &&
+    typeof data === 'object' &&
+    (data as { type?: unknown }).type === 'nosskey:visibility'
+  ) {
+    setModalVisible(Boolean((data as { visible?: unknown }).visible));
+  }
+});
+
 app.innerHTML = `
   <h1>Nosskey iframe parent sample</h1>
   <p class="subtitle">
@@ -122,10 +153,12 @@ async function connect(): Promise<void> {
     return;
   }
   setStatus('connecting…');
-  log(`Mounting iframe: ${iframeUrl}`);
+  const embeddedUrl = withEmbeddedParam(iframeUrl);
+  log(`Mounting iframe: ${embeddedUrl}`);
   try {
-    const next = new NosskeyIframeClient({ iframeUrl });
+    const next = new NosskeyIframeClient({ iframeUrl: embeddedUrl });
     client = next;
+    modalCard.appendChild(next.iframe);
     await next.ready();
     window.nostr = {
       getPublicKey: () => next.getPublicKey(),
@@ -141,6 +174,7 @@ async function connect(): Promise<void> {
     client = null;
     window.nostr = undefined;
     setConnectedUI(false);
+    setModalVisible(false);
   }
 }
 
@@ -150,6 +184,7 @@ function disconnect(): void {
   client = null;
   window.nostr = undefined;
   setConnectedUI(false);
+  setModalVisible(false);
   setStatus('disconnected');
   log('Iframe destroyed; window.nostr removed.');
 }

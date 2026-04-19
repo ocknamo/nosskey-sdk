@@ -130,3 +130,47 @@ button.secondary {
 .status.err {
   color: #e03131;
 }
+
+.iframe-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 2000;
+}
+
+.iframe-modal[aria-hidden="false"] {
+  display: block;
+}
+
+.iframe-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.iframe-modal__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 95vw);
+  height: min(640px, 90vh);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.iframe-modal__card > iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .iframe-modal__card {
+    background: #1d2025;
+  }
+}

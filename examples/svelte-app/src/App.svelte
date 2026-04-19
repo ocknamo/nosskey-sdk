@@ -303,4 +303,10 @@ onMount(() => {
       color 0.3s ease,
       background-color 0.3s ease;
   }
+
+  /* Embedded mode: the iframe is mounted inside a parent-provided modal card,
+     so the body must be transparent to blend with the parent card surface. */
+  :global(body.nosskey-embedded) {
+    background: transparent;
+  }
 </style>
