@@ -10,7 +10,14 @@ type UiState = 'running' | 'partitioned' | 'denied' | 'granted' | 'noKeyExists' 
 // Newer Storage Access API options (`{ all: true }`) are not in the default
 // lib.dom yet. Define the call signature locally rather than augmenting
 // Document, which would conflict with the existing zero-arg declaration.
-type RequestStorageAccessFn = (options?: { all?: boolean }) => Promise<void>;
+// Minimal handle shape — the SDK stores key info in localStorage only, so other
+// members (sessionStorage / indexedDB / caches / etc.) are intentionally omitted.
+type StorageAccessHandle = {
+  localStorage: Storage;
+};
+type RequestStorageAccessFn = (options?: { all?: boolean }) => Promise<
+  StorageAccessHandle | undefined
+>;
 
 let stopHost: (() => void) | null = null;
 let uiState: UiState = $state('running');
@@ -41,20 +48,33 @@ function detectInitialState(): void {
   postVisibility(true);
 }
 
-async function callRequestStorageAccess(): Promise<void> {
+function isStorageAccessHandle(value: unknown): value is StorageAccessHandle {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'localStorage' in value &&
+    typeof (value as { localStorage: unknown }).localStorage === 'object'
+  );
+}
+
+// Returns the StorageAccessHandle on Chromium (unpartitioned storage reference),
+// or null when the browser auto-unpartitions window.localStorage (Firefox) or
+// when we fall back to the zero-arg form.
+async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
   const fn = document.requestStorageAccess as RequestStorageAccessFn | undefined;
   if (typeof fn !== 'function') {
     throw new Error('Storage Access API is not available.');
   }
   try {
-    await fn.call(document, { all: true });
+    const result = await fn.call(document, { all: true });
+    return isStorageAccessHandle(result) ? result : null;
   } catch (err) {
     // Older implementations reject the `{ all: true }` argument with a
     // TypeError. Fall back to the zero-arg form which at least grants cookie
     // access; Firefox's zero-arg form also unpartitions localStorage.
     if (err instanceof TypeError) {
       await fn.call(document);
-      return;
+      return null;
     }
     throw err;
   }
@@ -64,8 +84,15 @@ async function requestAccess(): Promise<void> {
   working = true;
   errorMessage = '';
   try {
-    await callRequestStorageAccess();
+    const handle = await callRequestStorageAccess();
     const manager = getNosskeyManager();
+    if (handle) {
+      // Chrome: window.localStorage remains partitioned after the grant —
+      // only handle.localStorage points at unpartitioned storage. Thread it
+      // into the SDK singleton so both this screen and the NosskeyIframeHost
+      // (which shares the same manager) read the unpartitioned store.
+      manager.setStorageOptions({ storage: handle.localStorage });
+    }
     if (manager.hasKeyInfo()) {
       uiState = 'granted';
       postVisibility(false);
