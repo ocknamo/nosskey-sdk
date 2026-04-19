@@ -1,7 +1,7 @@
 import type { NosskeyManagerLike, NostrEvent } from 'nosskey-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeHost } from './host.js';
-import { isNosskeyReady, isNosskeyResponse } from './protocol.js';
+import { isNosskeyReady, isNosskeyResponse, isNosskeyVisibility } from './protocol.js';
 
 /**
  * Builds a `NosskeyManagerLike` test double where every method is a vitest spy
@@ -329,6 +329,126 @@ describe('NosskeyIframeHost', () => {
       'https://parent.example'
     );
     expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('INTERNAL');
+    host.stop();
+  });
+
+  it('posts visibility true before onConsent and false after signEvent succeeds', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const input: NostrEvent = { kind: 1, content: 'hi' };
+    const signed: NostrEvent = { ...input, id: 'abc', sig: 'def' };
+    const visibilityWhenConsentCalled: boolean[] = [];
+    const onConsent = vi.fn(async () => {
+      // Record every visibility message posted up to this point.
+      for (const call of (parent.postMessage as unknown as ReturnType<typeof vi.fn>).mock.calls) {
+        if (isNosskeyVisibility(call[0])) {
+          visibilityWhenConsentCalled.push((call[0] as { visible: boolean }).visible);
+        }
+      }
+      return true;
+    });
+    const manager = makeManager({ signEvent: vi.fn(async () => signed) });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      {
+        type: 'nosskey:request',
+        id: 'v1',
+        method: 'signEvent',
+        params: { event: input },
+      },
+      'https://parent.example'
+    );
+
+    // Before onConsent ran, only visibility:true should have been posted.
+    expect(visibilityWhenConsentCalled).toEqual([true]);
+
+    const parentMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls.map((c) => c[0]);
+    const visibilityMessages = parentMessages.filter(isNosskeyVisibility);
+    expect(visibilityMessages.map((m) => m.visible)).toEqual([true, false]);
+
+    const response = win.sent[0];
+    expect((response.data as { result: NostrEvent }).result).toEqual(signed);
+    host.stop();
+  });
+
+  it('posts visibility false after onConsent rejects signEvent', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const manager = makeManager({
+      signEvent: vi.fn(async () => {
+        throw new Error('should not be called');
+      }),
+    });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => false,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      {
+        type: 'nosskey:request',
+        id: 'v2',
+        method: 'signEvent',
+        params: { event: { kind: 1, content: '' } },
+      },
+      'https://parent.example'
+    );
+
+    const visibilityMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls
+      .map((c) => c[0])
+      .filter(isNosskeyVisibility);
+    expect(visibilityMessages.map((m) => m.visible)).toEqual([true, false]);
+    expect(manager.signEvent).not.toHaveBeenCalled();
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('USER_REJECTED');
+    host.stop();
+  });
+
+  it('does not post visibility when signEvent fails with NO_KEY', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const manager = makeManager({ hasKeyInfo: () => false });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      {
+        type: 'nosskey:request',
+        id: 'v3',
+        method: 'signEvent',
+        params: { event: { kind: 1, content: '' } },
+      },
+      'https://parent.example'
+    );
+
+    const visibilityMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls
+      .map((c) => c[0])
+      .filter(isNosskeyVisibility);
+    expect(visibilityMessages).toHaveLength(0);
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('NO_KEY');
     host.stop();
   });
 

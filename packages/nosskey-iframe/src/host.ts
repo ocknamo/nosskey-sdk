@@ -11,6 +11,7 @@ import {
   type NosskeyReady,
   type NosskeyRequest,
   type NosskeyResponse,
+  type NosskeyVisibility,
   isNosskeyRequest,
 } from './protocol.js';
 
@@ -175,19 +176,27 @@ export class NosskeyIframeHost {
         if (!manager.hasKeyInfo()) {
           throw new HostError('NO_KEY', 'No key is configured in the iframe.');
         }
-        if (requireUserConsent) {
-          if (!onConsent) {
-            throw new HostError(
-              'INTERNAL',
-              'onConsent must be provided when requireUserConsent is true.'
-            );
+        // The parent hides the iframe by default; show it so the consent
+        // dialog is interactable and so the cross-origin WebAuthn prompt
+        // fired inside manager.signEvent() has a visible frame to attach to.
+        this.#postVisibility(true);
+        try {
+          if (requireUserConsent) {
+            if (!onConsent) {
+              throw new HostError(
+                'INTERNAL',
+                'onConsent must be provided when requireUserConsent is true.'
+              );
+            }
+            const approved = await onConsent({ origin, method: 'signEvent', event });
+            if (!approved) {
+              throw new HostError('USER_REJECTED', 'User rejected the signing request.');
+            }
           }
-          const approved = await onConsent({ origin, method: 'signEvent', event });
-          if (!approved) {
-            throw new HostError('USER_REJECTED', 'User rejected the signing request.');
-          }
+          return await manager.signEvent(event);
+        } finally {
+          this.#postVisibility(false);
         }
-        return manager.signEvent(event);
       }
       default: {
         // Exhaustiveness — request.method is typed as NosskeyMethod already,
@@ -196,6 +205,13 @@ export class NosskeyIframeHost {
         throw new HostError('UNKNOWN_METHOD', `Unknown method: ${String(request.method)}`);
       }
     }
+  }
+
+  #postVisibility(visible: boolean): void {
+    const parent = this.#options.window.parent;
+    if (!parent || parent === this.#options.window) return;
+    const message: NosskeyVisibility = { type: 'nosskey:visibility', visible };
+    parent.postMessage(message, '*');
   }
 }
 
