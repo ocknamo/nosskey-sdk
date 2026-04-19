@@ -8,9 +8,19 @@ import ConsentDialog from '../ConsentDialog.svelte';
 type UiState = 'running' | 'partitioned' | 'denied' | 'granted' | 'noKeyExists' | 'unsupported';
 
 // Newer Storage Access API options (`{ all: true }`) are not in the default
-// lib.dom yet. Define the call signature locally rather than augmenting
-// Document, which would conflict with the existing zero-arg declaration.
-type RequestStorageAccessFn = (options?: { all?: boolean }) => Promise<void>;
+// lib.dom yet. Define types locally rather than augmenting Document, which
+// would conflict with the existing zero-arg declaration.
+//
+// Chrome returns a StorageAccessHandle from requestStorageAccess({ all: true }).
+// window.localStorage remains partitioned after the call; the handle's
+// .localStorage property is the only way to reach unpartitioned storage.
+// Firefox's zero-arg form unpartitions window.localStorage directly (no handle).
+interface StorageAccessHandle {
+  localStorage: Storage;
+}
+type RequestStorageAccessFn = (options?: {
+  all?: boolean;
+}) => Promise<StorageAccessHandle | void>;
 
 let stopHost: (() => void) | null = null;
 let uiState: UiState = $state('running');
@@ -41,20 +51,23 @@ function detectInitialState(): void {
   postVisibility(true);
 }
 
-async function callRequestStorageAccess(): Promise<void> {
+// Returns handle.localStorage when Chrome's { all: true } form is used,
+// or undefined when falling back to the zero-arg form (Firefox path).
+async function callRequestStorageAccess(): Promise<Storage | undefined> {
   const fn = document.requestStorageAccess as RequestStorageAccessFn | undefined;
   if (typeof fn !== 'function') {
     throw new Error('Storage Access API is not available.');
   }
   try {
-    await fn.call(document, { all: true });
+    const handle = await fn.call(document, { all: true });
+    return (handle as StorageAccessHandle | undefined)?.localStorage;
   } catch (err) {
     // Older implementations reject the `{ all: true }` argument with a
-    // TypeError. Fall back to the zero-arg form which at least grants cookie
-    // access; Firefox's zero-arg form also unpartitions localStorage.
+    // TypeError. Fall back to the zero-arg form; Firefox's zero-arg form
+    // unpartitions window.localStorage directly so no handle is needed.
     if (err instanceof TypeError) {
-      await fn.call(document);
-      return;
+      await (document.requestStorageAccess as () => Promise<void>).call(document);
+      return undefined;
     }
     throw err;
   }
@@ -64,8 +77,13 @@ async function requestAccess(): Promise<void> {
   working = true;
   errorMessage = '';
   try {
-    await callRequestStorageAccess();
+    const unpartitionedStorage = await callRequestStorageAccess();
     const manager = getNosskeyManager();
+    // Chrome: switch the manager to the unpartitioned storage from the handle.
+    // Firefox: window.localStorage is already unpartitioned at this point.
+    if (unpartitionedStorage) {
+      manager.setStorageOptions({ storage: unpartitionedStorage });
+    }
     if (manager.hasKeyInfo()) {
       uiState = 'granted';
       postVisibility(false);
