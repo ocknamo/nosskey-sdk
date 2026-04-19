@@ -23,27 +23,19 @@ function postVisibility(visible: boolean): void {
   }
 }
 
-async function detectInitialState(): Promise<void> {
+function detectInitialState(): void {
   const manager = getNosskeyManager();
   if (manager.hasKeyInfo()) {
     uiState = 'running';
     return;
   }
+  // hasStorageAccess() reflects cookie access, not localStorage partition state,
+  // so it cannot reliably detect whether unpartitioned storage is accessible.
+  // Always show the Grant button when Storage Access API is available.
   if (typeof document.requestStorageAccess !== 'function') {
     uiState = 'unsupported';
     postVisibility(true);
     return;
-  }
-  try {
-    const hasSA =
-      typeof document.hasStorageAccess === 'function' ? await document.hasStorageAccess() : false;
-    if (hasSA) {
-      uiState = 'noKeyExists';
-      postVisibility(true);
-      return;
-    }
-  } catch {
-    // Treat hasStorageAccess failures as "not granted" and proceed to request.
   }
   uiState = 'partitioned';
   postVisibility(true);
@@ -90,7 +82,7 @@ async function requestAccess(): Promise<void> {
 
 onMount(() => {
   stopHost = startIframeHost();
-  void detectInitialState();
+  detectInitialState();
 });
 
 onDestroy(() => {
