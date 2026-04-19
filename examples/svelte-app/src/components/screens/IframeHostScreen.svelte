@@ -23,7 +23,7 @@ function postVisibility(visible: boolean): void {
   }
 }
 
-async function detectInitialState(): Promise<void> {
+function detectInitialState(): void {
   const manager = getNosskeyManager();
   if (manager.hasKeyInfo()) {
     uiState = 'running';
@@ -34,17 +34,9 @@ async function detectInitialState(): Promise<void> {
     postVisibility(true);
     return;
   }
-  try {
-    const hasSA =
-      typeof document.hasStorageAccess === 'function' ? await document.hasStorageAccess() : false;
-    if (hasSA) {
-      uiState = 'noKeyExists';
-      postVisibility(true);
-      return;
-    }
-  } catch {
-    // Treat hasStorageAccess failures as "not granted" and proceed to request.
-  }
+  // `document.hasStorageAccess()` reflects cookie access only and does not
+  // indicate whether localStorage is unpartitioned, so always offer the Grant
+  // button when no key is loaded. After the user gesture we re-check the key.
   uiState = 'partitioned';
   postVisibility(true);
 }
@@ -90,7 +82,7 @@ async function requestAccess(): Promise<void> {
 
 onMount(() => {
   stopHost = startIframeHost();
-  void detectInitialState();
+  detectInitialState();
 });
 
 onDestroy(() => {
