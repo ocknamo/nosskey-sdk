@@ -42,6 +42,6 @@
   },
   "dependencies": {
     "rx-nostr": "^3.6.1",
-    "@rx-nostr/crypto": "^3.1.5"
+    "rx-nostr-crypto": "^3.1.3"
   }
 }

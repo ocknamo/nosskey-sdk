@@ -1,4 +1,4 @@
-import { seckeySigner } from '@rx-nostr/crypto';
+import { seckeySigner } from 'rx-nostr-crypto';
 import { KeyCache } from './key-cache.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import type {
@@ -287,7 +287,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
 
-    // @rx-nostr/cryptoを使用して公開鍵を取得
+    // rx-nostr-cryptoを使用して公開鍵を取得
     const signer = seckeySigner(skHex);
     const publicKey = await signer.getPublicKey();
 
@@ -344,7 +344,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
 
-    // @rx-nostr/crypto seckeySigner を使用して署名
+    // rx-nostr-crypto seckeySigner を使用して署名
     const signer = seckeySigner(skHex, { tags });
     const signedEvent = await signer.signEvent(event);
 
