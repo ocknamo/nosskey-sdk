@@ -1,4 +1,4 @@
-import { seckeySigner } from '@rx-nostr/crypto';
+import { seckeySigner } from 'rx-nostr-crypto';
 /**
  * Nosskey SDK テスト
  * @packageDocumentation
@@ -8,8 +8,8 @@ import { NosskeyManager } from './nosskey.js';
 import type { NostrEvent, NostrKeyInfo } from './types.js';
 import { bytesToHex } from './utils.js';
 
-// @rx-nostr/crypto のモック
-vi.mock('@rx-nostr/crypto', () => {
+// rx-nostr-crypto のモック
+vi.mock('rx-nostr-crypto', () => {
   return {
     seckeySigner: vi.fn(() => ({
       signEvent: vi.fn(async (event) => ({
