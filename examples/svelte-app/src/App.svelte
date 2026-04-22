@@ -30,6 +30,13 @@ function handleHashChange() {
 let skipNextScrollReset = false;
 function handlePopState() {
   skipNextScrollReset = true;
+  // hashchange → updateHash の順で flag は消費される想定だが、
+  // 万一消費されなくても次の遷移に漏れないようフレーム後にリセットする
+  if (typeof window !== 'undefined') {
+    window.requestAnimationFrame(() => {
+      skipNextScrollReset = false;
+    });
+  }
 }
 
 // ストアの値が変更されたときにURLハッシュを更新
@@ -39,6 +46,16 @@ function updateHash(value: string) {
     window.location.hash = `#/${value}`;
   }
   screen = value;
+
+  // 画面遷移時にスクロール位置をトップに戻す
+  // ただし、ブラウザの戻る/進む操作の直後はブラウザ既定のスクロール挙動に任せる
+  if (typeof window !== 'undefined') {
+    if (skipNextScrollReset) {
+      skipNextScrollReset = false;
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
 }
 
 // subscribe の初回同期コールバックで URL ハッシュが上書きされないよう、
@@ -59,19 +76,6 @@ $effect(() => {
       window.removeEventListener('popstate', handlePopState);
     };
   }
-});
-
-// 画面遷移時にスクロール位置をトップに戻す
-// ただし、ブラウザの戻る/進む操作の直後はブラウザ既定のスクロール挙動に任せる
-$effect(() => {
-  // screen を依存に含めて変更を検知
-  void screen;
-  if (typeof window === 'undefined') return;
-  if (skipNextScrollReset) {
-    skipNextScrollReset = false;
-    return;
-  }
-  window.scrollTo(0, 0);
 });
 
 // ストアの監視
