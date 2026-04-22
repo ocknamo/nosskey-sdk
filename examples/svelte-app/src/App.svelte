@@ -26,6 +26,12 @@ function handleHashChange() {
   initializeFromHash();
 }
 
+// ブラウザの戻る/進む操作の直後はスクロール位置を維持する
+let skipNextScrollReset = false;
+function handlePopState() {
+  skipNextScrollReset = true;
+}
+
 // ストアの値が変更されたときにURLハッシュを更新
 function updateHash(value: string) {
   // URLハッシュの変更によるループを防ぐ
@@ -45,21 +51,27 @@ if (typeof window !== 'undefined') {
 $effect(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
 
     // コンポーネント破棄時にイベントリスナーを削除
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
     };
   }
 });
 
 // 画面遷移時にスクロール位置をトップに戻す
+// ただし、ブラウザの戻る/進む操作の直後はブラウザ既定のスクロール挙動に任せる
 $effect(() => {
   // screen を依存に含めて変更を検知
   void screen;
-  if (typeof window !== 'undefined') {
-    window.scrollTo(0, 0);
+  if (typeof window === 'undefined') return;
+  if (skipNextScrollReset) {
+    skipNextScrollReset = false;
+    return;
   }
+  window.scrollTo(0, 0);
 });
 
 // ストアの監視
