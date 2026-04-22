@@ -53,6 +53,15 @@ $effect(() => {
   }
 });
 
+// 画面遷移時にスクロール位置をトップに戻す
+$effect(() => {
+  // screen を依存に含めて変更を検知
+  void screen;
+  if (typeof window !== 'undefined') {
+    window.scrollTo(0, 0);
+  }
+});
+
 // ストアの監視
 currentScreen.subscribe(updateHash);
 
