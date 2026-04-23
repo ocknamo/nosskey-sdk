@@ -40,19 +40,32 @@ function handlePopState() {
 }
 
 // 画面遷移時にスクロール位置をトップに戻す
-// 新しい画面の DOM が反映されてから実行する必要があるため tick を待つ
+// 新しい画面の DOM 反映やブラウザのスクロール復元と競合しないよう
+// 複数タイミングでリセットを行う
+function forceScrollTop() {
+  window.scrollTo(0, 0);
+  if (document.scrollingElement) {
+    document.scrollingElement.scrollTop = 0;
+  }
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
 async function scrollToTopAfterRender() {
   if (typeof window === 'undefined') return;
   if (skipNextScrollReset) {
     skipNextScrollReset = false;
     return;
   }
+  // 同期的に一度リセット
+  forceScrollTop();
+  // Svelte の state 更新後にもう一度リセット
   await tick();
-  // ブラウザによってスクロール対象が html / body のどちらかに分かれるため両方リセット
-  window.scrollTo(0, 0);
-  if (document.scrollingElement) {
-    document.scrollingElement.scrollTop = 0;
-  }
+  forceScrollTop();
+  // 次のペイント後、ブラウザ自動復元や後続レイアウトに対して最後のリセット
+  window.requestAnimationFrame(() => {
+    forceScrollTop();
+  });
 }
 
 // ストアの値が変更されたときにURLハッシュを更新
@@ -278,6 +291,11 @@ function applyTheme(theme: ThemeMode) {
 
 // アプリの初期化
 onMount(() => {
+  // ブラウザの自動スクロール復元を無効化（画面遷移時のリセットと競合させない）
+  if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual';
+  }
+
   // 初期テーマの適用
   applyTheme($currentTheme);
 
