@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
@@ -39,22 +39,34 @@ function handlePopState() {
   }
 }
 
+// 画面遷移時にスクロール位置をトップに戻す
+// 新しい画面の DOM が反映されてから実行する必要があるため tick を待つ
+async function scrollToTopAfterRender() {
+  if (typeof window === 'undefined') return;
+  if (skipNextScrollReset) {
+    skipNextScrollReset = false;
+    return;
+  }
+  await tick();
+  // ブラウザによってスクロール対象が html / body のどちらかに分かれるため両方リセット
+  window.scrollTo(0, 0);
+  if (document.scrollingElement) {
+    document.scrollingElement.scrollTop = 0;
+  }
+}
+
 // ストアの値が変更されたときにURLハッシュを更新
 function updateHash(value: string) {
+  const screenChanged = screen !== value;
+
   // URLハッシュの変更によるループを防ぐ
   if (window.location.hash !== `#/${value}`) {
     window.location.hash = `#/${value}`;
   }
   screen = value;
 
-  // 画面遷移時にスクロール位置をトップに戻す
-  // ただし、ブラウザの戻る/進む操作の直後はブラウザ既定のスクロール挙動に任せる
-  if (typeof window !== 'undefined') {
-    if (skipNextScrollReset) {
-      skipNextScrollReset = false;
-    } else {
-      window.scrollTo(0, 0);
-    }
+  if (screenChanged) {
+    void scrollToTopAfterRender();
   }
 }
 
