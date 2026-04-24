@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
@@ -52,12 +52,11 @@ function setScrollY(y: number) {
   document.body.scrollTop = y;
 }
 
-function applyScrollForScreen(target: string) {
+async function applyScrollForScreen(target: string) {
   if (typeof window === 'undefined') return;
-  // 10ms 待ってから（DOM 更新・レイアウト確定後に）スクロール位置を反映
-  window.setTimeout(() => {
-    setScrollY(savedScrollPositions.get(target) ?? 0);
-  }, 10);
+  // Svelte の DOM 更新が反映されてからスクロール位置を適用
+  await tick();
+  setScrollY(savedScrollPositions.get(target) ?? 0);
 }
 
 // ストアの値が変更されたときにURLハッシュを更新
@@ -77,7 +76,7 @@ function updateHash(value: string) {
   screen = value;
 
   if (screenChanged) {
-    applyScrollForScreen(value);
+    void applyScrollForScreen(value);
   }
 }
 
