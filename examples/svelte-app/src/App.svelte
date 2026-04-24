@@ -1,4 +1,5 @@
 <script lang="ts">
+import { createConsoleViewer } from 'console-daijin';
 import { onMount } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
@@ -297,6 +298,9 @@ function applyTheme(theme: ThemeMode) {
 
 // アプリの初期化
 onMount(() => {
+  // 開発中のため常に画面下部にコンソールログビューワを表示する
+  createConsoleViewer({ show: 'always', height: 160 });
+
   // ブラウザの自動スクロール復元を無効化（画面遷移時のリセットと競合させない）
   if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
     window.history.scrollRestoration = 'manual';
