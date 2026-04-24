@@ -1,5 +1,4 @@
 <script lang="ts">
-import { createConsoleViewer } from 'console-daijin';
 import { onMount } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
@@ -57,17 +56,7 @@ function applyScrollForScreen(target: string) {
   if (typeof window === 'undefined') return;
   // 10ms 待ってから（DOM 更新・レイアウト確定後に）スクロール位置を反映
   window.setTimeout(() => {
-    const restored = savedScrollPositions.get(target) ?? 0;
-    console.info(
-      '[scroll] apply for',
-      target,
-      'restored=',
-      restored,
-      'currentScrollY=',
-      getScrollY()
-    );
-    setScrollY(restored);
-    console.info('[scroll] applied. scrollY=', getScrollY());
+    setScrollY(savedScrollPositions.get(target) ?? 0);
   }, 10);
 }
 
@@ -79,7 +68,6 @@ function updateHash(value: string) {
   if (screenChanged) {
     // 離脱直前のスクロール位置を保存
     savedScrollPositions.set(previousScreen, getScrollY());
-    console.info('[scroll] saved', previousScreen, '=', savedScrollPositions.get(previousScreen));
   }
 
   // URLハッシュの変更によるループを防ぐ
@@ -299,10 +287,8 @@ function applyTheme(theme: ThemeMode) {
 
 // アプリの初期化
 onMount(() => {
-  // 開発中のため常に画面下部にコンソールログビューワを表示する
-  createConsoleViewer({ show: 'always', height: 160 });
-
-  // ブラウザの自動スクロール復元を無効化（画面遷移時のリセットと競合させない）
+  // スクロール位置は updateHash 内で画面ごとに管理するため、
+  // ブラウザの自動スクロール復元は無効化する。
   if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
     window.history.scrollRestoration = 'manual';
   }

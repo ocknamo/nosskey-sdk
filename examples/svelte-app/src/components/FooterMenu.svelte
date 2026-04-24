@@ -61,8 +61,7 @@ function navigateTo(target: ScreenName) {
 <style>
   .footer-menu {
     position: fixed;
-    /* console-daijin (height: 160px) と被らないよう上にずらす */
-    bottom: 160px;
+    bottom: 0;
     left: 0;
     right: 0;
     background-color: var(--color-card);
