@@ -12,13 +12,15 @@ import { type ThemeMode, currentScreen, currentTheme, isScreenName } from './sto
 let screen = $state('account');
 
 // URLのハッシュからページを初期化
+// screen の更新は updateHash に集約するため、ここでは直接代入せず
+// currentScreen.set 経由でストア → updateHash に流す。
 function initializeFromHash() {
   const hash = window.location.hash.substring(1);
   const name = hash.startsWith('/') ? hash.substring(1) : hash;
-  screen = name || 'account';
+  const newScreen = name || 'account';
 
-  if (isScreenName(screen)) {
-    currentScreen.set(screen);
+  if (isScreenName(newScreen)) {
+    currentScreen.set(newScreen);
   }
 }
 
@@ -27,82 +29,67 @@ function handleHashChange() {
   initializeFromHash();
 }
 
-// ブラウザの戻る/進む操作の直後はスクロール位置を維持する
-// ブラウザによっては location.hash 代入時にも popstate が飛ぶため、
-// プログラム由来の hash 変更中はフラグを立てて popstate を無視する。
-let skipNextScrollReset = false;
-let isProgrammaticHashChange = false;
-function handlePopState() {
-  if (isProgrammaticHashChange) {
-    console.info('[scroll] popstate ignored (programmatic hash change)');
-    return;
-  }
-  console.info('[scroll] popstate detected (browser back/forward)');
-  skipNextScrollReset = true;
-  // hashchange → updateHash の順で flag は消費される想定だが、
-  // 万一消費されなくても次の遷移に漏れないようフレーム後にリセットする
-  if (typeof window !== 'undefined') {
-    window.requestAnimationFrame(() => {
-      skipNextScrollReset = false;
-    });
-  }
+// 画面遷移時のスクロール位置管理
+// 画面ごとにスクロール位置を Map に保存し、戻ってきたときに復元する。
+// （popstate 検出はブラウザ差異が大きいため使わない）
+const savedScrollPositions = new Map<string, number>();
+
+function getScrollY(): number {
+  return (
+    window.scrollY ||
+    document.scrollingElement?.scrollTop ||
+    document.documentElement.scrollTop ||
+    document.body.scrollTop ||
+    0
+  );
 }
 
-// 画面遷移時にスクロール位置をトップに戻す
-// 新しい画面の DOM 反映やブラウザのスクロール復元と競合しないよう
-// 複数タイミングでリセットを行う
-function forceScrollTop() {
-  window.scrollTo(0, 0);
+function setScrollY(y: number) {
+  window.scrollTo(0, y);
   if (document.scrollingElement) {
-    document.scrollingElement.scrollTop = 0;
+    document.scrollingElement.scrollTop = y;
   }
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = y;
+  document.body.scrollTop = y;
 }
 
-function scrollToTopAfterRender() {
+function applyScrollForScreen(target: string) {
   if (typeof window === 'undefined') return;
-  if (skipNextScrollReset) {
-    skipNextScrollReset = false;
-    console.info('[scroll] skipped (popstate)');
-    return;
-  }
-  // 10ms 待ってから（DOM 更新・レイアウト確定後に）スクロールリセット
+  // 10ms 待ってから（DOM 更新・レイアウト確定後に）スクロール位置を反映
   window.setTimeout(() => {
-    const scrollingTargets = [...document.querySelectorAll('*')]
-      .filter((el) => el.scrollTop > 0)
-      .map((el) => `${el.tagName}#${el.id || ''}.${el.className || ''}=${el.scrollTop}`);
+    const restored = savedScrollPositions.get(target) ?? 0;
     console.info(
-      '[scroll] reset after 10ms. window.scrollY=',
-      window.scrollY,
-      'targets=',
-      scrollingTargets
+      '[scroll] apply for',
+      target,
+      'restored=',
+      restored,
+      'currentScrollY=',
+      getScrollY()
     );
-    forceScrollTop();
-    console.info('[scroll] after reset. window.scrollY=', window.scrollY);
+    setScrollY(restored);
+    console.info('[scroll] applied. scrollY=', getScrollY());
   }, 10);
 }
 
 // ストアの値が変更されたときにURLハッシュを更新
 function updateHash(value: string) {
-  const screenChanged = screen !== value;
+  const previousScreen = screen;
+  const screenChanged = previousScreen !== value;
+
+  if (screenChanged) {
+    // 離脱直前のスクロール位置を保存
+    savedScrollPositions.set(previousScreen, getScrollY());
+    console.info('[scroll] saved', previousScreen, '=', savedScrollPositions.get(previousScreen));
+  }
 
   // URLハッシュの変更によるループを防ぐ
   if (window.location.hash !== `#/${value}`) {
-    // この hash 代入で発火する popstate / hashchange は「戻る/進む」ではないため
-    // 後続の handlePopState で無視できるようフラグを立てる
-    isProgrammaticHashChange = true;
     window.location.hash = `#/${value}`;
-    // popstate / hashchange はマイクロタスクではなくタスクキューで非同期に発火するため
-    // setTimeout で確実にイベント処理後にフラグを解除する
-    window.setTimeout(() => {
-      isProgrammaticHashChange = false;
-    }, 0);
   }
   screen = value;
 
   if (screenChanged) {
-    void scrollToTopAfterRender();
+    applyScrollForScreen(value);
   }
 }
 
@@ -116,12 +103,10 @@ if (typeof window !== 'undefined') {
 $effect(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('hashchange', handleHashChange);
-    window.addEventListener('popstate', handlePopState);
 
     // コンポーネント破棄時にイベントリスナーを削除
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
-      window.removeEventListener('popstate', handlePopState);
     };
   }
 });
