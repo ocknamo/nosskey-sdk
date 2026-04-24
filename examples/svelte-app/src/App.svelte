@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
@@ -11,13 +11,15 @@ import { type ThemeMode, currentScreen, currentTheme, isScreenName } from './sto
 let screen = $state('account');
 
 // URLのハッシュからページを初期化
+// screen の更新は updateHash に集約するため、ここでは直接代入せず
+// currentScreen.set 経由でストア → updateHash に流す。
 function initializeFromHash() {
   const hash = window.location.hash.substring(1);
   const name = hash.startsWith('/') ? hash.substring(1) : hash;
-  screen = name || 'account';
+  const newScreen = name || 'account';
 
-  if (isScreenName(screen)) {
-    currentScreen.set(screen);
+  if (isScreenName(newScreen)) {
+    currentScreen.set(newScreen);
   }
 }
 
@@ -26,13 +28,56 @@ function handleHashChange() {
   initializeFromHash();
 }
 
+// 画面遷移時のスクロール位置管理
+// 画面ごとにスクロール位置を Map に保存し、戻ってきたときに復元する。
+// （popstate 検出はブラウザ差異が大きいため使わない）
+const savedScrollPositions = new Map<string, number>();
+
+function getScrollY(): number {
+  return (
+    window.scrollY ||
+    document.scrollingElement?.scrollTop ||
+    document.documentElement.scrollTop ||
+    document.body.scrollTop ||
+    0
+  );
+}
+
+function setScrollY(y: number) {
+  window.scrollTo(0, y);
+  if (document.scrollingElement) {
+    document.scrollingElement.scrollTop = y;
+  }
+  document.documentElement.scrollTop = y;
+  document.body.scrollTop = y;
+}
+
+async function applyScrollForScreen(target: string) {
+  if (typeof window === 'undefined') return;
+  // Svelte の DOM 更新が反映されてからスクロール位置を適用
+  await tick();
+  setScrollY(savedScrollPositions.get(target) ?? 0);
+}
+
 // ストアの値が変更されたときにURLハッシュを更新
 function updateHash(value: string) {
+  const previousScreen = screen;
+  const screenChanged = previousScreen !== value;
+
+  if (screenChanged) {
+    // 離脱直前のスクロール位置を保存
+    savedScrollPositions.set(previousScreen, getScrollY());
+  }
+
   // URLハッシュの変更によるループを防ぐ
   if (window.location.hash !== `#/${value}`) {
     window.location.hash = `#/${value}`;
   }
   screen = value;
+
+  if (screenChanged) {
+    void applyScrollForScreen(value);
+  }
 }
 
 // subscribe の初回同期コールバックで URL ハッシュが上書きされないよう、
@@ -241,6 +286,12 @@ function applyTheme(theme: ThemeMode) {
 
 // アプリの初期化
 onMount(() => {
+  // スクロール位置は updateHash 内で画面ごとに管理するため、
+  // ブラウザの自動スクロール復元は無効化する。
+  if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual';
+  }
+
   // 初期テーマの適用
   applyTheme($currentTheme);
 
