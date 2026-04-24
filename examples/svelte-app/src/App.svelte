@@ -28,8 +28,16 @@ function handleHashChange() {
 }
 
 // ブラウザの戻る/進む操作の直後はスクロール位置を維持する
+// ブラウザによっては location.hash 代入時にも popstate が飛ぶため、
+// プログラム由来の hash 変更中はフラグを立てて popstate を無視する。
 let skipNextScrollReset = false;
+let isProgrammaticHashChange = false;
 function handlePopState() {
+  if (isProgrammaticHashChange) {
+    console.info('[scroll] popstate ignored (programmatic hash change)');
+    return;
+  }
+  console.info('[scroll] popstate detected (browser back/forward)');
   skipNextScrollReset = true;
   // hashchange → updateHash の順で flag は消費される想定だが、
   // 万一消費されなくても次の遷移に漏れないようフレーム後にリセットする
@@ -81,7 +89,15 @@ function updateHash(value: string) {
 
   // URLハッシュの変更によるループを防ぐ
   if (window.location.hash !== `#/${value}`) {
+    // この hash 代入で発火する popstate / hashchange は「戻る/進む」ではないため
+    // 後続の handlePopState で無視できるようフラグを立てる
+    isProgrammaticHashChange = true;
     window.location.hash = `#/${value}`;
+    // popstate / hashchange はマイクロタスクではなくタスクキューで非同期に発火するため
+    // setTimeout で確実にイベント処理後にフラグを解除する
+    window.setTimeout(() => {
+      isProgrammaticHashChange = false;
+    }, 0);
   }
   screen = value;
 
