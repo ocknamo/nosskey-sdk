@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, tick } from 'svelte';
+import { onMount } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
@@ -51,21 +51,27 @@ function forceScrollTop() {
   document.body.scrollTop = 0;
 }
 
-async function scrollToTopAfterRender() {
+function scrollToTopAfterRender() {
   if (typeof window === 'undefined') return;
   if (skipNextScrollReset) {
     skipNextScrollReset = false;
+    console.info('[scroll] skipped (popstate)');
     return;
   }
-  // 同期的に一度リセット
-  forceScrollTop();
-  // Svelte の state 更新後にもう一度リセット
-  await tick();
-  forceScrollTop();
-  // 次のペイント後、ブラウザ自動復元や後続レイアウトに対して最後のリセット
-  window.requestAnimationFrame(() => {
+  // 10ms 待ってから（DOM 更新・レイアウト確定後に）スクロールリセット
+  window.setTimeout(() => {
+    const scrollingTargets = [...document.querySelectorAll('*')]
+      .filter((el) => el.scrollTop > 0)
+      .map((el) => `${el.tagName}#${el.id || ''}.${el.className || ''}=${el.scrollTop}`);
+    console.info(
+      '[scroll] reset after 10ms. window.scrollY=',
+      window.scrollY,
+      'targets=',
+      scrollingTargets
+    );
     forceScrollTop();
-  });
+    console.info('[scroll] after reset. window.scrollY=', window.scrollY);
+  }, 10);
 }
 
 // ストアの値が変更されたときにURLハッシュを更新
