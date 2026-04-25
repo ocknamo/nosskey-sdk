@@ -29,15 +29,17 @@ onMount(async () => {
 });
 </script>
 
-<CardSection title={$i18n.t.appWarning.title}>
-  <ul>
-    <li>{$i18n.t.appWarning.demoDescription}</li>
-    <li>{$i18n.t.appWarning.prfCompatibility}</li>
-    <li>{$i18n.t.appWarning.domainChange}</li>
-  </ul>
-</CardSection>
-
 <div class="account-screen">
+  <h1 class="screen-title">{$i18n.t.navigation.account}</h1>
+
+  <CardSection title={$i18n.t.appWarning.title}>
+    <ul>
+      <li>{$i18n.t.appWarning.demoDescription}</li>
+      <li>{$i18n.t.appWarning.prfCompatibility}</li>
+      <li>{$i18n.t.appWarning.domainChange}</li>
+    </ul>
+  </CardSection>
+
   {#if !login}
     <AuthScreen />
   {:else}
@@ -53,6 +55,13 @@ onMount(async () => {
     margin: 0 auto;
     padding: 20px;
     padding-bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  h1 {
+    margin: 0;
   }
 
   .account-info {
