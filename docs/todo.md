@@ -13,7 +13,7 @@
 ### iframe機能拡充（詳細: `docs/iframe-expansion-plan.md`）
 
 #### Phase 1: NIP-07 完全対応
-- [ ] `getRelays()` の追加 — リレー設定の取得・保存 (SDK + iframe + Svelte UI)
+- [x] `getRelays()` の追加 — リレー設定の取得 (iframe `onGetRelays` コールバック + Svelte UI、SDK 非変更方針)
 - [ ] `nip44.encrypt / decrypt` の追加 — NIP-44 暗号化/復号 (SDK + iframe + 同意ダイアログ)
 - [ ] `nip04.encrypt / decrypt` の追加 — NIP-04 暗号化/復号 (SDK + iframe + 同意ダイアログ)
 
