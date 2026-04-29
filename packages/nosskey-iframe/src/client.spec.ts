@@ -188,6 +188,37 @@ describe('NosskeyIframeClient', () => {
     client.destroy();
   });
 
+  it('getRelays() posts a request and resolves with the relay map', async () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/iframe',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+    const iframe = harness.iframes[0];
+    const relays = {
+      'wss://relay.example': { read: true, write: true },
+      'wss://relay.read.example': { read: true, write: false },
+    };
+
+    const pending = client.getRelays();
+    expect(iframe.contentWindow.postMessage).toHaveBeenCalledOnce();
+    const [request, targetOrigin] = iframe.contentWindow.postMessage.mock.calls[0];
+    expect(targetOrigin).toBe('https://nosskey.example');
+    expect(request).toMatchObject({
+      type: 'nosskey:request',
+      method: 'getRelays',
+    });
+
+    harness.dispatchAsIframe({
+      type: 'nosskey:response',
+      id: (request as { id: string }).id,
+      result: relays,
+    });
+    await expect(pending).resolves.toEqual(relays);
+    client.destroy();
+  });
+
   it('signEvent() posts the event and resolves with the signed event', async () => {
     const client = new NosskeyIframeClient({
       iframeUrl: 'https://nosskey.example/iframe',

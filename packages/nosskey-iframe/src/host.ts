@@ -12,6 +12,7 @@ import {
   type NosskeyRequest,
   type NosskeyResponse,
   type NosskeyVisibility,
+  type RelayMap,
   isNosskeyRequest,
 } from './protocol.js';
 
@@ -39,6 +40,11 @@ export interface NosskeyIframeHostOptions {
   requireUserConsent?: boolean;
   /** Called to obtain user consent. Required when `requireUserConsent` is true. */
   onConsent?: (request: ConsentRequest) => Promise<boolean>;
+  /**
+   * Resolves the relay map returned by NIP-07 `getRelays()`. Read-only and
+   * never prompts the user. Omit to return an empty map.
+   */
+  onGetRelays?: () => Promise<RelayMap>;
   /** Override the window used to install the message listener. Defaults to globalThis.window. */
   window?: Window;
 }
@@ -48,6 +54,7 @@ interface ResolvedOptions {
   allowedOrigins: string[] | '*';
   requireUserConsent: boolean;
   onConsent?: (request: ConsentRequest) => Promise<boolean>;
+  onGetRelays?: () => Promise<RelayMap>;
   window: Window;
 }
 
@@ -61,6 +68,7 @@ function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
     allowedOrigins: options.allowedOrigins ?? '*',
     requireUserConsent: options.requireUserConsent ?? true,
     onConsent: options.onConsent,
+    onGetRelays: options.onGetRelays,
     window: win,
   };
 }
@@ -167,6 +175,11 @@ export class NosskeyIframeHost {
           throw new HostError('NO_KEY', 'No key is configured in the iframe.');
         }
         return manager.getPublicKey();
+      }
+      case 'getRelays': {
+        const { onGetRelays } = this.#options;
+        if (!onGetRelays) return {} satisfies RelayMap;
+        return onGetRelays();
       }
       case 'signEvent': {
         const event = request.params?.event;

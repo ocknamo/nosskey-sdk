@@ -155,6 +155,17 @@ export interface TranslationData {
       auto: string;
       changed: string;
     };
+    relays: {
+      title: string;
+      description: string;
+      addPlaceholder: string;
+      addButton: string;
+      readLabel: string;
+      writeLabel: string;
+      removeButton: string;
+      invalidUrl: string;
+      empty: string;
+    };
   };
   navigation: {
     account: string;
@@ -332,6 +343,18 @@ export const ja: TranslationData = {
       dark: 'ダークモード',
       auto: 'システム設定に従う',
       changed: 'テーマを変更しました',
+    },
+    relays: {
+      title: 'リレー設定',
+      description:
+        '親アプリから getRelays() で参照されるリレー一覧です。Nosskey 自身はリレーへ送信しません。',
+      addPlaceholder: 'wss://relay.example',
+      addButton: '追加',
+      readLabel: '読み取り',
+      writeLabel: '書き込み',
+      removeButton: '削除',
+      invalidUrl: 'wss:// または ws:// で始まる URL を入力してください。',
+      empty: 'リレーが登録されていません。',
     },
     exportKeyInfo: {
       title: '鍵情報のエクスポート',
@@ -528,6 +551,18 @@ export const en: TranslationData = {
       dark: 'Dark Mode',
       auto: 'Follow System Setting',
       changed: 'Theme changed',
+    },
+    relays: {
+      title: 'Relay Settings',
+      description:
+        'Relays returned to parent apps via getRelays(). Nosskey itself does not publish to relays.',
+      addPlaceholder: 'wss://relay.example',
+      addButton: 'Add',
+      readLabel: 'Read',
+      writeLabel: 'Write',
+      removeButton: 'Remove',
+      invalidUrl: 'Please enter a URL starting with wss:// or ws://.',
+      empty: 'No relays configured.',
     },
     exportKeyInfo: {
       title: 'Export KeyInfo',

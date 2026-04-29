@@ -23,4 +23,5 @@ export type {
   NosskeyRequestParams,
   NosskeyResponse,
   NosskeyVisibility,
+  RelayMap,
 } from './protocol.js';

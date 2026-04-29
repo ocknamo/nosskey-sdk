@@ -8,6 +8,7 @@ import type { NostrEvent } from 'nosskey-sdk';
 import {
   type NosskeyRequest,
   type NosskeyResponse,
+  type RelayMap,
   isNosskeyReady,
   isNosskeyResponse,
   isNosskeyVisibility,
@@ -136,6 +137,15 @@ export class NosskeyIframeClient {
       throw new Error('getPublicKey: expected string result from iframe.');
     }
     return result;
+  }
+
+  /** Send a `getRelays` request and await the relay map. */
+  async getRelays(): Promise<RelayMap> {
+    const result = await this.#request({ method: 'getRelays' });
+    if (!result || typeof result !== 'object') {
+      throw new Error('getRelays: expected object result from iframe.');
+    }
+    return result as RelayMap;
   }
 
   /** Send a `signEvent` request and await the signed event. */

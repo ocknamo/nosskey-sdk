@@ -9,7 +9,12 @@
 import type { NostrEvent } from 'nosskey-sdk';
 
 /** Supported NIP-07 methods the iframe provider can execute. */
-export type NosskeyMethod = 'getPublicKey' | 'signEvent';
+export type NosskeyMethod = 'getPublicKey' | 'signEvent' | 'getRelays';
+
+/**
+ * NIP-07 `getRelays()` return shape: a map of relay URL to read/write flags.
+ */
+export type RelayMap = Record<string, { read: boolean; write: boolean }>;
 
 /** Error codes returned in a {@link NosskeyResponse}. */
 export type NosskeyErrorCode =
@@ -77,7 +82,7 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
 }
 
 function isSupportedMethod(x: unknown): x is NosskeyMethod {
-  return x === 'getPublicKey' || x === 'signEvent';
+  return x === 'getPublicKey' || x === 'signEvent' || x === 'getRelays';
 }
 
 function isErrorCode(x: unknown): x is NosskeyErrorCode {

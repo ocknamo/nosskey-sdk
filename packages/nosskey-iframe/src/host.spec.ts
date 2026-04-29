@@ -157,6 +157,54 @@ describe('NosskeyIframeHost', () => {
     host.stop();
   });
 
+  it('routes getRelays via the onGetRelays callback', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const relays = {
+      'wss://relay.example': { read: true, write: true },
+      'wss://relay.read.example': { read: true, write: false },
+    };
+    const onGetRelays = vi.fn(async () => relays);
+    const host = new NosskeyIframeHost({
+      manager: makeManager(),
+      allowedOrigins: ['https://parent.example'],
+      onGetRelays,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'rg1', method: 'getRelays' },
+      'https://parent.example'
+    );
+
+    expect(onGetRelays).toHaveBeenCalledOnce();
+    expect(win.sent).toHaveLength(1);
+    const msg = win.sent[0];
+    expect(isNosskeyResponse(msg.data)).toBe(true);
+    expect((msg.data as { result: unknown }).result).toEqual(relays);
+    expect(msg.targetOrigin).toBe('https://parent.example');
+    host.stop();
+  });
+
+  it('returns an empty map for getRelays when onGetRelays is not provided', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const host = new NosskeyIframeHost({
+      manager: makeManager(),
+      allowedOrigins: ['https://parent.example'],
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'rg2', method: 'getRelays' },
+      'https://parent.example'
+    );
+
+    expect(win.sent).toHaveLength(1);
+    expect((win.sent[0].data as { result: unknown }).result).toEqual({});
+    host.stop();
+  });
+
   it('routes signEvent after onConsent resolves true', async () => {
     const win = createFakeWindow() as DispatchableWindow;
     const input: NostrEvent = { kind: 1, content: 'hi' };
