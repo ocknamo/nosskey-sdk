@@ -4,6 +4,7 @@ import type { NostrEvent } from 'nosskey-sdk';
 interface NostrProvider {
   getPublicKey(): Promise<string>;
   signEvent(event: NostrEvent): Promise<NostrEvent>;
+  getRelays(): Promise<Record<string, { read: boolean; write: boolean }>>;
 }
 
 declare global {
@@ -79,7 +80,15 @@ app.innerHTML = `
   </section>
 
   <section>
-    <h2>3. Sign &amp; publish kind:1 note</h2>
+    <h2>3. Get relays</h2>
+    <div class="row">
+      <button id="get-relays" disabled>Call window.nostr.getRelays()</button>
+    </div>
+    <pre id="relays-output">No relays fetched yet.</pre>
+  </section>
+
+  <section>
+    <h2>4. Sign &amp; publish kind:1 note</h2>
     <label for="note">Note content</label>
     <textarea id="note">${DEFAULT_NOTE}</textarea>
     <label for="relay-url" style="margin-top:12px;">Relay URL</label>
@@ -110,6 +119,8 @@ const ui = {
   connect: requireEl<HTMLButtonElement>('#connect'),
   disconnect: requireEl<HTMLButtonElement>('#disconnect'),
   getPubkey: requireEl<HTMLButtonElement>('#get-pubkey'),
+  getRelays: requireEl<HTMLButtonElement>('#get-relays'),
+  relaysOutput: requireEl<HTMLPreElement>('#relays-output'),
   signPublish: requireEl<HTMLButtonElement>('#sign-publish'),
   status: requireEl<HTMLSpanElement>('#status'),
   log: requireEl<HTMLPreElement>('#log'),
@@ -133,6 +144,7 @@ function setConnectedUI(connected: boolean): void {
   ui.iframeUrl.disabled = connected;
   ui.disconnect.disabled = !connected;
   ui.getPubkey.disabled = !connected;
+  ui.getRelays.disabled = !connected;
   ui.signPublish.disabled = !connected;
 }
 
@@ -163,6 +175,7 @@ async function connect(): Promise<void> {
     window.nostr = {
       getPublicKey: () => next.getPublicKey(),
       signEvent: (event) => next.signEvent(event),
+      getRelays: () => next.getRelays(),
     };
     setConnectedUI(true);
     setStatus('connected', 'ok');
@@ -205,6 +218,22 @@ async function getPubkey(): Promise<void> {
           'tab, create a passkey, and try again.'
       );
     }
+  }
+}
+
+async function getRelays(): Promise<void> {
+  if (!window.nostr) return;
+  log('Requesting window.nostr.getRelays()…');
+  try {
+    const relays = await window.nostr.getRelays();
+    const count = Object.keys(relays).length;
+    const formatted = count === 0 ? '{}' : JSON.stringify(relays, null, 2);
+    ui.relaysOutput.textContent = formatted;
+    log(`getRelays: ${count} relay(s) returned`);
+  } catch (err) {
+    const message = formatError(err);
+    log(`getRelays failed: ${message}`);
+    ui.relaysOutput.textContent = `Error: ${message}`;
   }
 }
 
@@ -304,6 +333,9 @@ ui.connect.addEventListener('click', () => {
 ui.disconnect.addEventListener('click', disconnect);
 ui.getPubkey.addEventListener('click', () => {
   void getPubkey();
+});
+ui.getRelays.addEventListener('click', () => {
+  void getRelays();
 });
 ui.signPublish.addEventListener('click', () => {
   void signAndPublish();

@@ -104,7 +104,8 @@ button.secondary {
   color: inherit;
 }
 
-#log {
+#log,
+#relays-output {
   margin: 0;
   padding: 12px;
   background: #0b0d10;
@@ -116,6 +117,10 @@ button.secondary {
   word-break: break-word;
   font-size: 0.82rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+#relays-output {
+  margin-top: 12px;
 }
 
 .status {
