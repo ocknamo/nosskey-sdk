@@ -2,6 +2,7 @@ import type { ConsentRequest, NosskeyIframeHostOptions } from 'nosskey-iframe';
 import { NosskeyIframeHost } from 'nosskey-iframe';
 import { writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
+import { loadRelays } from './services/relays-store.js';
 
 export interface PendingConsent extends ConsentRequest {
   resolve: (approved: boolean) => void;
@@ -41,6 +42,7 @@ export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {
     allowedOrigins: '*',
     requireUserConsent: true,
     onConsent,
+    onGetRelays: async () => loadRelays(),
     ...overrides,
   });
   host.start();

@@ -19,7 +19,7 @@
 | `signEvent(event)` | ✅ 実装済み（同意ダイアログあり） |
 | `nosskey:visibility` | ✅ 実装済み（Storage Access API 対応） |
 | `nosskey:ready` | ✅ 実装済み |
-| `getRelays()` | ❌ 未実装 |
+| `getRelays()` | ✅ 実装済み（同意不要・iframe アプリで保管） |
 | `nip44.encrypt / decrypt` | ❌ 未実装 |
 | `nip04.encrypt / decrypt` | ❌ 未実装 |
 | オリジン別の許可記憶 | ❌ 未実装 |
@@ -53,7 +53,7 @@
 
 **目的**: 主要 Nostr クライアント（Snort, Iris, Nostrium 等）が要求する全 NIP-07 メソッドを揃える。
 
-### 1-A: `getRelays()` の追加
+### 1-A: `getRelays()` の追加（✅ 実装済み）
 
 **概要**: ユーザーの優先リレーリストを返す。ユーザー同意不要の読み取り専用操作。
 
@@ -62,20 +62,23 @@
 type RelayMap = Record<string, { read: boolean; write: boolean }>;
 ```
 
+**設計方針**: SDK には実装しない。リレー設定は「アプリのユーザー設定」であり SDK の責務外（`docs/todo.md` でも「リレーへのパブリッシュは SDK 責務外」と明記）。`onConsent` と同パターンで `NosskeyIframeHost` に `onGetRelays` コールバックを追加し、iframe を提供するアプリ側（svelte-app）が localStorage で保管する。書き込み（`setRelays`）はプロトコルに載せず、iframe 内アプリの UI が直接 localStorage を編集する（NIP-07 標準にも `setRelays` は無い）。
+
 **変更ファイル:**
 
 | ファイル | 変更内容 |
 |----------|---------|
-| `packages/nosskey-sdk/src/types.ts` | `NosskeyManagerLike` に `getRelays(): Promise<RelayMap>` / `setRelays(relays: RelayMap): void` 追加 |
-| `packages/nosskey-sdk/src/nosskey.ts` | `getRelays()` / `setRelays()` 実装。localStorage に `nosskey_relays` キーで JSON 保存 |
-| `packages/nosskey-iframe/src/protocol.ts` | `NosskeyMethod` に `'getRelays'` 追加 |
-| `packages/nosskey-iframe/src/host.ts` | `#dispatch()` に `getRelays` ケース追加 |
+| `packages/nosskey-iframe/src/protocol.ts` | `NosskeyMethod` に `'getRelays'` 追加、`isSupportedMethod` 更新 |
+| `packages/nosskey-iframe/src/host.ts` | `NosskeyIframeHostOptions` に `onGetRelays` コールバック追加。`#dispatch()` に `getRelays` ケース追加（同意不要、未指定時は `{}` を返す） |
 | `packages/nosskey-iframe/src/client.ts` | `getRelays(): Promise<RelayMap>` 追加 |
-| `examples/svelte-app/src/screens/SettingsScreen.svelte` | リレー設定 UI（追加・削除・read/write フラグ切り替え）を追加 |
+| `examples/svelte-app/src/services/relays-store.ts` | localStorage の load/save ヘルパー（新規） |
+| `examples/svelte-app/src/iframe-mode.ts` | Host 生成時に `onGetRelays: async () => loadRelays()` を渡す |
+| `examples/svelte-app/src/components/settings/RelaySettings.svelte` | リレー設定 UI（追加・削除・read/write フラグ切り替え、新規） |
+| `examples/svelte-app/src/components/screens/SettingsScreen.svelte` | `<RelaySettings />` 挿入 |
+| `examples/svelte-app/src/i18n/translations.ts` | `settings.relays.*` 翻訳追加 |
 
 **テスト追加:**
-- `packages/nosskey-sdk/src/nosskey.spec.ts` — `getRelays` / `setRelays` の正常系・空リスト
-- `packages/nosskey-iframe/src/host.spec.ts` — `getRelays` リクエスト処理
+- `packages/nosskey-iframe/src/host.spec.ts` — `getRelays` リクエストが `onGetRelays` を呼ぶこと、未指定時に `{}` を返すこと
 - `packages/nosskey-iframe/src/client.spec.ts` — `getRelays` レスポンス受信
 
 ---
