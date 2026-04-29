@@ -37,12 +37,16 @@ export function isEmbeddedIframeMode(): boolean {
 }
 
 export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {}): () => void {
+  const manager = getNosskeyManager();
   const host = new NosskeyIframeHost({
-    manager: getNosskeyManager(),
+    manager,
     allowedOrigins: '*',
     requireUserConsent: true,
     onConsent,
-    onGetRelays: async () => loadRelays(),
+    // Read through the SDK's storage handle so we hit first-party storage
+    // when the user has granted access (Chromium keeps window.localStorage
+    // partitioned even after the grant — only the handle points at it).
+    onGetRelays: async () => loadRelays(manager.getStorageOptions().storage),
     ...overrides,
   });
   host.start();
