@@ -25,7 +25,6 @@ vi.mock('@rx-nostr/crypto', () => {
 describe('NosskeyManager', () => {
   // WebAuthn APIのモック
   const mockPrfResultValue = 42;
-  const mockPrfResult = new Uint8Array(32).fill(mockPrfResultValue).buffer;
   const mockCredentialId = new Uint8Array(16).fill(1);
   let originalCrypto: typeof globalThis.crypto;
   let originalCredentials: typeof globalThis.navigator.credentials;
@@ -35,7 +34,11 @@ describe('NosskeyManager', () => {
     originalCrypto = globalThis.crypto;
     originalCredentials = globalThis.navigator.credentials;
 
-    // PRF出力を含むモックの応答
+    // PRF出力を含むモックの応答。getClientExtensionResults() は呼び出しごとに
+    // 新しい ArrayBuffer を返す。NosskeyManager は秘密鍵をエフェメラルに使い
+    // 終わったあと .fill(0) で消去するので、共有バッファを使うとそれが次の
+    // 呼び出しに伝播する（ゼロ鍵 → ECDH エラー）。実機ブラウザでは PRF も
+    // 毎回フレッシュなので、フレッシュ生成の方が現実に近い挙動でもある。
     const mockCredential = {
       id: 'mock-credential-id',
       rawId: mockCredentialId.buffer,
@@ -43,7 +46,7 @@ describe('NosskeyManager', () => {
       getClientExtensionResults: vi.fn(() => ({
         prf: {
           results: {
-            first: mockPrfResult,
+            first: new Uint8Array(32).fill(mockPrfResultValue).buffer,
           },
         },
       })),
@@ -942,16 +945,10 @@ describe('NosskeyManager', () => {
     beforeEach(async () => {
       const { schnorr } = await import('@noble/curves/secp256k1.js');
       peerPubHex = bytesToHex(schnorr.getPublicKey(peerSecret));
-      // Earlier signing tests zero out the shared mockPrfResult buffer when
-      // they call #clearKey(). Refill it before each crypto roundtrip test
-      // so the PRF still returns a valid 32-byte scalar.
-      new Uint8Array(mockPrfResult).fill(mockPrfResultValue);
     });
 
     it('nip44Encrypt / nip44Decrypt のラウンドトリップ', async () => {
-      // Enable the key cache so the PRF mock buffer is fetched once and
-      // not zero-ed between encrypt and decrypt.
-      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      const nosskey = new NosskeyManager();
       nosskey.setCurrentKeyInfo({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
@@ -971,7 +968,7 @@ describe('NosskeyManager', () => {
     });
 
     it('nip04Encrypt / nip04Decrypt のラウンドトリップ', async () => {
-      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      const nosskey = new NosskeyManager();
       nosskey.setCurrentKeyInfo({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
