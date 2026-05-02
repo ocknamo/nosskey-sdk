@@ -1,4 +1,5 @@
 <script lang="ts">
+import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
 import Button from './ui/button/Button.svelte';
@@ -17,7 +18,10 @@ function shortenPubkey(value: string): string {
   return `${value.slice(0, PUBKEY_HEAD)}…${value.slice(-PUBKEY_TAIL)}`;
 }
 
-function methodLabel(method: string, labels: typeof $i18n.t.consent.methodLabel): string {
+function methodLabel(
+  method: NosskeyMethod,
+  labels: typeof $i18n.t.consent.methodLabel
+): string {
   switch (method) {
     case 'signEvent':
       return labels.signEvent;
@@ -34,17 +38,17 @@ function methodLabel(method: string, labels: typeof $i18n.t.consent.methodLabel)
   }
 }
 
-function dialogTitle(method: string, t: typeof $i18n.t.consent): string {
+function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
   if (method === 'signEvent') return t.title;
-  if (method.endsWith('_decrypt')) return t.titleDecrypt;
+  if (isDecryptMethod(method)) return t.titleDecrypt;
   return t.titleEncrypt;
 }
 </script>
 
 {#if $pendingConsent}
   {@const c = $pendingConsent}
-  {@const isEncrypt = c.method === 'nip44_encrypt' || c.method === 'nip04_encrypt'}
-  {@const isDecrypt = c.method === 'nip44_decrypt' || c.method === 'nip04_decrypt'}
+  {@const isEncrypt = isEncryptMethod(c.method)}
+  {@const isDecrypt = isDecryptMethod(c.method)}
   <div class="consent-backdrop" role="dialog" aria-modal="true" aria-labelledby="consent-title">
     <div class="consent-card">
       <h2 id="consent-title">{dialogTitle(c.method, $i18n.t.consent)}</h2>

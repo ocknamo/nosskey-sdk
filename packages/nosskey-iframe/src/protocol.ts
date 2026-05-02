@@ -27,6 +27,16 @@ export const CONSENT_REQUIRED_METHODS: readonly NosskeyMethod[] = [
   'nip04_decrypt',
 ] as const;
 
+/** True for `nip44_encrypt` / `nip04_encrypt`. */
+export function isEncryptMethod(method: NosskeyMethod): boolean {
+  return method === 'nip44_encrypt' || method === 'nip04_encrypt';
+}
+
+/** True for `nip44_decrypt` / `nip04_decrypt`. */
+export function isDecryptMethod(method: NosskeyMethod): boolean {
+  return method === 'nip44_decrypt' || method === 'nip04_decrypt';
+}
+
 /**
  * NIP-07 `getRelays()` return shape: a map of relay URL to read/write flags.
  */
