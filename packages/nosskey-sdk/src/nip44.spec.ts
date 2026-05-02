@@ -109,9 +109,15 @@ describe('NIP-44 v2: invalid plaintext lengths reject', () => {
   const pubHex = pubkeyHexFromSecret(
     '0000000000000000000000000000000000000000000000000000000000000002'
   );
+  // The vectors include lengths up to 10_000_000; nip44Encrypt rejects
+  // anything > 65535 bytes the moment it inspects utf8.length, so we don't
+  // need to actually allocate a 10 MB string per test. Cap allocation at
+  // MAX+1 (= 65536) for any oversized length.
+  const MAX = 65535;
   for (const len of v2.invalid.encrypt_msg_lengths) {
     it(`length ${len} throws`, () => {
-      const plaintext = len === 0 ? '' : 'a'.repeat(len);
+      const allocLen = len === 0 ? 0 : Math.min(len, MAX + 1);
+      const plaintext = 'a'.repeat(allocLen);
       expect(() => nip44Encrypt(plaintext, sec, pubHex)).toThrow();
     });
   }
