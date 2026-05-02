@@ -9,29 +9,12 @@
  * @packageDocumentation
  */
 import { cbc } from '@noble/ciphers/aes.js';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
-import { hexToBytes } from './utils.js';
+import { ecdhSharedX } from './secp-utils.js';
 
 const IV_LEN = 16;
 
-function liftXOnly(pubkeyHex: string): Uint8Array {
-  if (pubkeyHex.length !== 64) {
-    throw new Error('NIP-04: peer public key must be 32 bytes (64 hex chars).');
-  }
-  const x = hexToBytes(pubkeyHex);
-  const compressed = new Uint8Array(33);
-  compressed[0] = 0x02;
-  compressed.set(x, 1);
-  return compressed;
-}
-
 function getSharedX(secretKey: Uint8Array, peerPubkeyHex: string): Uint8Array {
-  if (secretKey.length !== 32) {
-    throw new Error('NIP-04: secret key must be 32 bytes.');
-  }
-  const peer = liftXOnly(peerPubkeyHex);
-  const point = secp256k1.getSharedSecret(secretKey, peer, true);
-  return point.slice(1, 33);
+  return ecdhSharedX(secretKey, peerPubkeyHex, 'NIP-04');
 }
 
 function base64Encode(bytes: Uint8Array): string {

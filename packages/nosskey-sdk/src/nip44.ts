@@ -6,11 +6,11 @@
  * @packageDocumentation
  */
 import { chacha20 } from '@noble/ciphers/chacha.js';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { expand as hkdfExpand, extract as hkdfExtract } from '@noble/hashes/hkdf.js';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, hexToBytes } from './utils.js';
+import { ecdhSharedX } from './secp-utils.js';
+import { bytesToHex } from './utils.js';
 
 const VERSION = 0x02;
 const MIN_PLAINTEXT_LEN = 1;
@@ -33,21 +33,6 @@ interface MessageKeys {
 }
 
 /**
- * Decode a 32-byte (x-only) Nostr public key into the 33-byte compressed form
- * accepted by `secp256k1.getSharedSecret`. NIP-44 fixes the parity to even (0x02).
- */
-function liftXOnly(pubkeyHex: string): Uint8Array {
-  if (pubkeyHex.length !== 64) {
-    throw new Error('NIP-44: peer public key must be 32 bytes (64 hex chars).');
-  }
-  const x = hexToBytes(pubkeyHex);
-  const compressed = new Uint8Array(33);
-  compressed[0] = 0x02;
-  compressed.set(x, 1);
-  return compressed;
-}
-
-/**
  * Compute the conversation key shared between two NIP-44 peers.
  *
  * @internal Intentionally not re-exported from the SDK barrel: the conversation
@@ -56,13 +41,7 @@ function liftXOnly(pubkeyHex: string): Uint8Array {
  * {@link nip44Encrypt} / {@link nip44Decrypt} instead.
  */
 function getConversationKey(secretKey: Uint8Array, peerPubkeyHex: string): Uint8Array {
-  if (secretKey.length !== 32) {
-    throw new Error('NIP-44: secret key must be 32 bytes.');
-  }
-  const peerPub = liftXOnly(peerPubkeyHex);
-  const shared = secp256k1.getSharedSecret(secretKey, peerPub, true);
-  // Drop the leading byte (0x02 / 0x03) — only the x coordinate participates in the KDF.
-  const sharedX = shared.subarray(1, 33);
+  const sharedX = ecdhSharedX(secretKey, peerPubkeyHex, 'NIP-44');
   return hkdfExtract(sha256, sharedX, SALT);
 }
 
