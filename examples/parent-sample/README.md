@@ -68,6 +68,26 @@ To test cross-account interop, paste a peer pubkey from another Nostr
 client into the peer field, encrypt, send the ciphertext over any channel
 to that other client, and have it decrypt — and vice versa.
 
+### Sending a real DM to another user
+
+Section **6. NIP-04 encrypt / decrypt** has a **Send DM (kind:4 → relay)**
+button that combines the steps above into one flow:
+
+1. Paste the recipient's hex pubkey into the section-6 peer field.
+2. Type the plaintext.
+3. Make sure the Relay URL in section 4 points to a relay both you and
+   the recipient use (default `wss://relay.damus.io`).
+4. Click **Send DM**. The host page pops two consent dialogs in order —
+   one for encryption, one for the kind:4 event signature. Approve both.
+5. The relay's `OK` / `NOTICE` ack appears in the log.
+6. The recipient's Nostr client should receive a kind:4 event with
+   `tags: [["p", your_pubkey]]` and decrypt it with their own NIP-04
+   implementation.
+
+> NIP-04 is the legacy DM kind. NIP-17 (sealed DM via NIP-44 + gift-wrap)
+> is the modern recommendation but requires SDK-side gift-wrap support;
+> see `docs/todo.md` for the planned work.
+
 ## Browser support
 
 - **Chrome 118+** — fully supported (WebAuthn PRF + iframe).

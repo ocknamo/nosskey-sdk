@@ -153,6 +153,15 @@ app.innerHTML = `
     <textarea id="nip04-ciphertext" placeholder="paste a NIP-04 payload here, or click Encrypt above"></textarea>
     <label for="nip04-decrypted" style="margin-top:12px;">Decrypted output</label>
     <pre id="nip04-decrypted">No decryption attempted yet.</pre>
+    <p class="hint">
+      <strong>Send DM</strong> below encrypts the plaintext to the peer
+      pubkey, builds a kind:4 event with a <code>p</code> tag, signs it
+      through the iframe (consent dialog appears twice — once for encrypt,
+      once for sign), and publishes to the Relay URL from section 4.
+    </p>
+    <div class="row">
+      <button id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
+    </div>
   </section>
 
   <section>
@@ -193,6 +202,7 @@ const ui = {
   nip04Decrypt: requireEl<HTMLButtonElement>('#nip04-decrypt'),
   nip04Ciphertext: requireEl<HTMLTextAreaElement>('#nip04-ciphertext'),
   nip04Decrypted: requireEl<HTMLPreElement>('#nip04-decrypted'),
+  nip04SendDm: requireEl<HTMLButtonElement>('#nip04-send-dm'),
   status: requireEl<HTMLSpanElement>('#status'),
   log: requireEl<HTMLPreElement>('#log'),
 };
@@ -223,6 +233,7 @@ function setConnectedUI(connected: boolean): void {
   ui.nip04UseSelf.disabled = !connected;
   ui.nip04Encrypt.disabled = !connected;
   ui.nip04Decrypt.disabled = !connected;
+  ui.nip04SendDm.disabled = !connected;
 }
 
 function formatError(err: unknown): string {
@@ -499,6 +510,56 @@ async function nip04Decrypt(): Promise<void> {
   }
 }
 
+async function nip04SendDm(): Promise<void> {
+  if (!window.nostr) return;
+  const peer = ui.nip04Peer.value.trim();
+  const plain = ui.nip04Plaintext.value;
+  const relayUrl = ui.relayUrl.value.trim();
+  if (!peer) {
+    log('NIP-04 DM aborted: peer pubkey is empty.');
+    return;
+  }
+  if (!relayUrl) {
+    log('NIP-04 DM aborted: relay URL (section 4) is empty.');
+    return;
+  }
+
+  // 1) encrypt — prompts encrypt consent
+  log(`NIP-04 DM: encrypting ${plain.length} chars to ${peer.slice(0, 8)}…`);
+  let ciphertext: string;
+  try {
+    ciphertext = await window.nostr.nip04.encrypt(peer, plain);
+  } catch (err) {
+    log(`NIP-04 DM encrypt failed: ${formatError(err)}`);
+    return;
+  }
+  ui.nip04Ciphertext.value = ciphertext;
+
+  // 2) build kind:4 + p-tag, sign — prompts sign consent
+  const draft: NostrEvent = {
+    kind: 4,
+    content: ciphertext,
+    tags: [['p', peer]],
+    created_at: Math.floor(Date.now() / 1000),
+  };
+  log('NIP-04 DM: signing kind:4 event…');
+  let signed: NostrEvent;
+  try {
+    signed = await window.nostr.signEvent(draft);
+  } catch (err) {
+    log(`NIP-04 DM signEvent failed: ${formatError(err)}`);
+    return;
+  }
+  log(`NIP-04 DM: signed event id ${signed.id ?? '(missing id)'}.`);
+
+  // 3) publish via the existing WebSocket helper
+  try {
+    await publishEvent(relayUrl, signed);
+  } catch (err) {
+    log(`NIP-04 DM publish failed: ${formatError(err)}`);
+  }
+}
+
 ui.connect.addEventListener('click', () => {
   void connect();
 });
@@ -529,6 +590,9 @@ ui.nip04Encrypt.addEventListener('click', () => {
 });
 ui.nip04Decrypt.addEventListener('click', () => {
   void nip04Decrypt();
+});
+ui.nip04SendDm.addEventListener('click', () => {
+  void nip04SendDm();
 });
 
 log(
