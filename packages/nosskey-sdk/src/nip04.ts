@@ -19,30 +19,12 @@
  */
 import { cbc } from '@noble/ciphers/aes.js';
 import { ecdhSharedX } from './secp-utils.js';
+import { base64ToBytes, bytesToBase64 } from './utils.js';
 
 const IV_LEN = 16;
 
 function getSharedX(secretKey: Uint8Array, peerPubkeyHex: string): Uint8Array {
   return ecdhSharedX(secretKey, peerPubkeyHex, 'NIP-04');
-}
-
-function base64Encode(bytes: Uint8Array): string {
-  if (typeof btoa === 'function') {
-    let bin = '';
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin);
-  }
-  return Buffer.from(bytes).toString('base64');
-}
-
-function base64Decode(str: string): Uint8Array {
-  if (typeof atob === 'function') {
-    const bin = atob(str);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return bytes;
-  }
-  return new Uint8Array(Buffer.from(str, 'base64'));
 }
 
 /**
@@ -75,7 +57,7 @@ export function nip04Encrypt(
   }
   const sharedX = getSharedX(ourSecretKey, peerPubkeyHex);
   const ciphertext = cbc(sharedX, iv).encrypt(new TextEncoder().encode(plaintext));
-  return `${base64Encode(ciphertext)}?iv=${base64Encode(iv)}`;
+  return `${bytesToBase64(ciphertext)}?iv=${bytesToBase64(iv)}`;
 }
 
 /**
@@ -96,8 +78,8 @@ export function nip04Decrypt(
   }
   const ctB64 = payload.slice(0, sep);
   const ivB64 = payload.slice(sep + 4);
-  const ciphertext = base64Decode(ctB64);
-  const iv = base64Decode(ivB64);
+  const ciphertext = base64ToBytes(ctB64);
+  const iv = base64ToBytes(ivB64);
   if (iv.length !== IV_LEN) {
     throw new Error('NIP-04: IV must be 16 bytes.');
   }

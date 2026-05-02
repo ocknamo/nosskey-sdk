@@ -10,7 +10,7 @@ import { expand as hkdfExpand, extract as hkdfExtract } from '@noble/hashes/hkdf
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { ecdhSharedX } from './secp-utils.js';
-import { bytesToHex } from './utils.js';
+import { base64ToBytes, bytesToBase64, bytesToHex } from './utils.js';
 
 const VERSION = 0x02;
 const MIN_PLAINTEXT_LEN = 1;
@@ -125,30 +125,17 @@ function hmacWithAad(key: Uint8Array, aad: Uint8Array, message: Uint8Array): Uin
   return hmac(sha256, key, buf);
 }
 
-function base64Encode(bytes: Uint8Array): string {
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  // btoa exists in browsers; fall back to Buffer in Node.
-  if (typeof btoa === 'function') return btoa(bin);
-  return Buffer.from(bytes).toString('base64');
-}
-
-function base64Decode(str: string): Uint8Array {
+function decodePayload(str: string): Uint8Array {
+  // NIP-44 reserves a leading '#' to mark a future, non-base64 versioned
+  // wire format; reject explicitly so it surfaces as a protocol error rather
+  // than as a base64 parse failure.
   if (str.length === 0) {
     throw new Error('NIP-44: payload is empty.');
   }
   if (str.startsWith('#')) {
     throw new Error('NIP-44: unsupported version prefix "#".');
   }
-  let bin: string;
-  if (typeof atob === 'function') {
-    bin = atob(str);
-  } else {
-    return new Uint8Array(Buffer.from(str, 'base64'));
-  }
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
+  return base64ToBytes(str);
 }
 
 /**
@@ -187,7 +174,7 @@ export function nip44Encrypt(
   payload.set(nonce, 1);
   payload.set(ciphertext, 1 + NONCE_LEN);
   payload.set(mac, 1 + NONCE_LEN + ciphertext.length);
-  return base64Encode(payload);
+  return bytesToBase64(payload);
 }
 
 /**
@@ -202,7 +189,7 @@ export function nip44Decrypt(
   ourSecretKey: Uint8Array,
   peerPubkeyHex: string
 ): string {
-  const bytes = base64Decode(payload);
+  const bytes = decodePayload(payload);
   if (bytes.length < 1 + NONCE_LEN + 1 + MAC_LEN) {
     throw new Error('NIP-44: payload is too short.');
   }
