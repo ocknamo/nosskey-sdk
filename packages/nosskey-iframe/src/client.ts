@@ -157,6 +157,57 @@ export class NosskeyIframeClient {
     return result as NostrEvent;
   }
 
+  /**
+   * NIP-44 v2 encrypt / decrypt. Mirrors the `window.nostr.nip44` shape so
+   * existing Nostr clients can use the iframe as a drop-in NIP-07 provider.
+   */
+  readonly nip44 = {
+    encrypt: async (peerPubkey: string, plaintext: string): Promise<string> => {
+      const result = await this.#request({
+        method: 'nip44_encrypt',
+        params: { pubkey: peerPubkey, plaintext },
+      });
+      if (typeof result !== 'string') {
+        throw new Error('nip44.encrypt: expected string result from iframe.');
+      }
+      return result;
+    },
+    decrypt: async (peerPubkey: string, ciphertext: string): Promise<string> => {
+      const result = await this.#request({
+        method: 'nip44_decrypt',
+        params: { pubkey: peerPubkey, ciphertext },
+      });
+      if (typeof result !== 'string') {
+        throw new Error('nip44.decrypt: expected string result from iframe.');
+      }
+      return result;
+    },
+  };
+
+  /** NIP-04 (legacy) encrypt / decrypt. Same shape as `window.nostr.nip04`. */
+  readonly nip04 = {
+    encrypt: async (peerPubkey: string, plaintext: string): Promise<string> => {
+      const result = await this.#request({
+        method: 'nip04_encrypt',
+        params: { pubkey: peerPubkey, plaintext },
+      });
+      if (typeof result !== 'string') {
+        throw new Error('nip04.encrypt: expected string result from iframe.');
+      }
+      return result;
+    },
+    decrypt: async (peerPubkey: string, ciphertext: string): Promise<string> => {
+      const result = await this.#request({
+        method: 'nip04_decrypt',
+        params: { pubkey: peerPubkey, ciphertext },
+      });
+      if (typeof result !== 'string') {
+        throw new Error('nip04.decrypt: expected string result from iframe.');
+      }
+      return result;
+    },
+  };
+
   /** Remove the iframe, detach the listener, reject any pending requests. */
   destroy(): void {
     if (this.#destroyed) return;

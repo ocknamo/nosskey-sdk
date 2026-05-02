@@ -6,16 +6,18 @@
 
 ## 実装関連
 - [ ] PWKのリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする）
+- [ ] NIP-17 sealed DM (kind:14 + gift-wrap) サポート — 受け取った NIP-44 暗号文を kind:13 seal でラップし、ephemeral 鍵で kind:1059 gift-wrap 化する 3 段構成。SDK に「ランダム ephemeral 秘密鍵で署名する API」を追加する必要があり、現状の `signEvent`（登録済み鍵専用）とは別経路。NIP-04 (kind:4) 互換 DM 送信は `examples/parent-sample` のセクション 6 で動作確認可能なので、それで足りる用途は当面そちらを使う想定。
 - [x] iframeでNosskeyを使用できるNosskey-iframe(仮)の作成 — 段階1〜4完了 (`nosskey-iframe` パッケージ: protocol / host / client)。ブランチ `claude/add-iframe-support-2tKuX`
 - [x] Nosskey-iframe(仮)の参照実装の作成 — 段階5〜7完了 (Svelteアプリの `#/iframe` ルート、ConsentDialog、Timeline/relay 機能削除、README 追記)。ブランチ `claude/continue-iframe-support-mCrAL`。段階8 (E2E 手動検証) は別途
 - [x] iframe を埋め込む親ページ側のサンプル実装 (`NosskeyIframeClient` を使った最小デモ) を `examples/parent-sample/` に追加
+- [x] parent-sample に NIP-44 / NIP-04 encrypt/decrypt UI と NIP-04 kind:4 DM 送信ボタンを追加 (任意ピア宛 DM 動作確認用)
 
 ### iframe機能拡充（詳細: `docs/iframe-expansion-plan.md`）
 
 #### Phase 1: NIP-07 完全対応
 - [x] `getRelays()` の追加 — リレー設定の取得 (iframe `onGetRelays` コールバック + Svelte UI、SDK 非変更方針)
-- [ ] `nip44.encrypt / decrypt` の追加 — NIP-44 暗号化/復号 (SDK + iframe + 同意ダイアログ)
-- [ ] `nip04.encrypt / decrypt` の追加 — NIP-04 暗号化/復号 (SDK + iframe + 同意ダイアログ)
+- [x] `nip44.encrypt / decrypt` の追加 — NIP-44 v2 を SDK (`packages/nosskey-sdk/src/nip44.ts`)、iframe protocol/host/client、ConsentDialog で実装。公式テストベクター (`__fixtures__/nip44-vectors.json`) 全件パス。ブランチ `claude/review-todos-nFRqm`
+- [x] `nip04.encrypt / decrypt` の追加 — NIP-04（レガシー DM、AES-256-CBC）を SDK (`packages/nosskey-sdk/src/nip04.ts`)、iframe、ConsentDialog で実装。ラウンドトリップテスト追加。ブランチ `claude/review-todos-nFRqm`
 
 #### Phase 2: UX・セキュリティ改善
 - [ ] オリジン別の許可記憶 — 「このサイトを常に許可」チェックボックスと localStorage 保存

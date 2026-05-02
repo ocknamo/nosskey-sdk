@@ -25,7 +25,6 @@ vi.mock('@rx-nostr/crypto', () => {
 describe('NosskeyManager', () => {
   // WebAuthn APIのモック
   const mockPrfResultValue = 42;
-  const mockPrfResult = new Uint8Array(32).fill(mockPrfResultValue).buffer;
   const mockCredentialId = new Uint8Array(16).fill(1);
   let originalCrypto: typeof globalThis.crypto;
   let originalCredentials: typeof globalThis.navigator.credentials;
@@ -35,7 +34,11 @@ describe('NosskeyManager', () => {
     originalCrypto = globalThis.crypto;
     originalCredentials = globalThis.navigator.credentials;
 
-    // PRF出力を含むモックの応答
+    // PRF出力を含むモックの応答。getClientExtensionResults() は呼び出しごとに
+    // 新しい ArrayBuffer を返す。NosskeyManager は秘密鍵をエフェメラルに使い
+    // 終わったあと .fill(0) で消去するので、共有バッファを使うとそれが次の
+    // 呼び出しに伝播する（ゼロ鍵 → ECDH エラー）。実機ブラウザでは PRF も
+    // 毎回フレッシュなので、フレッシュ生成の方が現実に近い挙動でもある。
     const mockCredential = {
       id: 'mock-credential-id',
       rawId: mockCredentialId.buffer,
@@ -43,7 +46,7 @@ describe('NosskeyManager', () => {
       getClientExtensionResults: vi.fn(() => ({
         prf: {
           results: {
-            first: mockPrfResult,
+            first: new Uint8Array(32).fill(mockPrfResultValue).buffer,
           },
         },
       })),
@@ -930,6 +933,67 @@ describe('NosskeyManager', () => {
     it('localStorage未定義でもclearStoredKeyInfoが例外を投げない', () => {
       const nosskey = new NosskeyManager();
       expect(() => nosskey.clearStoredKeyInfo()).not.toThrow();
+    });
+  });
+
+  describe('NIP-44 / NIP-04 暗号化メソッド', () => {
+    // The PRF mock returns 32 bytes of 0x2a, which is a valid secp256k1 scalar.
+    // We pair it with a peer pubkey derived from a known private key.
+    const peerSecret = new Uint8Array(32).fill(0x33);
+    let peerPubHex: string;
+
+    beforeEach(async () => {
+      const { schnorr } = await import('@noble/curves/secp256k1.js');
+      peerPubHex = bytesToHex(schnorr.getPublicKey(peerSecret));
+    });
+
+    it('nip44Encrypt / nip44Decrypt のラウンドトリップ', async () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setCurrentKeyInfo({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+
+      const ciphertext = await nosskey.nip44Encrypt(peerPubHex, 'こんにちは 🌸');
+      // Decrypt from the peer's perspective to validate the payload is well-formed.
+      const { schnorr } = await import('@noble/curves/secp256k1.js');
+      const ourSk = new Uint8Array(32).fill(mockPrfResultValue);
+      const ourPubHex = bytesToHex(schnorr.getPublicKey(ourSk));
+      const { nip44Decrypt } = await import('./nip44.js');
+      expect(nip44Decrypt(ciphertext, peerSecret, ourPubHex)).toBe('こんにちは 🌸');
+
+      // And decrypting back through NosskeyManager works.
+      expect(await nosskey.nip44Decrypt(peerPubHex, ciphertext)).toBe('こんにちは 🌸');
+    });
+
+    it('nip04Encrypt / nip04Decrypt のラウンドトリップ', async () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setCurrentKeyInfo({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+
+      const ciphertext = await nosskey.nip04Encrypt(peerPubHex, 'hello legacy DM');
+      expect(ciphertext).toMatch(/\?iv=/);
+      expect(await nosskey.nip04Decrypt(peerPubHex, ciphertext)).toBe('hello legacy DM');
+    });
+
+    it('NostrKeyInfo 未設定だと nip44Encrypt はエラー', async () => {
+      const nosskey = new NosskeyManager();
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
+      await expect(nosskey.nip44Encrypt(peerPubHex, 'x')).rejects.toThrow(
+        'No current NostrKeyInfo set'
+      );
+    });
+
+    it('NostrKeyInfo 未設定だと nip04Decrypt はエラー', async () => {
+      const nosskey = new NosskeyManager();
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
+      await expect(nosskey.nip04Decrypt(peerPubHex, 'foo?iv=bar')).rejects.toThrow(
+        'No current NostrKeyInfo set'
+      );
     });
   });
 });

@@ -20,7 +20,15 @@ import {
 export interface ConsentRequest {
   origin: string;
   method: NosskeyMethod;
+  /** Set for `signEvent`. */
   event?: NostrEvent;
+  /** Counterparty public key for nip44 / nip04 methods (32-byte hex). */
+  pubkey?: string;
+  /**
+   * Plaintext shown for `nip44_encrypt` / `nip04_encrypt`. Intentionally not
+   * present on decrypt (the iframe cannot decrypt before consent is granted).
+   */
+  plaintext?: string;
 }
 
 export interface NosskeyIframeHostOptions {
@@ -167,7 +175,7 @@ export class NosskeyIframeHost {
   }
 
   async #dispatch(request: NosskeyRequest, origin: string): Promise<unknown> {
-    const { manager, requireUserConsent, onConsent } = this.#options;
+    const { manager } = this.#options;
 
     switch (request.method) {
       case 'getPublicKey': {
@@ -186,30 +194,35 @@ export class NosskeyIframeHost {
         if (!event || typeof event !== 'object') {
           throw new HostError('INVALID_REQUEST', 'signEvent requires params.event.');
         }
-        if (!manager.hasKeyInfo()) {
-          throw new HostError('NO_KEY', 'No key is configured in the iframe.');
-        }
-        // The parent hides the iframe by default; show it so the consent
-        // dialog is interactable and so the cross-origin WebAuthn prompt
-        // fired inside manager.signEvent() has a visible frame to attach to.
-        this.#postVisibility(true);
-        try {
-          if (requireUserConsent) {
-            if (!onConsent) {
-              throw new HostError(
-                'INTERNAL',
-                'onConsent must be provided when requireUserConsent is true.'
-              );
-            }
-            const approved = await onConsent({ origin, method: 'signEvent', event });
-            if (!approved) {
-              throw new HostError('USER_REJECTED', 'User rejected the signing request.');
-            }
-          }
-          return await manager.signEvent(event);
-        } finally {
-          this.#postVisibility(false);
-        }
+        return this.#withVisibilityAndConsent({ origin, method: 'signEvent', event }, () =>
+          manager.signEvent(event)
+        );
+      }
+      case 'nip44_encrypt': {
+        const { pubkey, plaintext } = this.#requireEncryptParams(request, 'nip44_encrypt');
+        return this.#withVisibilityAndConsent(
+          { origin, method: 'nip44_encrypt', pubkey, plaintext },
+          () => manager.nip44Encrypt(pubkey, plaintext)
+        );
+      }
+      case 'nip44_decrypt': {
+        const { pubkey, ciphertext } = this.#requireDecryptParams(request, 'nip44_decrypt');
+        return this.#withVisibilityAndConsent({ origin, method: 'nip44_decrypt', pubkey }, () =>
+          manager.nip44Decrypt(pubkey, ciphertext)
+        );
+      }
+      case 'nip04_encrypt': {
+        const { pubkey, plaintext } = this.#requireEncryptParams(request, 'nip04_encrypt');
+        return this.#withVisibilityAndConsent(
+          { origin, method: 'nip04_encrypt', pubkey, plaintext },
+          () => manager.nip04Encrypt(pubkey, plaintext)
+        );
+      }
+      case 'nip04_decrypt': {
+        const { pubkey, ciphertext } = this.#requireDecryptParams(request, 'nip04_decrypt');
+        return this.#withVisibilityAndConsent({ origin, method: 'nip04_decrypt', pubkey }, () =>
+          manager.nip04Decrypt(pubkey, ciphertext)
+        );
       }
       default: {
         // Exhaustiveness — request.method is typed as NosskeyMethod already,
@@ -217,6 +230,68 @@ export class NosskeyIframeHost {
         // past isNosskeyRequest in future refactors.
         throw new HostError('UNKNOWN_METHOD', `Unknown method: ${String(request.method)}`);
       }
+    }
+  }
+
+  #requireEncryptParams(
+    request: NosskeyRequest,
+    method: NosskeyMethod
+  ): { pubkey: string; plaintext: string } {
+    const pubkey = request.params?.pubkey;
+    const plaintext = request.params?.plaintext;
+    if (typeof pubkey !== 'string' || typeof plaintext !== 'string') {
+      throw new HostError(
+        'INVALID_REQUEST',
+        `${method} requires params.pubkey and params.plaintext (strings).`
+      );
+    }
+    return { pubkey, plaintext };
+  }
+
+  #requireDecryptParams(
+    request: NosskeyRequest,
+    method: NosskeyMethod
+  ): { pubkey: string; ciphertext: string } {
+    const pubkey = request.params?.pubkey;
+    const ciphertext = request.params?.ciphertext;
+    if (typeof pubkey !== 'string' || typeof ciphertext !== 'string') {
+      throw new HostError(
+        'INVALID_REQUEST',
+        `${method} requires params.pubkey and params.ciphertext (strings).`
+      );
+    }
+    return { pubkey, ciphertext };
+  }
+
+  /**
+   * Show the iframe, request user consent, run the operation, and hide the iframe.
+   * Shared by signEvent and the nip44/nip04 encrypt/decrypt methods.
+   */
+  async #withVisibilityAndConsent<T>(consent: ConsentRequest, run: () => Promise<T>): Promise<T> {
+    const { manager, requireUserConsent, onConsent } = this.#options;
+    if (!manager.hasKeyInfo()) {
+      throw new HostError('NO_KEY', 'No key is configured in the iframe.');
+    }
+    // Show the iframe so the consent dialog is interactable and so any
+    // cross-origin WebAuthn prompt fired inside the manager call has a
+    // visible frame to attach to.
+    this.#postVisibility(true);
+    try {
+      if (requireUserConsent) {
+        if (!onConsent) {
+          throw new HostError(
+            'INTERNAL',
+            'onConsent must be provided when requireUserConsent is true.'
+          );
+        }
+        const approved = await onConsent(consent);
+        if (!approved) {
+          throw new HostError('USER_REJECTED', `User rejected the ${consent.method} request.`);
+        }
+      }
+      return await run();
+    } finally {
+      this.#postVisibility(false);
     }
   }
 
