@@ -60,9 +60,15 @@ describe('protocol: isNosskeyRequest', () => {
   });
 
   it('rejects unsupported method', () => {
-    expect(isNosskeyRequest({ type: 'nosskey:request', id: 'r', method: 'nip04_encrypt' })).toBe(
+    expect(isNosskeyRequest({ type: 'nosskey:request', id: 'r', method: 'somethingElse' })).toBe(
       false
     );
+  });
+
+  it('accepts nip44 / nip04 encrypt / decrypt methods', () => {
+    for (const method of ['nip44_encrypt', 'nip44_decrypt', 'nip04_encrypt', 'nip04_decrypt']) {
+      expect(isNosskeyRequest({ type: 'nosskey:request', id: 'r', method })).toBe(true);
+    }
   });
 
   it('rejects non-object params', () => {

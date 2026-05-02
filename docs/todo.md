@@ -14,8 +14,8 @@
 
 #### Phase 1: NIP-07 完全対応
 - [x] `getRelays()` の追加 — リレー設定の取得 (iframe `onGetRelays` コールバック + Svelte UI、SDK 非変更方針)
-- [ ] `nip44.encrypt / decrypt` の追加 — NIP-44 暗号化/復号 (SDK + iframe + 同意ダイアログ)
-- [ ] `nip04.encrypt / decrypt` の追加 — NIP-04 暗号化/復号 (SDK + iframe + 同意ダイアログ)
+- [x] `nip44.encrypt / decrypt` の追加 — NIP-44 v2 を SDK (`packages/nosskey-sdk/src/nip44.ts`)、iframe protocol/host/client、ConsentDialog で実装。公式テストベクター (`__fixtures__/nip44-vectors.json`) 全件パス。ブランチ `claude/review-todos-nFRqm`
+- [x] `nip04.encrypt / decrypt` の追加 — NIP-04（レガシー DM、AES-256-CBC）を SDK (`packages/nosskey-sdk/src/nip04.ts`)、iframe、ConsentDialog で実装。ラウンドトリップテスト追加。ブランチ `claude/review-todos-nFRqm`
 
 #### Phase 2: UX・セキュリティ改善
 - [ ] オリジン別の許可記憶 — 「このサイトを常に許可」チェックボックスと localStorage 保存

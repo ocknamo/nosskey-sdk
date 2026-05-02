@@ -174,6 +174,8 @@ export interface TranslationData {
   };
   consent: {
     title: string;
+    titleEncrypt: string;
+    titleDecrypt: string;
     origin: string;
     eventKind: string;
     eventContent: string;
@@ -181,6 +183,17 @@ export interface TranslationData {
     noTags: string;
     approve: string;
     reject: string;
+    method: string;
+    methodLabel: {
+      signEvent: string;
+      nip44Encrypt: string;
+      nip44Decrypt: string;
+      nip04Encrypt: string;
+      nip04Decrypt: string;
+    };
+    peerPubkey: string;
+    plaintext: string;
+    decryptNoPreview: string;
   };
   iframeHost: {
     running: string;
@@ -380,6 +393,8 @@ export const ja: TranslationData = {
   },
   consent: {
     title: '署名リクエストの確認',
+    titleEncrypt: '暗号化リクエストの確認',
+    titleDecrypt: '復号リクエストの確認',
     origin: 'リクエスト元:',
     eventKind: 'イベント種別',
     eventContent: '本文',
@@ -387,6 +402,17 @@ export const ja: TranslationData = {
     noTags: '(タグなし)',
     approve: '承認',
     reject: '拒否',
+    method: 'リクエスト種別',
+    methodLabel: {
+      signEvent: 'イベント署名',
+      nip44Encrypt: 'NIP-44 暗号化',
+      nip44Decrypt: 'NIP-44 復号',
+      nip04Encrypt: 'NIP-04 暗号化（レガシー）',
+      nip04Decrypt: 'NIP-04 復号（レガシー）',
+    },
+    peerPubkey: '相手の公開鍵',
+    plaintext: '平文',
+    decryptNoPreview: '暗号文の内容は復号後にしか確認できません。',
   },
   iframeHost: {
     running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
@@ -588,6 +614,8 @@ export const en: TranslationData = {
   },
   consent: {
     title: 'Signing request',
+    titleEncrypt: 'Encryption request',
+    titleDecrypt: 'Decryption request',
     origin: 'Requesting origin:',
     eventKind: 'Event kind',
     eventContent: 'Content',
@@ -595,6 +623,17 @@ export const en: TranslationData = {
     noTags: '(no tags)',
     approve: 'Approve',
     reject: 'Reject',
+    method: 'Request type',
+    methodLabel: {
+      signEvent: 'Sign event',
+      nip44Encrypt: 'NIP-44 encrypt',
+      nip44Decrypt: 'NIP-44 decrypt',
+      nip04Encrypt: 'NIP-04 encrypt (legacy)',
+      nip04Decrypt: 'NIP-04 decrypt (legacy)',
+    },
+    peerPubkey: 'Peer public key',
+    plaintext: 'Plaintext',
+    decryptNoPreview: 'Ciphertext contents are only visible after decryption.',
   },
   iframeHost: {
     running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',

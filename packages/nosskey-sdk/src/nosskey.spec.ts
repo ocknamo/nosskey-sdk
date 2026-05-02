@@ -932,4 +932,71 @@ describe('NosskeyManager', () => {
       expect(() => nosskey.clearStoredKeyInfo()).not.toThrow();
     });
   });
+
+  describe('NIP-44 / NIP-04 暗号化メソッド', () => {
+    // The PRF mock returns 32 bytes of 0x2a, which is a valid secp256k1 scalar.
+    // We pair it with a peer pubkey derived from a known private key.
+    const peerSecret = new Uint8Array(32).fill(0x33);
+    let peerPubHex: string;
+
+    beforeEach(async () => {
+      const { schnorr } = await import('@noble/curves/secp256k1.js');
+      peerPubHex = bytesToHex(schnorr.getPublicKey(peerSecret));
+      // Earlier signing tests zero out the shared mockPrfResult buffer when
+      // they call #clearKey(). Refill it before each crypto roundtrip test
+      // so the PRF still returns a valid 32-byte scalar.
+      new Uint8Array(mockPrfResult).fill(mockPrfResultValue);
+    });
+
+    it('nip44Encrypt / nip44Decrypt のラウンドトリップ', async () => {
+      // Enable the key cache so the PRF mock buffer is fetched once and
+      // not zero-ed between encrypt and decrypt.
+      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      nosskey.setCurrentKeyInfo({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+
+      const ciphertext = await nosskey.nip44Encrypt(peerPubHex, 'こんにちは 🌸');
+      // Decrypt from the peer's perspective to validate the payload is well-formed.
+      const { schnorr } = await import('@noble/curves/secp256k1.js');
+      const ourSk = new Uint8Array(32).fill(mockPrfResultValue);
+      const ourPubHex = bytesToHex(schnorr.getPublicKey(ourSk));
+      const { nip44Decrypt } = await import('./nip44.js');
+      expect(nip44Decrypt(ciphertext, peerSecret, ourPubHex)).toBe('こんにちは 🌸');
+
+      // And decrypting back through NosskeyManager works.
+      expect(await nosskey.nip44Decrypt(peerPubHex, ciphertext)).toBe('こんにちは 🌸');
+    });
+
+    it('nip04Encrypt / nip04Decrypt のラウンドトリップ', async () => {
+      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true } });
+      nosskey.setCurrentKeyInfo({
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      });
+
+      const ciphertext = await nosskey.nip04Encrypt(peerPubHex, 'hello legacy DM');
+      expect(ciphertext).toMatch(/\?iv=/);
+      expect(await nosskey.nip04Decrypt(peerPubHex, ciphertext)).toBe('hello legacy DM');
+    });
+
+    it('NostrKeyInfo 未設定だと nip44Encrypt はエラー', async () => {
+      const nosskey = new NosskeyManager();
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
+      await expect(nosskey.nip44Encrypt(peerPubHex, 'x')).rejects.toThrow(
+        'No current NostrKeyInfo set'
+      );
+    });
+
+    it('NostrKeyInfo 未設定だと nip04Decrypt はエラー', async () => {
+      const nosskey = new NosskeyManager();
+      vi.spyOn(nosskey, 'getCurrentKeyInfo').mockReturnValue(null);
+      await expect(nosskey.nip04Decrypt(peerPubHex, 'foo?iv=bar')).rejects.toThrow(
+        'No current NostrKeyInfo set'
+      );
+    });
+  });
 });
