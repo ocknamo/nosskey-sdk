@@ -6,6 +6,15 @@
  * NIP-04 uses AES-256-CBC keyed directly with the X coordinate of the
  * secp256k1 ECDH shared point. Payload format: `<base64(ciphertext)>?iv=<base64(iv)>`.
  *
+ * ⚠️ **Deprecated by the NIP-04 spec itself.** The construction is
+ * AES-CBC without authentication, which makes it vulnerable to padding
+ * oracle attacks and silent ciphertext modification. It also leaks the
+ * counterparty pubkey in the `p` tag.
+ *
+ * **Do not use NIP-04 for new code.** Use {@link ../nip44.ts | NIP-44}
+ * instead. NIP-04 is provided here only so existing clients (Snort,
+ * Iris, Damus, etc.) can still read older DMs through this SDK.
+ *
  * @packageDocumentation
  */
 import { cbc } from '@noble/ciphers/aes.js';
@@ -38,6 +47,9 @@ function base64Decode(str: string): Uint8Array {
 
 /**
  * Encrypt a plaintext for NIP-04 kind:4 DM.
+ *
+ * ⚠️ Prefer {@link ../nip44.ts | NIP-44} for new messages. NIP-04 lacks
+ * authentication and is vulnerable to padding oracle attacks.
  *
  * @param plaintext UTF-8 plaintext.
  * @param ourSecretKey Sender's 32-byte private key.
