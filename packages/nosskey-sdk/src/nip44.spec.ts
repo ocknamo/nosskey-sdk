@@ -1,7 +1,7 @@
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { describe, expect, it } from 'vitest';
 import vectors from './__fixtures__/nip44-vectors.json' with { type: 'json' };
-import { __nip44Internal, calcPaddedLen, nip44Decrypt, nip44Encrypt } from './nip44.js';
+import { __nip44Internal, nip44Decrypt, nip44Encrypt } from './nip44.js';
 import { bytesToHex, hexToBytes } from './utils.js';
 
 interface ConversationKeyVector {
@@ -81,7 +81,7 @@ describe('NIP-44 v2: get_message_keys', () => {
 describe('NIP-44 v2: calc_padded_len', () => {
   for (const [unpadded, expected] of v2.valid.calc_padded_len) {
     it(`${unpadded} -> ${expected}`, () => {
-      expect(calcPaddedLen(unpadded)).toBe(expected);
+      expect(__nip44Internal.calcPaddedLen(unpadded)).toBe(expected);
     });
   }
 });

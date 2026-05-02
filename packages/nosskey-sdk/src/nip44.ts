@@ -47,8 +47,15 @@ function liftXOnly(pubkeyHex: string): Uint8Array {
   return compressed;
 }
 
-/** Compute the conversation key shared between two NIP-44 peers. */
-export function getConversationKey(secretKey: Uint8Array, peerPubkeyHex: string): Uint8Array {
+/**
+ * Compute the conversation key shared between two NIP-44 peers.
+ *
+ * @internal Intentionally not re-exported from the SDK barrel: the conversation
+ * key is a long-lived secret derived from ECDH, and exposing it lets callers
+ * encrypt arbitrary messages without re-deriving from the private key. Use
+ * {@link nip44Encrypt} / {@link nip44Decrypt} instead.
+ */
+function getConversationKey(secretKey: Uint8Array, peerPubkeyHex: string): Uint8Array {
   if (secretKey.length !== 32) {
     throw new Error('NIP-44: secret key must be 32 bytes.');
   }
@@ -59,8 +66,15 @@ export function getConversationKey(secretKey: Uint8Array, peerPubkeyHex: string)
   return hkdfExtract(sha256, sharedX, SALT);
 }
 
-/** Derive per-message keys (chacha key, chacha nonce, hmac key) from the conversation key. */
-export function getMessageKeys(conversationKey: Uint8Array, nonce: Uint8Array): MessageKeys {
+/**
+ * Derive per-message keys (chacha key, chacha nonce, hmac key) from the
+ * conversation key.
+ *
+ * @internal Intentionally not re-exported. Returning the chacha key and HMAC
+ * key in raw bytes invites nonce reuse and key-mixing footguns from callers
+ * who don't know the protocol details.
+ */
+function getMessageKeys(conversationKey: Uint8Array, nonce: Uint8Array): MessageKeys {
   if (conversationKey.length !== CONVERSATION_KEY_LEN) {
     throw new Error('NIP-44: conversation key must be 32 bytes.');
   }
@@ -76,7 +90,7 @@ export function getMessageKeys(conversationKey: Uint8Array, nonce: Uint8Array): 
 }
 
 /** Padded length bucket used by the spec's `calc_padded_len`. */
-export function calcPaddedLen(unpaddedLen: number): number {
+function calcPaddedLen(unpaddedLen: number): number {
   if (unpaddedLen < 1) {
     throw new Error('NIP-44: plaintext length must be >= 1.');
   }
