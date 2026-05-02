@@ -13,12 +13,18 @@ host example (`svelte-app` on port 5173), exercising the cross-origin
 1. Mount `NosskeyIframeClient` against a host URL (default
    `http://localhost:5173/#/iframe`).
 2. Wait for the `nosskey:ready` handshake.
-3. Install a NIP-07 compatible `window.nostr = { getPublicKey, signEvent }`.
-4. Call `getPublicKey()`.
+3. Install a NIP-07 compatible
+   `window.nostr = { getPublicKey, signEvent, getRelays, nip44, nip04 }`.
+4. Call `getPublicKey()` and `getRelays()`.
 5. Build a kind:1 event, sign it through the iframe (consent dialog is shown
    inside the iframe/host page), and publish it via raw WebSocket to a public
    relay (default `wss://relay.damus.io`).
-6. Surface `NosskeyIframeError.code` values such as `NO_KEY`,
+6. **NIP-44 encrypt / decrypt** (modern, recommended): self-encrypt with the
+   "Use my pubkey" helper to verify the round trip without a second account.
+   Encrypt and decrypt each prompt the consent dialog independently.
+7. **NIP-04 encrypt / decrypt** (legacy): same shape as NIP-44, with a
+   deprecation warning. Useful for verifying interop with older clients.
+8. Surface `NosskeyIframeError.code` values such as `NO_KEY`,
    `USER_REJECTED`, `NOT_AUTHORIZED` in the log.
 
 ## Run locally
@@ -39,6 +45,28 @@ npm run dev -w parent-sample
 
 Open <http://localhost:5174/> in Chrome and click **Connect**, then
 **Get public key**, then **Sign & publish**.
+
+### Manual E2E test for NIP-44 / NIP-04
+
+After **Connect** succeeds:
+
+1. Scroll to **5. NIP-44 encrypt / decrypt**.
+2. Click **Use my pubkey** (this fills the peer field with your own pubkey,
+   so encrypt and decrypt operate on the same key).
+3. Click **Encrypt → ciphertext** — the host page will pop a consent dialog
+   showing the peer pubkey and a plaintext preview. Approve it. The
+   `ciphertext` textarea fills with a base64 NIP-44 v2 payload.
+4. Click **Decrypt → plaintext** — the host page pops a second consent
+   dialog (this time with no plaintext preview, since the iframe cannot
+   inspect the ciphertext before consent). Approve it. The decrypted
+   output should match what you encrypted.
+5. Repeat with section **6. NIP-04 encrypt / decrypt** to verify the
+   legacy path. Note that NIP-04 is unauthenticated (AES-CBC) — the SDK
+   marks it as deprecated; only use it for interop with old clients.
+
+To test cross-account interop, paste a peer pubkey from another Nostr
+client into the peer field, encrypt, send the ciphertext over any channel
+to that other client, and have it decrypt — and vice versa.
 
 ## Browser support
 
