@@ -6,16 +6,24 @@
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { hexToBytes } from './utils.js';
 
+/** Match exactly 64 hex characters (case-insensitive) — a 32-byte value. */
+const HEX_32_BYTES = /^[0-9a-f]{64}$/i;
+
 /**
  * Decode a 32-byte (x-only) Nostr public key into the 33-byte compressed form
  * accepted by `secp256k1.getSharedSecret`. Both NIP-04 and NIP-44 fix the
  * parity to even (`0x02` prefix).
  *
- * @throws if `pubkeyHex` is not exactly 64 lowercase/uppercase hex characters.
+ * Validates the hex string strictly: `utils.hexToBytes` silently skips
+ * non-hex characters, which would let `'g'.repeat(64)` through and surface
+ * later as an unhelpful "point not on curve" error from noble. We catch it
+ * up front instead.
+ *
+ * @throws if `pubkeyHex` is not exactly 64 hex characters.
  */
 export function liftEvenXOnly(pubkeyHex: string, label: string): Uint8Array {
-  if (pubkeyHex.length !== 64) {
-    throw new Error(`${label}: peer public key must be 32 bytes (64 hex chars).`);
+  if (!HEX_32_BYTES.test(pubkeyHex)) {
+    throw new Error(`${label}: peer public key must be 64 hex characters.`);
   }
   const x = hexToBytes(pubkeyHex);
   const compressed = new Uint8Array(33);

@@ -46,4 +46,10 @@ describe('NIP-04', () => {
   it('rejects 64-char-mismatch peer pubkey', () => {
     expect(() => nip04Encrypt('x', aliceSec, 'short')).toThrow();
   });
+
+  it('rejects non-hex peer pubkey of correct length', () => {
+    // Same length as a real pubkey but contains non-hex characters.
+    const fakePub = 'g'.repeat(64);
+    expect(() => nip04Encrypt('x', aliceSec, fakePub)).toThrow(/64 hex characters/);
+  });
 });
