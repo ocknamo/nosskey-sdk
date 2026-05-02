@@ -2,20 +2,34 @@
 import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
+import { hexToNpub } from '../utils/bech32-converter.js';
 import Button from './ui/button/Button.svelte';
 
 const CONTENT_PREVIEW_LIMIT = 240;
-const PUBKEY_HEAD = 8;
-const PUBKEY_TAIL = 8;
+const NPUB_HEAD = 12;
+const NPUB_TAIL = 8;
 
 function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
   if (value.length <= limit) return value;
   return `${value.slice(0, limit)}…`;
 }
 
-function shortenPubkey(value: string): string {
-  if (value.length <= PUBKEY_HEAD + PUBKEY_TAIL + 1) return value;
-  return `${value.slice(0, PUBKEY_HEAD)}…${value.slice(-PUBKEY_TAIL)}`;
+/**
+ * Render a 64-char hex pubkey as a shortened npub. We prefer npub over hex
+ * here because consent dialogs are user-facing and Nostr clients
+ * conventionally show npub. Fall back to a hex truncation if conversion
+ * fails (malformed pubkey from the parent).
+ */
+function renderPeerPubkey(hexPubkey: string): string {
+  try {
+    const npub = hexToNpub(hexPubkey);
+    if (npub.length <= NPUB_HEAD + NPUB_TAIL + 1) return npub;
+    return `${npub.slice(0, NPUB_HEAD)}…${npub.slice(-NPUB_TAIL)}`;
+  } catch {
+    return hexPubkey.length > 16
+      ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}`
+      : hexPubkey;
+  }
 }
 
 function methodLabel(
@@ -83,7 +97,7 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
         {#if c.pubkey}
           <dt>{$i18n.t.consent.peerPubkey}</dt>
           <dd>
-            <code title={c.pubkey}>{shortenPubkey(c.pubkey)}</code>
+            <code title={c.pubkey}>{renderPeerPubkey(c.pubkey)}</code>
           </dd>
         {/if}
 
