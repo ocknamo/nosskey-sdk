@@ -52,4 +52,15 @@ describe('NIP-04', () => {
     const fakePub = 'g'.repeat(64);
     expect(() => nip04Encrypt('x', aliceSec, fakePub)).toThrow(/64 hex characters/);
   });
+
+  // Cross-implementation interop: known-answer vector taken verbatim from
+  // nostr-tools' nip04.test.ts ("decrypt message from go-nostr"). Confirms
+  // we agree with go-nostr / nostr-tools on the wire format.
+  it('decrypts a payload produced by go-nostr', () => {
+    const sk1 = hexToBytes('91ba716fa9e7ea2fcbad360cf4f8e0d312f73984da63d90f524ad61a6a1e7dbe');
+    const sk2 = hexToBytes('96f6fa197aa07477ab88f6981118466ae3a982faab8ad5db9d5426870c73d220');
+    const pk1 = bytesToHex(schnorr.getPublicKey(sk1));
+    const ciphertext = 'zJxfaJ32rN5Dg1ODjOlEew==?iv=EV5bUjcc4OX2Km/zPp4ndQ==';
+    expect(nip04Decrypt(ciphertext, sk2, pk1)).toBe('nanana');
+  });
 });
