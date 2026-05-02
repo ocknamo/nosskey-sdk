@@ -26,16 +26,11 @@ function renderPeerPubkey(hexPubkey: string): string {
     if (npub.length <= NPUB_HEAD + NPUB_TAIL + 1) return npub;
     return `${npub.slice(0, NPUB_HEAD)}…${npub.slice(-NPUB_TAIL)}`;
   } catch {
-    return hexPubkey.length > 16
-      ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}`
-      : hexPubkey;
+    return hexPubkey.length > 16 ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}` : hexPubkey;
   }
 }
 
-function methodLabel(
-  method: NosskeyMethod,
-  labels: typeof $i18n.t.consent.methodLabel
-): string {
+function methodLabel(method: NosskeyMethod, labels: typeof $i18n.t.consent.methodLabel): string {
   switch (method) {
     case 'signEvent':
       return labels.signEvent;
