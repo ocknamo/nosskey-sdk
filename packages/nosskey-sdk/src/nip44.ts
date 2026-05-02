@@ -68,7 +68,13 @@ function getMessageKeys(conversationKey: Uint8Array, nonce: Uint8Array): Message
   };
 }
 
-/** Padded length bucket used by the spec's `calc_padded_len`. */
+/**
+ * Padded length bucket used by the spec's `calc_padded_len`.
+ *
+ * The early `<= 32` return is not just an optimisation — it also keeps
+ * `Math.log2(unpaddedLen - 1)` away from `log2(0) = -Infinity` for
+ * `unpaddedLen === 1`. Reorder at your peril.
+ */
 function calcPaddedLen(unpaddedLen: number): number {
   if (unpaddedLen < 1) {
     throw new Error('NIP-44: plaintext length must be >= 1.');
