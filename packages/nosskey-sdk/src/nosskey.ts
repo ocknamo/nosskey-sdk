@@ -317,45 +317,15 @@ export class NosskeyManager implements NosskeyManagerLike {
     options: SignOptions = {}
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags } = options;
-
-    // グローバル設定を使用
-    const shouldUseCache = this.#keyCache.isEnabled();
-
-    let sk: Uint8Array | undefined;
-
-    // キャッシュが有効で、クレデンシャルIDがあり、キャッシュに鍵がある場合はそれを使用
-    if (shouldUseCache) {
-      sk = this.#keyCache.getKey(keyInfo.credentialId);
+    const sk = await this.#getSecretKey(keyInfo);
+    try {
+      const signer = seckeySigner(bytesToHex(sk.bytes), { tags });
+      return await signer.signEvent(event);
+    } finally {
+      // release() が cache 有効時は no-op、無効時のみ #clearKey を実行する。
+      // clearMemory=false なら呼ばないので「キャッシュ無効でも残す」も可能。
+      if (clearMemory) sk.release();
     }
-
-    // キャッシュがない場合は通常の処理
-    if (!sk) {
-      // PRF値を取得（これが直接シークレットキー）
-      const { secret: prfSecret } = await getPrfSecret(
-        hexToBytes(keyInfo.credentialId),
-        this.#prfOptions
-      );
-      sk = prfSecret;
-
-      // キャッシュが有効な場合は保存
-      if (shouldUseCache) {
-        this.#keyCache.setKey(keyInfo.credentialId, sk);
-      }
-    }
-
-    // 秘密鍵HEX文字列を取得
-    const skHex = bytesToHex(sk);
-
-    // @rx-nostr/crypto seckeySigner を使用して署名
-    const signer = seckeySigner(skHex, { tags });
-    const signedEvent = await signer.signEvent(event);
-
-    // キャッシュを使用しない場合、または明示的にclearMemory=trueの場合のみメモリクリア
-    if (!shouldUseCache && clearMemory) {
-      this.#clearKey(sk);
-    }
-
-    return signedEvent;
   }
 
   /**
@@ -439,7 +409,9 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * 現在の NostrKeyInfo から秘密鍵を解決する。
+   * NostrKeyInfo から秘密鍵を解決する。
+   *
+   * @param keyInfoOverride 明示的に使う鍵情報。省略時は `getCurrentKeyInfo()` を使う。
    *
    * 戻り値の `bytes` の所有権:
    * - **読み取り専用**として扱うこと。キャッシュ有効時は `bytes` がキャッシュ
@@ -452,8 +424,10 @@ export class NosskeyManager implements NosskeyManagerLike {
    * - キャッシュが有効ならキャッシュを参照し、無ければ PRF で取得して保存する
    * - キャッシュが無効な場合は呼び出し側で `release()` 時に消去される一時バッファを返す
    */
-  async #getSecretKey(): Promise<{ bytes: Uint8Array; release: () => void }> {
-    const keyInfo = this.getCurrentKeyInfo();
+  async #getSecretKey(
+    keyInfoOverride?: NostrKeyInfo
+  ): Promise<{ bytes: Uint8Array; release: () => void }> {
+    const keyInfo = keyInfoOverride ?? this.getCurrentKeyInfo();
     if (!keyInfo) {
       throw new Error('No current NostrKeyInfo set');
     }
