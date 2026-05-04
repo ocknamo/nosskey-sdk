@@ -5,6 +5,14 @@ interface NostrProvider {
   getPublicKey(): Promise<string>;
   signEvent(event: NostrEvent): Promise<NostrEvent>;
   getRelays(): Promise<Record<string, { read: boolean; write: boolean }>>;
+  nip44: {
+    encrypt(peerPubkey: string, plaintext: string): Promise<string>;
+    decrypt(peerPubkey: string, ciphertext: string): Promise<string>;
+  };
+  nip04: {
+    encrypt(peerPubkey: string, plaintext: string): Promise<string>;
+    decrypt(peerPubkey: string, ciphertext: string): Promise<string>;
+  };
 }
 
 declare global {
@@ -99,6 +107,64 @@ app.innerHTML = `
   </section>
 
   <section>
+    <h2>5. NIP-44 encrypt / decrypt</h2>
+    <p class="hint">
+      Modern (recommended) DM encryption. Self-encrypt by clicking
+      <em>Use my pubkey</em> to populate the peer field with the public key
+      from this iframe — both encrypt and decrypt will use the same key,
+      so you can verify the round trip without a second account.
+    </p>
+    <label for="nip44-peer">Peer public key (hex, 64 chars)</label>
+    <div class="row">
+      <input id="nip44-peer" type="text" placeholder="64 hex characters" />
+      <button id="nip44-use-self" class="secondary" disabled>Use my pubkey</button>
+    </div>
+    <label for="nip44-plaintext" style="margin-top:12px;">Plaintext</label>
+    <textarea id="nip44-plaintext">hello, NIP-44 🌸</textarea>
+    <div class="row">
+      <button id="nip44-encrypt" disabled>Encrypt → ciphertext</button>
+      <button id="nip44-decrypt" disabled>Decrypt → plaintext</button>
+    </div>
+    <label for="nip44-ciphertext" style="margin-top:12px;">Ciphertext (base64)</label>
+    <textarea id="nip44-ciphertext" placeholder="paste a NIP-44 v2 payload here, or click Encrypt above"></textarea>
+    <label for="nip44-decrypted" style="margin-top:12px;">Decrypted output</label>
+    <pre id="nip44-decrypted">No decryption attempted yet.</pre>
+  </section>
+
+  <section>
+    <h2>6. NIP-04 encrypt / decrypt (legacy)</h2>
+    <p class="hint warn">
+      ⚠️ NIP-04 is AES-CBC without authentication and is deprecated by the
+      spec itself. Use NIP-44 for new messages. This section is provided
+      only to verify interop with older clients.
+    </p>
+    <label for="nip04-peer">Peer public key (hex, 64 chars)</label>
+    <div class="row">
+      <input id="nip04-peer" type="text" placeholder="64 hex characters" />
+      <button id="nip04-use-self" class="secondary" disabled>Use my pubkey</button>
+    </div>
+    <label for="nip04-plaintext" style="margin-top:12px;">Plaintext</label>
+    <textarea id="nip04-plaintext">hello, NIP-04 (legacy)</textarea>
+    <div class="row">
+      <button id="nip04-encrypt" disabled>Encrypt → ciphertext</button>
+      <button id="nip04-decrypt" disabled>Decrypt → plaintext</button>
+    </div>
+    <label for="nip04-ciphertext" style="margin-top:12px;">Ciphertext (base64?iv=base64)</label>
+    <textarea id="nip04-ciphertext" placeholder="paste a NIP-04 payload here, or click Encrypt above"></textarea>
+    <label for="nip04-decrypted" style="margin-top:12px;">Decrypted output</label>
+    <pre id="nip04-decrypted">No decryption attempted yet.</pre>
+    <p class="hint">
+      <strong>Send DM</strong> below encrypts the plaintext to the peer
+      pubkey, builds a kind:4 event with a <code>p</code> tag, signs it
+      through the iframe (consent dialog appears twice — once for encrypt,
+      once for sign), and publishes to the Relay URL from section 4.
+    </p>
+    <div class="row">
+      <button id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
+    </div>
+  </section>
+
+  <section>
     <h2>Log</h2>
     <pre id="log"></pre>
   </section>
@@ -122,6 +188,21 @@ const ui = {
   getRelays: requireEl<HTMLButtonElement>('#get-relays'),
   relaysOutput: requireEl<HTMLPreElement>('#relays-output'),
   signPublish: requireEl<HTMLButtonElement>('#sign-publish'),
+  nip44Peer: requireEl<HTMLInputElement>('#nip44-peer'),
+  nip44UseSelf: requireEl<HTMLButtonElement>('#nip44-use-self'),
+  nip44Plaintext: requireEl<HTMLTextAreaElement>('#nip44-plaintext'),
+  nip44Encrypt: requireEl<HTMLButtonElement>('#nip44-encrypt'),
+  nip44Decrypt: requireEl<HTMLButtonElement>('#nip44-decrypt'),
+  nip44Ciphertext: requireEl<HTMLTextAreaElement>('#nip44-ciphertext'),
+  nip44Decrypted: requireEl<HTMLPreElement>('#nip44-decrypted'),
+  nip04Peer: requireEl<HTMLInputElement>('#nip04-peer'),
+  nip04UseSelf: requireEl<HTMLButtonElement>('#nip04-use-self'),
+  nip04Plaintext: requireEl<HTMLTextAreaElement>('#nip04-plaintext'),
+  nip04Encrypt: requireEl<HTMLButtonElement>('#nip04-encrypt'),
+  nip04Decrypt: requireEl<HTMLButtonElement>('#nip04-decrypt'),
+  nip04Ciphertext: requireEl<HTMLTextAreaElement>('#nip04-ciphertext'),
+  nip04Decrypted: requireEl<HTMLPreElement>('#nip04-decrypted'),
+  nip04SendDm: requireEl<HTMLButtonElement>('#nip04-send-dm'),
   status: requireEl<HTMLSpanElement>('#status'),
   log: requireEl<HTMLPreElement>('#log'),
 };
@@ -146,6 +227,13 @@ function setConnectedUI(connected: boolean): void {
   ui.getPubkey.disabled = !connected;
   ui.getRelays.disabled = !connected;
   ui.signPublish.disabled = !connected;
+  ui.nip44UseSelf.disabled = !connected;
+  ui.nip44Encrypt.disabled = !connected;
+  ui.nip44Decrypt.disabled = !connected;
+  ui.nip04UseSelf.disabled = !connected;
+  ui.nip04Encrypt.disabled = !connected;
+  ui.nip04Decrypt.disabled = !connected;
+  ui.nip04SendDm.disabled = !connected;
 }
 
 function formatError(err: unknown): string {
@@ -176,6 +264,14 @@ async function connect(): Promise<void> {
       getPublicKey: () => next.getPublicKey(),
       signEvent: (event) => next.signEvent(event),
       getRelays: () => next.getRelays(),
+      nip44: {
+        encrypt: (peer, plain) => next.nip44.encrypt(peer, plain),
+        decrypt: (peer, cipher) => next.nip44.decrypt(peer, cipher),
+      },
+      nip04: {
+        encrypt: (peer, plain) => next.nip04.encrypt(peer, plain),
+        decrypt: (peer, cipher) => next.nip04.decrypt(peer, cipher),
+      },
     };
     setConnectedUI(true);
     setStatus('connected', 'ok');
@@ -327,6 +423,149 @@ async function signAndPublish(): Promise<void> {
   }
 }
 
+async function fillSelfPubkey(target: HTMLInputElement, label: string): Promise<void> {
+  if (!window.nostr) return;
+  log(`${label}: requesting window.nostr.getPublicKey() to self-fill peer pubkey…`);
+  try {
+    target.value = await window.nostr.getPublicKey();
+    log(`${label}: peer pubkey set to own pubkey.`);
+  } catch (err) {
+    log(`${label}: getPublicKey failed: ${formatError(err)}`);
+  }
+}
+
+async function nip44Encrypt(): Promise<void> {
+  if (!window.nostr) return;
+  const peer = ui.nip44Peer.value.trim();
+  const plain = ui.nip44Plaintext.value;
+  if (!peer) {
+    log('NIP-44 encrypt aborted: peer pubkey is empty.');
+    return;
+  }
+  log(`Requesting window.nostr.nip44.encrypt() for ${plain.length} chars…`);
+  try {
+    const ciphertext = await window.nostr.nip44.encrypt(peer, plain);
+    ui.nip44Ciphertext.value = ciphertext;
+    log(`NIP-44 encrypt OK (${ciphertext.length} chars of base64).`);
+  } catch (err) {
+    log(`NIP-44 encrypt failed: ${formatError(err)}`);
+  }
+}
+
+async function nip44Decrypt(): Promise<void> {
+  if (!window.nostr) return;
+  const peer = ui.nip44Peer.value.trim();
+  const ciphertext = ui.nip44Ciphertext.value.trim();
+  if (!peer || !ciphertext) {
+    log('NIP-44 decrypt aborted: peer pubkey or ciphertext is empty.');
+    return;
+  }
+  log('Requesting window.nostr.nip44.decrypt()…');
+  try {
+    const plaintext = await window.nostr.nip44.decrypt(peer, ciphertext);
+    ui.nip44Decrypted.textContent = plaintext;
+    log(`NIP-44 decrypt OK (${plaintext.length} chars).`);
+  } catch (err) {
+    const msg = formatError(err);
+    log(`NIP-44 decrypt failed: ${msg}`);
+    ui.nip44Decrypted.textContent = `Error: ${msg}`;
+  }
+}
+
+/**
+ * Run NIP-04 encryption and report length on success. Returns null on failure
+ * (already logged). Shared by the encrypt button and the DM-send flow so the
+ * two paths can't drift apart.
+ */
+async function performNip04Encrypt(peer: string, plain: string): Promise<string | null> {
+  if (!window.nostr) return null;
+  log(`Requesting window.nostr.nip04.encrypt() for ${plain.length} chars…`);
+  try {
+    const ciphertext = await window.nostr.nip04.encrypt(peer, plain);
+    log(`NIP-04 encrypt OK (${ciphertext.length} chars).`);
+    return ciphertext;
+  } catch (err) {
+    log(`NIP-04 encrypt failed: ${formatError(err)}`);
+    return null;
+  }
+}
+
+async function nip04Encrypt(): Promise<void> {
+  const peer = ui.nip04Peer.value.trim();
+  if (!peer) {
+    log('NIP-04 encrypt aborted: peer pubkey is empty.');
+    return;
+  }
+  const ciphertext = await performNip04Encrypt(peer, ui.nip04Plaintext.value);
+  if (ciphertext !== null) {
+    ui.nip04Ciphertext.value = ciphertext;
+  }
+}
+
+async function nip04Decrypt(): Promise<void> {
+  if (!window.nostr) return;
+  const peer = ui.nip04Peer.value.trim();
+  const ciphertext = ui.nip04Ciphertext.value.trim();
+  if (!peer || !ciphertext) {
+    log('NIP-04 decrypt aborted: peer pubkey or ciphertext is empty.');
+    return;
+  }
+  log('Requesting window.nostr.nip04.decrypt()…');
+  try {
+    const plaintext = await window.nostr.nip04.decrypt(peer, ciphertext);
+    ui.nip04Decrypted.textContent = plaintext;
+    log(`NIP-04 decrypt OK (${plaintext.length} chars).`);
+  } catch (err) {
+    const msg = formatError(err);
+    log(`NIP-04 decrypt failed: ${msg}`);
+    ui.nip04Decrypted.textContent = `Error: ${msg}`;
+  }
+}
+
+async function nip04SendDm(): Promise<void> {
+  if (!window.nostr) return;
+  const peer = ui.nip04Peer.value.trim();
+  const relayUrl = ui.relayUrl.value.trim();
+  if (!peer) {
+    log('NIP-04 DM aborted: peer pubkey is empty.');
+    return;
+  }
+  if (!relayUrl) {
+    log('NIP-04 DM aborted: relay URL (section 4) is empty.');
+    return;
+  }
+
+  // 1) encrypt — prompts encrypt consent
+  log(`NIP-04 DM: encrypting to ${peer.slice(0, 8)}…`);
+  const ciphertext = await performNip04Encrypt(peer, ui.nip04Plaintext.value);
+  if (ciphertext === null) return;
+  ui.nip04Ciphertext.value = ciphertext;
+
+  // 2) build kind:4 + p-tag, sign — prompts sign consent
+  const draft: NostrEvent = {
+    kind: 4,
+    content: ciphertext,
+    tags: [['p', peer]],
+    created_at: Math.floor(Date.now() / 1000),
+  };
+  log('NIP-04 DM: signing kind:4 event…');
+  let signed: NostrEvent;
+  try {
+    signed = await window.nostr.signEvent(draft);
+  } catch (err) {
+    log(`NIP-04 DM signEvent failed: ${formatError(err)}`);
+    return;
+  }
+  log(`NIP-04 DM: signed event id ${signed.id ?? '(missing id)'}.`);
+
+  // 3) publish via the existing WebSocket helper
+  try {
+    await publishEvent(relayUrl, signed);
+  } catch (err) {
+    log(`NIP-04 DM publish failed: ${formatError(err)}`);
+  }
+}
+
 ui.connect.addEventListener('click', () => {
   void connect();
 });
@@ -339,6 +578,27 @@ ui.getRelays.addEventListener('click', () => {
 });
 ui.signPublish.addEventListener('click', () => {
   void signAndPublish();
+});
+ui.nip44UseSelf.addEventListener('click', () => {
+  void fillSelfPubkey(ui.nip44Peer, 'NIP-44');
+});
+ui.nip44Encrypt.addEventListener('click', () => {
+  void nip44Encrypt();
+});
+ui.nip44Decrypt.addEventListener('click', () => {
+  void nip44Decrypt();
+});
+ui.nip04UseSelf.addEventListener('click', () => {
+  void fillSelfPubkey(ui.nip04Peer, 'NIP-04');
+});
+ui.nip04Encrypt.addEventListener('click', () => {
+  void nip04Encrypt();
+});
+ui.nip04Decrypt.addEventListener('click', () => {
+  void nip04Decrypt();
+});
+ui.nip04SendDm.addEventListener('click', () => {
+  void nip04SendDm();
 });
 
 log(

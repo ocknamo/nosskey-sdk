@@ -1,5 +1,7 @@
 import { seckeySigner } from '@rx-nostr/crypto';
 import { KeyCache } from './key-cache.js';
+import { nip04Decrypt, nip04Encrypt } from './nip04.js';
+import { nip44Decrypt, nip44Encrypt } from './nip44.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import type {
   GetPrfSecretOptions,
@@ -315,45 +317,15 @@ export class NosskeyManager implements NosskeyManagerLike {
     options: SignOptions = {}
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags } = options;
-
-    // グローバル設定を使用
-    const shouldUseCache = this.#keyCache.isEnabled();
-
-    let sk: Uint8Array | undefined;
-
-    // キャッシュが有効で、クレデンシャルIDがあり、キャッシュに鍵がある場合はそれを使用
-    if (shouldUseCache) {
-      sk = this.#keyCache.getKey(keyInfo.credentialId);
+    const sk = await this.#getSecretKey(keyInfo);
+    try {
+      const signer = seckeySigner(bytesToHex(sk.bytes), { tags });
+      return await signer.signEvent(event);
+    } finally {
+      // release() が cache 有効時は no-op、無効時のみ #clearKey を実行する。
+      // clearMemory=false なら呼ばないので「キャッシュ無効でも残す」も可能。
+      if (clearMemory) sk.release();
     }
-
-    // キャッシュがない場合は通常の処理
-    if (!sk) {
-      // PRF値を取得（これが直接シークレットキー）
-      const { secret: prfSecret } = await getPrfSecret(
-        hexToBytes(keyInfo.credentialId),
-        this.#prfOptions
-      );
-      sk = prfSecret;
-
-      // キャッシュが有効な場合は保存
-      if (shouldUseCache) {
-        this.#keyCache.setKey(keyInfo.credentialId, sk);
-      }
-    }
-
-    // 秘密鍵HEX文字列を取得
-    const skHex = bytesToHex(sk);
-
-    // @rx-nostr/crypto seckeySigner を使用して署名
-    const signer = seckeySigner(skHex, { tags });
-    const signedEvent = await signer.signEvent(event);
-
-    // キャッシュを使用しない場合、または明示的にclearMemory=trueの場合のみメモリクリア
-    if (!shouldUseCache && clearMemory) {
-      this.#clearKey(sk);
-    }
-
-    return signedEvent;
   }
 
   /**
@@ -386,6 +358,94 @@ export class NosskeyManager implements NosskeyManagerLike {
    */
   async isPrfSupported(): Promise<boolean> {
     return isPrfSupported();
+  }
+
+  /**
+   * NIP-44 v2 で平文を暗号化
+   */
+  async nip44Encrypt(peerPubkey: string, plaintext: string): Promise<string> {
+    const sk = await this.#getSecretKey();
+    try {
+      return nip44Encrypt(plaintext, sk.bytes, peerPubkey);
+    } finally {
+      sk.release();
+    }
+  }
+
+  /**
+   * NIP-44 v2 ペイロードを復号
+   */
+  async nip44Decrypt(peerPubkey: string, ciphertext: string): Promise<string> {
+    const sk = await this.#getSecretKey();
+    try {
+      return nip44Decrypt(ciphertext, sk.bytes, peerPubkey);
+    } finally {
+      sk.release();
+    }
+  }
+
+  /**
+   * NIP-04（レガシー）で平文を暗号化
+   */
+  async nip04Encrypt(peerPubkey: string, plaintext: string): Promise<string> {
+    const sk = await this.#getSecretKey();
+    try {
+      return nip04Encrypt(plaintext, sk.bytes, peerPubkey);
+    } finally {
+      sk.release();
+    }
+  }
+
+  /**
+   * NIP-04 ペイロードを復号
+   */
+  async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string> {
+    const sk = await this.#getSecretKey();
+    try {
+      return nip04Decrypt(ciphertext, sk.bytes, peerPubkey);
+    } finally {
+      sk.release();
+    }
+  }
+
+  /**
+   * NostrKeyInfo から秘密鍵を解決する。
+   *
+   * @param keyInfoOverride 明示的に使う鍵情報。省略時は `getCurrentKeyInfo()` を使う。
+   *
+   * 戻り値の `bytes` の所有権:
+   * - **読み取り専用**として扱うこと。キャッシュ有効時は `bytes` がキャッシュ
+   *   内のバッファと同一参照になっており、書き換えると以降の呼び出しが壊れる。
+   * - キャッシュ無効時は呼び出し側でこのバッファを変更しても問題ないが、
+   *   `release()` が `.fill(0)` でゼロ化するので変更には意味がない。
+   * - 使い終わったら必ず `release()` を呼ぶこと（try/finally）。
+   *
+   * キャッシュ動作:
+   * - キャッシュが有効ならキャッシュを参照し、無ければ PRF で取得して保存する
+   * - キャッシュが無効な場合は呼び出し側で `release()` 時に消去される一時バッファを返す
+   */
+  async #getSecretKey(
+    keyInfoOverride?: NostrKeyInfo
+  ): Promise<{ bytes: Uint8Array; release: () => void }> {
+    const keyInfo = keyInfoOverride ?? this.getCurrentKeyInfo();
+    if (!keyInfo) {
+      throw new Error('No current NostrKeyInfo set');
+    }
+    const shouldUseCache = this.#keyCache.isEnabled();
+
+    if (shouldUseCache) {
+      const cached = this.#keyCache.getKey(keyInfo.credentialId);
+      if (cached) {
+        return { bytes: cached, release: () => undefined };
+      }
+    }
+
+    const { secret } = await getPrfSecret(hexToBytes(keyInfo.credentialId), this.#prfOptions);
+    if (shouldUseCache) {
+      this.#keyCache.setKey(keyInfo.credentialId, secret);
+      return { bytes: secret, release: () => undefined };
+    }
+    return { bytes: secret, release: () => this.#clearKey(secret) };
   }
 
   /**

@@ -9,7 +9,33 @@
 import type { NostrEvent } from 'nosskey-sdk';
 
 /** Supported NIP-07 methods the iframe provider can execute. */
-export type NosskeyMethod = 'getPublicKey' | 'signEvent' | 'getRelays';
+export type NosskeyMethod =
+  | 'getPublicKey'
+  | 'signEvent'
+  | 'getRelays'
+  | 'nip44_encrypt'
+  | 'nip44_decrypt'
+  | 'nip04_encrypt'
+  | 'nip04_decrypt';
+
+/** Methods that mutate or expose secret material and therefore require user consent. */
+export const CONSENT_REQUIRED_METHODS: readonly NosskeyMethod[] = [
+  'signEvent',
+  'nip44_encrypt',
+  'nip44_decrypt',
+  'nip04_encrypt',
+  'nip04_decrypt',
+] as const;
+
+/** True for `nip44_encrypt` / `nip04_encrypt`. */
+export function isEncryptMethod(method: NosskeyMethod): boolean {
+  return method === 'nip44_encrypt' || method === 'nip04_encrypt';
+}
+
+/** True for `nip44_decrypt` / `nip04_decrypt`. */
+export function isDecryptMethod(method: NosskeyMethod): boolean {
+  return method === 'nip44_decrypt' || method === 'nip04_decrypt';
+}
 
 /**
  * NIP-07 `getRelays()` return shape: a map of relay URL to read/write flags.
@@ -39,6 +65,12 @@ export const NOSSKEY_ERROR_CODES: readonly NosskeyErrorCode[] = [
 export interface NosskeyRequestParams {
   /** Event payload for `signEvent`. */
   event?: NostrEvent;
+  /** Counterparty public key (32-byte hex) for nip44/nip04 methods. */
+  pubkey?: string;
+  /** Plaintext for `nip44_encrypt` / `nip04_encrypt`. */
+  plaintext?: string;
+  /** Ciphertext for `nip44_decrypt` / `nip04_decrypt`. */
+  ciphertext?: string;
 }
 
 /** Request sent from parent → iframe. */
@@ -82,7 +114,15 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
 }
 
 function isSupportedMethod(x: unknown): x is NosskeyMethod {
-  return x === 'getPublicKey' || x === 'signEvent' || x === 'getRelays';
+  return (
+    x === 'getPublicKey' ||
+    x === 'signEvent' ||
+    x === 'getRelays' ||
+    x === 'nip44_encrypt' ||
+    x === 'nip44_decrypt' ||
+    x === 'nip04_encrypt' ||
+    x === 'nip04_decrypt'
+  );
 }
 
 function isErrorCode(x: unknown): x is NosskeyErrorCode {

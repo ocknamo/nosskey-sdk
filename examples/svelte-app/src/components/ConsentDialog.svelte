@@ -1,36 +1,85 @@
 <script lang="ts">
+import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
+import { hexToNpub } from '../utils/bech32-converter.js';
 import Button from './ui/button/Button.svelte';
 
 const CONTENT_PREVIEW_LIMIT = 240;
+const NPUB_HEAD = 12;
+const NPUB_TAIL = 8;
 
 function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
   if (value.length <= limit) return value;
   return `${value.slice(0, limit)}…`;
 }
+
+/**
+ * Render a 64-char hex pubkey as a shortened npub. We prefer npub over hex
+ * here because consent dialogs are user-facing and Nostr clients
+ * conventionally show npub. Fall back to a hex truncation if conversion
+ * fails (malformed pubkey from the parent).
+ */
+function renderPeerPubkey(hexPubkey: string): string {
+  try {
+    const npub = hexToNpub(hexPubkey);
+    if (npub.length <= NPUB_HEAD + NPUB_TAIL + 1) return npub;
+    return `${npub.slice(0, NPUB_HEAD)}…${npub.slice(-NPUB_TAIL)}`;
+  } catch {
+    return hexPubkey.length > 16 ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}` : hexPubkey;
+  }
+}
+
+function methodLabel(method: NosskeyMethod, labels: typeof $i18n.t.consent.methodLabel): string {
+  switch (method) {
+    case 'signEvent':
+      return labels.signEvent;
+    case 'nip44_encrypt':
+      return labels.nip44Encrypt;
+    case 'nip44_decrypt':
+      return labels.nip44Decrypt;
+    case 'nip04_encrypt':
+      return labels.nip04Encrypt;
+    case 'nip04_decrypt':
+      return labels.nip04Decrypt;
+    default:
+      return method;
+  }
+}
+
+function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
+  if (method === 'signEvent') return t.title;
+  if (isDecryptMethod(method)) return t.titleDecrypt;
+  return t.titleEncrypt;
+}
 </script>
 
 {#if $pendingConsent}
+  {@const c = $pendingConsent}
+  {@const isEncrypt = isEncryptMethod(c.method)}
+  {@const isDecrypt = isDecryptMethod(c.method)}
   <div class="consent-backdrop" role="dialog" aria-modal="true" aria-labelledby="consent-title">
     <div class="consent-card">
-      <h2 id="consent-title">{$i18n.t.consent.title}</h2>
+      <h2 id="consent-title">{dialogTitle(c.method, $i18n.t.consent)}</h2>
       <p class="consent-origin">
         <span class="label">{$i18n.t.consent.origin}</span>
-        <code>{$pendingConsent.origin}</code>
+        <code>{c.origin}</code>
       </p>
 
-      {#if $pendingConsent.event}
-        <dl class="consent-event">
+      <dl class="consent-event">
+        <dt>{$i18n.t.consent.method}</dt>
+        <dd>{methodLabel(c.method, $i18n.t.consent.methodLabel)}</dd>
+
+        {#if c.event}
           <dt>{$i18n.t.consent.eventKind}</dt>
-          <dd>{$pendingConsent.event.kind}</dd>
+          <dd>{c.event.kind}</dd>
           <dt>{$i18n.t.consent.eventContent}</dt>
-          <dd><pre>{truncate($pendingConsent.event.content ?? '')}</pre></dd>
+          <dd><pre>{truncate(c.event.content ?? '')}</pre></dd>
           <dt>{$i18n.t.consent.eventTags}</dt>
           <dd>
-            {#if $pendingConsent.event.tags && $pendingConsent.event.tags.length > 0}
+            {#if c.event.tags && c.event.tags.length > 0}
               <ul>
-                {#each $pendingConsent.event.tags as tag, i (i)}
+                {#each c.event.tags as tag, i (i)}
                   <li><code>{JSON.stringify(tag)}</code></li>
                 {/each}
               </ul>
@@ -38,8 +87,25 @@ function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
               <span class="muted">{$i18n.t.consent.noTags}</span>
             {/if}
           </dd>
-        </dl>
-      {/if}
+        {/if}
+
+        {#if c.pubkey}
+          <dt>{$i18n.t.consent.peerPubkey}</dt>
+          <dd>
+            <code title={c.pubkey}>{renderPeerPubkey(c.pubkey)}</code>
+          </dd>
+        {/if}
+
+        {#if isEncrypt && c.plaintext !== undefined}
+          <dt>{$i18n.t.consent.plaintext}</dt>
+          <dd><pre>{truncate(c.plaintext)}</pre></dd>
+        {/if}
+
+        {#if isDecrypt}
+          <dt>{$i18n.t.consent.plaintext}</dt>
+          <dd><span class="muted">{$i18n.t.consent.decryptNoPreview}</span></dd>
+        {/if}
+      </dl>
 
       <div class="consent-actions">
         <Button variant="danger" onclick={rejectConsent}>

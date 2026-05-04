@@ -223,4 +223,34 @@ export interface NosskeyManagerLike {
     credentialId?: Uint8Array,
     options?: KeyOptions
   ): Promise<string>;
+
+  /**
+   * NIP-44 v2 で平文を暗号化
+   * @param peerPubkey 相手の公開鍵（hex, 32 bytes）
+   * @param plaintext 平文
+   * @returns base64 エンコードされた NIP-44 v2 ペイロード
+   */
+  nip44Encrypt(peerPubkey: string, plaintext: string): Promise<string>;
+
+  /**
+   * NIP-44 v2 ペイロードを復号
+   * @param peerPubkey 相手の公開鍵（hex, 32 bytes）
+   * @param ciphertext base64 エンコードされた NIP-44 v2 ペイロード
+   */
+  nip44Decrypt(peerPubkey: string, ciphertext: string): Promise<string>;
+
+  /**
+   * NIP-04 で平文を暗号化（レガシー DM）
+   * @param peerPubkey 相手の公開鍵（hex, 32 bytes）
+   * @param plaintext 平文
+   * @returns NIP-04 ペイロード（`<base64(ct)>?iv=<base64(iv)>`）
+   */
+  nip04Encrypt(peerPubkey: string, plaintext: string): Promise<string>;
+
+  /**
+   * NIP-04 ペイロードを復号
+   * @param peerPubkey 相手の公開鍵（hex, 32 bytes）
+   * @param ciphertext NIP-04 ペイロード
+   */
+  nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>;
 }

@@ -136,6 +136,22 @@ button.secondary {
   color: #e03131;
 }
 
+.hint {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.hint.warn {
+  opacity: 0.95;
+  color: #e8590c;
+}
+
+.hint em {
+  font-style: italic;
+  opacity: 0.9;
+}
+
 .iframe-modal {
   position: fixed;
   inset: 0;
