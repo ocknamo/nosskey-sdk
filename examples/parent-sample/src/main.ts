@@ -472,21 +472,33 @@ async function nip44Decrypt(): Promise<void> {
   }
 }
 
+/**
+ * Run NIP-04 encryption and report length on success. Returns null on failure
+ * (already logged). Shared by the encrypt button and the DM-send flow so the
+ * two paths can't drift apart.
+ */
+async function performNip04Encrypt(peer: string, plain: string): Promise<string | null> {
+  if (!window.nostr) return null;
+  log(`Requesting window.nostr.nip04.encrypt() for ${plain.length} chars…`);
+  try {
+    const ciphertext = await window.nostr.nip04.encrypt(peer, plain);
+    log(`NIP-04 encrypt OK (${ciphertext.length} chars).`);
+    return ciphertext;
+  } catch (err) {
+    log(`NIP-04 encrypt failed: ${formatError(err)}`);
+    return null;
+  }
+}
+
 async function nip04Encrypt(): Promise<void> {
-  if (!window.nostr) return;
   const peer = ui.nip04Peer.value.trim();
-  const plain = ui.nip04Plaintext.value;
   if (!peer) {
     log('NIP-04 encrypt aborted: peer pubkey is empty.');
     return;
   }
-  log(`Requesting window.nostr.nip04.encrypt() for ${plain.length} chars…`);
-  try {
-    const ciphertext = await window.nostr.nip04.encrypt(peer, plain);
+  const ciphertext = await performNip04Encrypt(peer, ui.nip04Plaintext.value);
+  if (ciphertext !== null) {
     ui.nip04Ciphertext.value = ciphertext;
-    log('NIP-04 encrypt OK.');
-  } catch (err) {
-    log(`NIP-04 encrypt failed: ${formatError(err)}`);
   }
 }
 
@@ -513,7 +525,6 @@ async function nip04Decrypt(): Promise<void> {
 async function nip04SendDm(): Promise<void> {
   if (!window.nostr) return;
   const peer = ui.nip04Peer.value.trim();
-  const plain = ui.nip04Plaintext.value;
   const relayUrl = ui.relayUrl.value.trim();
   if (!peer) {
     log('NIP-04 DM aborted: peer pubkey is empty.');
@@ -525,14 +536,9 @@ async function nip04SendDm(): Promise<void> {
   }
 
   // 1) encrypt — prompts encrypt consent
-  log(`NIP-04 DM: encrypting ${plain.length} chars to ${peer.slice(0, 8)}…`);
-  let ciphertext: string;
-  try {
-    ciphertext = await window.nostr.nip04.encrypt(peer, plain);
-  } catch (err) {
-    log(`NIP-04 DM encrypt failed: ${formatError(err)}`);
-    return;
-  }
+  log(`NIP-04 DM: encrypting to ${peer.slice(0, 8)}…`);
+  const ciphertext = await performNip04Encrypt(peer, ui.nip04Plaintext.value);
+  if (ciphertext === null) return;
   ui.nip04Ciphertext.value = ciphertext;
 
   // 2) build kind:4 + p-tag, sign — prompts sign consent
