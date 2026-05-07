@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ConsentPolicy } from '../store/app-state.js';
+import type { ConsentPolicy, TrustedOriginEntry } from '../store/app-state.js';
 import { evaluateConsent, policyKeyFor } from './consent-gating.js';
 
 const askPolicy: ConsentPolicy = {
@@ -31,8 +31,9 @@ describe('evaluateConsent', () => {
 
   it('returns reject when policy is deny, even for trusted origin', () => {
     const policy: ConsentPolicy = { ...askPolicy, signEvent: 'deny' };
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['signEvent'] }];
     expect(
-      evaluateConsent({ origin, method: 'signEvent' }, { trustedOrigins: [origin], policy })
+      evaluateConsent({ origin, method: 'signEvent' }, { trustedOrigins: trusted, policy })
     ).toEqual({ decision: 'reject', reason: 'policy-deny' });
   });
 
@@ -43,13 +44,26 @@ describe('evaluateConsent', () => {
     ).toEqual({ decision: 'approve', reason: 'policy-always' });
   });
 
-  it('returns approve when origin is trusted and policy is ask', () => {
+  it('returns approve when origin is trusted for this method', () => {
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['nip04'] }];
     expect(
       evaluateConsent(
         { origin, method: 'nip04_decrypt' },
-        { trustedOrigins: [origin], policy: askPolicy }
+        { trustedOrigins: trusted, policy: askPolicy }
       )
     ).toEqual({ decision: 'approve', reason: 'trusted-origin' });
+  });
+
+  it('returns ask when origin is trusted for a different method (no implicit elevation)', () => {
+    // signEvent のみ信頼している origin が、nip04_decrypt を要求してきたケース。
+    // メソッド境界を越えて自動承認しないことを保証する。
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['signEvent'] }];
+    expect(
+      evaluateConsent(
+        { origin, method: 'nip04_decrypt' },
+        { trustedOrigins: trusted, policy: askPolicy }
+      )
+    ).toEqual({ decision: 'ask' });
   });
 
   it('treats nip44 encrypt and decrypt as the same policy bucket', () => {
@@ -64,8 +78,9 @@ describe('evaluateConsent', () => {
 
   it('treats nip04 encrypt and decrypt as the same policy bucket', () => {
     const policy: ConsentPolicy = { ...askPolicy, nip04: 'deny' };
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['nip04'] }];
     for (const method of ['nip04_encrypt', 'nip04_decrypt'] as const) {
-      expect(evaluateConsent({ origin, method }, { trustedOrigins: [origin], policy })).toEqual({
+      expect(evaluateConsent({ origin, method }, { trustedOrigins: trusted, policy })).toEqual({
         decision: 'reject',
         reason: 'policy-deny',
       });

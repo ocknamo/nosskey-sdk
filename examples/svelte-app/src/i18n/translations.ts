@@ -171,6 +171,9 @@ export interface TranslationData {
       description: string;
       empty: string;
       removeButton: string;
+      removeAllButton: string;
+      confirmRemove: string;
+      confirmRemoveAll: string;
     };
     consentPolicy: {
       title: string;
@@ -405,9 +408,12 @@ export const ja: TranslationData = {
     trustedOrigins: {
       title: '信頼済みサイト',
       description:
-        '同意ダイアログで「このサイトを常に許可」を選んだサイトの一覧です。削除すると次回から再度確認が表示されます。',
+        '同意ダイアログで「このサイトを常に許可」を選んだサイトとメソッドの一覧です。許可はメソッドごとに記録され、他のメソッドは別途確認されます。削除すると次回から再度確認が表示されます。',
       empty: '信頼済みサイトはまだありません。',
-      removeButton: '削除',
+      removeButton: 'このメソッドを削除',
+      removeAllButton: 'すべて削除',
+      confirmRemove: 'このメソッドの自動許可を解除しますか？',
+      confirmRemoveAll: 'このサイトの自動許可をすべて解除しますか？',
     },
     consentPolicy: {
       title: 'メソッド別の同意ポリシー',
@@ -661,9 +667,12 @@ export const en: TranslationData = {
     trustedOrigins: {
       title: 'Trusted sites',
       description:
-        'Sites you marked as "always allow" in the consent dialog. Removing a site will make the dialog reappear on the next request.',
+        'Sites and methods you marked as "always allow" in the consent dialog. Trust is recorded per method; other methods are confirmed separately. Removing an entry will make the dialog reappear on the next request.',
       empty: 'No trusted sites yet.',
-      removeButton: 'Remove',
+      removeButton: 'Remove this method',
+      removeAllButton: 'Remove all',
+      confirmRemove: 'Remove auto-approval for this method?',
+      confirmRemoveAll: 'Remove auto-approval for this site entirely?',
     },
     consentPolicy: {
       title: 'Per-method consent policy',

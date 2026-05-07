@@ -5,10 +5,19 @@ export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
 export type ConsentDecision = 'ask' | 'always' | 'deny';
 
-export interface ConsentPolicy {
-  signEvent: ConsentDecision;
-  nip44: ConsentDecision;
-  nip04: ConsentDecision;
+/** ポリシーキーは `signEvent` / `nip44` / `nip04` の 3 種で、暗号化と復号は同一バケットに集約される。 */
+export type PolicyKey = 'signEvent' | 'nip44' | 'nip04';
+export const POLICY_KEYS: readonly PolicyKey[] = ['signEvent', 'nip44', 'nip04'] as const;
+
+export type ConsentPolicy = Record<PolicyKey, ConsentDecision>;
+
+/**
+ * 信頼済みエントリ。`origin` のすべての操作を許可するのではなく、
+ * `methods` に含まれるポリシーキーのみダイアログを省略する。
+ */
+export interface TrustedOriginEntry {
+  origin: string;
+  methods: PolicyKey[];
 }
 
 const DEFAULT_CONSENT_POLICY: ConsentPolicy = {
@@ -17,11 +26,17 @@ const DEFAULT_CONSENT_POLICY: ConsentPolicy = {
   nip04: 'ask',
 };
 
-const TRUSTED_ORIGINS_KEY = 'nosskey_trusted_origins';
+// v2: メソッドスコープ付きエントリの形式。旧 `nosskey_trusted_origins`
+// (`string[]`) は破壊的に置き換える（v1 ユーザー無し前提）。
+const TRUSTED_ORIGINS_KEY = 'nosskey_trusted_origins_v2';
 const CONSENT_POLICY_KEY = 'nosskey_consent_policy';
 
 function isConsentDecision(value: unknown): value is ConsentDecision {
   return value === 'ask' || value === 'always' || value === 'deny';
+}
+
+function isPolicyKey(value: unknown): value is PolicyKey {
+  return value === 'signEvent' || value === 'nip44' || value === 'nip04';
 }
 
 export function isScreenName(hash: string): hash is ScreenName {
@@ -46,7 +61,7 @@ export type ThemeMode = 'light' | 'dark' | 'auto';
 export const currentTheme = writable<ThemeMode>('dark');
 
 // 同意ゲート設定
-export const trustedOrigins = writable<string[]>([]);
+export const trustedOrigins = writable<TrustedOriginEntry[]>([]);
 export const consentPolicy = writable<ConsentPolicy>({ ...DEFAULT_CONSENT_POLICY });
 
 // 秘密鍵情報のキャッシュ設定を読み込む
@@ -81,16 +96,29 @@ function loadThemeSetting(): ThemeMode {
   return 'dark';
 }
 
-// 信頼済みオリジンを読み込む
-function loadTrustedOrigins(): string[] {
+// 信頼済みオリジン (v2: メソッドスコープ付き) を読み込む
+function loadTrustedOrigins(): TrustedOriginEntry[] {
   if (typeof window === 'undefined') return [];
   const raw = localStorage.getItem(TRUSTED_ORIGINS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((v): v is string => typeof v === 'string')) {
-      return parsed;
+    if (!Array.isArray(parsed)) return [];
+    const result: TrustedOriginEntry[] = [];
+    for (const entry of parsed) {
+      if (
+        entry &&
+        typeof entry === 'object' &&
+        typeof (entry as { origin?: unknown }).origin === 'string' &&
+        Array.isArray((entry as { methods?: unknown }).methods)
+      ) {
+        const methods = (entry as { methods: unknown[] }).methods.filter(isPolicyKey);
+        if (methods.length > 0) {
+          result.push({ origin: (entry as { origin: string }).origin, methods });
+        }
+      }
     }
+    return result;
   } catch {
     // 破損した値は無視してデフォルトを返す
   }

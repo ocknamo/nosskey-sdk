@@ -4,7 +4,7 @@ import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';
 import { consentPolicy, trustedOrigins } from './store/app-state.js';
-import { evaluateConsent } from './utils/consent-gating.js';
+import { evaluateConsent, policyKeyFor } from './utils/consent-gating.js';
 
 export interface ApproveOptions {
   /** チェックボックス「このサイトを常に許可」が ON のときに渡される。 */
@@ -17,9 +17,24 @@ export interface PendingConsent extends ConsentRequest {
 
 export const pendingConsent = writable<PendingConsent | null>(null);
 
-function rememberOriginIfRequested(origin: string, options?: ApproveOptions): void {
+/**
+ * `trustOrigin` が ON のとき、リクエストの origin × method 単位で信頼リストに追加する。
+ * すべてのメソッドを許可するのではなく、現在のリクエスト method（policyKey 単位）のみを許可する点に注意。
+ */
+function rememberOriginIfRequested(
+  request: ConsentRequest,
+  options: ApproveOptions | undefined
+): void {
   if (!options?.trustOrigin) return;
-  trustedOrigins.update((list) => (list.includes(origin) ? list : [...list, origin]));
+  const key = policyKeyFor(request.method);
+  trustedOrigins.update((list) => {
+    const existing = list.find((entry) => entry.origin === request.origin);
+    if (!existing) return [...list, { origin: request.origin, methods: [key] }];
+    if (existing.methods.includes(key)) return list;
+    return list.map((entry) =>
+      entry.origin === request.origin ? { ...entry, methods: [...entry.methods, key] } : entry
+    );
+  });
 }
 
 function onConsent(request: ConsentRequest): Promise<boolean> {
@@ -34,7 +49,7 @@ function onConsent(request: ConsentRequest): Promise<boolean> {
     pendingConsent.set({
       ...request,
       resolve: (approved, options) => {
-        if (approved) rememberOriginIfRequested(request.origin, options);
+        if (approved) rememberOriginIfRequested(request, options);
         resolve(approved);
       },
     });
@@ -65,6 +80,9 @@ export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {
   const manager = getNosskeyManager();
   const host = new NosskeyIframeHost({
     manager,
+    // NOTE: 'allowedOrigins: *' は postMessage の入口を全許可するデバッグ用設定。
+    // 「信頼済みオリジン」機能はあくまでダイアログを抑制するレイヤーであり、
+    // ここで原点フィルタを行うものではない。プロダクション統合時は親オリジンを限定すること。
     allowedOrigins: '*',
     requireUserConsent: true,
     onConsent,
