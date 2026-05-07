@@ -166,6 +166,26 @@ export interface TranslationData {
       invalidUrl: string;
       empty: string;
     };
+    trustedOrigins: {
+      title: string;
+      description: string;
+      empty: string;
+      removeButton: string;
+    };
+    consentPolicy: {
+      title: string;
+      description: string;
+      methodLabel: {
+        signEvent: string;
+        nip44: string;
+        nip04: string;
+      };
+      option: {
+        ask: string;
+        always: string;
+        deny: string;
+      };
+    };
   };
   navigation: {
     account: string;
@@ -194,6 +214,19 @@ export interface TranslationData {
     peerPubkey: string;
     plaintext: string;
     decryptNoPreview: string;
+    alwaysAllowSite: string;
+    showRaw: string;
+    kindLabel: {
+      textNote: string;
+      follows: string;
+      legacyDm: string;
+      repost: string;
+      reaction: string;
+      channelMessage: string;
+      giftWrap: string;
+      longForm: string;
+      unknown: string;
+    };
   };
   iframeHost: {
     running: string;
@@ -369,6 +402,28 @@ export const ja: TranslationData = {
       invalidUrl: 'wss:// または ws:// で始まる URL を入力してください。',
       empty: 'リレーが登録されていません。',
     },
+    trustedOrigins: {
+      title: '信頼済みサイト',
+      description:
+        '同意ダイアログで「このサイトを常に許可」を選んだサイトの一覧です。削除すると次回から再度確認が表示されます。',
+      empty: '信頼済みサイトはまだありません。',
+      removeButton: '削除',
+    },
+    consentPolicy: {
+      title: 'メソッド別の同意ポリシー',
+      description:
+        'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はサイトを問わずスキップ、「拒否」はダイアログを出さずに即拒否します。',
+      methodLabel: {
+        signEvent: 'イベント署名 (signEvent)',
+        nip44: 'NIP-44 暗号化 / 復号',
+        nip04: 'NIP-04 暗号化 / 復号（レガシー）',
+      },
+      option: {
+        ask: '毎回確認',
+        always: '常に許可',
+        deny: '拒否',
+      },
+    },
     exportKeyInfo: {
       title: '鍵情報のエクスポート',
       description:
@@ -413,6 +468,19 @@ export const ja: TranslationData = {
     peerPubkey: '相手の公開鍵',
     plaintext: '平文',
     decryptNoPreview: '暗号文の内容は復号後にしか確認できません。',
+    alwaysAllowSite: 'このサイトを常に許可（同意ダイアログをスキップ）',
+    showRaw: '生のイベント JSON を表示',
+    kindLabel: {
+      textNote: 'テキストノート',
+      follows: 'フォローリスト',
+      legacyDm: 'ダイレクトメッセージ（NIP-04 レガシー）',
+      repost: 'リポスト',
+      reaction: 'リアクション',
+      channelMessage: 'チャンネルメッセージ',
+      giftWrap: 'Gift Wrap',
+      longForm: '長文記事',
+      unknown: 'その他のイベント',
+    },
   },
   iframeHost: {
     running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
@@ -590,6 +658,28 @@ export const en: TranslationData = {
       invalidUrl: 'Please enter a URL starting with wss:// or ws://.',
       empty: 'No relays configured.',
     },
+    trustedOrigins: {
+      title: 'Trusted sites',
+      description:
+        'Sites you marked as "always allow" in the consent dialog. Removing a site will make the dialog reappear on the next request.',
+      empty: 'No trusted sites yet.',
+      removeButton: 'Remove',
+    },
+    consentPolicy: {
+      title: 'Per-method consent policy',
+      description:
+        'Set the default behavior for each request type. "Always allow" skips the dialog regardless of site, "Deny" rejects without prompting.',
+      methodLabel: {
+        signEvent: 'Sign event (signEvent)',
+        nip44: 'NIP-44 encrypt / decrypt',
+        nip04: 'NIP-04 encrypt / decrypt (legacy)',
+      },
+      option: {
+        ask: 'Ask every time',
+        always: 'Always allow',
+        deny: 'Deny',
+      },
+    },
     exportKeyInfo: {
       title: 'Export KeyInfo',
       description:
@@ -634,6 +724,19 @@ export const en: TranslationData = {
     peerPubkey: 'Peer public key',
     plaintext: 'Plaintext',
     decryptNoPreview: 'Ciphertext contents are only visible after decryption.',
+    alwaysAllowSite: 'Always allow this site (skip the consent dialog)',
+    showRaw: 'Show raw event JSON',
+    kindLabel: {
+      textNote: 'Text note',
+      follows: 'Follow list',
+      legacyDm: 'Direct message (NIP-04 legacy)',
+      repost: 'Repost',
+      reaction: 'Reaction',
+      channelMessage: 'Channel message',
+      giftWrap: 'Gift wrap',
+      longForm: 'Long-form article',
+      unknown: 'Other event',
+    },
   },
   iframeHost: {
     running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',

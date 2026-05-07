@@ -1,9 +1,11 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import AppInfo from '../settings/AppInfo.svelte';
+import ConsentPolicySettings from '../settings/ConsentPolicySettings.svelte';
 import LanguageSettings from '../settings/LanguageSettings.svelte';
 import LocalStorageSection from '../settings/LocalStorageSection.svelte';
 import RelaySettings from '../settings/RelaySettings.svelte';
+import TrustedOriginsSettings from '../settings/TrustedOriginsSettings.svelte';
 import ThemeSettings from '../settings/theme-settings.svelte';
 </script>
 
@@ -13,6 +15,8 @@ import ThemeSettings from '../settings/theme-settings.svelte';
   <LanguageSettings />
   <ThemeSettings />
   <RelaySettings />
+  <ConsentPolicySettings />
+  <TrustedOriginsSettings />
   <AppInfo />
 </div>
 

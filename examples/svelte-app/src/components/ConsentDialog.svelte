@@ -3,11 +3,14 @@ import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-if
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
+import { kindLabel } from '../utils/event-kind-labels.js';
 import Button from './ui/button/Button.svelte';
 
-const CONTENT_PREVIEW_LIMIT = 240;
-const NPUB_HEAD = 12;
+const CONTENT_PREVIEW_LIMIT = 100;
+const NPUB_HEAD = 8;
 const NPUB_TAIL = 8;
+
+let trustOrigin = $state(false);
 
 function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
   if (value.length <= limit) return value;
@@ -52,6 +55,16 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
   if (isDecryptMethod(method)) return t.titleDecrypt;
   return t.titleEncrypt;
 }
+
+function handleApprove() {
+  approveConsent({ trustOrigin });
+  trustOrigin = false;
+}
+
+function handleReject() {
+  rejectConsent();
+  trustOrigin = false;
+}
 </script>
 
 {#if $pendingConsent}
@@ -72,7 +85,10 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
 
         {#if c.event}
           <dt>{$i18n.t.consent.eventKind}</dt>
-          <dd>{c.event.kind}</dd>
+          <dd>
+            {kindLabel(c.event.kind, $i18n.t.consent.kindLabel)}
+            <span class="muted">(kind:{c.event.kind})</span>
+          </dd>
           <dt>{$i18n.t.consent.eventContent}</dt>
           <dd><pre>{truncate(c.event.content ?? '')}</pre></dd>
           <dt>{$i18n.t.consent.eventTags}</dt>
@@ -107,11 +123,23 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
         {/if}
       </dl>
 
+      {#if c.event}
+        <details class="consent-raw">
+          <summary>{$i18n.t.consent.showRaw}</summary>
+          <pre>{JSON.stringify(c.event, null, 2)}</pre>
+        </details>
+      {/if}
+
+      <label class="consent-trust">
+        <input type="checkbox" bind:checked={trustOrigin} />
+        <span>{$i18n.t.consent.alwaysAllowSite}</span>
+      </label>
+
       <div class="consent-actions">
-        <Button variant="danger" onclick={rejectConsent}>
+        <Button variant="danger" onclick={handleReject}>
           {$i18n.t.consent.reject}
         </Button>
-        <Button variant="primary" onclick={approveConsent}>
+        <Button variant="primary" onclick={handleApprove}>
           {$i18n.t.consent.approve}
         </Button>
       </div>
@@ -170,7 +198,7 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: 6px 12px;
-    margin: 12px 0 20px;
+    margin: 12px 0 12px;
   }
 
   .consent-event dt {
@@ -189,6 +217,37 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
 
   .muted {
     color: var(--color-text-muted);
+  }
+
+  .consent-raw {
+    margin: 0 0 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  .consent-raw summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .consent-raw pre {
+    margin-top: 8px;
+    max-height: 240px;
+    overflow: auto;
+  }
+
+  .consent-trust {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px;
+    cursor: pointer;
+  }
+
+  .consent-trust input[type='checkbox'] {
+    margin: 0;
   }
 
   .consent-actions {
