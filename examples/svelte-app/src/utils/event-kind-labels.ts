@@ -5,12 +5,15 @@
  */
 
 export interface KindLabelMap {
+  metadata: string; // kind 0 (NIP-01 profile)
   textNote: string; // kind 1
   follows: string; // kind 3
   legacyDm: string; // kind 4 (NIP-04)
   repost: string; // kind 6
   reaction: string; // kind 7
   channelMessage: string; // kind 42
+  rumor: string; // kind 13 (NIP-17 rumor)
+  seal: string; // kind 14 (NIP-17 seal)
   giftWrap: string; // kind 1059
   longForm: string; // kind 30023
   unknown: string; // フォールバック (引数に kind 番号を埋め込まない)
@@ -22,6 +25,8 @@ export interface KindLabelMap {
  */
 export function kindLabel(kind: number, labels: KindLabelMap): string {
   switch (kind) {
+    case 0:
+      return labels.metadata;
     case 1:
       return labels.textNote;
     case 3:
@@ -32,6 +37,10 @@ export function kindLabel(kind: number, labels: KindLabelMap): string {
       return labels.repost;
     case 7:
       return labels.reaction;
+    case 13:
+      return labels.rumor;
+    case 14:
+      return labels.seal;
     case 42:
       return labels.channelMessage;
     case 1059:

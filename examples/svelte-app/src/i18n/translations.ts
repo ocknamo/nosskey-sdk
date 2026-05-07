@@ -224,16 +224,20 @@ export interface TranslationData {
     alwaysAllowSite: string;
     showRaw: string;
     kindLabel: {
+      metadata: string;
       textNote: string;
       follows: string;
       legacyDm: string;
       repost: string;
       reaction: string;
       channelMessage: string;
+      rumor: string;
+      seal: string;
       giftWrap: string;
       longForm: string;
       unknown: string;
     };
+    approveAndTrust: string;
   };
   iframeHost: {
     running: string;
@@ -486,16 +490,20 @@ export const ja: TranslationData = {
     alwaysAllowSite: 'このサイトを常に許可（同意ダイアログをスキップ）',
     showRaw: '生のイベント JSON を表示',
     kindLabel: {
+      metadata: 'プロフィール (metadata)',
       textNote: 'テキストノート',
       follows: 'フォローリスト',
       legacyDm: 'ダイレクトメッセージ（NIP-04 レガシー）',
       repost: 'リポスト',
       reaction: 'リアクション',
       channelMessage: 'チャンネルメッセージ',
+      rumor: 'NIP-17 Rumor',
+      seal: 'NIP-17 Seal',
       giftWrap: 'Gift Wrap',
       longForm: '長文記事',
       unknown: 'その他のイベント',
     },
+    approveAndTrust: '常に許可して承認',
   },
   iframeHost: {
     running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
@@ -750,16 +758,20 @@ export const en: TranslationData = {
     alwaysAllowSite: 'Always allow this site (skip the consent dialog)',
     showRaw: 'Show raw event JSON',
     kindLabel: {
+      metadata: 'Profile (metadata)',
       textNote: 'Text note',
       follows: 'Follow list',
       legacyDm: 'Direct message (NIP-04 legacy)',
       repost: 'Repost',
       reaction: 'Reaction',
       channelMessage: 'Channel message',
+      rumor: 'NIP-17 rumor',
+      seal: 'NIP-17 seal',
       giftWrap: 'Gift wrap',
       longForm: 'Long-form article',
       unknown: 'Other event',
     },
+    approveAndTrust: 'Approve and always allow',
   },
   iframeHost: {
     running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',

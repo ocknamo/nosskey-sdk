@@ -10,6 +10,9 @@ const CONTENT_PREVIEW_LIMIT = 100;
 const NPUB_HEAD = 8;
 const NPUB_TAIL = 8;
 
+// `{#if $pendingConsent}` 配下のため、ダイアログがアンマウント・再マウントされる
+// 度に false で再初期化される。承認/拒否後の明示リセットも併せて行うのは、
+// 同じインスタンスのまま次の request が即セットされる稀なケースでの保険。
 let trustOrigin = $state(false);
 
 function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
@@ -140,7 +143,7 @@ function handleReject() {
           {$i18n.t.consent.reject}
         </Button>
         <Button variant="primary" onclick={handleApprove}>
-          {$i18n.t.consent.approve}
+          {trustOrigin ? $i18n.t.consent.approveAndTrust : $i18n.t.consent.approve}
         </Button>
       </div>
     </div>

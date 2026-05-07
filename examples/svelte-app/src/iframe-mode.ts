@@ -37,7 +37,14 @@ function rememberOriginIfRequested(
   });
 }
 
-function onConsent(request: ConsentRequest): Promise<boolean> {
+/**
+ * `NosskeyIframeHost.onConsent` 実装。テスト容易性のため export する。
+ * - ストアから現在のポリシー / 信頼リストを読み、純粋判定 (`evaluateConsent`) に委譲
+ * - `deny` 経路では warn＋カウンタ加算
+ * - `ask` 経路では `pendingConsent` をセットしてユーザー操作を待つ。承認時に
+ *   `trustOrigin` オプションが立っていれば origin × method を信頼リストに追加
+ */
+export function onConsent(request: ConsentRequest): Promise<boolean> {
   const evaluation = evaluateConsent(request, {
     trustedOrigins: get(trustedOrigins),
     policy: get(consentPolicy),
