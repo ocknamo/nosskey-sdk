@@ -64,6 +64,35 @@ export const currentTheme = writable<ThemeMode>('dark');
 export const trustedOrigins = writable<TrustedOriginEntry[]>([]);
 export const consentPolicy = writable<ConsentPolicy>({ ...DEFAULT_CONSENT_POLICY });
 
+/**
+ * `deny` ポリシーで自動拒否された回数。サイレントに拒否され続けて
+ * 親アプリのプローブを許してしまわないよう、ユーザーに可視化する。
+ * メソッドキー単位で集計し、永続化はしない（プロセス内のみ）。
+ */
+export const denyCounts = writable<Record<PolicyKey, number>>({
+  signEvent: 0,
+  nip44: 0,
+  nip04: 0,
+});
+
+export function incrementDenyCount(key: PolicyKey): void {
+  denyCounts.update((current) => ({ ...current, [key]: current[key] + 1 }));
+}
+
+export function resetDenyCounts(): void {
+  denyCounts.set({ signEvent: 0, nip44: 0, nip04: 0 });
+}
+
+/**
+ * localStorage に保存された設定が破損していたことを示すフラグ。
+ * 破損は黙ってデフォルト復帰させるが、Settings 画面で可視化する。
+ * メモリ内のみで保持（次回起動時はキー単位で再評価される）。
+ */
+export const storageCorruption = writable<{
+  trustedOrigins: boolean;
+  consentPolicy: boolean;
+}>({ trustedOrigins: false, consentPolicy: false });
+
 // 秘密鍵情報のキャッシュ設定を読み込む
 function loadCacheSecretsSetting() {
   if (typeof window !== 'undefined') {
@@ -96,6 +125,14 @@ function loadThemeSetting(): ThemeMode {
   return 'dark';
 }
 
+function markCorruption(field: 'trustedOrigins' | 'consentPolicy', reason: string): void {
+  // セキュリティ設定の沈黙降格を避けるため、破損は warn＋フラグで明示的に通知する。
+  // フェイルクローズに倒すと「明日突然サイトにアクセスできない」事象になるため、
+  // ここでは「黙ってデフォルト」ではなく「デフォルトに戻したことを表に出す」方針。
+  console.warn(`[nosskey] stored ${field} appears corrupted: ${reason}. Resetting to defaults.`);
+  storageCorruption.update((current) => ({ ...current, [field]: true }));
+}
+
 // 信頼済みオリジン (v2: メソッドスコープ付き) を読み込む
 function loadTrustedOrigins(): TrustedOriginEntry[] {
   if (typeof window === 'undefined') return [];
@@ -103,8 +140,12 @@ function loadTrustedOrigins(): TrustedOriginEntry[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      markCorruption('trustedOrigins', 'not an array');
+      return [];
+    }
     const result: TrustedOriginEntry[] = [];
+    let droppedAny = false;
     for (const entry of parsed) {
       if (
         entry &&
@@ -115,14 +156,17 @@ function loadTrustedOrigins(): TrustedOriginEntry[] {
         const methods = (entry as { methods: unknown[] }).methods.filter(isPolicyKey);
         if (methods.length > 0) {
           result.push({ origin: (entry as { origin: string }).origin, methods });
+          continue;
         }
       }
+      droppedAny = true;
     }
+    if (droppedAny) markCorruption('trustedOrigins', 'invalid entries dropped');
     return result;
-  } catch {
-    // 破損した値は無視してデフォルトを返す
+  } catch (err) {
+    markCorruption('trustedOrigins', err instanceof Error ? err.message : String(err));
+    return [];
   }
-  return [];
 }
 
 // 同意ポリシーを読み込む
@@ -132,12 +176,22 @@ function loadConsentPolicy(): ConsentPolicy {
   if (!raw) return { ...DEFAULT_CONSENT_POLICY };
   try {
     const parsed = JSON.parse(raw) as Partial<Record<keyof ConsentPolicy, unknown>>;
-    return {
+    const result: ConsentPolicy = {
       signEvent: isConsentDecision(parsed.signEvent) ? parsed.signEvent : 'ask',
       nip44: isConsentDecision(parsed.nip44) ? parsed.nip44 : 'ask',
       nip04: isConsentDecision(parsed.nip04) ? parsed.nip04 : 'ask',
     };
-  } catch {
+    // 元の値が consent decision でない場合 (deny が ask に降格したケース等) は
+    // セキュリティ設定の沈黙降格に該当するため、警告フラグを立てる。
+    for (const key of POLICY_KEYS) {
+      if (parsed[key] !== undefined && !isConsentDecision(parsed[key])) {
+        markCorruption('consentPolicy', `invalid value for ${key}`);
+        break;
+      }
+    }
+    return result;
+  } catch (err) {
+    markCorruption('consentPolicy', err instanceof Error ? err.message : String(err));
     return { ...DEFAULT_CONSENT_POLICY };
   }
 }

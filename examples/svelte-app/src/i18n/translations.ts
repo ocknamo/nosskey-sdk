@@ -188,6 +188,10 @@ export interface TranslationData {
         always: string;
         deny: string;
       };
+      denyCount: string;
+      resetDenyCounts: string;
+      saved: string;
+      corruptionWarning: string;
     };
   };
   navigation: {
@@ -429,6 +433,11 @@ export const ja: TranslationData = {
         always: '常に許可',
         deny: '拒否',
       },
+      denyCount: 'このセッションで {count} 件を自動拒否しました。',
+      resetDenyCounts: '拒否カウンタをリセット',
+      saved: '保存しました。',
+      corruptionWarning:
+        '保存された同意設定の一部が不正な形式だったため、デフォルト値に戻しました。意図しない設定変更がないか確認してください。',
     },
     exportKeyInfo: {
       title: '鍵情報のエクスポート',
@@ -688,6 +697,11 @@ export const en: TranslationData = {
         always: 'Always allow',
         deny: 'Deny',
       },
+      denyCount: 'Auto-rejected {count} request(s) this session.',
+      resetDenyCounts: 'Reset deny counter',
+      saved: 'Saved.',
+      corruptionWarning:
+        'Some stored consent settings were invalid and have been reset to defaults. Please verify your settings have not been altered unexpectedly.',
     },
     exportKeyInfo: {
       title: 'Export KeyInfo',

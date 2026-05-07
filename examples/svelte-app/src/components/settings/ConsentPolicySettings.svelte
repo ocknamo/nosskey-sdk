@@ -1,20 +1,31 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
-import { type ConsentDecision, type ConsentPolicy, consentPolicy } from '../../store/app-state.js';
+import {
+  type ConsentDecision,
+  type ConsentPolicy,
+  POLICY_KEYS,
+  type PolicyKey,
+  consentPolicy,
+  denyCounts,
+  resetDenyCounts,
+  storageCorruption,
+} from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import Button from '../ui/button/Button.svelte';
 
-const METHOD_KEYS = [
-  'signEvent',
-  'nip44',
-  'nip04',
-] as const satisfies readonly (keyof ConsentPolicy)[];
 const OPTIONS: ConsentDecision[] = ['ask', 'always', 'deny'];
+
+let savedMessage = $state('');
 
 function setDecision(method: keyof ConsentPolicy, value: ConsentDecision) {
   consentPolicy.update((current) => ({ ...current, [method]: value }));
+  savedMessage = $i18n.t.settings.consentPolicy.saved;
+  setTimeout(() => {
+    savedMessage = '';
+  }, 2000);
 }
 
-function methodLabel(method: keyof ConsentPolicy): string {
+function methodLabel(method: PolicyKey): string {
   return $i18n.t.settings.consentPolicy.methodLabel[method];
 }
 
@@ -26,8 +37,14 @@ function optionLabel(option: ConsentDecision): string {
 <CardSection title={$i18n.t.settings.consentPolicy.title}>
   <p class="description">{$i18n.t.settings.consentPolicy.description}</p>
 
+  {#if $storageCorruption.consentPolicy || $storageCorruption.trustedOrigins}
+    <p class="corruption-warning" role="alert">
+      {$i18n.t.settings.consentPolicy.corruptionWarning}
+    </p>
+  {/if}
+
   <div class="policy-grid">
-    {#each METHOD_KEYS as method (method)}
+    {#each POLICY_KEYS as method (method)}
       <fieldset class="policy-row">
         <legend>{methodLabel(method)}</legend>
         <div class="radio-group">
@@ -44,9 +61,29 @@ function optionLabel(option: ConsentDecision): string {
             </label>
           {/each}
         </div>
+        {#if $denyCounts[method] > 0}
+          <p class="deny-count" aria-live="polite">
+            {@html $i18n.t.settings.consentPolicy.denyCount.replace(
+              '{count}',
+              `<strong>${$denyCounts[method]}</strong>`
+            )}
+          </p>
+        {/if}
       </fieldset>
     {/each}
   </div>
+
+  {#if $denyCounts.signEvent > 0 || $denyCounts.nip44 > 0 || $denyCounts.nip04 > 0}
+    <div class="deny-actions">
+      <Button variant="secondary" size="small" onclick={resetDenyCounts}>
+        {$i18n.t.settings.consentPolicy.resetDenyCounts}
+      </Button>
+    </div>
+  {/if}
+
+  {#if savedMessage}
+    <div class="saved-message" aria-live="polite">{savedMessage}</div>
+  {/if}
 </CardSection>
 
 <style>
@@ -54,6 +91,16 @@ function optionLabel(option: ConsentDecision): string {
     margin-bottom: 15px;
     color: var(--color-text-secondary);
     transition: color 0.3s ease;
+  }
+
+  .corruption-warning {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--color-warning-bg, #fff7e0);
+    border: 1px solid var(--color-warning-border, #e6c452);
+    color: var(--color-warning, #8a6d00);
+    font-size: 0.9rem;
   }
 
   .policy-grid {
@@ -91,5 +138,27 @@ function optionLabel(option: ConsentDecision): string {
 
   .radio-group input[type='radio'] {
     margin: 0;
+  }
+
+  .deny-count {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
+
+  .deny-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .saved-message {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background-color: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    border-radius: 8px;
+    color: var(--color-success);
+    font-size: 0.9rem;
   }
 </style>

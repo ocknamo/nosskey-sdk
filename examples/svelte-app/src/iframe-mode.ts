@@ -3,7 +3,7 @@ import { NosskeyIframeHost } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';
-import { consentPolicy, trustedOrigins } from './store/app-state.js';
+import { consentPolicy, incrementDenyCount, trustedOrigins } from './store/app-state.js';
 import { evaluateConsent, policyKeyFor } from './utils/consent-gating.js';
 
 export interface ApproveOptions {
@@ -43,7 +43,17 @@ function onConsent(request: ConsentRequest): Promise<boolean> {
     policy: get(consentPolicy),
   });
   if (evaluation.decision === 'approve') return Promise.resolve(true);
-  if (evaluation.decision === 'reject') return Promise.resolve(false);
+  if (evaluation.decision === 'reject') {
+    // deny ポリシーは黙って拒否すると、悪意ある親からのプローブ
+    // (e.g. 任意 pubkey に対する nip04_decrypt 要求) をユーザーに知られず
+    // 試され続ける可能性がある。最低限 warn＋カウンタで観測できるようにする。
+    const key = policyKeyFor(request.method);
+    console.warn(
+      `[nosskey] consent auto-rejected for ${request.method} from ${request.origin} (policy=deny)`
+    );
+    incrementDenyCount(key);
+    return Promise.resolve(false);
+  }
 
   return new Promise<boolean>((resolve) => {
     pendingConsent.set({
