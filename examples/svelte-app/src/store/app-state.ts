@@ -126,9 +126,17 @@ function loadThemeSetting(): ThemeMode {
 }
 
 function markCorruption(field: 'trustedOrigins' | 'consentPolicy', reason: string): void {
-  // セキュリティ設定の沈黙降格を避けるため、破損は warn＋フラグで明示的に通知する。
-  // フェイルクローズに倒すと「明日突然サイトにアクセスできない」事象になるため、
-  // ここでは「黙ってデフォルト」ではなく「デフォルトに戻したことを表に出す」方針。
+  // 破損時の方針: デフォルト復帰 ＋ warn ＋ banner で可視化。
+  //
+  // trustedOrigins は空配列がそのまま fail-closed (全リクエスト要確認) に相当するので問題ない。
+  // consentPolicy のみトレードオフが残る:
+  //   - 全 'ask' 復帰 (現状): 'deny' を設定していたユーザーが破損で 'ask' に降格し、
+  //     社会工学で 1 クリック承認させられる攻撃面が新たに開く弱化。
+  //   - 全 'deny' 復帰 (fail-closed): 親アプリが署名不能になる。原因が分からないまま
+  //     ユーザーがブロックされ、Settings の banner に気付くまで復旧不能。
+  // 利便性を優先して前者を採用。banner と console.warn でユーザーが気付ける状態にし、
+  // 攻撃を成立させるには「破損 → ユーザーが banner を見落とす → 攻撃者が approve させる」
+  // の 3 段が必要、という妥協点。
   console.warn(`[nosskey] stored ${field} appears corrupted: ${reason}. Resetting to defaults.`);
   storageCorruption.update((current) => ({ ...current, [field]: true }));
 }
