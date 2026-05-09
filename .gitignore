@@ -134,3 +134,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Copied at publish-time from repo root (see packages/nosskey-sdk prepublishOnly)
+/packages/nosskey-sdk/README.md
+/packages/nosskey-sdk/README.ja.md
+/packages/nosskey-sdk/LICENSE
