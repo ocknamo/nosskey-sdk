@@ -12,6 +12,8 @@
     "format:check": "cd ../.. && biome check ./examples/parent-sample/src"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
     "nosskey-iframe": "*",
     "nosskey-sdk": "*"
   },

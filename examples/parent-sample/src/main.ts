@@ -1,5 +1,6 @@
 import { NosskeyIframeClient, NosskeyIframeError } from 'nosskey-iframe';
 import type { NostrEvent } from 'nosskey-sdk';
+import { sendNip17Dm } from './nip17.js';
 
 interface NostrProvider {
   getPublicKey(): Promise<string>;
@@ -165,6 +166,28 @@ app.innerHTML = `
   </section>
 
   <section>
+    <h2>7. NIP-17 sealed DM (gift-wrapped kind:1059)</h2>
+    <p class="hint">
+      Standards-compliant DM path: builds a kind:14 rumor, NIP-44 seals it
+      into a kind:13, then NIP-44 wraps that into a kind:1059 signed by a
+      throwaway ephemeral key. Compatible clients (Amethyst, 0xchat,
+      Coracle, Damus chat) listen for kind:1059 and decrypt automatically.
+      Two consent dialogs appear (NIP-44 encrypt for the seal, then sign
+      kind:13). The Relay URL is shared with section 4.
+    </p>
+    <label for="nip17-peer">Peer public key (hex, 64 chars)</label>
+    <div class="row">
+      <input id="nip17-peer" type="text" placeholder="64 hex characters" />
+      <button id="nip17-use-self" class="secondary" disabled>Use my pubkey</button>
+    </div>
+    <label for="nip17-plaintext" style="margin-top:12px;">Message</label>
+    <textarea id="nip17-plaintext">hello, NIP-17 🎁</textarea>
+    <div class="row">
+      <button id="nip17-send-dm" disabled>Send NIP-17 DM (kind:1059 → relay)</button>
+    </div>
+  </section>
+
+  <section>
     <h2>Log</h2>
     <pre id="log"></pre>
   </section>
@@ -203,6 +226,10 @@ const ui = {
   nip04Ciphertext: requireEl<HTMLTextAreaElement>('#nip04-ciphertext'),
   nip04Decrypted: requireEl<HTMLPreElement>('#nip04-decrypted'),
   nip04SendDm: requireEl<HTMLButtonElement>('#nip04-send-dm'),
+  nip17Peer: requireEl<HTMLInputElement>('#nip17-peer'),
+  nip17UseSelf: requireEl<HTMLButtonElement>('#nip17-use-self'),
+  nip17Plaintext: requireEl<HTMLTextAreaElement>('#nip17-plaintext'),
+  nip17SendDm: requireEl<HTMLButtonElement>('#nip17-send-dm'),
   status: requireEl<HTMLSpanElement>('#status'),
   log: requireEl<HTMLPreElement>('#log'),
 };
@@ -234,6 +261,8 @@ function setConnectedUI(connected: boolean): void {
   ui.nip04Encrypt.disabled = !connected;
   ui.nip04Decrypt.disabled = !connected;
   ui.nip04SendDm.disabled = !connected;
+  ui.nip17UseSelf.disabled = !connected;
+  ui.nip17SendDm.disabled = !connected;
 }
 
 function formatError(err: unknown): string {
@@ -566,6 +595,47 @@ async function nip04SendDm(): Promise<void> {
   }
 }
 
+async function nip17SendDm(): Promise<void> {
+  if (!window.nostr) return;
+  const nostr = window.nostr;
+  const peer = ui.nip17Peer.value.trim();
+  const relayUrl = ui.relayUrl.value.trim();
+  const plaintext = ui.nip17Plaintext.value;
+  if (!peer) {
+    log('NIP-17 DM aborted: peer pubkey is empty.');
+    return;
+  }
+  if (!relayUrl) {
+    log('NIP-17 DM aborted: relay URL (section 4) is empty.');
+    return;
+  }
+
+  log('NIP-17 DM: resolving sender pubkey…');
+  let senderPubkey: string;
+  try {
+    senderPubkey = await nostr.getPublicKey();
+  } catch (err) {
+    log(`NIP-17 DM getPublicKey failed: ${formatError(err)}`);
+    return;
+  }
+
+  log(`NIP-17 DM: sealing rumor for ${peer.slice(0, 8)}… (consent dialog x2)`);
+  try {
+    const result = await sendNip17Dm({
+      senderPubkey,
+      peerPubkey: peer,
+      plaintext,
+      sealEncrypt: (p, plain) => nostr.nip44.encrypt(p, plain),
+      signSeal: (draft) => nostr.signEvent(draft),
+      publish: (event) => publishEvent(relayUrl, event),
+    });
+    log(`NIP-17 DM: gift wrap id ${result.giftWrap.id ?? '(missing id)'}`);
+    log(`NIP-17 DM: ephemeral pubkey ${result.ephemeralPubkey}`);
+  } catch (err) {
+    log(`NIP-17 DM failed: ${formatError(err)}`);
+  }
+}
+
 ui.connect.addEventListener('click', () => {
   void connect();
 });
@@ -599,6 +669,12 @@ ui.nip04Decrypt.addEventListener('click', () => {
 });
 ui.nip04SendDm.addEventListener('click', () => {
   void nip04SendDm();
+});
+ui.nip17UseSelf.addEventListener('click', () => {
+  void fillSelfPubkey(ui.nip17Peer, 'NIP-17');
+});
+ui.nip17SendDm.addEventListener('click', () => {
+  void nip17SendDm();
 });
 
 log(
