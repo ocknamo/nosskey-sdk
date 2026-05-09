@@ -4,6 +4,8 @@
   "description": "SDK for Passkey-Derived Nostr Identity a.k.a. Nosskey",
   "files": [
     "dist",
+    "README.md",
+    "README.ja.md",
     "LICENSE"
   ],
   "type": "module",
@@ -38,7 +40,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build"
+    "copy-docs": "cp ../../README.md ../../README.ja.md ../../LICENSE .",
+    "prepublishOnly": "npm run copy-docs && npm run build"
   },
   "dependencies": {
     "@noble/ciphers": "^2.2.0",
