@@ -1,7 +1,7 @@
 {
   "name": "nosskey-sdk-monorepo",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Monorepo root for Nosskey SDK and iframe package",
   "type": "module",
   "workspaces": [
