@@ -57,7 +57,11 @@ async function detectInitialState(): Promise<void> {
     throw err;
   }
   applyStorageGrant(handle);
-  if (uiState === 'noKeyExists') {
+  // The 'granted' state is a post-click acknowledgement; in the silent path
+  // there was no dialog to acknowledge, so demote it to 'running'.
+  if (uiState === 'granted') {
+    uiState = 'running';
+  } else if (uiState === 'noKeyExists') {
     postVisibility(true);
   }
 }
