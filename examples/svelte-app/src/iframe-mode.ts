@@ -18,19 +18,6 @@ export interface PendingConsent extends ConsentRequest {
 export const pendingConsent = writable<PendingConsent | null>(null);
 
 /**
- * 親アプリへ iframe モーダルの可視状態を通知する。`onConsent` で同意ダイアログ
- * を出すタイミングで親モーダルを再表示する用途。`IframeHostScreen` の同名関数
- * と意図的に重複しているが、両者ともレシーバ側 (parent-sample) で
- * `nosskey:visibility` メッセージとして同じパスを通る。
- */
-function postVisibilityToParent(visible: boolean): void {
-  if (typeof window === 'undefined') return;
-  if (window.parent && window.parent !== window) {
-    window.parent.postMessage({ type: 'nosskey:visibility', visible }, '*');
-  }
-}
-
-/**
  * `trustOrigin` が ON のとき、リクエストの origin × method 単位で信頼リストに追加する。
  * すべてのメソッドを許可するのではなく、現在のリクエスト method（policyKey 単位）のみを許可する点に注意。
  */
@@ -76,10 +63,6 @@ export function onConsent(request: ConsentRequest): Promise<boolean> {
   }
 
   return new Promise<boolean>((resolve) => {
-    // ユーザーが iframe モーダルを閉じている場合、同意ダイアログがそのままでは
-    // 不可視になる。pendingConsent をセットする前に親へ visible:true を送り、
-    // モーダルを再表示させる。
-    postVisibilityToParent(true);
     pendingConsent.set({
       ...request,
       resolve: (approved, options) => {

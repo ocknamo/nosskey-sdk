@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
-import { isEmbeddedIframeMode, startIframeHost } from '../../iframe-mode.js';
+import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -209,14 +209,14 @@ onDestroy(() => {
 });
 </script>
 
-{#if uiState !== 'running'}
+{#if uiState !== 'running' && !$pendingConsent}
   {@const card = cardForState(uiState)}
   <div class="iframe-host" role="dialog" aria-modal="true" aria-labelledby="iframe-host-title">
     <div class="card">
       <button
         type="button"
         class="close-btn"
-        aria-label={$i18n.t.iframeHost.closeLabel}
+        aria-label={$i18n.t.common.close}
         onclick={handleClose}
       >
         <span class="material-symbols-outlined" aria-hidden="true">close</span>
