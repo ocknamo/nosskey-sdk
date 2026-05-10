@@ -30,22 +30,28 @@ function postVisibility(visible: boolean): void {
   }
 }
 
-function detectInitialState(): void {
+async function detectInitialState(): Promise<void> {
   const manager = getNosskeyManager();
   if (manager.hasKeyInfo()) {
     uiState = 'running';
     return;
   }
-  // hasStorageAccess() reflects cookie access, not localStorage partition state,
-  // so it cannot reliably detect whether unpartitioned storage is accessible.
-  // Always show the Grant button when Storage Access API is available.
   if (typeof document.requestStorageAccess !== 'function') {
     uiState = 'unsupported';
     postVisibility(true);
     return;
   }
-  uiState = 'partitioned';
-  postVisibility(true);
+  // Try silently first: browsers that remember a prior grant for this
+  // top-level × iframe origin pair resolve without a user gesture, so a
+  // returning user skips the dialog. First visits and expired grants reject,
+  // and we fall back to the manual button.
+  try {
+    const handle = await callRequestStorageAccess();
+    applyStorageGrant(handle);
+  } catch {
+    uiState = 'partitioned';
+    postVisibility(true);
+  }
 }
 
 function isStorageAccessHandle(value: unknown): value is StorageAccessHandle {
@@ -80,25 +86,30 @@ async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
   }
 }
 
+function applyStorageGrant(handle: StorageAccessHandle | null): void {
+  const manager = getNosskeyManager();
+  if (handle) {
+    // Chrome: window.localStorage remains partitioned after the grant —
+    // only handle.localStorage points at unpartitioned storage. Thread it
+    // into the SDK singleton so both this screen and the NosskeyIframeHost
+    // (which shares the same manager) read the unpartitioned store.
+    manager.setStorageOptions({ storage: handle.localStorage });
+  }
+  if (manager.hasKeyInfo()) {
+    uiState = 'granted';
+    postVisibility(false);
+  } else {
+    uiState = 'noKeyExists';
+    postVisibility(true);
+  }
+}
+
 async function requestAccess(): Promise<void> {
   working = true;
   errorMessage = '';
   try {
     const handle = await callRequestStorageAccess();
-    const manager = getNosskeyManager();
-    if (handle) {
-      // Chrome: window.localStorage remains partitioned after the grant —
-      // only handle.localStorage points at unpartitioned storage. Thread it
-      // into the SDK singleton so both this screen and the NosskeyIframeHost
-      // (which shares the same manager) read the unpartitioned store.
-      manager.setStorageOptions({ storage: handle.localStorage });
-    }
-    if (manager.hasKeyInfo()) {
-      uiState = 'granted';
-      postVisibility(false);
-    } else {
-      uiState = 'noKeyExists';
-    }
+    applyStorageGrant(handle);
   } catch (err) {
     uiState = 'denied';
     errorMessage = err instanceof Error ? err.message : String(err);
@@ -112,7 +123,7 @@ onMount(() => {
     document.body.classList.add('nosskey-embedded');
   }
   stopHost = startIframeHost();
-  detectInitialState();
+  void detectInitialState();
 });
 
 onDestroy(() => {
