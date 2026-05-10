@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint": "cd ../.. && biome check ./examples/parent-sample/src",
     "format": "cd ../.. && biome check --write ./examples/parent-sample/src",
     "format:check": "cd ../.. && biome check ./examples/parent-sample/src"

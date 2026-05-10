@@ -24,7 +24,11 @@ host example (`svelte-app` on port 5173), exercising the cross-origin
    Encrypt and decrypt each prompt the consent dialog independently.
 7. **NIP-04 encrypt / decrypt** (legacy): same shape as NIP-44, with a
    deprecation warning. Useful for verifying interop with older clients.
-8. Surface `NosskeyIframeError.code` values such as `NO_KEY`,
+8. **NIP-17 sealed DM** (gift-wrapped kind:1059): builds a kind:14 rumor,
+   NIP-44 seals it as kind:13, NIP-44 wraps that as kind:1059 signed by an
+   ephemeral key, and publishes to a relay. Compatible clients (Amethyst,
+   0xchat, Coracle, Damus chat) decrypt it automatically.
+9. Surface `NosskeyIframeError.code` values such as `NO_KEY`,
    `USER_REJECTED`, `NOT_AUTHORIZED` in the log.
 
 ## Run locally
@@ -84,9 +88,35 @@ button that combines the steps above into one flow:
    `tags: [["p", your_pubkey]]` and decrypt it with their own NIP-04
    implementation.
 
-> NIP-04 is the legacy DM kind. NIP-17 (sealed DM via NIP-44 + gift-wrap)
-> is the modern recommendation but requires SDK-side gift-wrap support;
-> see `docs/todo.md` for the planned work.
+### Sending a NIP-17 sealed DM (recommended)
+
+Section **7. NIP-17 sealed DM** publishes a gift-wrapped kind:1059 event
+that compatible clients (Amethyst, 0xchat, Coracle, Damus chat) recognize
+as a private message. Steps:
+
+1. Click **Use my pubkey** to self-encrypt for one-account verification, or
+   paste any recipient hex pubkey.
+2. Type the message.
+3. Confirm the Relay URL in section 4 points at a relay both ends use
+   (default `wss://relay.damus.io`).
+4. Click **Send NIP-17 DM**. Two consent dialogs appear:
+   - NIP-44 encrypt for the kind:13 seal (shows the rumor JSON preview).
+   - signEvent for the kind:13 seal.
+5. The relay's `OK` ack appears in the log along with the gift wrap event
+   id and the ephemeral pubkey.
+6. Open Amethyst (Android), 0xchat (web/mobile), or any other NIP-17 client
+   signed in with the recipient npub and verify the DM arrives in the inbox
+   with the correct plaintext.
+
+> The sample sends a single gift wrap addressed to the peer. NIP-17 also
+> lets the sender wrap a copy to themselves to keep an outbox visible
+> across their own devices; that's intentionally skipped here — verifying
+> reception in another client only needs the recipient copy.
+
+The NIP-17 helper (`src/nip17.ts`) is self-contained and only depends on
+`@noble/curves` for the ephemeral keypair and the SDK's exported
+`nip44Encrypt` for the gift-wrap layer; the seal layer goes through the
+iframe so the user's Nosskey never leaves the host origin.
 
 ## Browser support
 
