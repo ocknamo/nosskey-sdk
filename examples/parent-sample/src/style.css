@@ -174,12 +174,20 @@ button.secondary {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(560px, 95vw);
-  height: min(640px, 90vh);
+  /* Mobile-first: nearly fills the viewport on phones, stays compact on desktop. */
+  width: min(360px, 92vw);
+  height: min(440px, 85vh);
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
+}
+
+@media (min-width: 600px) {
+  .iframe-modal__card {
+    width: 400px;
+    height: 480px;
+  }
 }
 
 .iframe-modal__card > iframe {

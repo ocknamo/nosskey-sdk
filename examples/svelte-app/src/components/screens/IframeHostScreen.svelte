@@ -4,8 +4,11 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import ConsentDialog from '../ConsentDialog.svelte';
+import Button from '../ui/button/Button.svelte';
 
 type UiState = 'running' | 'partitioned' | 'denied' | 'granted' | 'noKeyExists' | 'unsupported';
+type IconTone = 'warning' | 'error' | 'success';
+type ActionVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning';
 
 // Newer Storage Access API options (`{ all: true }`) are not in the default
 // lib.dom yet. Define the call signature locally rather than augmenting
@@ -105,7 +108,6 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
   }
   if (manager.hasKeyInfo()) {
     uiState = 'granted';
-    postVisibility(false);
   } else {
     uiState = 'noKeyExists';
   }
@@ -125,6 +127,73 @@ async function requestAccess(): Promise<void> {
   }
 }
 
+function handleClose(): void {
+  postVisibility(false);
+}
+
+type CardConfig = {
+  title: string;
+  description: string;
+  icon: string;
+  tone: IconTone;
+  action?: {
+    label: string;
+    variant: ActionVariant;
+    onclick: () => void;
+  };
+};
+
+function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
+  const t = $i18n.t.iframeHost;
+  switch (state) {
+    case 'partitioned':
+      return {
+        title: t.partitionedTitle,
+        description: t.partitionedWarning,
+        icon: 'lock',
+        tone: 'warning',
+        action: {
+          label: t.grantStorageAccess,
+          variant: 'warning',
+          onclick: () => void requestAccess(),
+        },
+      };
+    case 'denied':
+      return {
+        title: t.deniedTitle,
+        description: t.storageAccessDenied,
+        icon: 'block',
+        tone: 'error',
+        action: {
+          label: t.retry,
+          variant: 'danger',
+          onclick: () => void requestAccess(),
+        },
+      };
+    case 'granted':
+      return {
+        title: t.grantedTitle,
+        description: t.storageAccessGranted,
+        icon: 'check_circle',
+        tone: 'success',
+      };
+    case 'noKeyExists':
+      return {
+        title: t.noKeyTitle,
+        description: t.noKey,
+        icon: 'key_off',
+        tone: 'warning',
+      };
+    case 'unsupported':
+      return {
+        title: t.unsupportedTitle,
+        description: `${t.storageAccessUnsupported} ${t.noKey}`,
+        icon: 'info',
+        tone: 'warning',
+      };
+  }
+}
+
 onMount(() => {
   if (isEmbeddedIframeMode()) {
     document.body.classList.add('nosskey-embedded');
@@ -140,77 +209,189 @@ onDestroy(() => {
 });
 </script>
 
-<div class="iframe-host">
-  <p class="status">{$i18n.t.iframeHost.running}</p>
-  {#if uiState === 'partitioned'}
-    <p class="warning">{$i18n.t.iframeHost.partitionedWarning}</p>
-    <button type="button" onclick={requestAccess} disabled={working}>
-      {$i18n.t.iframeHost.grantStorageAccess}
-    </button>
-  {:else if uiState === 'denied'}
-    <p class="warning">{$i18n.t.iframeHost.storageAccessDenied}</p>
-    {#if errorMessage}
-      <p class="error-detail">{errorMessage}</p>
-    {/if}
-    <button type="button" onclick={requestAccess} disabled={working}>
-      {$i18n.t.iframeHost.retry}
-    </button>
-  {:else if uiState === 'granted'}
-    <p class="success">{$i18n.t.iframeHost.storageAccessGranted}</p>
-  {:else if uiState === 'noKeyExists'}
-    <p class="warning">{$i18n.t.iframeHost.noKey}</p>
-  {:else if uiState === 'unsupported'}
-    <p class="warning">{$i18n.t.iframeHost.storageAccessUnsupported}</p>
-    <p class="warning">{$i18n.t.iframeHost.noKey}</p>
-  {/if}
-</div>
+{#if uiState !== 'running'}
+  {@const card = cardForState(uiState)}
+  <div class="iframe-host" role="dialog" aria-modal="true" aria-labelledby="iframe-host-title">
+    <div class="card">
+      <button
+        type="button"
+        class="close-btn"
+        aria-label={$i18n.t.iframeHost.closeLabel}
+        onclick={handleClose}
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+
+      <span
+        class="material-symbols-outlined card-icon tone-{card.tone}"
+        aria-hidden="true"
+      >
+        {card.icon}
+      </span>
+
+      <h2 id="iframe-host-title" class="card-title tone-{card.tone}">{card.title}</h2>
+      <p class="card-description">{card.description}</p>
+
+      {#if uiState === 'denied' && errorMessage}
+        <p class="error-detail">{errorMessage}</p>
+      {/if}
+
+      {#if card.action}
+        <div class="card-action">
+          <Button
+            variant={card.action.variant}
+            disabled={working}
+            onclick={card.action.onclick}
+          >
+            {card.action.label}
+          </Button>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
 
 <ConsentDialog />
 
 <style>
   .iframe-host {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 16px;
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    background: var(--color-card);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--color-shadow-strong);
+    padding: 32px 20px 24px;
     text-align: center;
+    box-sizing: border-box;
   }
 
-  .status {
-    margin: 8px 0;
-  }
-
-  .warning {
-    color: var(--color-warning);
-    font-weight: 600;
-    margin: 8px 0;
-  }
-
-  .success {
-    color: var(--color-success);
-    font-weight: 600;
-    margin: 8px 0;
-  }
-
-  .error-detail {
+  .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
     color: var(--color-text-secondary);
-    font-size: 0.8rem;
-    margin: 4px 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .close-btn:hover {
+    background: var(--color-hover-overlay, rgba(127, 127, 127, 0.15));
+  }
+
+  .close-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
+  }
+
+  .close-btn .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .card-icon {
+    font-size: 56px;
+    line-height: 1;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  .tone-success {
+    color: var(--color-success);
+  }
+
+  .tone-warning {
+    color: var(--color-warning);
+  }
+
+  .tone-error {
+    color: var(--color-error);
+  }
+
+  .card-title {
+    margin: 0 0 8px;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .card-description {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
     word-break: break-word;
   }
 
-  button {
-    margin-top: 8px;
-    padding: 8px 16px;
-    border: 1px solid var(--color-warning);
-    background-color: transparent;
-    color: var(--color-warning);
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
+  .error-detail {
+    margin: 0 0 16px;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    word-break: break-word;
   }
 
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .card-action {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .card-action :global(.btn) {
+    width: auto;
+    min-width: 160px;
+  }
+
+  /* Mobile-first: tighter spacing on narrow viewports */
+  @media (max-width: 360px) {
+    .card {
+      padding: 28px 14px 20px;
+    }
+
+    .card-icon {
+      font-size: 48px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+    }
+  }
+
+  /* Embedded mode: parent modal already provides the backdrop and card frame,
+     so suppress this component's own dim overlay and let the card fill the
+     iframe viewport seamlessly. */
+  :global(body.nosskey-embedded) .iframe-host {
+    background: transparent;
+    padding: 12px;
+  }
+
+  :global(body.nosskey-embedded) .card {
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 </style>
