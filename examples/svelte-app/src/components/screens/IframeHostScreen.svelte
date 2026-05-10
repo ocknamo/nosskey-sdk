@@ -43,13 +43,21 @@ async function detectInitialState(): Promise<void> {
   }
   // Try silently first: browsers that remember a prior grant for this
   // top-level × iframe origin pair resolve without a user gesture, so a
-  // returning user skips the dialog. First visits and expired grants reject,
-  // and we fall back to the manual button.
+  // returning user skips the dialog. First visits and expired grants reject
+  // with NotAllowedError, and we fall back to the manual button.
+  let handle: StorageAccessHandle | null;
   try {
-    const handle = await callRequestStorageAccess();
-    applyStorageGrant(handle);
-  } catch {
-    uiState = 'partitioned';
+    handle = await callRequestStorageAccess();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      uiState = 'partitioned';
+      postVisibility(true);
+      return;
+    }
+    throw err;
+  }
+  applyStorageGrant(handle);
+  if (uiState === 'noKeyExists') {
     postVisibility(true);
   }
 }
@@ -100,7 +108,6 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     postVisibility(false);
   } else {
     uiState = 'noKeyExists';
-    postVisibility(true);
   }
 }
 
