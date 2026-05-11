@@ -248,6 +248,11 @@ export interface TranslationData {
     storageAccessDenied: string;
     storageAccessUnsupported: string;
     retry: string;
+    partitionedTitle: string;
+    deniedTitle: string;
+    grantedTitle: string;
+    noKeyTitle: string;
+    unsupportedTitle: string;
   };
 }
 
@@ -516,6 +521,11 @@ export const ja: TranslationData = {
       'ストレージアクセスが拒否されました。もう一度試すか、別タブで nosskey.app を開いてください。',
     storageAccessUnsupported: 'このブラウザは Storage Access API をサポートしていません。',
     retry: '再試行',
+    partitionedTitle: 'ストレージアクセスの許可が必要です',
+    deniedTitle: 'アクセスが拒否されました',
+    grantedTitle: '許可されました',
+    noKeyTitle: '鍵が見つかりません',
+    unsupportedTitle: 'このブラウザは未対応です',
   },
 };
 
@@ -784,6 +794,11 @@ export const en: TranslationData = {
       'Storage access was denied. Retry, or open nosskey.app in another tab to create or unlock your key.',
     storageAccessUnsupported: 'This browser does not support the Storage Access API.',
     retry: 'Retry',
+    partitionedTitle: 'Storage access required',
+    deniedTitle: 'Access denied',
+    grantedTitle: 'Access granted',
+    noKeyTitle: 'No key found',
+    unsupportedTitle: 'Browser not supported',
   },
 };
 
