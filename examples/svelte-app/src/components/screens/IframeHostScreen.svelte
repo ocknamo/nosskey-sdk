@@ -35,11 +35,12 @@ function postVisibility(visible: boolean): void {
 
 async function detectInitialState(): Promise<void> {
   const manager = getNosskeyManager();
-  if (manager.hasKeyInfo()) {
-    uiState = 'running';
-    return;
-  }
   if (typeof document.requestStorageAccess !== 'function') {
+    // No Storage Access API: partitioned localStorage is all we can see.
+    if (manager.hasKeyInfo()) {
+      uiState = 'running';
+      return;
+    }
     uiState = 'unsupported';
     postVisibility(true);
     return;
@@ -48,11 +49,22 @@ async function detectInitialState(): Promise<void> {
   // top-level × iframe origin pair resolve without a user gesture, so a
   // returning user skips the dialog. First visits and expired grants reject
   // with NotAllowedError, and we fall back to the manual button.
+  // MUST run before any hasKeyInfo() shortcut — Chromium keeps
+  // window.localStorage partitioned even after the grant, so applyStorageGrant()
+  // must thread handle.localStorage into the SDK or first-party state
+  // (e.g. relays saved via the top-level Settings UI) stays invisible.
   let handle: StorageAccessHandle | null;
   try {
     handle = await callRequestStorageAccess();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      // No silent grant. Fall back to partitioned key info if available so the
+      // user can still sign with their cached key; first-party data (relays,
+      // etc.) stays unreachable until they explicitly grant access.
+      if (manager.hasKeyInfo()) {
+        uiState = 'running';
+        return;
+      }
       uiState = 'partitioned';
       postVisibility(true);
       return;
