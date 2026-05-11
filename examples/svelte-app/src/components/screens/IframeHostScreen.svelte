@@ -49,10 +49,9 @@ async function detectInitialState(): Promise<void> {
   // top-level × iframe origin pair resolve without a user gesture, so a
   // returning user skips the dialog. First visits and expired grants reject
   // with NotAllowedError, and we fall back to the manual button.
-  // MUST run before any hasKeyInfo() shortcut — Chromium keeps
-  // window.localStorage partitioned even after the grant, so applyStorageGrant()
-  // must thread handle.localStorage into the SDK or first-party state
-  // (e.g. relays saved via the top-level Settings UI) stays invisible.
+  //
+  // Do NOT short-circuit on hasKeyInfo() above this point — see
+  // applyStorageGrant() for why the SAA call must run first.
   let handle: StorageAccessHandle | null;
   try {
     handle = await callRequestStorageAccess();
