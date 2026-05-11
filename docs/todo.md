@@ -5,6 +5,7 @@
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
 
 ## 実装関連
+- [ ] `NosskeyManager.setStorageOptions({ storage })` で storage 参照を差し替えても `#currentKeyInfo` in-memory cache が invalidate されない。iframe 経由で SAA grant 適用後に partitioned localStorage 由来の旧 key info が first-party storage の鍵として誤認されるエッジケースを生む（PR #45 で表面化、退行は無いが本質的には SDK 側で塞ぐべき）。storage 差し替え時に cache をクリアして再読込するか、`applyStorageGrant` 相当が明示的に呼べる API を提供する。
 - [ ] PWKのリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする）
 - [ ] NIP-17 sealed DM (kind:14 + gift-wrap) サポート — 受け取った NIP-44 暗号文を kind:13 seal でラップし、ephemeral 鍵で kind:1059 gift-wrap 化する 3 段構成。SDK に「ランダム ephemeral 秘密鍵で署名する API」を追加する必要があり、現状の `signEvent`（登録済み鍵専用）とは別経路。**動作確認用の実装は `examples/parent-sample/src/nip17.ts` にあり、セクション 7 の "Send NIP-17 DM" で他クライアントとの受信検証が可能** (ブランチ `claude/nip44-iframe-sample-KnGuu`)。SDK 本体への昇格は再利用ニーズが出てから検討する。
 - [x] iframeでNosskeyを使用できるNosskey-iframe(仮)の作成 — 段階1〜4完了 (`nosskey-iframe` パッケージ: protocol / host / client)。ブランチ `claude/add-iframe-support-2tKuX`

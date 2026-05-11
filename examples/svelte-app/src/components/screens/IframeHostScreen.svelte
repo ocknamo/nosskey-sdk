@@ -35,11 +35,12 @@ function postVisibility(visible: boolean): void {
 
 async function detectInitialState(): Promise<void> {
   const manager = getNosskeyManager();
-  if (manager.hasKeyInfo()) {
-    uiState = 'running';
-    return;
-  }
   if (typeof document.requestStorageAccess !== 'function') {
+    // No Storage Access API: partitioned localStorage is all we can see.
+    if (manager.hasKeyInfo()) {
+      uiState = 'running';
+      return;
+    }
     uiState = 'unsupported';
     postVisibility(true);
     return;
@@ -48,11 +49,21 @@ async function detectInitialState(): Promise<void> {
   // top-level × iframe origin pair resolve without a user gesture, so a
   // returning user skips the dialog. First visits and expired grants reject
   // with NotAllowedError, and we fall back to the manual button.
+  //
+  // Do NOT short-circuit on hasKeyInfo() above this point — see
+  // applyStorageGrant() for why the SAA call must run first.
   let handle: StorageAccessHandle | null;
   try {
     handle = await callRequestStorageAccess();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      // No silent grant. Fall back to partitioned key info if available so the
+      // user can still sign with their cached key; first-party data (relays,
+      // etc.) stays unreachable until they explicitly grant access.
+      if (manager.hasKeyInfo()) {
+        uiState = 'running';
+        return;
+      }
       uiState = 'partitioned';
       postVisibility(true);
       return;
