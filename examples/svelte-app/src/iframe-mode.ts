@@ -2,7 +2,7 @@ import type { ConsentRequest, NosskeyIframeHostOptions } from 'nosskey-iframe';
 import { NosskeyIframeHost } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
-import { loadRelays } from './services/relays-store.js';
+import { RELAYS_STORAGE_KEY, loadRelays } from './services/relays-store.js';
 import { consentPolicy, incrementDenyCount, trustedOrigins } from './store/app-state.js';
 import { evaluateConsent, policyKeyFor } from './utils/consent-gating.js';
 
@@ -106,7 +106,26 @@ export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {
     // Read through the SDK's storage handle so we hit first-party storage
     // when the user has granted access (Chromium keeps window.localStorage
     // partitioned even after the grant — only the handle points at it).
-    onGetRelays: async () => loadRelays(manager.getStorageOptions().storage),
+    onGetRelays: async () => {
+      // DIAG (一時): A/C/D 切り分け用ログ。原因確定後に必ず元の 1 行
+      //   `onGetRelays: async () => loadRelays(manager.getStorageOptions().storage),`
+      // に戻すこと。
+      const storage = manager.getStorageOptions().storage;
+      const fallback = typeof window !== 'undefined' ? window.localStorage : null;
+      const handleRaw = storage?.getItem(RELAYS_STORAGE_KEY) ?? null;
+      const fallbackRaw = fallback?.getItem(RELAYS_STORAGE_KEY) ?? null;
+      const result = loadRelays(storage);
+      console.log('[nosskey][onGetRelays][diag]', {
+        hasHandle: !!storage,
+        handleSameAsWindow: storage === fallback,
+        handleRawLength: handleRaw?.length ?? 0,
+        handleRawSnippet: handleRaw ? handleRaw.slice(0, 200) : null,
+        windowRawLength: fallbackRaw?.length ?? 0,
+        windowRawSnippet: fallbackRaw ? fallbackRaw.slice(0, 200) : null,
+        resultKeys: Object.keys(result),
+      });
+      return result;
+    },
     ...overrides,
   });
   host.start();
