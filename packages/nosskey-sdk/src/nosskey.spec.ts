@@ -704,6 +704,85 @@ describe('NosskeyManager', () => {
       expect(customStorage.setItem).toHaveBeenCalled();
     });
 
+    it('storage を差し替えると in-memory cache が invalidate される', () => {
+      const keyInfoA: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'pubkey-from-storage-a',
+        salt: '6e6f7374722d6b6579',
+      };
+      const keyInfoB: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'pubkey-from-storage-b',
+        salt: '6e6f7374722d6b6579',
+      };
+      const storageA = createMockStorage();
+      (storageA.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'nosskey_keyinfo' ? JSON.stringify(keyInfoA) : null
+      );
+      const storageB = createMockStorage();
+      (storageB.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'nosskey_keyinfo' ? JSON.stringify(keyInfoB) : null
+      );
+
+      const nosskey = new NosskeyManager({
+        storageOptions: { enabled: true, storage: storageA },
+      });
+      expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('pubkey-from-storage-a');
+
+      nosskey.setStorageOptions({ storage: storageB });
+
+      expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('pubkey-from-storage-b');
+    });
+
+    it('同じ storage 参照を渡し直した場合は cache を保持する', () => {
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'cached-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      const customStorage = createMockStorage();
+      (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'nosskey_keyinfo' ? JSON.stringify(keyInfo) : null
+      );
+
+      const nosskey = new NosskeyManager({
+        storageOptions: { enabled: true, storage: customStorage },
+      });
+      const getItemMock = customStorage.getItem as ReturnType<typeof vi.fn>;
+      const callsAfterCtor = getItemMock.mock.calls.length;
+
+      nosskey.setStorageOptions({ storage: customStorage });
+      const result = nosskey.getCurrentKeyInfo();
+
+      expect(result?.pubkey).toBe('cached-pubkey');
+      // 同参照なので invalidate されず、追加の storage.getItem は発生しない
+      expect(getItemMock.mock.calls.length).toBe(callsAfterCtor);
+    });
+
+    it('storageKey のみ変更しても cache は保持される', () => {
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'cached-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      const customStorage = createMockStorage();
+      (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'nosskey_keyinfo' ? JSON.stringify(keyInfo) : null
+      );
+
+      const nosskey = new NosskeyManager({
+        storageOptions: { enabled: true, storage: customStorage },
+      });
+      const getItemMock = customStorage.getItem as ReturnType<typeof vi.fn>;
+      const callsAfterCtor = getItemMock.mock.calls.length;
+
+      nosskey.setStorageOptions({ storageKey: 'other-key' });
+      const result = nosskey.getCurrentKeyInfo();
+
+      expect(result?.pubkey).toBe('cached-pubkey');
+      expect(getItemMock.mock.calls.length).toBe(callsAfterCtor);
+    });
+
     it('カスタムstorageからのロードが動作する', () => {
       const storedKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),

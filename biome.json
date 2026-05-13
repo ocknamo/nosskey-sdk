@@ -11,7 +11,9 @@
       "./packages/*/dist",
       "./packages/*/node_modules",
       "./dist",
-      "./node_modules"
+      "./node_modules",
+      "./examples/*/coverage",
+      "./packages/*/coverage"
     ]
   },
   "linter": {
