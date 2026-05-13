@@ -77,7 +77,15 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @param options ストレージオプション
    */
   setStorageOptions(options: Partial<NostrKeyStorageOptions>): void {
+    // storage 参照が差し替わったら in-memory cache は別バケットの値を握って
+    // しまっているので破棄する。次回 getCurrentKeyInfo() で新しい storage から
+    // 読み直す。iframe で SAA grant 後に handle.localStorage を流し込む経路で
+    // partitioned 由来のキャッシュが残り続けるのを防ぐのが主目的。
+    const storageChanged = 'storage' in options && options.storage !== this.#storageOptions.storage;
     this.#storageOptions = { ...this.#storageOptions, ...options };
+    if (storageChanged) {
+      this.#currentKeyInfo = null;
+    }
 
     // ストレージが無効化された場合はストレージからNostrKeyInfoを削除
     if (options.enabled === false) {
