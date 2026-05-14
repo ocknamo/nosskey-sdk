@@ -131,14 +131,14 @@ function handleReject() {
       {/if}
 
       <div class="consent-actions">
-        <Button variant="danger" onclick={handleReject}>
+        <Button variant="danger" size="small" onclick={handleReject}>
           {$i18n.t.consent.reject}
         </Button>
-        <Button variant="secondary" onclick={handleApproveOnce}>
-          {$i18n.t.consent.approveOnce}
-        </Button>
-        <Button variant="primary" onclick={handleApproveAlways}>
+        <Button variant="primary" size="small" onclick={handleApproveAlways}>
           {$i18n.t.consent.alwaysAllow}
+        </Button>
+        <Button variant="secondary" size="small" onclick={handleApproveOnce}>
+          {$i18n.t.consent.approveOnce}
         </Button>
       </div>
     </div>
@@ -219,44 +219,52 @@ function handleReject() {
   }
 
   .consent-raw {
-    margin: 0 0 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 8px 12px;
+    margin: 0 0 12px;
   }
 
   .consent-raw summary {
     cursor: pointer;
-    font-weight: 600;
-    color: var(--color-text-secondary);
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    display: inline-block;
+    padding: 2px 0;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    list-style: none;
+  }
+
+  .consent-raw summary::-webkit-details-marker {
+    display: none;
   }
 
   .consent-raw pre {
-    margin-top: 8px;
+    margin-top: 6px;
     max-height: 240px;
     overflow: auto;
     text-align: left;
+    font-size: 0.75rem;
   }
 
   .consent-actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-
-  /* ナローウィンドウ（embedded iframe は通常 360px 幅）では 3 ボタンを縦に並べ、
-     DOM 順 reject→once→always を視覚的に always→once→reject に反転する。
-     これにより親指の届きにくい上端が primary、最下段が destructive (reject) になり、
-     折り返し時に reject だけが右端孤立してミスタップを誘発する状況を避ける。 */
-  @media (max-width: 480px) {
-    .consent-actions {
-      flex-direction: column-reverse;
-    }
+    flex-direction: row;
+    gap: 8px;
+    padding-top: 16px;
+    margin-top: 8px;
+    border-top: 1px solid var(--color-border);
   }
 
   .consent-actions :global(.btn) {
+    flex: 1 1 0;
     width: auto;
+    max-width: none;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Embedded mode: parent modal already provides the backdrop and card frame,
