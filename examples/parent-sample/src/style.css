@@ -198,8 +198,18 @@ button.secondary {
   background: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  .iframe-modal__card {
-    background: #1d2025;
-  }
+/* Sync the modal card background with the theme passed to the iframe so the
+   embedded UI does not appear to float on a contrasting backdrop. The body
+   classes are applied by main.ts whenever a connection is active. */
+body.parent-theme-dark {
+  background: #000000;
+  color: #e7e9ee;
+}
+
+body.parent-theme-dark .iframe-modal__card {
+  background: #111111;
+}
+
+body.parent-theme-light .iframe-modal__card {
+  background: #ffffff;
 }

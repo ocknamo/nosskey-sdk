@@ -11,11 +11,16 @@ const translations: Record<Language, TranslationData> = {
   en,
 };
 
+// 親オリジンから `?embedded=1&lang=...` で言語を上書きされた場合、
+// localStorage には書き戻さない（次回スタンドアロン起動時に保持するため）。
+let embeddedLangOverride = false;
+
 // 現在の言語を管理するストア
 export const currentLanguage = writable<Language>(loadLanguage());
 
 // 言語変更時にローカルストレージに保存
 currentLanguage.subscribe((lang) => {
+  if (embeddedLangOverride) return;
   if (typeof window !== 'undefined') {
     localStorage.setItem('nosskey_language', lang);
   }
@@ -24,6 +29,15 @@ currentLanguage.subscribe((lang) => {
 // 言語設定をローカルストレージから読み込む
 function loadLanguage(): Language {
   if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('embedded') === '1') {
+      const l = params.get('lang');
+      if (l === 'ja' || l === 'en') {
+        embeddedLangOverride = true;
+        return l;
+      }
+    }
+
     const saved = localStorage.getItem('nosskey_language');
     if (saved && (saved === 'ja' || saved === 'en')) {
       return saved;

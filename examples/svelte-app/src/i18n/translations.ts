@@ -209,6 +209,8 @@ export interface TranslationData {
     eventTags: string;
     noTags: string;
     approve: string;
+    approveOnce: string;
+    alwaysAllow: string;
     reject: string;
     method: string;
     methodLabel: {
@@ -480,6 +482,8 @@ export const ja: TranslationData = {
     eventTags: 'タグ',
     noTags: '(タグなし)',
     approve: '承認',
+    approveOnce: '今回のみ許可',
+    alwaysAllow: '常に許可',
     reject: '拒否',
     method: 'リクエスト種別',
     methodLabel: {
@@ -753,6 +757,8 @@ export const en: TranslationData = {
     eventTags: 'Tags',
     noTags: '(no tags)',
     approve: 'Approve',
+    approveOnce: 'Allow once',
+    alwaysAllow: 'Always allow',
     reject: 'Reject',
     method: 'Request type',
     methodLabel: {
