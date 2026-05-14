@@ -10,11 +10,6 @@ const CONTENT_PREVIEW_LIMIT = 100;
 const NPUB_HEAD = 8;
 const NPUB_TAIL = 8;
 
-// `{#if $pendingConsent}` 配下のため、ダイアログがアンマウント・再マウントされる
-// 度に false で再初期化される。承認/拒否後の明示リセットも併せて行うのは、
-// 同じインスタンスのまま次の request が即セットされる稀なケースでの保険。
-let trustOrigin = $state(false);
-
 function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
   if (value.length <= limit) return value;
   return `${value.slice(0, limit)}…`;
@@ -59,14 +54,16 @@ function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
   return t.titleEncrypt;
 }
 
-function handleApprove() {
-  approveConsent({ trustOrigin });
-  trustOrigin = false;
+function handleApproveOnce() {
+  approveConsent({ trustOrigin: false });
+}
+
+function handleApproveAlways() {
+  approveConsent({ trustOrigin: true });
 }
 
 function handleReject() {
   rejectConsent();
-  trustOrigin = false;
 }
 </script>
 
@@ -133,17 +130,15 @@ function handleReject() {
         </details>
       {/if}
 
-      <label class="consent-trust">
-        <input type="checkbox" bind:checked={trustOrigin} />
-        <span>{$i18n.t.consent.alwaysAllowSite}</span>
-      </label>
-
       <div class="consent-actions">
         <Button variant="danger" onclick={handleReject}>
           {$i18n.t.consent.reject}
         </Button>
-        <Button variant="primary" onclick={handleApprove}>
-          {trustOrigin ? $i18n.t.consent.approveAndTrust : $i18n.t.consent.approve}
+        <Button variant="secondary" onclick={handleApproveOnce}>
+          {$i18n.t.consent.approveOnce}
+        </Button>
+        <Button variant="primary" onclick={handleApproveAlways}>
+          {$i18n.t.consent.alwaysAllow}
         </Button>
       </div>
     </div>
@@ -168,7 +163,7 @@ function handleReject() {
     border: 1px solid var(--color-border);
     border-radius: 12px;
     box-shadow: 0 8px 24px var(--color-shadow-strong);
-    padding: 20px;
+    padding: 24px;
     width: 100%;
     max-width: 520px;
     max-height: 90vh;
@@ -211,6 +206,7 @@ function handleReject() {
 
   .consent-event dd {
     margin: 0;
+    text-align: left;
   }
 
   .consent-event ul {
@@ -239,24 +235,24 @@ function handleReject() {
     margin-top: 8px;
     max-height: 240px;
     overflow: auto;
-  }
-
-  .consent-trust {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 16px;
-    cursor: pointer;
-  }
-
-  .consent-trust input[type='checkbox'] {
-    margin: 0;
+    text-align: left;
   }
 
   .consent-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 12px;
+  }
+
+  /* ナローウィンドウ（embedded iframe は通常 360px 幅）では 3 ボタンを縦に並べ、
+     DOM 順 reject→once→always を視覚的に always→once→reject に反転する。
+     これにより親指の届きにくい上端が primary、最下段が destructive (reject) になり、
+     折り返し時に reject だけが右端孤立してミスタップを誘発する状況を避ける。 */
+  @media (max-width: 480px) {
+    .consent-actions {
+      flex-direction: column-reverse;
+    }
   }
 
   .consent-actions :global(.btn) {
@@ -275,6 +271,7 @@ function handleReject() {
     max-width: none;
     max-height: none;
     height: 100%;
+    padding: 20px;
     border: 0;
     border-radius: 0;
     box-shadow: none;

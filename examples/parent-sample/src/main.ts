@@ -42,10 +42,29 @@ function setModalVisible(visible: boolean): void {
   modal?.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
+function resolveParentTheme(): 'light' | 'dark' {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function resolveParentLang(): 'ja' | 'en' {
+  return navigator.language?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+}
+
+function applyParentTheme(theme: 'light' | 'dark'): void {
+  document.body.classList.remove('parent-theme-light', 'parent-theme-dark');
+  document.body.classList.add(`parent-theme-${theme}`);
+}
+
+function clearParentTheme(): void {
+  document.body.classList.remove('parent-theme-light', 'parent-theme-dark');
+}
+
 function withEmbeddedParam(rawUrl: string): string {
   try {
     const url = new URL(rawUrl, window.location.href);
     url.searchParams.set('embedded', '1');
+    url.searchParams.set('theme', resolveParentTheme());
+    url.searchParams.set('lang', resolveParentLang());
     return url.toString();
   } catch {
     return rawUrl;
@@ -284,6 +303,7 @@ async function connect(): Promise<void> {
   setStatus('connecting…');
   const embeddedUrl = withEmbeddedParam(iframeUrl);
   log(`Mounting iframe: ${embeddedUrl}`);
+  applyParentTheme(resolveParentTheme());
   try {
     const next = new NosskeyIframeClient({ iframeUrl: embeddedUrl });
     client = next;
@@ -313,6 +333,7 @@ async function connect(): Promise<void> {
     window.nostr = undefined;
     setConnectedUI(false);
     setModalVisible(false);
+    clearParentTheme();
   }
 }
 
@@ -323,6 +344,7 @@ function disconnect(): void {
   window.nostr = undefined;
   setConnectedUI(false);
   setModalVisible(false);
+  clearParentTheme();
   setStatus('disconnected');
   log('Iframe destroyed; window.nostr removed.');
 }
