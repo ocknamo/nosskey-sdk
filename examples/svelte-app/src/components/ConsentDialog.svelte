@@ -245,6 +245,16 @@ function handleReject() {
     gap: 12px;
   }
 
+  /* ナローウィンドウ（embedded iframe は通常 360px 幅）では 3 ボタンを縦に並べ、
+     DOM 順 reject→once→always を視覚的に always→once→reject に反転する。
+     これにより親指の届きにくい上端が primary、最下段が destructive (reject) になり、
+     折り返し時に reject だけが右端孤立してミスタップを誘発する状況を避ける。 */
+  @media (max-width: 480px) {
+    .consent-actions {
+      flex-direction: column-reverse;
+    }
+  }
+
   .consent-actions :global(.btn) {
     width: auto;
   }
