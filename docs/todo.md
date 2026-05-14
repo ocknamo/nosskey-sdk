@@ -20,8 +20,8 @@
 - [x] `nip04.encrypt / decrypt` の追加 — NIP-04（レガシー DM、AES-256-CBC）を SDK (`packages/nosskey-sdk/src/nip04.ts`)、iframe、ConsentDialog で実装。ラウンドトリップテスト追加。ブランチ `claude/review-todos-nFRqm`
 
 #### Phase 2: UX・セキュリティ改善
-- [ ] オリジン別の許可記憶 — 「このサイトを常に許可」チェックボックスと localStorage 保存
-- [ ] メソッド別の同意ポリシー設定 — signEvent / nip44 / nip04 ごとに「毎回確認 / 常に許可 / 拒否」
+- [x] オリジン別の許可記憶 — 「このサイトを常に許可」で origin×method を `localStorage` (`nosskey_trusted_origins_v2`、設計書の `nosskey_trusted_origins` から v1 ユーザー無し前提で破壊的置換) に保存。`examples/svelte-app/src/store/app-state.ts` (`TrustedOriginEntry` / 永続化) + `examples/svelte-app/src/utils/consent-gating.ts` (`evaluateConsent`) + `ConsentDialog.svelte`
+- [x] メソッド別の同意ポリシー設定 — `signEvent` / `nip44` / `nip04` ごとに「毎回確認 / 常に許可 / 拒否」を保持。`ConsentPolicy` 型 + `policyKeyFor()`（nip44/nip04 encrypt/decrypt は同バケット集約） + `localStorage` (`nosskey_consent_policy`)。評価順は deny > always > trusted-origin > ask
 
 #### Phase 3: 接続堅牢化
 - [ ] ヘルスチェック（ping/pong） — 定期的な接続確認メッセージ
@@ -35,9 +35,9 @@
 - [ ] Safari 向け `window.open()` フォールバック — Safari PRF サポート安定後に対応
 
 #### Phase 6: ダイアログ UX 改善
-- [ ] ダイアログ表示内容の整理 — kind ラベル化・content プレビュー・詳細折りたたみ
-- [ ] スタイル整理 — CSS variables 化・レスポンシブ対応
-- [ ] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由
+- [x] ダイアログ表示内容の整理 — `kindLabel()` で kind ラベル化、content は 100 文字プレビュー、`<details>` で raw event JSON を折りたたみ表示、nip44/nip04 では `renderPeerPubkey()` で相手 pubkey を短縮表示（`examples/svelte-app/src/components/ConsentDialog.svelte`）
+- [x] スタイル整理 — `--color-card` / `--color-text` 等の CSS variables 化と `@media (max-width: 480px)` レスポンシブ対応（`ConsentDialog.svelte`）
+- [ ] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由。Svelte アプリ側の受信 (`app-state.ts` / `i18n-store.ts`) は実装済み。`NosskeyIframeClient` 側の `theme` / `lang` オプション追加・URL 自動付与が未実装
 - [ ] 設定ページへのリンク遷移 — NO_KEY エラー時のセットアップ誘導
 
 #### Phase 7: フレームワーク導入しやすさの改善（低優先）
