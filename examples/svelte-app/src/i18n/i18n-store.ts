@@ -36,6 +36,13 @@ function loadLanguage(): Language {
         embeddedLangOverride = true;
         return l;
       }
+      if (l === 'auto') {
+        // 親が `auto` を指定したらブラウザ言語で解決し、上書きフラグは立てる
+        // （次回スタンドアロン起動時の localStorage 書き戻しを抑止するため）。
+        embeddedLangOverride = true;
+        const browserLang = navigator.language.split('-')[0];
+        return browserLang === 'ja' ? 'ja' : 'en';
+      }
     }
 
     const saved = localStorage.getItem('nosskey_language');

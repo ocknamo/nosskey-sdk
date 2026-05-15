@@ -230,6 +230,42 @@ describe('NosskeyIframeClient', () => {
     client.destroy();
   });
 
+  it('resolves a relative iframeUrl against window.location.href', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: '/iframe',
+      theme: 'dark',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+
+    const iframe = harness.iframes[0];
+    // Harness location.href is 'https://parent.example/app/' so '/iframe'
+    // resolves under the same origin.
+    const url = new URL(iframe.src);
+    expect(url.origin).toBe('https://parent.example');
+    expect(url.pathname).toBe('/iframe');
+    expect(url.searchParams.get('embedded')).toBe('1');
+    expect(url.searchParams.get('theme')).toBe('dark');
+    client.destroy();
+  });
+
+  it("passes lang='auto' through to the iframe unchanged", () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/#/iframe',
+      lang: 'auto',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+
+    const iframe = harness.iframes[0];
+    const url = new URL(iframe.src);
+    expect(url.searchParams.get('embedded')).toBe('1');
+    expect(url.searchParams.get('lang')).toBe('auto');
+    client.destroy();
+  });
+
   it('ready() resolves when a nosskey:ready message arrives from the iframe', async () => {
     const client = new NosskeyIframeClient({
       iframeUrl: 'https://nosskey.example/iframe',

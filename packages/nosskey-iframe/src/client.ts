@@ -26,17 +26,19 @@ export interface NosskeyIframeClientOptions {
   timeout?: number;
   /**
    * Theme to pass to the iframe via the `?theme=...` URL parameter. When set,
-   * `embedded=1` is also appended automatically. The host app applies the
-   * theme on load only; runtime switching requires destroying and re-creating
-   * the client with a new value.
+   * `embedded=1` is also appended automatically. `'auto'` is resolved inside
+   * the iframe (via `prefers-color-scheme`). The host app applies the theme
+   * on load only; runtime switching requires destroying and re-creating the
+   * client with a new value.
    */
   theme?: 'light' | 'dark' | 'auto';
   /**
    * Language to pass to the iframe via the `?lang=...` URL parameter. When
-   * set, `embedded=1` is also appended automatically. Same load-time-only
+   * set, `embedded=1` is also appended automatically. `'auto'` is resolved
+   * inside the iframe (via `navigator.language`). Same load-time-only
    * semantics as {@link theme}.
    */
-  lang?: 'ja' | 'en';
+  lang?: 'ja' | 'en' | 'auto';
   /**
    * Override the window used to install the message listener.
    * Defaults to `globalThis.window`. Primarily useful for tests.
@@ -61,6 +63,15 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>;
 }
 
+/**
+ * Compose the iframe `src` URL with optional `theme` / `lang` parameters.
+ *
+ * - If neither `theme` nor `lang` is provided, returns `rawUrl` unchanged.
+ * - Otherwise, parses `rawUrl` against `baseHref`, sets `embedded=1`, and sets
+ *   each provided parameter (using `URLSearchParams.set`, which replaces any
+ *   existing value).
+ * - Returns `rawUrl` unchanged if URL parsing throws (invalid input).
+ */
 function buildIframeUrl(
   rawUrl: string,
   baseHref: string,

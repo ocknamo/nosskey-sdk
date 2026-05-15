@@ -49,16 +49,11 @@ function resolveParentTheme(): 'light' | 'dark' {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function resolveParentLang(): 'ja' | 'en' {
-  return navigator.language?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
-}
-
+// theme は親ページの body クラスに反映する必要があるため、`auto` を `light`/`dark`
+// に解決する。一方 `lang` は親ページが直接使わないので解決不要 — iframe 側の
+// i18n-store.ts が `auto` を navigator.language で解決する。
 function resolveTheme(choice: ThemeChoice): 'light' | 'dark' {
   return choice === 'auto' ? resolveParentTheme() : choice;
-}
-
-function resolveLang(choice: LangChoice): 'ja' | 'en' {
-  return choice === 'auto' ? resolveParentLang() : choice;
 }
 
 function applyParentTheme(theme: 'light' | 'dark'): void {
@@ -325,13 +320,11 @@ async function connect(): Promise<void> {
   setStatus('connecting…');
   const themeChoice = ui.parentTheme.value as ThemeChoice;
   const langChoice = ui.parentLang.value as LangChoice;
-  const theme = resolveTheme(themeChoice);
-  const lang = resolveLang(langChoice);
-  log(`Mounting iframe ${iframeUrl} with theme=${theme}, lang=${lang}`);
-  applyParentTheme(theme);
+  log(`Mounting iframe ${iframeUrl} with theme=${themeChoice}, lang=${langChoice}`);
+  applyParentTheme(resolveTheme(themeChoice));
   let next: NosskeyIframeClient | null = null;
   try {
-    next = new NosskeyIframeClient({ iframeUrl, theme, lang });
+    next = new NosskeyIframeClient({ iframeUrl, theme: themeChoice, lang: langChoice });
     client = next;
     modalCard.appendChild(next.iframe);
     await next.ready();
