@@ -150,6 +150,86 @@ describe('NosskeyIframeClient', () => {
     client.destroy();
   });
 
+  it('appends embedded=1 and theme/lang query params when provided', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/#/iframe',
+      theme: 'dark',
+      lang: 'ja',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+
+    const iframe = harness.iframes[0];
+    const url = new URL(iframe.src);
+    expect(url.searchParams.get('embedded')).toBe('1');
+    expect(url.searchParams.get('theme')).toBe('dark');
+    expect(url.searchParams.get('lang')).toBe('ja');
+    expect(url.hash).toBe('#/iframe');
+    client.destroy();
+  });
+
+  it('omits theme/lang params when neither option is supplied', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/#/iframe',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+
+    const iframe = harness.iframes[0];
+    expect(iframe.src).toBe('https://nosskey.example/#/iframe');
+    client.destroy();
+  });
+
+  it('appends only theme when lang is omitted (and vice versa)', () => {
+    const themeOnly = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/#/iframe',
+      theme: 'auto',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+    const themeIframe = harness.iframes[0];
+    const themeUrl = new URL(themeIframe.src);
+    expect(themeUrl.searchParams.get('embedded')).toBe('1');
+    expect(themeUrl.searchParams.get('theme')).toBe('auto');
+    expect(themeUrl.searchParams.has('lang')).toBe(false);
+    themeOnly.destroy();
+
+    const langOnly = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/#/iframe',
+      lang: 'en',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+    const langIframe = harness.iframes[1];
+    const langUrl = new URL(langIframe.src);
+    expect(langUrl.searchParams.get('embedded')).toBe('1');
+    expect(langUrl.searchParams.get('lang')).toBe('en');
+    expect(langUrl.searchParams.has('theme')).toBe(false);
+    langOnly.destroy();
+  });
+
+  it('overrides existing embedded/theme/lang query params on the source URL', () => {
+    const client = new NosskeyIframeClient({
+      iframeUrl: 'https://nosskey.example/iframe?embedded=1&theme=light&lang=en',
+      theme: 'dark',
+      lang: 'ja',
+      window: harness.window,
+      document: harness.document,
+      container: harness.container as unknown as HTMLElement,
+    });
+
+    const iframe = harness.iframes[0];
+    const url = new URL(iframe.src);
+    expect(url.searchParams.getAll('theme')).toEqual(['dark']);
+    expect(url.searchParams.getAll('lang')).toEqual(['ja']);
+    expect(url.searchParams.getAll('embedded')).toEqual(['1']);
+    client.destroy();
+  });
+
   it('ready() resolves when a nosskey:ready message arrives from the iframe', async () => {
     const client = new NosskeyIframeClient({
       iframeUrl: 'https://nosskey.example/iframe',

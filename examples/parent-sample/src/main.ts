@@ -42,12 +42,23 @@ function setModalVisible(visible: boolean): void {
   modal?.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
+type ThemeChoice = 'auto' | 'light' | 'dark';
+type LangChoice = 'auto' | 'ja' | 'en';
+
 function resolveParentTheme(): 'light' | 'dark' {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function resolveParentLang(): 'ja' | 'en' {
   return navigator.language?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+}
+
+function resolveTheme(choice: ThemeChoice): 'light' | 'dark' {
+  return choice === 'auto' ? resolveParentTheme() : choice;
+}
+
+function resolveLang(choice: LangChoice): 'ja' | 'en' {
+  return choice === 'auto' ? resolveParentLang() : choice;
 }
 
 function applyParentTheme(theme: 'light' | 'dark'): void {
@@ -57,18 +68,6 @@ function applyParentTheme(theme: 'light' | 'dark'): void {
 
 function clearParentTheme(): void {
   document.body.classList.remove('parent-theme-light', 'parent-theme-dark');
-}
-
-function withEmbeddedParam(rawUrl: string): string {
-  try {
-    const url = new URL(rawUrl, window.location.href);
-    url.searchParams.set('embedded', '1');
-    url.searchParams.set('theme', resolveParentTheme());
-    url.searchParams.set('lang', resolveParentLang());
-    return url.toString();
-  } catch {
-    return rawUrl;
-  }
 }
 
 window.addEventListener('message', (event) => {
@@ -93,6 +92,25 @@ app.innerHTML = `
     <h2>1. Connect to iframe</h2>
     <label for="iframe-url">Iframe URL</label>
     <input id="iframe-url" type="url" value="${DEFAULT_IFRAME_URL}" />
+    <div class="row">
+      <label for="parent-theme">Theme</label>
+      <select id="parent-theme">
+        <option value="auto" selected>auto</option>
+        <option value="light">light</option>
+        <option value="dark">dark</option>
+      </select>
+      <label for="parent-lang">Lang</label>
+      <select id="parent-lang">
+        <option value="auto" selected>auto</option>
+        <option value="ja">ja</option>
+        <option value="en">en</option>
+      </select>
+    </div>
+    <p class="hint">
+      Changing theme or lang while connected re-mounts the iframe with new
+      query parameters (<code>?embedded=1&amp;theme=...&amp;lang=...</code>).
+      The current session state inside the iframe is reset.
+    </p>
     <div class="row">
       <button id="connect">Connect</button>
       <button id="disconnect" class="secondary" disabled>Disconnect</button>
@@ -222,6 +240,8 @@ function requireEl<T extends Element>(selector: string): T {
 
 const ui = {
   iframeUrl: requireEl<HTMLInputElement>('#iframe-url'),
+  parentTheme: requireEl<HTMLSelectElement>('#parent-theme'),
+  parentLang: requireEl<HTMLSelectElement>('#parent-lang'),
   relayUrl: requireEl<HTMLInputElement>('#relay-url'),
   note: requireEl<HTMLTextAreaElement>('#note'),
   connect: requireEl<HTMLButtonElement>('#connect'),
@@ -269,6 +289,8 @@ function setStatus(text: string, variant: '' | 'ok' | 'err' = ''): void {
 function setConnectedUI(connected: boolean): void {
   ui.connect.disabled = connected;
   ui.iframeUrl.disabled = connected;
+  // Theme/lang selects remain enabled while connected so the user can switch
+  // and trigger a re-mount; the change handler does the disconnect+reconnect.
   ui.disconnect.disabled = !connected;
   ui.getPubkey.disabled = !connected;
   ui.getRelays.disabled = !connected;
@@ -301,11 +323,14 @@ async function connect(): Promise<void> {
     return;
   }
   setStatus('connecting…');
-  const embeddedUrl = withEmbeddedParam(iframeUrl);
-  log(`Mounting iframe: ${embeddedUrl}`);
-  applyParentTheme(resolveParentTheme());
+  const themeChoice = ui.parentTheme.value as ThemeChoice;
+  const langChoice = ui.parentLang.value as LangChoice;
+  const theme = resolveTheme(themeChoice);
+  const lang = resolveLang(langChoice);
+  log(`Mounting iframe ${iframeUrl} with theme=${theme}, lang=${lang}`);
+  applyParentTheme(theme);
   try {
-    const next = new NosskeyIframeClient({ iframeUrl: embeddedUrl });
+    const next = new NosskeyIframeClient({ iframeUrl, theme, lang });
     client = next;
     modalCard.appendChild(next.iframe);
     await next.ready();
@@ -662,6 +687,19 @@ ui.connect.addEventListener('click', () => {
   void connect();
 });
 ui.disconnect.addEventListener('click', disconnect);
+
+function remountIfConnected(reason: string): void {
+  if (!client) return;
+  log(`${reason}: re-mounting iframe…`);
+  disconnect();
+  void connect();
+}
+ui.parentTheme.addEventListener('change', () => {
+  remountIfConnected(`Theme changed to ${ui.parentTheme.value}`);
+});
+ui.parentLang.addEventListener('change', () => {
+  remountIfConnected(`Lang changed to ${ui.parentLang.value}`);
+});
 ui.getPubkey.addEventListener('click', () => {
   void getPubkey();
 });

@@ -25,6 +25,19 @@ export interface NosskeyIframeClientOptions {
   /** Request timeout in milliseconds. Defaults to 60000. */
   timeout?: number;
   /**
+   * Theme to pass to the iframe via the `?theme=...` URL parameter. When set,
+   * `embedded=1` is also appended automatically. The host app applies the
+   * theme on load only; runtime switching requires destroying and re-creating
+   * the client with a new value.
+   */
+  theme?: 'light' | 'dark' | 'auto';
+  /**
+   * Language to pass to the iframe via the `?lang=...` URL parameter. When
+   * set, `embedded=1` is also appended automatically. Same load-time-only
+   * semantics as {@link theme}.
+   */
+  lang?: 'ja' | 'en';
+  /**
    * Override the window used to install the message listener.
    * Defaults to `globalThis.window`. Primarily useful for tests.
    */
@@ -48,6 +61,30 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>;
 }
 
+function buildIframeUrl(
+  rawUrl: string,
+  baseHref: string,
+  theme: NosskeyIframeClientOptions['theme'],
+  lang: NosskeyIframeClientOptions['lang']
+): string {
+  if (theme === undefined && lang === undefined) {
+    return rawUrl;
+  }
+  try {
+    const url = new URL(rawUrl, baseHref);
+    url.searchParams.set('embedded', '1');
+    if (theme !== undefined) {
+      url.searchParams.set('theme', theme);
+    }
+    if (lang !== undefined) {
+      url.searchParams.set('lang', lang);
+    }
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 function resolveOptions(options: NosskeyIframeClientOptions): ResolvedOptions {
   const win = options.window ?? (globalThis as unknown as { window?: Window }).window;
   if (!win) {
@@ -61,9 +98,11 @@ function resolveOptions(options: NosskeyIframeClientOptions): ResolvedOptions {
   if (!container) {
     throw new Error('NosskeyIframeClient could not determine a container element.');
   }
-  const iframeOrigin = new URL(options.iframeUrl, win.location?.href ?? 'http://localhost/').origin;
+  const baseHref = win.location?.href ?? 'http://localhost/';
+  const iframeUrl = buildIframeUrl(options.iframeUrl, baseHref, options.theme, options.lang);
+  const iframeOrigin = new URL(iframeUrl, baseHref).origin;
   return {
-    iframeUrl: options.iframeUrl,
+    iframeUrl,
     iframeOrigin,
     container,
     timeout: options.timeout ?? 60000,
