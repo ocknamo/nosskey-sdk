@@ -329,11 +329,19 @@ async function connect(): Promise<void> {
   const lang = resolveLang(langChoice);
   log(`Mounting iframe ${iframeUrl} with theme=${theme}, lang=${lang}`);
   applyParentTheme(theme);
+  let next: NosskeyIframeClient | null = null;
   try {
-    const next = new NosskeyIframeClient({ iframeUrl, theme, lang });
+    next = new NosskeyIframeClient({ iframeUrl, theme, lang });
     client = next;
     modalCard.appendChild(next.iframe);
     await next.ready();
+    // If a concurrent re-mount (theme/lang change) swapped the active client
+    // while we awaited ready(), bail out without touching shared UI state —
+    // the newer connect() owns the `client` slot now.
+    if (client !== next) {
+      next.destroy();
+      return;
+    }
     window.nostr = {
       getPublicKey: () => next.getPublicKey(),
       signEvent: (event) => next.signEvent(event),
@@ -352,13 +360,16 @@ async function connect(): Promise<void> {
     log('Received nosskey:ready. window.nostr is now available.');
   } catch (err) {
     log(`Connect failed: ${formatError(err)}`);
-    setStatus('connect failed', 'err');
-    client?.destroy();
-    client = null;
-    window.nostr = undefined;
-    setConnectedUI(false);
-    setModalVisible(false);
-    clearParentTheme();
+    next?.destroy();
+    // Only reset shared UI state if this connect() still owns the client slot.
+    if (next === null || client === next) {
+      client = null;
+      window.nostr = undefined;
+      setConnectedUI(false);
+      setModalVisible(false);
+      clearParentTheme();
+      setStatus('connect failed', 'err');
+    }
   }
 }
 
