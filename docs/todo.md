@@ -5,7 +5,7 @@
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
 
 ## 実装関連
-- [ ] PWKのリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする）
+- [ ] `NostrKeyInfo` のリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする） — **優先度低**: `credentialId` / `salt` 等の機密性のあるメタデータを第三者リレーに送ることになり、Nostr pubkey と特定パスキーの紐付けがリンク可能になるプライバシーリスクがある。実装する場合は暗号化形式・許容リレーの設計を慎重に検討する必要あり
 - [ ] NIP-17 sealed DM (kind:14 + gift-wrap) サポート — 受け取った NIP-44 暗号文を kind:13 seal でラップし、ephemeral 鍵で kind:1059 gift-wrap 化する 3 段構成。SDK に「ランダム ephemeral 秘密鍵で署名する API」を追加する必要があり、現状の `signEvent`（登録済み鍵専用）とは別経路。**動作確認用の実装は `examples/parent-sample/src/nip17.ts` にあり、セクション 7 の "Send NIP-17 DM" で他クライアントとの受信検証が可能** (ブランチ `claude/nip44-iframe-sample-KnGuu`)。SDK 本体への昇格は再利用ニーズが出てから検討する。
 - [x] iframeでNosskeyを使用できるNosskey-iframe(仮)の作成 — 段階1〜4完了 (`nosskey-iframe` パッケージ: protocol / host / client)。ブランチ `claude/add-iframe-support-2tKuX`
 - [x] Nosskey-iframe(仮)の参照実装の作成 — 段階5〜7完了 (Svelteアプリの `#/iframe` ルート、ConsentDialog、Timeline/relay 機能削除、README 追記)。ブランチ `claude/continue-iframe-support-mCrAL`。段階8 (E2E 手動検証) は別途
