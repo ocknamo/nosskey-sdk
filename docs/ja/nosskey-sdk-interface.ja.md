@@ -273,6 +273,65 @@ export interface SignOptions {
 }
 ```
 
+## パッケージエクスポート
+
+`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数を公開しています。
+
+### 低レベル暗号化関数（NIP-44 / NIP-04）
+
+`NosskeyManager.nip44Encrypt()` などのメソッドが内部で秘密鍵を管理するのに対し、これらのスタンドアロン関数は秘密鍵（`Uint8Array`）を引数として直接受け取ります。**メソッドと同名でもシグネチャが異なる**点に注意してください。
+
+```typescript
+function nip44Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  nonceOverride?: Uint8Array
+): string
+
+function nip44Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+
+function nip04Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  ivOverride?: Uint8Array
+): string
+
+function nip04Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+```
+
+### PRF ハンドラー関数
+
+`NosskeyManager` の `isPrfSupported()` / `createPasskey()` メソッドは内部でこれらを利用します。直接利用も可能です。
+
+```typescript
+function isPrfSupported(): Promise<boolean>
+
+function createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
+
+function getPrfSecret(
+  credentialId?: Uint8Array,
+  options?: GetPrfSecretOptions
+): Promise<{ secret: Uint8Array; id: Uint8Array }>
+```
+
+### バイト変換ユーティリティ
+
+```typescript
+function bytesToHex(bytes: Uint8Array): string
+
+function hexToBytes(hex: string): Uint8Array
+```
+
+### テスト用ユーティリティ
+
+```typescript
+function registerDummyPasskey(userId: string): Promise<PublicKeyCredential>
+```
+
+テスト・デモ用途のダミーパスキー登録ヘルパーです。本番コードでの使用は想定していません。
+
 ## 使用例
 
 ### 基本的な使用方法

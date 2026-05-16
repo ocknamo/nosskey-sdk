@@ -273,6 +273,65 @@ export interface SignOptions {
 }
 ```
 
+## Package Exports
+
+In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions.
+
+### Low-level Encryption Functions (NIP-44 / NIP-04)
+
+Unlike the `NosskeyManager` methods such as `nip44Encrypt()`, which manage the private key internally, these standalone functions take the private key (`Uint8Array`) directly as an argument. **Note that they share the method names but have different signatures.**
+
+```typescript
+function nip44Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  nonceOverride?: Uint8Array
+): string
+
+function nip44Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+
+function nip04Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  ivOverride?: Uint8Array
+): string
+
+function nip04Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+```
+
+### PRF Handler Functions
+
+The `NosskeyManager` `isPrfSupported()` / `createPasskey()` methods use these internally. They can also be used directly.
+
+```typescript
+function isPrfSupported(): Promise<boolean>
+
+function createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
+
+function getPrfSecret(
+  credentialId?: Uint8Array,
+  options?: GetPrfSecretOptions
+): Promise<{ secret: Uint8Array; id: Uint8Array }>
+```
+
+### Byte Conversion Utilities
+
+```typescript
+function bytesToHex(bytes: Uint8Array): string
+
+function hexToBytes(hex: string): Uint8Array
+```
+
+### Test Utility
+
+```typescript
+function registerDummyPasskey(userId: string): Promise<PublicKeyCredential>
+```
+
+A helper for registering a dummy passkey, intended for testing and demos. It is not intended for use in production code.
+
 ## Usage Examples
 
 ### Basic Usage
