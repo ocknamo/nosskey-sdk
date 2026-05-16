@@ -46,6 +46,7 @@ export interface NostrEvent {
 constructor(options?: {
   cacheOptions?: Partial<KeyCacheOptions>;
   storageOptions?: Partial<NostrKeyStorageOptions>;
+  prfOptions?: GetPrfSecretOptions;
 })
 ```
 
@@ -63,6 +64,38 @@ async getPublicKey(): Promise<string>
 
 ```typescript
 async signEvent(event: NostrEvent): Promise<NostrEvent>
+```
+
+### NIP-44 / NIP-04 暗号化メソッド
+
+現在設定されているNostrKeyInfoの秘密鍵と相手の公開鍵から共有鍵を導出し、ダイレクトメッセージを暗号化・復号します。
+
+#### nip44Encrypt()
+NIP-44 v2 で平文を暗号化します。
+
+```typescript
+async nip44Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip44Decrypt()
+NIP-44 v2 のペイロードを復号します。
+
+```typescript
+async nip44Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
+```
+
+#### nip04Encrypt()
+NIP-04（レガシー方式）で平文を暗号化します。
+
+```typescript
+async nip04Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip04Decrypt()
+NIP-04 のペイロードを復号します。
+
+```typescript
+async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
 ```
 
 ### NostrKeyInfo管理メソッド
@@ -117,6 +150,7 @@ PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを
 ```typescript
 async createNostrKey(
   credentialId?: Uint8Array,
+  options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
 
@@ -209,6 +243,16 @@ export interface NostrKeyStorageOptions {
   enabled: boolean; // NostrKeyInfoの保存を有効にするか（デフォルト: true）
   storage?: Storage; // 使用するストレージ（デフォルト: localStorage）
   storageKey?: string; // 保存に使用するキー名（デフォルト: "nosskey_keyinfo"）
+}
+```
+
+### GetPrfSecretOptions
+
+```typescript
+export interface GetPrfSecretOptions {
+  rpId?: string; // Relying Party ID
+  timeout?: number; // タイムアウト時間（ミリ秒）
+  userVerification?: UserVerificationRequirement; // ユーザー検証要件
 }
 ```
 

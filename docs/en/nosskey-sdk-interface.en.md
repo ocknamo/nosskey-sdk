@@ -46,6 +46,7 @@ export interface NostrEvent {
 constructor(options?: {
   cacheOptions?: Partial<KeyCacheOptions>;
   storageOptions?: Partial<NostrKeyStorageOptions>;
+  prfOptions?: GetPrfSecretOptions;
 })
 ```
 
@@ -63,6 +64,38 @@ Signs an event with the currently set NostrKeyInfo.
 
 ```typescript
 async signEvent(event: NostrEvent): Promise<NostrEvent>
+```
+
+### NIP-44 / NIP-04 Encryption Methods
+
+Derives a shared key from the private key of the currently set NostrKeyInfo and a peer's public key to encrypt/decrypt direct messages.
+
+#### nip44Encrypt()
+Encrypts plaintext with NIP-44 v2.
+
+```typescript
+async nip44Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip44Decrypt()
+Decrypts a NIP-44 v2 payload.
+
+```typescript
+async nip44Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
+```
+
+#### nip04Encrypt()
+Encrypts plaintext with NIP-04 (legacy method).
+
+```typescript
+async nip04Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip04Decrypt()
+Decrypts a NIP-04 payload.
+
+```typescript
+async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
 ```
 
 ### NostrKeyInfo Management Methods
@@ -210,6 +243,16 @@ export interface NostrKeyStorageOptions {
   enabled: boolean; // Whether to enable NostrKeyInfo storage (default: true)
   storage?: Storage; // Storage to use (default: localStorage)
   storageKey?: string; // Key name for storage (default: "nosskey_keyinfo")
+}
+```
+
+### GetPrfSecretOptions
+
+```typescript
+export interface GetPrfSecretOptions {
+  rpId?: string; // Relying Party ID
+  timeout?: number; // Timeout duration (milliseconds)
+  userVerification?: UserVerificationRequirement; // User verification requirement
 }
 ```
 
