@@ -170,7 +170,12 @@ export interface ConsentRequest {
 **ストレージ設計:**
 ```typescript
 // localStorage キー: 'nosskey_trusted_origins_v2'
-type TrustedOrigins = string[]; // ['https://example.com', ...]
+// origin ごとに、ダイアログを省略するポリシーキーを methods に保持する
+type TrustedOriginEntry = {
+  origin: string;
+  methods: ('signEvent' | 'nip44' | 'nip04')[];
+};
+type TrustedOrigins = TrustedOriginEntry[];
 ```
 
 **フロー:**
