@@ -64,6 +64,15 @@ export const currentTheme = writable<ThemeMode>('dark');
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
 let embeddedThemeOverride = false;
 
+/**
+ * 設定の永続化先 Storage。スタンドアロン（ファーストパーティ）では
+ * `window.localStorage` で正しい。クロスオリジン埋め込み iframe では
+ * Chromium が `window.localStorage` をパーティションのまま残すため、
+ * Storage Access API グラント後に `rebindSettingsStorage()` で
+ * first-party ハンドルへ張り替える。
+ */
+let settingsStorage: Storage | null = typeof window !== 'undefined' ? window.localStorage : null;
+
 // 同意ゲート設定
 export const trustedOrigins = writable<TrustedOriginEntry[]>([]);
 export const consentPolicy = writable<ConsentPolicy>({ ...DEFAULT_CONSENT_POLICY });
@@ -98,23 +107,17 @@ export const storageCorruption = writable<{
 }>({ trustedOrigins: false, consentPolicy: false });
 
 // 秘密鍵情報のキャッシュ設定を読み込む
-function loadCacheSecretsSetting() {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('nosskey_cache_secrets');
-    // デフォルトはtrue（キャッシュする）
-    return saved === null ? true : saved === 'true';
-  }
-  return true;
+function loadCacheSecretsSetting(storage: Storage | null = settingsStorage): boolean {
+  const saved = storage?.getItem('nosskey_cache_secrets') ?? null;
+  // デフォルトはtrue（キャッシュする）
+  return saved === null ? true : saved === 'true';
 }
 
 // キャッシュタイムアウト設定を読み込む
-function loadCacheTimeoutSetting() {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('nosskey_cache_timeout');
-    // デフォルトは300秒（5分）
-    return saved === null ? 300 : Number.parseInt(saved, 10);
-  }
-  return 300;
+function loadCacheTimeoutSetting(storage: Storage | null = settingsStorage): number {
+  const saved = storage?.getItem('nosskey_cache_timeout') ?? null;
+  // デフォルトは300秒（5分）
+  return saved === null ? 300 : Number.parseInt(saved, 10);
 }
 
 // テーマ設定を読み込む
@@ -138,9 +141,8 @@ function markCorruption(field: 'trustedOrigins' | 'consentPolicy', reason: strin
 }
 
 // 信頼済みオリジン (v2: メソッドスコープ付き) を読み込む
-function loadTrustedOrigins(): TrustedOriginEntry[] {
-  if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem(TRUSTED_ORIGINS_KEY);
+function loadTrustedOrigins(storage: Storage | null = settingsStorage): TrustedOriginEntry[] {
+  const raw = storage?.getItem(TRUSTED_ORIGINS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -174,9 +176,8 @@ function loadTrustedOrigins(): TrustedOriginEntry[] {
 }
 
 // 同意ポリシーを読み込む
-function loadConsentPolicy(): ConsentPolicy {
-  if (typeof window === 'undefined') return { ...DEFAULT_CONSENT_POLICY };
-  const raw = localStorage.getItem(CONSENT_POLICY_KEY);
+function loadConsentPolicy(storage: Storage | null = settingsStorage): ConsentPolicy {
+  const raw = storage?.getItem(CONSENT_POLICY_KEY);
   if (!raw) return { ...DEFAULT_CONSENT_POLICY };
   try {
     const parsed = JSON.parse(raw) as Partial<Record<keyof ConsentPolicy, unknown>>;
@@ -224,15 +225,11 @@ try {
 
   // 設定が変更されたら保存
   cacheSecrets.subscribe((value) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nosskey_cache_secrets', String(value));
-    }
+    settingsStorage?.setItem('nosskey_cache_secrets', String(value));
   });
 
   cacheTimeout.subscribe((value) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nosskey_cache_timeout', String(value));
-    }
+    settingsStorage?.setItem('nosskey_cache_timeout', String(value));
   });
 
   currentTheme.subscribe((value) => {
@@ -246,18 +243,33 @@ try {
   consentPolicy.set(loadConsentPolicy());
 
   trustedOrigins.subscribe((value) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(TRUSTED_ORIGINS_KEY, JSON.stringify(value));
-    }
+    settingsStorage?.setItem(TRUSTED_ORIGINS_KEY, JSON.stringify(value));
   });
 
   consentPolicy.subscribe((value) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
-    }
+    settingsStorage?.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
   });
 } catch (e) {
   console.error('設定の初期化に失敗しました:', e);
+}
+
+/**
+ * 設定の永続化先を first-party ストレージハンドルへ張り替え、全設定を
+ * そのハンドルから読み直す。クロスオリジン埋め込み iframe で Storage Access
+ * API のグラントを得た直後に呼ぶ。Chromium はグラント後も
+ * `window.localStorage` をパーティションのまま残すため、ハンドル経由でしか
+ * first-party ストレージへ到達できない。
+ *
+ * `.set()` により登録済みの subscriber が発火し、読み直した値がハンドルへ
+ * 書き戻される（冪等）。テーマは埋め込み時に親オリジンが指定する既存仕様の
+ * ため対象外。
+ */
+export function rebindSettingsStorage(storage: Storage): void {
+  settingsStorage = storage;
+  cacheSecrets.set(loadCacheSecretsSetting(storage));
+  cacheTimeout.set(loadCacheTimeoutSetting(storage));
+  trustedOrigins.set(loadTrustedOrigins(storage));
+  consentPolicy.set(loadConsentPolicy(storage));
 }
 
 // リセット関数

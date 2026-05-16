@@ -3,6 +3,7 @@ import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { rebindSettingsStorage } from '../../store/app-state.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -117,6 +118,10 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     // (which shares the same manager) read the unpartitioned store.
     manager.setStorageOptions({ storage: handle.localStorage });
   }
+  // Re-point app settings (consent policy, trusted origins, cache options)
+  // at first-party storage and reload them. On Chromium that is the SAA
+  // handle; on Firefox the grant un-partitions window.localStorage itself.
+  rebindSettingsStorage(handle ? handle.localStorage : window.localStorage);
   if (manager.hasKeyInfo()) {
     uiState = 'granted';
   } else {
