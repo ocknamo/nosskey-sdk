@@ -10,8 +10,8 @@
 - [ ] PRF対応表(`docs/{ja,en}/prf-support-tables`)・`prf-study` を2026年時点で再検証・日付更新 — 2025-04-25 スタンプで約13か月経過。Firefox「OFF(実験的)」・Windows Hello「未対応」・各パスワードマネージャの「β/予定」表記を要再確認
 - [ ] `README.md` / `README.ja.md` の機能一覧・APIリファレンスに NIP-44/NIP-04 メソッドと iframe パッケージを追記
 - [ ] `examples/svelte-app/svelte-app-design.md` を現行アーキテクチャに全面改訂 — 存在しない `Timeline`/`PostForm`/`ProfileEditor`/`timeline`画面の記述を削除し、3画面＋iframeルート・iframeホストモード・consentポリシーを記載
-- [ ] `examples/svelte-app/README.md` から削除済み機能(「Nostrメッセージの作成と署名」「リレーへの送信」)を除去し、iframeモード設定アプリとして書き直し。Chrome対応バージョンの不統一(116/118)も解消
-- [ ] ドキュメント内のリンク切れ修正 — `nosskey-specification` 内の `sdk-if.md`(存在しない/正しくは `nosskey-sdk-interface`)・`prf-support-tables.md`(実体は `*.en.md`/`*.ja.md`)
+- [ ] `examples/svelte-app/README.md` から削除済み機能(「Nostrメッセージの作成と署名」「リレーへの送信」)を除去し、iframeモード設定アプリとして書き直し。Chrome対応バージョンの不統一(116/118)も解消。あわせて壊れたリンク `../../docs/prf-support-tables.md`(実体は `docs/{ja,en}/prf-support-tables.{ja,en}.md`)も修正
+- [x] ドキュメント内のリンク切れ修正 — `nosskey-specification` 内の `sdk-if.md`(存在しない/正しくは `nosskey-sdk-interface`)・`prf-support-tables.md`(実体は `*.en.md`/`*.ja.md`)
 - [x] NIP draft 英語版(`docs/nip-draft.md`)のタイトルを日本語版に合わせて修正 — `Passkey-Wrapped Keys`(旧wrap方式の名残)→ `Passkey-Derived Nostr Keys`
 
 ## 実装関連
