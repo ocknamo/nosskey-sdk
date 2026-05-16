@@ -37,7 +37,7 @@
 #### Phase 6: ダイアログ UX 改善
 - [x] ダイアログ表示内容の整理 — `kindLabel()` で kind ラベル化、content は 100 文字プレビュー、`<details>` で raw event JSON を折りたたみ表示、nip44/nip04 では `renderPeerPubkey()` で相手 pubkey を短縮表示（`examples/svelte-app/src/components/ConsentDialog.svelte`）
 - [x] スタイル整理 — `--color-card` / `--color-text` 等の CSS variables 化と `@media (max-width: 480px)` レスポンシブ対応（`ConsentDialog.svelte`）
-- [ ] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由。Svelte アプリ側の受信 (`app-state.ts` / `i18n-store.ts`) は実装済み。`NosskeyIframeClient` 側の `theme` / `lang` オプション追加・URL 自動付与が未実装
+- [x] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由。`NosskeyIframeClient` に `theme` / `lang` オプションを追加し `buildIframeUrl()` で URL に自動付与、Svelte アプリ側の受信 (`app-state.ts` / `i18n-store.ts`) も対応済み。PR #52
 - [ ] 設定ページへのリンク遷移 — NO_KEY エラー時のセットアップ誘導
 
 #### Phase 7: フレームワーク導入しやすさの改善（低優先）
