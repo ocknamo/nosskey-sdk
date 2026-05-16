@@ -93,11 +93,11 @@ const signature = signEvent(event, prfResult);
 prfResult.fill(0);
 ```
 
-For more detailed implementation examples, refer to the [SDK Interface Details](sdk-if.md).
+For more detailed implementation examples, refer to the [SDK Interface Details](nosskey-sdk-interface.en.md).
 
 ### Considerations and Limitations
 
-1. **PRF Extension Support Status**: Not all browsers and authenticators support it (see [compatibility table](prf-support-tables.md))
+1. **PRF Extension Support Status**: Not all browsers and authenticators support it (see [compatibility table](prf-support-tables.en.md))
 2. **secp256k1 Range Constraint**: Theoretical possibility that PRF output values fall outside the valid private key range of the curve (probability of about 2^-224)
 3. **Compatibility with Existing Keys**: Cannot import nsec keys
 4. **Backup/Recovery**: Depends on passkey cloud synchronization (platform-dependent)
@@ -143,7 +143,7 @@ Direct use of PRF values depends on the quality of cloud synchronization, but th
 
 ### Environment Dependency and Compatibility Status
 
-WebAuthn and PRF extension compatibility varies by environment. See the [PRF Compatibility Table](prf-support-tables.md) for details. If the PRF extension is not available, alternative approaches (HMAC-secret extension, NIP-49, etc.) should be provided.
+WebAuthn and PRF extension compatibility varies by environment. See the [PRF Compatibility Table](prf-support-tables.en.md) for details. If the PRF extension is not available, alternative approaches (HMAC-secret extension, NIP-49, etc.) should be provided.
 
 ### Security Considerations
 

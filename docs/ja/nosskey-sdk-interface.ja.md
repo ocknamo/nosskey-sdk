@@ -46,6 +46,7 @@ export interface NostrEvent {
 constructor(options?: {
   cacheOptions?: Partial<KeyCacheOptions>;
   storageOptions?: Partial<NostrKeyStorageOptions>;
+  prfOptions?: GetPrfSecretOptions;
 })
 ```
 
@@ -63,6 +64,38 @@ async getPublicKey(): Promise<string>
 
 ```typescript
 async signEvent(event: NostrEvent): Promise<NostrEvent>
+```
+
+### NIP-44 / NIP-04 暗号化メソッド
+
+現在設定されているNostrKeyInfoの秘密鍵と相手の公開鍵から共有鍵を導出し、ダイレクトメッセージを暗号化・復号します。
+
+#### nip44Encrypt()
+NIP-44 v2 で平文を暗号化します。
+
+```typescript
+async nip44Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip44Decrypt()
+NIP-44 v2 のペイロードを復号します。
+
+```typescript
+async nip44Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
+```
+
+#### nip04Encrypt()
+NIP-04（レガシー方式）で平文を暗号化します。
+
+```typescript
+async nip04Encrypt(peerPubkey: string, plaintext: string): Promise<string>
+```
+
+#### nip04Decrypt()
+NIP-04 のペイロードを復号します。
+
+```typescript
+async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
 ```
 
 ### NostrKeyInfo管理メソッド
@@ -117,6 +150,7 @@ PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを
 ```typescript
 async createNostrKey(
   credentialId?: Uint8Array,
+  options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
 
@@ -212,6 +246,16 @@ export interface NostrKeyStorageOptions {
 }
 ```
 
+### GetPrfSecretOptions
+
+```typescript
+export interface GetPrfSecretOptions {
+  rpId?: string; // Relying Party ID
+  timeout?: number; // タイムアウト時間（ミリ秒）
+  userVerification?: UserVerificationRequirement; // ユーザー検証要件
+}
+```
+
 ### KeyOptions
 
 ```typescript
@@ -228,6 +272,65 @@ export interface SignOptions {
   tags?: string[][]; // 追加のタグ
 }
 ```
+
+## パッケージエクスポート
+
+`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数を公開しています。
+
+### 低レベル暗号化関数（NIP-44 / NIP-04）
+
+`NosskeyManager.nip44Encrypt()` などのメソッドが内部で秘密鍵を管理するのに対し、これらのスタンドアロン関数は秘密鍵（`Uint8Array`）を引数として直接受け取ります。**メソッドと同名でもシグネチャが異なる**点に注意してください。
+
+```typescript
+function nip44Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  nonceOverride?: Uint8Array
+): string
+
+function nip44Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+
+function nip04Encrypt(
+  plaintext: string,
+  ourSecretKey: Uint8Array,
+  peerPubkeyHex: string,
+  ivOverride?: Uint8Array
+): string
+
+function nip04Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
+```
+
+### PRF ハンドラー関数
+
+`NosskeyManager` の `isPrfSupported()` / `createPasskey()` メソッドは内部でこれらを利用します。直接利用も可能です。
+
+```typescript
+function isPrfSupported(): Promise<boolean>
+
+function createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
+
+function getPrfSecret(
+  credentialId?: Uint8Array,
+  options?: GetPrfSecretOptions
+): Promise<{ secret: Uint8Array; id: Uint8Array }>
+```
+
+### バイト変換ユーティリティ
+
+```typescript
+function bytesToHex(bytes: Uint8Array): string
+
+function hexToBytes(hex: string): Uint8Array
+```
+
+### テスト用ユーティリティ
+
+```typescript
+function registerDummyPasskey(userId: string): Promise<PublicKeyCredential>
+```
+
+テスト・デモ用途のダミーパスキー登録ヘルパーです。本番コードでの使用は想定していません。
 
 ## 使用例
 
