@@ -283,5 +283,8 @@ function handleReject() {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: safe center;
   }
 </style>
