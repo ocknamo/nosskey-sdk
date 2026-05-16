@@ -64,8 +64,9 @@ export const currentTheme = writable<ThemeMode>('dark');
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
 let embeddedThemeOverride = false;
 
-// 下記初期化ブロックが最後まで走り切ったら true。`resolveSettingsStorage()`
-// が SDK マネージャを参照してよいかの判定に使う（理由は同関数のコメント）。
+// 同期的なモジュール初期化フェーズが終わったら true（成否を問わず）。
+// `resolveSettingsStorage()` が SDK マネージャを参照してよいかの判定に使う
+// （理由は同関数のコメント）。
 let settingsInitDone = false;
 
 /**
@@ -266,19 +267,22 @@ try {
   consentPolicy.subscribe((value) => {
     resolveSettingsStorage()?.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
   });
-
-  // 初期化完了。以降 resolveSettingsStorage() は SDK マネージャを参照する。
-  settingsInitDone = true;
 } catch (e) {
   console.error('設定の初期化に失敗しました:', e);
+} finally {
+  // 同期的な初期化フェーズの終了。初期化が例外で中断しても必ずフラグを立てる。
+  // 以降 resolveSettingsStorage() が呼ばれるのは必ずモジュール評価完了後
+  // （runtime）であり TDZ の心配はない。逆に false のまま固定すると、SAA
+  // grant 後も partitioned storage を読み続け設定同期が静かに壊れる。
+  settingsInitDone = true;
 }
 
 /**
  * 全設定を現在のストレージ（`resolveSettingsStorage()`）から読み直す。
  * クロスオリジン埋め込み iframe で Storage Access API のグラントを得て
  * `NosskeyManager.setStorageOptions({ storage })` を呼んだ直後に実行する。
- * モジュール初期化時は partitioned 側を読んでいるため、grant 後に
- * first-party の値で上書きする必要がある。以降の subscriber 書き込みも
+ * 埋め込み iframe ではモジュール初期化時に partitioned 側を読んでいるため、
+ * grant 後に first-party の値で読み直す必要がある。以降の subscriber 書き込みも
  * 同じハンドル（リレー設定と共通の `manager.getStorageOptions().storage`）へ
  * 向かう。テーマは埋め込み時に親オリジンが指定する既存仕様のため対象外。
  */
