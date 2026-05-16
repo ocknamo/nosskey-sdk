@@ -12,7 +12,7 @@
 - [ ] `examples/svelte-app/svelte-app-design.md` を現行アーキテクチャに全面改訂 — 存在しない `Timeline`/`PostForm`/`ProfileEditor`/`timeline`画面の記述を削除し、3画面＋iframeルート・iframeホストモード・consentポリシーを記載
 - [ ] `examples/svelte-app/README.md` から削除済み機能(「Nostrメッセージの作成と署名」「リレーへの送信」)を除去し、iframeモード設定アプリとして書き直し。Chrome対応バージョンの不統一(116/118)も解消
 - [ ] ドキュメント内のリンク切れ修正 — `nosskey-specification` 内の `sdk-if.md`(存在しない/正しくは `nosskey-sdk-interface`)・`prf-support-tables.md`(実体は `*.en.md`/`*.ja.md`)
-- [ ] NIP draft 英語版(`docs/nip-draft.md`)のタイトルを日本語版に合わせて修正 — `Passkey-Wrapped Keys`(旧wrap方式の名残)→ `Passkey-Derived Nostr Keys`
+- [x] NIP draft 英語版(`docs/nip-draft.md`)のタイトルを日本語版に合わせて修正 — `Passkey-Wrapped Keys`(旧wrap方式の名残)→ `Passkey-Derived Nostr Keys`
 
 ## 実装関連
 - [ ] salt値の不整合を解消 — 実際のPRF入力は `prf-handler.ts` の `'nostr-pwk'` だが、`NostrKeyInfo.salt` に書き込まれる `STANDARD_SALT`(`nosskey.ts`)・`types.ts` の JSDoc・`nip-draft` は `"nostr-key"`(hex `6e6f7374722d6b6579`)。salt は導出に未使用のため鍵は壊れないが、保存値と仕様記述が実装と食い違うため統一が必要(要方針決定)

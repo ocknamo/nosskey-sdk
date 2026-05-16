@@ -1,5 +1,5 @@
 NIP-XX  
-Passkey-Wrapped Keys
+Passkey-Derived Nostr Keys
 ==========================
 
 `draft` `optional`
