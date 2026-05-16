@@ -1,7 +1,7 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { cacheSecrets, cacheTimeout } from '../../store/app-state.js';
+import { cacheSecrets, cacheTimeout } from '../../store/secret-cache-settings.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 

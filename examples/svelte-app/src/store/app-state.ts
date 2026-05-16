@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { getNosskeyManager, peekNosskeyManager } from '../services/nosskey-manager.service.js';
+import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
@@ -52,10 +53,6 @@ export const isLoggedIn = writable(false);
 // Nostrキー情報
 export const publicKey = writable<string | null>(null);
 
-// アプリケーション設定
-export const cacheSecrets = writable<boolean>(true); // 秘密鍵情報をキャッシュするかどうか
-export const cacheTimeout = writable<number>(300); // キャッシュのタイムアウト時間（秒）
-
 // テーマ設定
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export const currentTheme = writable<ThemeMode>('dark');
@@ -64,27 +61,19 @@ export const currentTheme = writable<ThemeMode>('dark');
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
 let embeddedThemeOverride = false;
 
-// 同期的なモジュール初期化フェーズが終わったら true（成否を問わず）。
-// `resolveSettingsStorage()` が SDK マネージャを参照してよいかの判定に使う
-// （理由は同関数のコメント）。
-let settingsInitDone = false;
-
 /**
  * 設定の永続化先 Storage を解決する。SDK マネージャが Storage Access API
  * グラント後のハンドルを保持していれば、それを使う。これはリレー設定が読む
  * `manager.getStorageOptions().storage` と同一参照であり、handle の正本は
  * SDK マネージャ 1 箇所に集約される。未グラント / スタンドアロンでは
  * `window.localStorage`（= ファーストパーティ）。
+ *
+ * `peekNosskeyManager()`（未構築なら null、新規構築しない）を使うため、
+ * モジュール初期化中に呼ばれてもマネージャを構築せず安全。
  */
 function resolveSettingsStorage(): Storage | null {
-  // app-state ↔ nosskey-manager.service は循環 import。モジュール初期化中に
-  // peekNosskeyManager() を呼ぶと import 順次第で service 側の `instance` が
-  // TDZ になり ReferenceError を投げうる。初期化中は first-party storage =
-  // window.localStorage で確定なので、初期化完了まではマネージャを参照しない。
-  if (settingsInitDone) {
-    const handle = peekNosskeyManager()?.getStorageOptions().storage;
-    if (handle) return handle;
-  }
+  const handle = peekNosskeyManager()?.getStorageOptions().storage;
+  if (handle) return handle;
   return typeof window !== 'undefined' ? window.localStorage : null;
 }
 
@@ -269,12 +258,6 @@ try {
   });
 } catch (e) {
   console.error('設定の初期化に失敗しました:', e);
-} finally {
-  // 同期的な初期化フェーズの終了。初期化が例外で中断しても必ずフラグを立てる。
-  // 以降 resolveSettingsStorage() が呼ばれるのは必ずモジュール評価完了後
-  // （runtime）であり TDZ の心配はない。逆に false のまま固定すると、SAA
-  // grant 後も partitioned storage を読み続け設定同期が静かに壊れる。
-  settingsInitDone = true;
 }
 
 /**

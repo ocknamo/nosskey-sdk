@@ -2,13 +2,8 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
-import {
-  cacheSecrets,
-  cacheTimeout,
-  consentPolicy,
-  reloadSettings,
-  trustedOrigins,
-} from './app-state.js';
+import { consentPolicy, reloadSettings, trustedOrigins } from './app-state.js';
+import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
 /** Map-backed in-memory Storage stand-in for a first-party storage handle. */
 function createFakeStorage(seed: Record<string, string> = {}): Storage {

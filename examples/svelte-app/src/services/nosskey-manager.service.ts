@@ -1,5 +1,5 @@
 import { NosskeyManager } from 'nosskey-sdk';
-import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
+import { cacheSecrets, cacheTimeout } from '../store/secret-cache-settings.js';
 
 // シングルトンインスタンス
 let instance: NosskeyManager | null = null;
