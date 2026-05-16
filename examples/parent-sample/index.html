@@ -7,7 +7,154 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <h1>Nosskey iframe parent sample</h1>
+      <p class="subtitle">
+        Mounts the Nosskey signing iframe, exposes a NIP-07 compatible
+        <code>window.nostr</code>, and publishes a signed kind:1 note to a relay.
+      </p>
+
+      <section>
+        <h2>1. Connect to iframe</h2>
+        <label for="iframe-url">Iframe URL</label>
+        <input id="iframe-url" type="url" value="https://nosskey.app/#/iframe" />
+        <div class="row">
+          <label for="parent-theme">Theme</label>
+          <select id="parent-theme">
+            <option value="auto" selected>auto</option>
+            <option value="light">light</option>
+            <option value="dark">dark</option>
+          </select>
+          <label for="parent-lang">Lang</label>
+          <select id="parent-lang">
+            <option value="auto" selected>auto</option>
+            <option value="ja">ja</option>
+            <option value="en">en</option>
+          </select>
+        </div>
+        <p class="hint">
+          Changing theme or lang while connected re-mounts the iframe with new
+          query parameters (<code>?embedded=1&amp;theme=...&amp;lang=...</code>).
+          The current session state inside the iframe is reset.
+        </p>
+        <div class="row">
+          <button id="connect">Connect</button>
+          <button id="disconnect" class="secondary" disabled>Disconnect</button>
+          <span id="status" class="status">disconnected</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Get public key</h2>
+        <div class="row">
+          <button id="get-pubkey" disabled>Call window.nostr.getPublicKey()</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. Get relays</h2>
+        <div class="row">
+          <button id="get-relays" disabled>Call window.nostr.getRelays()</button>
+        </div>
+        <pre id="relays-output">No relays fetched yet.</pre>
+      </section>
+
+      <section>
+        <h2>4. Sign &amp; publish kind:1 note</h2>
+        <label for="note">Note content</label>
+        <textarea id="note">Hello from Nosskey iframe parent sample!</textarea>
+        <label for="relay-url" style="margin-top:12px;">Relay URL</label>
+        <input id="relay-url" type="url" value="wss://relay.damus.io" />
+        <div class="row">
+          <button id="sign-publish" disabled>Sign &amp; publish</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. NIP-44 encrypt / decrypt</h2>
+        <p class="hint">
+          Modern (recommended) DM encryption. Self-encrypt by clicking
+          <em>Use my pubkey</em> to populate the peer field with the public key
+          from this iframe — both encrypt and decrypt will use the same key,
+          so you can verify the round trip without a second account.
+        </p>
+        <label for="nip44-peer">Peer public key (hex, 64 chars)</label>
+        <div class="row">
+          <input id="nip44-peer" type="text" placeholder="64 hex characters" />
+          <button id="nip44-use-self" class="secondary" disabled>Use my pubkey</button>
+        </div>
+        <label for="nip44-plaintext" style="margin-top:12px;">Plaintext</label>
+        <textarea id="nip44-plaintext">hello, NIP-44 🌸</textarea>
+        <div class="row">
+          <button id="nip44-encrypt" disabled>Encrypt → ciphertext</button>
+          <button id="nip44-decrypt" disabled>Decrypt → plaintext</button>
+        </div>
+        <label for="nip44-ciphertext" style="margin-top:12px;">Ciphertext (base64)</label>
+        <textarea id="nip44-ciphertext" placeholder="paste a NIP-44 v2 payload here, or click Encrypt above"></textarea>
+        <label for="nip44-decrypted" style="margin-top:12px;">Decrypted output</label>
+        <pre id="nip44-decrypted">No decryption attempted yet.</pre>
+      </section>
+
+      <section>
+        <h2>6. NIP-04 encrypt / decrypt (legacy)</h2>
+        <p class="hint warn">
+          ⚠️ NIP-04 is AES-CBC without authentication and is deprecated by the
+          spec itself. Use NIP-44 for new messages. This section is provided
+          only to verify interop with older clients.
+        </p>
+        <label for="nip04-peer">Peer public key (hex, 64 chars)</label>
+        <div class="row">
+          <input id="nip04-peer" type="text" placeholder="64 hex characters" />
+          <button id="nip04-use-self" class="secondary" disabled>Use my pubkey</button>
+        </div>
+        <label for="nip04-plaintext" style="margin-top:12px;">Plaintext</label>
+        <textarea id="nip04-plaintext">hello, NIP-04 (legacy)</textarea>
+        <div class="row">
+          <button id="nip04-encrypt" disabled>Encrypt → ciphertext</button>
+          <button id="nip04-decrypt" disabled>Decrypt → plaintext</button>
+        </div>
+        <label for="nip04-ciphertext" style="margin-top:12px;">Ciphertext (base64?iv=base64)</label>
+        <textarea id="nip04-ciphertext" placeholder="paste a NIP-04 payload here, or click Encrypt above"></textarea>
+        <label for="nip04-decrypted" style="margin-top:12px;">Decrypted output</label>
+        <pre id="nip04-decrypted">No decryption attempted yet.</pre>
+        <p class="hint">
+          <strong>Send DM</strong> below encrypts the plaintext to the peer
+          pubkey, builds a kind:4 event with a <code>p</code> tag, signs it
+          through the iframe (consent dialog appears twice — once for encrypt,
+          once for sign), and publishes to the Relay URL from section 4.
+        </p>
+        <div class="row">
+          <button id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>7. NIP-17 sealed DM (gift-wrapped kind:1059)</h2>
+        <p class="hint">
+          Standards-compliant DM path: builds a kind:14 rumor, NIP-44 seals it
+          into a kind:13, then NIP-44 wraps that into a kind:1059 signed by a
+          throwaway ephemeral key. Compatible clients (Amethyst, 0xchat,
+          Coracle, Damus chat) listen for kind:1059 and decrypt automatically.
+          Two consent dialogs appear (NIP-44 encrypt for the seal, then sign
+          kind:13). The Relay URL is shared with section 4.
+        </p>
+        <label for="nip17-peer">Peer public key (hex, 64 chars)</label>
+        <div class="row">
+          <input id="nip17-peer" type="text" placeholder="64 hex characters" />
+          <button id="nip17-use-self" class="secondary" disabled>Use my pubkey</button>
+        </div>
+        <label for="nip17-plaintext" style="margin-top:12px;">Message</label>
+        <textarea id="nip17-plaintext">hello, NIP-17 🎁</textarea>
+        <div class="row">
+          <button id="nip17-send-dm" disabled>Send NIP-17 DM (kind:1059 → relay)</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Log</h2>
+        <pre id="log"></pre>
+      </section>
+    </div>
     <div id="iframe-modal" class="iframe-modal" aria-hidden="true">
       <div class="iframe-modal__backdrop"></div>
       <div
