@@ -3,7 +3,7 @@
 ## ドキュメント関連
 - [ ] README.mdの充実：使用方法やサンプルコードの追加
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
-- [ ] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)が両言語版とも未記載。あわせて ja版 `createNostrKey` のシグネチャ(`options` 引数欠落)、コンストラクタの `prfOptions`、barrel export 群の不整合を修正 — **対応中**: NIP-44/04 メソッド・`createNostrKey` シグネチャ・`prfOptions`(+`GetPrfSecretOptions` 型)は両言語版とも反映済み。残るは barrel export 群の不整合のみ(`crypto-utils.ts` を公開 API としてドキュメント化するかは下記の crypto-utils TODO の方針確定後に対応)
+- [ ] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)が両言語版とも未記載。あわせて ja版 `createNostrKey` のシグネチャ(`options` 引数欠落)、コンストラクタの `prfOptions`、barrel export 群の不整合を修正 — **対応中**: NIP-44/04 メソッド・`createNostrKey` シグネチャ・`prfOptions`(+`GetPrfSecretOptions` 型)は両言語版とも反映済み。残るは barrel export 群の不整合のみ(`crypto-utils.ts` は削除済み。barrel が公開する標準関数エクスポートをドキュメントへ反映する作業)
 - [ ] iframe-host ドキュメント(`docs/{ja,en}/iframe-host`)を全面更新 — 「getPublicKey/signEvent の2メソッド」前提の記述を、7メソッドのNIP-07プロバイダの実態に修正。consent対象メソッド・`getRelays`・3ボタン同意ダイアログ・`startIframeHost`/`onConsent` サンプルコード・`theme`/`lang`/`embedded`・Storage Access API を反映
 - [x] `docs/iframe-expansion-plan.md` のステータス表を実態に修正 — Phase 1-B/1-C(nip44/nip04)・2-A/2-B(オリジン別許可・メソッド別ポリシー)は実装済みなのに「未実装」表記。localStorageキー名を `nosskey_trusted_origins_v2` に、ファイルパスを `src/components/screens/` に修正
 - [x] `docs/iframe-plan.md` をアーカイブ扱いにする — 完了済み・`iframe-expansion-plan.md` に統合された旨のバナーを追記(古い3メッセージ/2メソッドのプロトコル記述が現行と混同される)
@@ -16,7 +16,7 @@
 
 ## 実装関連
 - [ ] salt値の不整合を解消 — 実際のPRF入力は `prf-handler.ts` の `'nostr-pwk'` だが、`NostrKeyInfo.salt` に書き込まれる `STANDARD_SALT`(`nosskey.ts`)・`types.ts` の JSDoc・`nip-draft` は `"nostr-key"`(hex `6e6f7374722d6b6579`)。salt は導出に未使用のため鍵は壊れないが、保存値と仕様記述が実装と食い違うため統一が必要(要方針決定)
-- [ ] `crypto-utils.ts`(AES-GCM の `deriveAesGcmKey`/`aesGcmEncrypt`/`aesGcmDecrypt`)の扱いを判断 — どこからも import されないデッドコード。削除するか、残す場合は `nosskey-specification` の「暗号化/復号アプローチ」記述と整合を取る
+- [x] `crypto-utils.ts`(AES-GCM の `deriveAesGcmKey`/`aesGcmEncrypt`/`aesGcmDecrypt`)を削除 — どこからも import されないデッドコードのため、ソース・テスト・barrel export を削除。`nosskey-specification` の「暗号化/復号アプローチ（代替手法）」は設計上の代替案の記述であり API 実装の主張ではないため変更不要
 - [ ] `NostrKeyInfo` のリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする） — **優先度低**: `credentialId` / `salt` 等の機密性のあるメタデータを第三者リレーに送ることになり、Nostr pubkey と特定パスキーの紐付けがリンク可能になるプライバシーリスクがある。実装する場合は暗号化形式・許容リレーの設計を慎重に検討する必要あり
 - [ ] NIP-17 sealed DM (kind:14 + gift-wrap) サポート — 受け取った NIP-44 暗号文を kind:13 seal でラップし、ephemeral 鍵で kind:1059 gift-wrap 化する 3 段構成。SDK に「ランダム ephemeral 秘密鍵で署名する API」を追加する必要があり、現状の `signEvent`（登録済み鍵専用）とは別経路。**動作確認用の実装は `examples/parent-sample/src/nip17.ts` にあり、セクション 7 の "Send NIP-17 DM" で他クライアントとの受信検証が可能** (ブランチ `claude/nip44-iframe-sample-KnGuu`)。SDK 本体への昇格は再利用ニーズが出てから検討する。
 - [x] iframeでNosskeyを使用できるNosskey-iframe(仮)の作成 — 段階1〜4完了 (`nosskey-iframe` パッケージ: protocol / host / client)。ブランチ `claude/add-iframe-support-2tKuX`

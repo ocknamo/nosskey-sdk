@@ -151,7 +151,6 @@ export interface ConsentRequest {
 **技術的前提**:
 - 共有秘密の導出は `secp256k1.getSharedSecret()` + SHA-256
 - 暗号化は Web Crypto API (`AES-CBC`)
-- 既存の `crypto-utils.ts` の AES-GCM とは別実装
 
 **変更ファイル**: 1-B と同じファイル群に `nip04_encrypt` / `nip04_decrypt` を追加（実装のみ異なる）。
 

@@ -12,9 +12,6 @@ export { NosskeyManager } from './nosskey.js';
 // ユーティリティのエクスポート
 export { bytesToHex, hexToBytes } from './utils.js';
 
-// 暗号化ユーティリティのエクスポート
-export { aesGcmDecrypt, aesGcmEncrypt, deriveAesGcmKey } from './crypto-utils.js';
-
 // NIP-44 / NIP-04 のエクスポート
 // 低レベルプリミティブ (getConversationKey / getMessageKeys) は鍵再利用や
 // nonce 再利用の足場になりうるため意図的に公開しない。

@@ -438,7 +438,7 @@ npx biome check .
 
 ### 段階1〜4 で判明した技術的注意点
 
-- **TypeScript バージョン:** `~5.8.3` にピン留め必須。`^5.8.3` だと 5.9.x に解決され、`crypto-utils.ts` の DTS ビルドで `ArrayBufferLike` 型不整合が発生する
+- **TypeScript バージョン:** `~5.8.3` にピン留め必須。`^5.8.3` だと 5.9.x に解決され、`crypto-utils.ts` の DTS ビルドで `ArrayBufferLike` 型不整合が発生する（注: `crypto-utils.ts` はその後デッドコードとして削除済み。ピン留めを見直す際はこの理由が解消されている点に留意）
 - **EventListener キャスト:** `host.ts` で async listener を `addEventListener` に渡す際、`as unknown as EventListener` のダブルキャストが必要
 - **unhandled rejection 回避:** `client.ts` の `#readyPromise` に内部 `.catch(() => undefined)` を付与し、`ready()` を await せずに `destroy()` した場合の unhandled rejection を防止
 
