@@ -116,8 +116,11 @@ function loadCacheSecretsSetting(storage: Storage | null = settingsStorage): boo
 // キャッシュタイムアウト設定を読み込む
 function loadCacheTimeoutSetting(storage: Storage | null = settingsStorage): number {
   const saved = storage?.getItem('nosskey_cache_timeout') ?? null;
-  // デフォルトは300秒（5分）
-  return saved === null ? 300 : Number.parseInt(saved, 10);
+  if (saved === null) return 300; // デフォルトは300秒（5分）
+  // 破損値（NaN 等）はデフォルトに倒す。rebind 経由で first-party の壊れた値を
+  // 取り込んだ場合に NaN が SDK の timeoutMs まで伝播するのを防ぐ。
+  const parsed = Number.parseInt(saved, 10);
+  return Number.isFinite(parsed) ? parsed : 300;
 }
 
 // テーマ設定を読み込む
@@ -261,8 +264,7 @@ try {
  * first-party ストレージへ到達できない。
  *
  * `.set()` により登録済みの subscriber が発火し、読み直した値がハンドルへ
- * 書き戻される（冪等）。テーマは埋め込み時に親オリジンが指定する既存仕様の
- * ため対象外。
+ * 書き戻される。テーマは埋め込み時に親オリジンが指定する既存仕様のため対象外。
  */
 export function rebindSettingsStorage(storage: Storage): void {
   settingsStorage = storage;

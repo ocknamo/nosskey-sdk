@@ -84,6 +84,27 @@ describe('rebindSettingsStorage', () => {
     });
   });
 
+  it('persists a trustedOrigins.update() to the rebound storage', () => {
+    // Mirrors iframe-mode.ts rememberOriginIfRequested: the "always allow"
+    // path during sign & publish appends via update(), not set().
+    const firstParty = createFakeStorage();
+    rebindSettingsStorage(firstParty);
+
+    trustedOrigins.update((list) => [
+      ...list,
+      { origin: 'https://parent.example', methods: ['signEvent'] },
+    ]);
+
+    expect(JSON.parse(firstParty.getItem('nosskey_trusted_origins_v2') as string)).toEqual([
+      { origin: 'https://parent.example', methods: ['signEvent'] },
+    ]);
+  });
+
+  it('falls back to the default cache timeout when the stored value is corrupt', () => {
+    rebindSettingsStorage(createFakeStorage({ nosskey_cache_timeout: 'not-a-number' }));
+    expect(get(cacheTimeout)).toBe(300);
+  });
+
   it('does not write to the previous storage after rebinding', () => {
     const partitioned = createFakeStorage();
     const firstParty = createFakeStorage();
