@@ -1,5 +1,11 @@
 # Nosskey iframe 対応 計画
 
+> **アーカイブ済みドキュメント**
+>
+> このドキュメントは初期 iframe 実装計画であり、記載された全段階は**完了済み**です。
+> 現行の iframe 機能の仕様・ロードマップは [`iframe-expansion-plan.md`](./iframe-expansion-plan.md) に統合されています。
+> 以下に記載されたプロトコル（3 メッセージ・`getPublicKey` / `signEvent` の 2 メソッド）は当時の設計であり、現行実装（7 メソッドの NIP-07 互換プロバイダ）とは異なります。歴史的経緯の記録としてのみ参照してください。
+
 ## Context
 
 Nosskey SDK は WebAuthn PRF 拡張で Nostr 秘密鍵を生成する。WebAuthn は Origin に束縛されるため、複数 Nostr Web アプリが同じパスキーを共有できない。
