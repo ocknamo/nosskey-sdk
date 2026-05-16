@@ -1,14 +1,16 @@
+// @vitest-environment happy-dom
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
 import {
   cacheSecrets,
   cacheTimeout,
   consentPolicy,
-  rebindSettingsStorage,
+  reloadSettings,
   trustedOrigins,
 } from './app-state.js';
 
-/** Map-backed in-memory Storage stand-in for partitioned / first-party buckets. */
+/** Map-backed in-memory Storage stand-in for a first-party storage handle. */
 function createFakeStorage(seed: Record<string, string> = {}): Storage {
   const map = new Map<string, string>(Object.entries(seed));
   return {
@@ -27,68 +29,69 @@ function createFakeStorage(seed: Record<string, string> = {}): Storage {
   };
 }
 
+/**
+ * Point the shared SDK manager at a fresh first-party storage handle, the
+ * way IframeHostScreen does after a Storage Access API grant. Settings then
+ * resolve their storage through the same manager handle the relay sync uses.
+ */
+function grantFirstPartyStorage(seed: Record<string, string> = {}): Storage {
+  const firstParty = createFakeStorage(seed);
+  getNosskeyManager().setStorageOptions({ storage: firstParty });
+  return firstParty;
+}
+
 beforeEach(() => {
+  resetNosskeyManager();
   trustedOrigins.set([]);
   consentPolicy.set({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
   cacheSecrets.set(true);
   cacheTimeout.set(300);
 });
 
-describe('rebindSettingsStorage', () => {
-  it('loads consent policy and trusted origins from the rebound storage', () => {
-    const firstParty = createFakeStorage({
+describe('reloadSettings', () => {
+  it('reads consent policy and trusted origins from the granted storage handle', () => {
+    grantFirstPartyStorage({
       nosskey_consent_policy: JSON.stringify({ signEvent: 'always', nip44: 'deny', nip04: 'ask' }),
       nosskey_trusted_origins_v2: JSON.stringify([
         { origin: 'https://parent.example', methods: ['signEvent'] },
       ]),
     });
-    rebindSettingsStorage(firstParty);
+    reloadSettings();
     expect(get(consentPolicy)).toEqual({ signEvent: 'always', nip44: 'deny', nip04: 'ask' });
     expect(get(trustedOrigins)).toEqual([
       { origin: 'https://parent.example', methods: ['signEvent'] },
     ]);
   });
 
-  it('loads cache settings from the rebound storage', () => {
-    const firstParty = createFakeStorage({
-      nosskey_cache_secrets: 'false',
-      nosskey_cache_timeout: '60',
-    });
-    rebindSettingsStorage(firstParty);
+  it('reads cache settings from the granted storage handle', () => {
+    grantFirstPartyStorage({ nosskey_cache_secrets: 'false', nosskey_cache_timeout: '60' });
+    reloadSettings();
     expect(get(cacheSecrets)).toBe(false);
     expect(get(cacheTimeout)).toBe(60);
   });
 
-  it('falls back to defaults when the rebound storage is empty', () => {
-    rebindSettingsStorage(createFakeStorage());
+  it('falls back to defaults when the granted storage is empty', () => {
+    grantFirstPartyStorage();
+    reloadSettings();
     expect(get(consentPolicy)).toEqual({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
     expect(get(trustedOrigins)).toEqual([]);
     expect(get(cacheSecrets)).toBe(true);
     expect(get(cacheTimeout)).toBe(300);
   });
 
-  it('persists subsequent store updates to the rebound storage', () => {
-    const firstParty = createFakeStorage();
-    rebindSettingsStorage(firstParty);
-
-    trustedOrigins.set([{ origin: 'https://parent.example', methods: ['nip44'] }]);
-    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
-
-    expect(JSON.parse(firstParty.getItem('nosskey_trusted_origins_v2') as string)).toEqual([
-      { origin: 'https://parent.example', methods: ['nip44'] },
-    ]);
-    expect(JSON.parse(firstParty.getItem('nosskey_consent_policy') as string)).toEqual({
-      signEvent: 'always',
-      nip44: 'ask',
-      nip04: 'ask',
-    });
+  it('falls back to the default cache timeout when the stored value is corrupt', () => {
+    grantFirstPartyStorage({ nosskey_cache_timeout: 'not-a-number' });
+    reloadSettings();
+    expect(get(cacheTimeout)).toBe(300);
   });
+});
 
-  it('persists a trustedOrigins.update() to the rebound storage', () => {
-    // Mirrors iframe-mode.ts rememberOriginIfRequested: the "always allow"
-    // path during sign & publish appends via update(), not set().
-    const firstParty = createFakeStorage();
-    rebindSettingsStorage(firstParty);
+describe('settings persistence after a storage grant', () => {
+  it('persists a trustedOrigins.update() to the granted storage handle', () => {
+    // Mirrors iframe-mode.ts rememberOriginIfRequested: the consent dialog
+    // "always allow" path appends via update(), not set().
+    const firstParty = grantFirstPartyStorage();
+    reloadSettings();
 
     trustedOrigins.update((list) => [
       ...list,
@@ -100,25 +103,19 @@ describe('rebindSettingsStorage', () => {
     ]);
   });
 
-  it('falls back to the default cache timeout when the stored value is corrupt', () => {
-    rebindSettingsStorage(createFakeStorage({ nosskey_cache_timeout: 'not-a-number' }));
-    expect(get(cacheTimeout)).toBe(300);
-  });
+  it('writes through the same handle the SDK manager exposes for relay sync', () => {
+    const firstParty = grantFirstPartyStorage();
+    reloadSettings();
 
-  it('does not write to the previous storage after rebinding', () => {
-    const partitioned = createFakeStorage();
-    const firstParty = createFakeStorage();
-    rebindSettingsStorage(partitioned);
-    rebindSettingsStorage(firstParty);
+    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
 
-    trustedOrigins.set([{ origin: 'https://parent.example', methods: ['signEvent'] }]);
-
-    // The update lands only in the currently-bound (first-party) storage.
-    expect(JSON.parse(firstParty.getItem('nosskey_trusted_origins_v2') as string)).toEqual([
-      { origin: 'https://parent.example', methods: ['signEvent'] },
-    ]);
-    // The previously-bound storage keeps whatever it held at rebind time ([]),
-    // never the post-rebind update.
-    expect(partitioned.getItem('nosskey_trusted_origins_v2')).toBe('[]');
+    // The settings handle and the relay handle are one and the same:
+    // manager.getStorageOptions().storage. No second copy is kept.
+    expect(getNosskeyManager().getStorageOptions().storage).toBe(firstParty);
+    expect(JSON.parse(firstParty.getItem('nosskey_consent_policy') as string)).toEqual({
+      signEvent: 'always',
+      nip44: 'ask',
+      nip04: 'ask',
+    });
   });
 });

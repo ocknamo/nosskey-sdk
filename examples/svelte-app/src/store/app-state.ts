@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { getNosskeyManager } from '../services/nosskey-manager.service.js';
+import { getNosskeyManager, peekNosskeyManager } from '../services/nosskey-manager.service.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
@@ -64,14 +64,28 @@ export const currentTheme = writable<ThemeMode>('dark');
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
 let embeddedThemeOverride = false;
 
+// 下記初期化ブロックが最後まで走り切ったら true。`resolveSettingsStorage()`
+// が SDK マネージャを参照してよいかの判定に使う（理由は同関数のコメント）。
+let settingsInitDone = false;
+
 /**
- * 設定の永続化先 Storage。スタンドアロン（ファーストパーティ）では
- * `window.localStorage` で正しい。クロスオリジン埋め込み iframe では
- * Chromium が `window.localStorage` をパーティションのまま残すため、
- * Storage Access API グラント後に `rebindSettingsStorage()` で
- * first-party ハンドルへ張り替える。
+ * 設定の永続化先 Storage を解決する。SDK マネージャが Storage Access API
+ * グラント後のハンドルを保持していれば、それを使う。これはリレー設定が読む
+ * `manager.getStorageOptions().storage` と同一参照であり、handle の正本は
+ * SDK マネージャ 1 箇所に集約される。未グラント / スタンドアロンでは
+ * `window.localStorage`（= ファーストパーティ）。
  */
-let settingsStorage: Storage | null = typeof window !== 'undefined' ? window.localStorage : null;
+function resolveSettingsStorage(): Storage | null {
+  // app-state ↔ nosskey-manager.service は循環 import。モジュール初期化中に
+  // peekNosskeyManager() を呼ぶと import 順次第で service 側の `instance` が
+  // TDZ になり ReferenceError を投げうる。初期化中は first-party storage =
+  // window.localStorage で確定なので、初期化完了まではマネージャを参照しない。
+  if (settingsInitDone) {
+    const handle = peekNosskeyManager()?.getStorageOptions().storage;
+    if (handle) return handle;
+  }
+  return typeof window !== 'undefined' ? window.localStorage : null;
+}
 
 // 同意ゲート設定
 export const trustedOrigins = writable<TrustedOriginEntry[]>([]);
@@ -107,18 +121,18 @@ export const storageCorruption = writable<{
 }>({ trustedOrigins: false, consentPolicy: false });
 
 // 秘密鍵情報のキャッシュ設定を読み込む
-function loadCacheSecretsSetting(storage: Storage | null = settingsStorage): boolean {
-  const saved = storage?.getItem('nosskey_cache_secrets') ?? null;
+function loadCacheSecretsSetting(): boolean {
+  const saved = resolveSettingsStorage()?.getItem('nosskey_cache_secrets') ?? null;
   // デフォルトはtrue（キャッシュする）
   return saved === null ? true : saved === 'true';
 }
 
 // キャッシュタイムアウト設定を読み込む
-function loadCacheTimeoutSetting(storage: Storage | null = settingsStorage): number {
-  const saved = storage?.getItem('nosskey_cache_timeout') ?? null;
+function loadCacheTimeoutSetting(): number {
+  const saved = resolveSettingsStorage()?.getItem('nosskey_cache_timeout') ?? null;
   if (saved === null) return 300; // デフォルトは300秒（5分）
-  // 破損値（NaN 等）はデフォルトに倒す。rebind 経由で first-party の壊れた値を
-  // 取り込んだ場合に NaN が SDK の timeoutMs まで伝播するのを防ぐ。
+  // 破損値（NaN 等）はデフォルトに倒す。reloadSettings 経由で first-party の
+  // 壊れた値を取り込んだ場合に NaN が SDK の timeoutMs まで伝播するのを防ぐ。
   const parsed = Number.parseInt(saved, 10);
   return Number.isFinite(parsed) ? parsed : 300;
 }
@@ -144,8 +158,8 @@ function markCorruption(field: 'trustedOrigins' | 'consentPolicy', reason: strin
 }
 
 // 信頼済みオリジン (v2: メソッドスコープ付き) を読み込む
-function loadTrustedOrigins(storage: Storage | null = settingsStorage): TrustedOriginEntry[] {
-  const raw = storage?.getItem(TRUSTED_ORIGINS_KEY);
+function loadTrustedOrigins(): TrustedOriginEntry[] {
+  const raw = resolveSettingsStorage()?.getItem(TRUSTED_ORIGINS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -179,8 +193,8 @@ function loadTrustedOrigins(storage: Storage | null = settingsStorage): TrustedO
 }
 
 // 同意ポリシーを読み込む
-function loadConsentPolicy(storage: Storage | null = settingsStorage): ConsentPolicy {
-  const raw = storage?.getItem(CONSENT_POLICY_KEY);
+function loadConsentPolicy(): ConsentPolicy {
+  const raw = resolveSettingsStorage()?.getItem(CONSENT_POLICY_KEY);
   if (!raw) return { ...DEFAULT_CONSENT_POLICY };
   try {
     const parsed = JSON.parse(raw) as Partial<Record<keyof ConsentPolicy, unknown>>;
@@ -228,11 +242,11 @@ try {
 
   // 設定が変更されたら保存
   cacheSecrets.subscribe((value) => {
-    settingsStorage?.setItem('nosskey_cache_secrets', String(value));
+    resolveSettingsStorage()?.setItem('nosskey_cache_secrets', String(value));
   });
 
   cacheTimeout.subscribe((value) => {
-    settingsStorage?.setItem('nosskey_cache_timeout', String(value));
+    resolveSettingsStorage()?.setItem('nosskey_cache_timeout', String(value));
   });
 
   currentTheme.subscribe((value) => {
@@ -246,32 +260,33 @@ try {
   consentPolicy.set(loadConsentPolicy());
 
   trustedOrigins.subscribe((value) => {
-    settingsStorage?.setItem(TRUSTED_ORIGINS_KEY, JSON.stringify(value));
+    resolveSettingsStorage()?.setItem(TRUSTED_ORIGINS_KEY, JSON.stringify(value));
   });
 
   consentPolicy.subscribe((value) => {
-    settingsStorage?.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
+    resolveSettingsStorage()?.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
   });
+
+  // 初期化完了。以降 resolveSettingsStorage() は SDK マネージャを参照する。
+  settingsInitDone = true;
 } catch (e) {
   console.error('設定の初期化に失敗しました:', e);
 }
 
 /**
- * 設定の永続化先を first-party ストレージハンドルへ張り替え、全設定を
- * そのハンドルから読み直す。クロスオリジン埋め込み iframe で Storage Access
- * API のグラントを得た直後に呼ぶ。Chromium はグラント後も
- * `window.localStorage` をパーティションのまま残すため、ハンドル経由でしか
- * first-party ストレージへ到達できない。
- *
- * `.set()` により登録済みの subscriber が発火し、読み直した値がハンドルへ
- * 書き戻される。テーマは埋め込み時に親オリジンが指定する既存仕様のため対象外。
+ * 全設定を現在のストレージ（`resolveSettingsStorage()`）から読み直す。
+ * クロスオリジン埋め込み iframe で Storage Access API のグラントを得て
+ * `NosskeyManager.setStorageOptions({ storage })` を呼んだ直後に実行する。
+ * モジュール初期化時は partitioned 側を読んでいるため、grant 後に
+ * first-party の値で上書きする必要がある。以降の subscriber 書き込みも
+ * 同じハンドル（リレー設定と共通の `manager.getStorageOptions().storage`）へ
+ * 向かう。テーマは埋め込み時に親オリジンが指定する既存仕様のため対象外。
  */
-export function rebindSettingsStorage(storage: Storage): void {
-  settingsStorage = storage;
-  cacheSecrets.set(loadCacheSecretsSetting(storage));
-  cacheTimeout.set(loadCacheTimeoutSetting(storage));
-  trustedOrigins.set(loadTrustedOrigins(storage));
-  consentPolicy.set(loadConsentPolicy(storage));
+export function reloadSettings(): void {
+  cacheSecrets.set(loadCacheSecretsSetting());
+  cacheTimeout.set(loadCacheTimeoutSetting());
+  trustedOrigins.set(loadTrustedOrigins());
+  consentPolicy.set(loadConsentPolicy());
 }
 
 // リセット関数
