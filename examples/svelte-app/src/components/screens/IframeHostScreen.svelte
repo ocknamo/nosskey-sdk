@@ -3,6 +3,7 @@ import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { reloadSettings } from '../../store/app-state.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -117,6 +118,12 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     // (which shares the same manager) read the unpartitioned store.
     manager.setStorageOptions({ storage: handle.localStorage });
   }
+  // The SDK manager now points at first-party storage (the SAA handle on
+  // Chromium; on Firefox the grant un-partitions window.localStorage and the
+  // manager keeps no handle). Reload app settings so consent policy, trusted
+  // origins and cache options resolve through that same storage — the one
+  // the relay sync already reads via manager.getStorageOptions().storage.
+  reloadSettings();
   if (manager.hasKeyInfo()) {
     uiState = 'granted';
   } else {

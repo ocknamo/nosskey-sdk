@@ -1,5 +1,5 @@
 import { NosskeyManager } from 'nosskey-sdk';
-import { cacheSecrets, cacheTimeout } from '../store/app-state.js';
+import { cacheSecrets, cacheTimeout } from '../store/secret-cache-settings.js';
 
 // シングルトンインスタンス
 let instance: NosskeyManager | null = null;
@@ -62,6 +62,15 @@ export function getNosskeyManager(): NosskeyManager {
       },
     });
   }
+  return instance;
+}
+
+/**
+ * 既に構築済みの NosskeyManager を返す。未構築なら null を返し、新規構築は
+ * 行わない。`getNosskeyManager()` は `location.host` 参照などの副作用を伴う
+ * ため、モジュール初期化時にストレージハンドルだけ覗きたい経路で使う。
+ */
+export function peekNosskeyManager(): NosskeyManager | null {
   return instance;
 }
 
