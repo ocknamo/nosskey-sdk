@@ -21,8 +21,20 @@ import type {
  */
 import { bytesToHex, hexToBytes } from './utils.js';
 
-// 標準salt値（"nostr-key"のUTF-8バイト）
-const STANDARD_SALT = '6e6f7374722d6b6579';
+// 標準salt値（"nostr-pwk"のUTF-8バイトのhex）。実際のPRF評価入力と一致する。
+const STANDARD_SALT = '6e6f7374722d70776b';
+
+// 旧誤値（"nostr-key"のhex）。過去に保存された NostrKeyInfo に残っている可能性があるが、
+// 実際の導出は常に "nostr-pwk" で行われていたため、標準値へ正規化して扱う。
+const LEGACY_SALT = '6e6f7374722d6b6579';
+
+/**
+ * NostrKeyInfo.salt をPRF評価入力として使える値に正規化する。
+ * 未設定・旧誤値は標準salt値に置き換える（既存鍵の保護）。
+ */
+function normalizeSalt(salt?: string): string {
+  return !salt || salt === LEGACY_SALT ? STANDARD_SALT : salt;
+}
 
 /**
  * Nosskey - Passkey-Derived Nostr Keys
@@ -183,7 +195,14 @@ export class NosskeyManager implements NosskeyManagerLike {
     if (!data) return null;
 
     try {
-      return JSON.parse(data) as NostrKeyInfo;
+      const keyInfo = JSON.parse(data) as NostrKeyInfo;
+      const normalizedSalt = normalizeSalt(keyInfo.salt);
+      if (keyInfo.salt !== normalizedSalt) {
+        // 旧誤値で保存された NostrKeyInfo を標準salt値へ修復保存する
+        keyInfo.salt = normalizedSalt;
+        void this.#saveKeyInfoToStorage(keyInfo);
+      }
+      return keyInfo;
     } catch (e) {
       console.error('Failed to parse stored NostrKeyInfo', e);
       return null;
@@ -285,8 +304,12 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @param options オプション
    */
   async createNostrKey(credentialId?: Uint8Array, options: KeyOptions = {}): Promise<NostrKeyInfo> {
-    // PRF秘密を取得（これが直接シークレットキーになる）
-    const { secret: sk, id: responseId } = await getPrfSecret(credentialId, this.#prfOptions);
+    // PRF秘密を取得（これが直接シークレットキーになる）。標準salt値を導出入力に使用する。
+    const { secret: sk, id: responseId } = await getPrfSecret(
+      credentialId,
+      this.#prfOptions,
+      hexToBytes(STANDARD_SALT)
+    );
 
     // secp256k1の有効範囲チェック(ここでは0チェックのみ)
     // 注: 実用上は確率が非常に低いため省略可能
@@ -352,8 +375,12 @@ export class NosskeyManager implements NosskeyManagerLike {
       usedCredentialId = hexToBytes(keyInfo.credentialId);
     }
 
-    // PRF値を取得（これが直接シークレットキー）
-    const { secret: sk } = await getPrfSecret(usedCredentialId, this.#prfOptions);
+    // PRF値を取得（これが直接シークレットキー）。keyInfo.salt を導出入力に使用する。
+    const { secret: sk } = await getPrfSecret(
+      usedCredentialId,
+      this.#prfOptions,
+      hexToBytes(normalizeSalt(keyInfo.salt))
+    );
 
     // 秘密鍵HEX文字列を取得
     const skHex = bytesToHex(sk);
@@ -448,7 +475,11 @@ export class NosskeyManager implements NosskeyManagerLike {
       }
     }
 
-    const { secret } = await getPrfSecret(hexToBytes(keyInfo.credentialId), this.#prfOptions);
+    const { secret } = await getPrfSecret(
+      hexToBytes(keyInfo.credentialId),
+      this.#prfOptions,
+      hexToBytes(normalizeSalt(keyInfo.salt))
+    );
     if (shouldUseCache) {
       this.#keyCache.setKey(keyInfo.credentialId, secret);
       return { bytes: secret, release: () => undefined };
