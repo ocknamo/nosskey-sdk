@@ -277,9 +277,9 @@ export interface SignOptions {
 
 In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions.
 
-### Low-level Encryption Functions (NIP-44 / NIP-04)
+### Low-level NIP-44 Functions
 
-Unlike the `NosskeyManager` methods such as `nip44Encrypt()`, which manage the private key internally, these standalone functions take the private key (`Uint8Array`) directly as an argument. **Note that they share the method names but have different signatures.**
+Unlike the `NosskeyManager` methods such as `nip44Encrypt()`, which manage the private key internally, these standalone functions take the private key (`Uint8Array`) directly as an argument. **Note that they share the method names but have different signatures.** Use them when you need to encrypt with an ephemeral private key rather than the registered passkey-derived key (e.g. NIP-17 gift-wrap).
 
 ```typescript
 function nip44Encrypt(
@@ -290,16 +290,9 @@ function nip44Encrypt(
 ): string
 
 function nip44Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
-
-function nip04Encrypt(
-  plaintext: string,
-  ourSecretKey: Uint8Array,
-  peerPubkeyHex: string,
-  ivOverride?: Uint8Array
-): string
-
-function nip04Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
 ```
+
+The low-level NIP-04 functions are not exported. For NIP-04 encryption/decryption, use the `NosskeyManager` `nip04Encrypt()` / `nip04Decrypt()` methods.
 
 ### PRF Handler Functions
 
