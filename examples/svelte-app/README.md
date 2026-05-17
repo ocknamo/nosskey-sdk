@@ -3,35 +3,37 @@
 [nosskey.app](https://nosskey.app/)
 
 このアプリケーションは、Nosskey SDKを利用したPasskey（WebAuthn）ベースのNostr鍵管理デモです。
-PRF拡張の出力値を直接Nostrのシークレットキーとして使用する方法と既存のNostr鍵をPRF値で暗号化する方法を実装しています。
+PRF拡張の出力値を直接Nostrのシークレットキーとして使用する方法と、既存のNostr鍵をPRF値で暗号化（PWK）する方法を実装しています。
+また `#/iframe` ルートでは、別オリジンのNostrアプリへ署名機能を提供するiframe署名プロバイダとしても動作します。
 
 ## 技術スタック
 
 - **フレームワーク**: Svelte v5
 - **言語**: TypeScript
 - **ビルドツール**: Vite
-- **Nostr関連**: rx-nostr、@rx-nostr/crypto
-- **鍵管理**: Nosskey SDK
+- **鍵管理**: Nosskey SDK (`nosskey-sdk`)
+- **iframe 連携**: `nosskey-iframe`
 
 ## 主な機能
 
 - PRF拡張対応確認
 - Passkey新規作成による鍵生成
 - 既存Passkey認証によるログイン
-- Nostrメッセージの作成と署名
-- リレーへのメッセージ送信
+- KeyInfo（PWKデータ）・秘密鍵のエクスポート／インポート
+- iframe署名プロバイダモード（`#/iframe`）— 別オリジンのNostrアプリへNIP-07メソッドを提供
+- iframe同意ポリシー・信頼済みオリジンの設定
 
 ## 動作要件
 
 - `localhost`またはHTTPS環境での実行が必要
-- Chrome 116以降または Safari 18以降推奨
+- Chrome 118以降または Safari 18以降推奨
 - PRF拡張をサポートする認証器が必要:
-  - Chromium 116+ + Google Password Manager Passkey
-  - Chromium 116+ / Safari 18 + CTAP2セキュリティキー（YubiKey 5シリーズ等）
+  - Chromium 118+ + Google Password Manager Passkey
+  - Chromium 118+ / Safari 18 + CTAP2セキュリティキー（YubiKey 5シリーズ等）
   - macOS 15・iOS 18以降のApple Passkeys (Touch ID / Face ID)
   - ※Windows Helloは2025年4月時点でPRF拡張未対応
 
-PRF拡張対応の詳細は[こちら](../../docs/prf-support-tables.md)を参照してください。
+PRF拡張対応の詳細は[こちら](../../docs/ja/prf-support-tables.ja.md)を参照してください。
 
 ## 開発・実行方法
 

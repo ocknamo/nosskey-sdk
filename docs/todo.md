@@ -4,13 +4,13 @@
 - [ ] README.mdの充実：使用方法やサンプルコードの追加
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
 - [x] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)、ja版 `createNostrKey` のシグネチャ(`options` 引数)、コンストラクタの `prfOptions`(+`GetPrfSecretOptions` 型)を両言語版に反映。barrel が公開する標準関数(nip44 低レベル関数・PRFハンドラー関数・バイト変換・テストユーティリティ)を「パッケージエクスポート」節として追加。`crypto-utils.ts` および外部利用の無い nip04 低レベル関数の barrel export は削除済み
-- [ ] iframe-host ドキュメント(`docs/{ja,en}/iframe-host`)を全面更新 — 「getPublicKey/signEvent の2メソッド」前提の記述を、7メソッドのNIP-07プロバイダの実態に修正。consent対象メソッド・`getRelays`・3ボタン同意ダイアログ・`startIframeHost`/`onConsent` サンプルコード・`theme`/`lang`/`embedded`・Storage Access API を反映
+- [x] iframe-host ドキュメント(`docs/{ja,en}/iframe-host`)を全面更新 — 「getPublicKey/signEvent の2メソッド」前提の記述を、7メソッドのNIP-07プロバイダの実態に修正。consent対象メソッド・`getRelays`・3ボタン同意ダイアログ・`evaluateConsent`/`onConsent`/`startIframeHost` の現行サンプルコード・consentポリシー/信頼済みオリジン・`theme`/`lang`/`embedded`・Storage Access API を反映。日英を同内容で更新
 - [x] `docs/iframe-expansion-plan.md` のステータス表を実態に修正 — Phase 1-B/1-C(nip44/nip04)・2-A/2-B(オリジン別許可・メソッド別ポリシー)は実装済みなのに「未実装」表記。localStorageキー名を `nosskey_trusted_origins_v2` に、ファイルパスを `src/components/screens/` に修正
 - [x] `docs/iframe-plan.md` をアーカイブ扱いにする — 完了済み・`iframe-expansion-plan.md` に統合された旨のバナーを追記(古い3メッセージ/2メソッドのプロトコル記述が現行と混同される)
 - [ ] PRF対応表(`docs/{ja,en}/prf-support-tables`)・`prf-study` を2026年時点で再検証・日付更新 — 2025-04-25 スタンプで約13か月経過。Firefox「OFF(実験的)」・Windows Hello「未対応」・各パスワードマネージャの「β/予定」表記を要再確認
-- [ ] `README.md` / `README.ja.md` の機能一覧・APIリファレンスに NIP-44/NIP-04 メソッドと iframe パッケージを追記
-- [ ] `examples/svelte-app/svelte-app-design.md` を現行アーキテクチャに全面改訂 — 存在しない `Timeline`/`PostForm`/`ProfileEditor`/`timeline`画面の記述を削除し、3画面＋iframeルート・iframeホストモード・consentポリシーを記載
-- [ ] `examples/svelte-app/README.md` から削除済み機能(「Nostrメッセージの作成と署名」「リレーへの送信」)を除去し、iframeモード設定アプリとして書き直し。Chrome対応バージョンの不統一(116/118)も解消。あわせて壊れたリンク `../../docs/prf-support-tables.md`(実体は `docs/{ja,en}/prf-support-tables.{ja,en}.md`)も修正
+- [x] `README.md` / `README.ja.md` の機能一覧・APIリファレンスに NIP-44/NIP-04 メソッドを追記 — APIリファレンスに `nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt` の4メソッド節を新設、機能一覧に「暗号化メッセージング」項目と NIP-44 使用例コードを追加。iframe パッケージ節は既に記載済み。あわせて旧 `docs/iframe-plan.md` リンクを `iframe-host` 文書に修正
+- [x] `examples/svelte-app/svelte-app-design.md` を現行アーキテクチャに全面改訂 — 存在しない `Timeline`/`PostForm`/`ProfileEditor`/`timeline`画面の記述を削除し、3画面(account/key/settings)＋iframeルート・iframeホストモード・consentポリシー・現行のファイルツリー/ストア/サービス構成を記載。rx-nostr 依存削除も反映
+- [x] `examples/svelte-app/README.md` から削除済み機能(「Nostrメッセージの作成と署名」「リレーへの送信」)を除去し、iframe署名プロバイダモードを含む現行機能に書き直し。Chrome対応バージョンを 118 に統一(116→118)。壊れたリンク `../../docs/prf-support-tables.md` を `../../docs/ja/prf-support-tables.ja.md` に修正。技術スタックの rx-nostr 削除も反映
 - [x] ドキュメント内のリンク切れ修正 — `nosskey-specification` 内の `sdk-if.md`(存在しない/正しくは `nosskey-sdk-interface`)・`prf-support-tables.md`(実体は `*.en.md`/`*.ja.md`)
 - [x] NIP draft 英語版(`docs/nip-draft.md`)のタイトルを日本語版に合わせて修正 — `Passkey-Wrapped Keys`(旧wrap方式の名残)→ `Passkey-Derived Nostr Keys`
 

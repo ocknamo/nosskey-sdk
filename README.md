@@ -24,6 +24,7 @@ Traditional Nostr private key management methods, such as plaintext storage or p
 - 🔐 **Phishing Resistance**: Domain validation prevents unauthorized use on phishing sites
 - ⚡ **Fast Processing**: Efficient implementation utilizing WebAuthn PRF extension
 - 🔄 **Cross-Device Support**: Available on multiple devices through OS passkey synchronization
+- ✉️ **Encrypted Messaging**: Built-in NIP-44 (v2) and NIP-04 (legacy) encrypt/decrypt for direct messages
 
 ## Installation
 
@@ -59,6 +60,18 @@ const event = {
   created_at: Math.floor(Date.now() / 1000)
 };
 const signedEvent = await keyMgr.signEvent(event);
+```
+
+### Encrypting and Decrypting Messages (NIP-44)
+
+```javascript
+// peerPubkey is the counterparty's public key (32-byte hex)
+const ciphertext = await keyMgr.nip44Encrypt(peerPubkey, 'Hello, this is a secret');
+const plaintext = await keyMgr.nip44Decrypt(peerPubkey, ciphertext);
+
+// NIP-04 (legacy DM) is also available with the same signature
+const legacyCiphertext = await keyMgr.nip04Encrypt(peerPubkey, 'Legacy DM');
+const legacyPlaintext = await keyMgr.nip04Decrypt(peerPubkey, legacyCiphertext);
 ```
 
 ### Advanced Configuration Examples
@@ -115,6 +128,12 @@ const keyMgr = new NosskeyManager({
 - `getPublicKey()` - Get the public key from the current NostrKeyInfo
 - `signEvent(event)` - Sign a Nostr event using the current NostrKeyInfo
 - `signEventWithKeyInfo(event, keyInfo, options?)` - Sign a Nostr event with specified NostrKeyInfo
+
+#### NIP-44 / NIP-04 Encryption Methods
+- `nip44Encrypt(peerPubkey, plaintext)` - Encrypt a message for a peer using NIP-44 v2
+- `nip44Decrypt(peerPubkey, ciphertext)` - Decrypt a NIP-44 v2 message from a peer
+- `nip04Encrypt(peerPubkey, plaintext)` - Encrypt a message for a peer using NIP-04 (legacy, AES-256-CBC)
+- `nip04Decrypt(peerPubkey, ciphertext)` - Decrypt a NIP-04 (legacy) message from a peer
 
 #### Cache Management
 - `setCacheOptions(options)` - Update cache configuration
@@ -179,7 +198,7 @@ The reference host (`#/iframe`) recovers by calling
 `document.requestStorageAccess({ all: true })` on a user gesture and
 auto-toggles the iframe's visibility via a `nosskey:visibility` postMessage
 (handled inside `NosskeyIframeClient`). See
-[`docs/iframe-plan.md`](docs/iframe-plan.md#storage-partitioning-%E5%AF%BE%E5%BF%9C)
+[docs/en/iframe-host.en.md](docs/en/iframe-host.en.md#storage-partitioning--storage-access-api)
 for details. If you build a custom host, implement the same flow.
 
 ## Supported Environments

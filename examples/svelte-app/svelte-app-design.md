@@ -2,387 +2,326 @@
 
 ## 1. 概要
 
-このドキュメントは、Nosskey SDKを利用したサンプルアプリケーションの設計と実装詳細を記述しています。このアプリケーションは、Passkey（WebAuthn）を利用したNostr鍵管理の仕組みをデモンストレーションするために作成されました。パスキーとNostr鍵の統合により、安全かつユーザーフレンドリーな鍵管理を実現しています。
+このドキュメントは、Nosskey SDK を利用したサンプルアプリケーションの設計と実装詳細を記述しています。このアプリケーションは、Passkey（WebAuthn）を利用した Nostr 鍵管理の仕組みをデモンストレーションするために作成されました。パスキーと Nostr 鍵の統合により、安全かつユーザーフレンドリーな鍵管理を実現しています。
+
+通常 UI に加え、`#/iframe` ルートでアクセスされた際には **Nostr 署名プロバイダ iframe としてのみ動作するモード**にも切り替わります（[7. iframe ホストモード](#7-iframe-ホストモード)）。
 
 ## 2. アプリケーション構成
 
 ### 2.1 技術スタック
 
 - **フロントエンド**: Svelte v5
-- **構成**: シンプルなSPA（4画面切り替え方式）
+- **言語**: TypeScript
+- **構成**: SPA（ハッシュルーティングによる画面切り替え）
 - **ビルドツール**: Vite
-- **Nostr関連**: rx-nostr
-- **鍵管理**: Nosskey SDK
-- **多言語対応**: カスタムi18nストア
-- **スタイリング**: カスタムCSS + SVGアイコン
+- **鍵管理**: Nosskey SDK (`nosskey-sdk`)
+- **iframe 連携**: `nosskey-iframe`（署名プロバイダのホスト実装）
+- **Bech32 変換**: `bech32`
+- **多言語対応**: カスタム i18n ストア
+- **スタイリング**: カスタム CSS + CSS variables + SVG アイコン
+- **テスト**: Vitest
+
+> このアプリは Nostr リレーへの接続・タイムライン表示・投稿機能を持ちません。リレーは「設定値」として保持し、iframe モードの `getRelays()` 応答に使うのみです。
 
 ### 2.2 プロジェクト構造
 
 ```
 examples/svelte-app/
 ├── public/
+│   ├── _headers                   # Cloudflare Pages 用ヘッダ (Permissions-Policy 等)
 │   └── nosskey.svg                # アプリアイコン
 ├── src/
 │   ├── components/
-│   │   ├── FooterMenu.svelte      # フッターナビゲーション
-│   │   ├── HeaderBar.svelte       # ヘッダーバー
-│   │   ├── PostForm.svelte        # 投稿フォーム
-│   │   ├── ProfileEditor.svelte   # プロフィール編集
-│   │   ├── PublicKeyDisplay.svelte # 公開鍵表示
-│   │   ├── Timeline.svelte        # タイムライン表示
-│   │   ├── screens/               # 画面コンポーネント
+│   │   ├── ConsentDialog.svelte        # iframe モードの同意ダイアログ
+│   │   ├── FooterMenu.svelte           # フッターナビゲーション
+│   │   ├── HeaderBar.svelte            # ヘッダーバー
+│   │   ├── PublicKeyDisplay.svelte     # 公開鍵表示
+│   │   ├── screens/                    # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
 │   │   │   ├── AuthScreen.svelte       # 認証画面
-│   │   │   ├── SettingsScreen.svelte   # 設定画面
-│   │   │   └── TimelineScreen.svelte   # タイムライン画面
-│   │   ├── settings/              # 設定関連コンポーネント
-│   │   │   ├── AppInfo.svelte          # アプリ情報
-│   │   │   ├── ExportKeyInfoComponent.svelte # PWKエクスポート
-│   │   │   ├── ExportSecretKey.svelte  # 秘密鍵エクスポート
-│   │   │   ├── LanguageSettings.svelte # 言語設定
-│   │   │   ├── LocalStorageSection.svelte # ローカルストレージ
-│   │   │   ├── LogoutSection.svelte    # ログアウト
-│   │   │   ├── RelayManagement.svelte  # リレー管理（接続状況表示付き）
-│   │   │   ├── SecretCacheSettings.svelte # キャッシュ設定
-│   │   │   ├── SettingSection.svelte   # 設定セクション基底
-│   │   │   └── theme-settings.svelte   # テーマ設定
-│   │   └── ui/                    # UIコンポーネント
-│   │       ├── Button.svelte           # 基本ボタン
-│   │       ├── DangerButton.svelte     # 危険操作ボタン
-│   │       ├── IconButton.svelte       # アイコンボタン
-│   │       ├── SecondaryButton.svelte  # セカンダリボタン
-│   │       └── WarningButton.svelte    # 警告ボタン
-│   ├── assets/                    # SVGアイコンなど
-│   │   ├── account-icon.svg
-│   │   ├── copy-icon.svg
-│   │   ├── home-icon.svg
-│   │   ├── nosskey.svg
-│   │   ├── setting-icon.svg
-│   │   └── svelte.svg
-│   ├── i18n/                      # 多言語対応関連
-│   │   ├── i18n-store.ts          # 言語ストア
-│   │   └── translations.ts        # 翻訳データ
+│   │   │   ├── IframeHostScreen.svelte # iframe ホストモード画面
+│   │   │   ├── KeyManagement.svelte    # 鍵管理画面
+│   │   │   └── SettingsScreen.svelte   # 設定画面
+│   │   ├── settings/                   # 設定セクションコンポーネント
+│   │   │   ├── AppInfo.svelte               # アプリ情報
+│   │   │   ├── ConsentPolicySettings.svelte # 同意ポリシー設定
+│   │   │   ├── ExportKeyInfoComponent.svelte # KeyInfo エクスポート
+│   │   │   ├── ExportSecretKey.svelte        # 秘密鍵エクスポート
+│   │   │   ├── LanguageSettings.svelte       # 言語設定
+│   │   │   ├── LocalStorageSection.svelte    # ローカルストレージ操作
+│   │   │   ├── LogoutSection.svelte          # ログアウト
+│   │   │   ├── RelaySettings.svelte          # リレー設定
+│   │   │   ├── SecretCacheSettings.svelte    # 秘密鍵キャッシュ設定
+│   │   │   ├── TrustedOriginsSettings.svelte # 信頼済みオリジン管理
+│   │   │   └── theme-settings.svelte         # テーマ設定
+│   │   └── ui/                         # 汎用 UI コンポーネント
+│   │       ├── CardSection.svelte
+│   │       └── button/
+│   │           ├── Button.svelte
+│   │           ├── FileInputButton.svelte
+│   │           ├── IconButton.svelte
+│   │           ├── NavButton.svelte
+│   │           ├── TabButton.svelte
+│   │           └── ToggleButton.svelte
+│   ├── assets/                     # SVG アイコンなど
+│   ├── i18n/                       # 多言語対応
+│   │   ├── i18n-store.ts           # 言語ストア
+│   │   └── translations.ts         # 翻訳データ
 │   ├── services/
-│   │   ├── nosskey-manager.service.ts # PWK管理サービス
-│   │   ├── relay.service.ts       # リレー接続サービス
-│   │   └── test-rxnostr.ts        # テスト用ユーティリティ 
+│   │   ├── nosskey-manager.service.ts # NosskeyManager シングルトン管理
+│   │   └── relays-store.ts            # リレー設定の永続化
 │   ├── store/
-│   │   ├── app-state.ts           # アプリケーション状態管理
-│   │   ├── relay-store.ts         # リレー状態管理
-│   │   └── timeline-store.ts      # タイムライン状態管理
+│   │   ├── app-state.ts            # アプリ状態・同意ゲート設定
+│   │   └── secret-cache-settings.ts # 秘密鍵キャッシュ設定ストア
 │   ├── utils/
-│   │   ├── bech32-converter.ts    # Bech32変換ユーティリティ
-│   │   └── bech32-converter.spec.ts # 変換テスト
-│   ├── app.css                    # グローバルスタイル
-│   ├── App.svelte                 # メインアプリコンポーネント
-│   ├── main.ts                    # エントリーポイント
-│   └── vite-env.d.ts              # Vite型定義
+│   │   ├── bech32-converter.ts     # hex ⇔ npub/nsec 変換
+│   │   ├── consent-gating.ts       # 同意判定ロジック
+│   │   └── event-kind-labels.ts    # kind 番号のラベル化
+│   ├── iframe-mode.ts              # iframe ホスト起動・consent ブリッジ
+│   ├── App.svelte                  # メインアプリコンポーネント
+│   ├── main.ts                     # エントリーポイント
+│   └── vite-env.d.ts               # Vite 型定義
 ├── index.html
 ├── package.json
+├── svelte.config.js
 └── vite.config.ts
 ```
+
+`*.spec.ts`（`iframe-mode.spec.ts`・`store/app-state.spec.ts`・`utils/*.spec.ts`）は Vitest によるテストです。
 
 ## 3. 機能とコンポーネント詳細
 
 ### 3.1 状態管理
 
 #### app-state.ts
-アプリケーションの状態管理を行うストア：
-- `defaultRelays` - デフォルトで使用するリレーの配列
-- `currentScreen` - 現在の画面を保持するwritableストア（'account'、'timeline'、'settings'、'import'）
-- `isLoggedIn` - 認証状態を管理
-- `publicKey` - Nostr公開鍵
-- `cacheSecrets` - 秘密鍵情報をキャッシュするかどうかのフラグ
+アプリケーションの中心的な状態管理ストア：
+
+- `currentScreen` - 現在の画面を保持する writable ストア（`ScreenName = 'account' | 'settings' | 'key' | 'iframe'`）
+- `isLoggedIn` - 認証状態
+- `publicKey` - Nostr 公開鍵
+- `currentTheme` - テーマ設定（`'light' | 'dark' | 'auto'`）
+- `trustedOrigins` - 信頼済みオリジン（`TrustedOriginEntry[]`、origin × method 単位）
+- `consentPolicy` - メソッド別の同意ポリシー（`signEvent` / `nip44` / `nip04` ごとに `ask` / `always` / `deny`）
+- `denyCounts` - `deny` ポリシーで自動拒否された回数（プロセス内のみ）
+- `storageCorruption` - 保存済み設定が破損していたことを示すフラグ
+- `isScreenName()` - ハッシュ文字列が有効な画面名か判定
+- `reloadSettings()` - Storage Access グラント後に全設定を読み直す
+- `resetState()` / `logout()` - 状態リセット・ログアウト処理
+
+信頼済みオリジン・同意ポリシーは `localStorage`（キー `nosskey_trusted_origins_v2` / `nosskey_consent_policy`）に永続化されます。埋め込みモード時はテーマ・言語を `localStorage` へ書き戻しません。
+
+#### secret-cache-settings.ts
+秘密鍵キャッシュ設定のみを定義する leaf モジュール（循環 import 回避のため独立）：
+
+- `cacheSecrets` - 秘密鍵情報をメモリにキャッシュするか
 - `cacheTimeout` - キャッシュのタイムアウト時間（秒）
-- `resetState()` - 全ての状態をリセットする関数
-- `logout()` - ログアウト処理を行う関数
-
-#### relay-store.ts
-リレー関連の状態管理を行うストア：
-- `activeRelays` - 現在使用中のリレーリスト
-- `relayService` - リレーサービスのシングルトンインスタンス
-- リレーリストの初期化・保存機能
-- ストレージとの同期機能
-
-#### timeline-store.ts
-タイムライン関連の状態管理を行うストア：
-- タイムラインイベントの管理
-- イベントの取得・更新・削除機能
-- タイムライン表示状態の管理
 
 ### 3.2 サービス
 
 #### nosskey-manager.service.ts
-Nosskey管理サービス：
-- `getNosskeyManager()` - NosskeyManagerのシングルトンインスタンスを取得
-- キャッシュ設定の動的更新機能
-- シークレットキーのキャッシュクリア機能
-- 鍵情報の保存・復元機能
+`NosskeyManager` のシングルトン管理：
 
-#### relay.service.ts
-Nostrリレーとの通信を管理するサービス：
-- リレーの追加・削除・状態管理
-- イベント送信機能
-- タイムライン取得機能
-- リレー状態監視機能
+- `getNosskeyManager()` - シングルトンインスタンスを取得（未構築なら `rpId` 判定込みで初期化）
+- `peekNosskeyManager()` - 構築済みインスタンスを返す（未構築なら `null`、新規構築しない）
+- `resetNosskeyManager()` - インスタンスをリセット（主にテスト用）
+- `clearSecretCache()` - SDK のキャッシュをクリア
+- `cacheSecrets` / `cacheTimeout` ストアを購読し、SDK のキャッシュ設定に反映
+
+#### relays-store.ts
+リレー設定の永続化（リレー接続は行わない）：
+
+- `loadRelays(storage?)` - 永続化されたリレーマップ（`RelayMap`）を読み込む
+- `saveRelays(relays, storage?)` - リレーマップを保存
+- `storage` 引数は partitioned iframe で Storage Access ハンドルを渡すために使う
 
 ### 3.3 画面コンポーネント
 
 #### App.svelte
 アプリケーションのメインコンポーネント：
-- URLハッシュに基づく画面初期化と切り替え
-- 状態に応じた画面の表示（AccountScreen、TimelineScreen、SettingsScreen）
-- グローバルスタイルの定義
+
+- URL ハッシュに基づく画面初期化と切り替え（`hashchange` 監視）
+- `screen === "iframe"` のときはルートごと `IframeHostScreen` に差し替え、それ以外は `HeaderBar` + 各画面 + `FooterMenu`
+- 画面ごとのスクロール位置の保存・復元
+- テーマ（CSS variables）の適用とシステムテーマ変更の監視
 
 #### AccountScreen.svelte
-アカウント情報と認証を担当するコンポーネント：
-- 認証状態による表示切り替え
-  - 未認証時はAuthScreenを表示
-  - 認証済み時はアカウント情報（公開鍵情報、プロフィール）を表示
+アカウント情報と認証を担当：
+
+- デモアプリに関する注意喚起カードを表示
+- 未認証時は `AuthScreen` を表示、認証済み時は `PublicKeyDisplay` を表示
 - ローカルストレージと認証状態の整合性チェック
 
 #### AuthScreen.svelte
-認証機能を担当するコンポーネント：
-- パスキー新規作成機能
-- 既存パスキーでのログイン機能
-- インポート画面への遷移機能
-- PRF拡張対応確認機能
+認証機能を担当：
 
-#### TimelineScreen.svelte
-タイムライン表示と投稿機能を担当するコンポーネント：
-- 認証状態による表示切り替え
-- PostFormとTimelineコンポーネントの統合
+- 新規パスキー作成（`createPasskey()` → `createNostrKey()`）
+- 既存パスキーでのログイン（`credentialId` 指定あり／なし）
+- 高度なオプション: `KeyInfo`（PWK データ）のファイル／テキストインポート
+- 開発者向けセクション: PRF 拡張対応確認
+
+#### KeyManagement.svelte（`key` 画面）
+鍵関連の操作をまとめた画面：
+
+- `SecretCacheSettings` - 秘密鍵キャッシュ設定
+- `ExportKeyInfoComponent` - KeyInfo（PWK データ）エクスポート
+- `ExportSecretKey` - 秘密鍵エクスポート
+- `LogoutSection` - ログアウト
+- `LocalStorageSection` - ローカルストレージのクリア
 
 #### SettingsScreen.svelte
-設定画面のコンテナコンポーネント：
-- 各種設定セクションの統合
+アプリ設定のコンテナ。`LanguageSettings` / `ThemeSettings` / `RelaySettings` / `ConsentPolicySettings` / `TrustedOriginsSettings` / `AppInfo` を統合。
 
-### 3.4 設定コンポーネント
+#### IframeHostScreen.svelte
+`#/iframe` ルートで動作する署名プロバイダモードの画面。詳細は [7. iframe ホストモード](#7-iframe-ホストモード) を参照。
 
-設定画面は複数の独立した設定セクションで構成されています：
+### 3.4 設定コンポーネント（`settings/`）
 
-- **SettingSection.svelte** - 設定セクションの基底コンポーネント（共通レイアウトとスタイル）
-- **RelayManagement.svelte** - リレーの追加・削除・リセット機能、接続状況表示
-- **SecretCacheSettings.svelte** - 秘密鍵キャッシュの設定
-- **LanguageSettings.svelte** - アプリケーション言語の切り替え
-- **theme-settings.svelte** - テーマ設定（ダークモード・ライトモード切り替え）
-- **LogoutSection.svelte** - ログアウト機能
-- **LocalStorageSection.svelte** - ローカルストレージのクリア機能
-- **ExportKeyInfoComponent.svelte** - PWKデータのエクスポート機能
-- **ExportSecretKey.svelte** - 秘密鍵のエクスポート機能
-- **AppInfo.svelte** - アプリケーション情報の表示
+- **LanguageSettings** - 言語切り替え
+- **theme-settings** - テーマ設定（ライト／ダーク／自動）
+- **RelaySettings** - リレー設定（追加・削除・リセット）
+- **ConsentPolicySettings** - iframe 同意ポリシー（`signEvent` / `nip44` / `nip04` ごとに `毎回確認` / `常に許可` / `拒否`）
+- **TrustedOriginsSettings** - 信頼済みオリジンの確認・削除
+- **SecretCacheSettings** - 秘密鍵キャッシュの有効化・タイムアウト設定
+- **ExportKeyInfoComponent** - KeyInfo（PWK データ）のエクスポート
+- **ExportSecretKey** - 秘密鍵のエクスポート
+- **LogoutSection** - ログアウト
+- **LocalStorageSection** - ローカルストレージのクリア
+- **AppInfo** - アプリケーション情報（commit hash 等）
 
 ### 3.5 共通コンポーネント
 
-#### HeaderBar.svelte
-アプリケーション上部のヘッダーバーコンポーネント：
-- アプリケーションタイトルとロゴの表示
-- 現在の画面タイトルの表示
-- 統一されたヘッダーデザインの提供
+- **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示
+- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）
+- **PublicKeyDisplay** - 公開鍵を短縮形式と npub 形式で表示、npub のクリップボードコピー
+- **ConsentDialog** - iframe モードの同意要求モーダル（[7. iframe ホストモード](#7-iframe-ホストモード)）
 
-#### FooterMenu.svelte
-アプリケーションナビゲーションを担当するコンポーネント：
-- 現在の画面に応じたアクティブ状態表示
-- 画面遷移機能
+### 3.6 UI コンポーネント（`ui/`）
 
-#### PostForm.svelte
-Nostrメッセージ作成・投稿機能を担当するコンポーネント：
-- メッセージ入力フォーム
-- イベント署名機能
-- リレーへのメッセージ送信機能
-- 投稿状態とエラーハンドリング
+- **CardSection** - カード型セクションの共通レイアウト
+- **ui/button/** - `Button` / `FileInputButton` / `IconButton` / `NavButton` / `TabButton` / `ToggleButton`
 
-#### ProfileEditor.svelte
-ユーザープロフィール編集機能を担当するコンポーネント：
-- プロフィール情報の表示・編集
-- プロフィールデータの保存機能
-- プロフィール画像やメタデータの管理
+### 3.7 ユーティリティ（`utils/`）
 
-#### PublicKeyDisplay.svelte
-公開鍵情報を表示するコンポーネント：
-- 公開鍵情報の表示（短縮形式とnpub形式）
-- npub形式のクリップボードコピー機能
-- コピー完了メッセージの表示
-
-#### Timeline.svelte
-タイムライン表示機能を担当するコンポーネント：
-- Nostrイベントの時系列表示
-- リアルタイムでのイベント更新
-- イベントの詳細表示機能
-
-### 3.6 UIコンポーネント
-
-アプリケーション全体で統一されたUIコンポーネント群：
-
-#### Button.svelte
-基本的なボタンコンポーネント：
-- 標準的なアクション用ボタン
-- 統一されたスタイルとホバー効果
-- クリックイベントハンドリング
-
-#### SecondaryButton.svelte
-セカンダリアクション用ボタンコンポーネント：
-- サブアクションやキャンセル操作用
-- 控えめなスタイルデザイン
-
-#### WarningButton.svelte
-警告を伴うアクション用ボタンコンポーネント：
-- 注意が必要な操作用（例：データリセット）
-- 警告色を使用したスタイル
-
-#### DangerButton.svelte
-危険なアクション用ボタンコンポーネント：
-- 削除やログアウトなどの重要な操作用
-- 赤色系の警告色を使用
-
-#### IconButton.svelte
-アイコン付きボタンコンポーネント：
-- アイコンとテキストを組み合わせたボタン
-- 視覚的に分かりやすいアクション表現
+- **bech32-converter.ts** - hex ⇔ npub / nsec 変換
+- **consent-gating.ts** - `evaluateConsent()`（副作用なしの同意判定）と `policyKeyFor()`（メソッド名 → ポリシーキー）
+- **event-kind-labels.ts** - `kindLabel()`（kind 番号を人間可読なラベルに変換）
 
 ## 4. 多言語対応
 
-アプリケーションは多言語対応（i18n）機能を実装しています：
-
-### 4.1 i18n実装
-
 #### i18n-store.ts
 言語設定とテキスト管理：
-- `currentLanguage` - 現在の言語設定（'ja'または'en'）
-- `i18n` - 翻訳データを提供するderivedストア
-- `changeLanguage()` - 言語を切り替える関数
-- ブラウザ設定に基づく言語自動選択機能
-- 設定画面から言語を選択できる
+
+- `currentLanguage` - 現在の言語（`'ja'` または `'en'`）
+- `i18n` - 翻訳データを提供する derived ストア
+- `changeLanguage()` - 言語切り替え
+- ブラウザ設定に基づく言語自動選択。埋め込みモードでは親オリジンの `?lang=` 指定を優先
 
 #### translations.ts
-言語リソースの定義：
-- 日本語（ja）と英語（en）の翻訳セット
-- 階層構造を持つ翻訳オブジェクト
-- アプリケーション全体のテキストリソース
+日本語（ja）・英語（en）の翻訳セットを階層構造で定義。
 
 ## 5. データフロー
 
 ### 5.1 起動時フロー
 
-1. アプリ起動時に初期化
-   - ストアの初期化
-   - ローカルストレージのチェック
-   - URLハッシュに基づく画面表示
-   - 言語設定の読み込み
-   - 認証状態と保存データの整合性検証
+1. ストア初期化（キャッシュ設定・テーマ・同意ポリシー・信頼済みオリジンを `localStorage` から読み込み）
+2. URL ハッシュに基づく画面表示
+3. 認証状態と保存データ（`NostrKeyInfo`）の整合性検証
 
 ### 5.2 認証フロー
 
 #### 新規パスキー作成
-1. 新規パスキー作成
-   - `createPasskey()` メソッドで新規パスキー作成
-   - PRFから直接Nostr鍵を導出
-2. 結果を保存
-3. 認証状態の更新
-4. タイムライン画面へ自動遷移
+1. `createPasskey()` で新規パスキー作成
+2. `createNostrKey()` で PRF から Nostr 鍵を導出
+3. `setCurrentKeyInfo()` で SDK に設定（内部でストレージに保存）
+4. 認証状態を更新し、アカウント画面へ遷移
 
 #### 既存パスキーでログイン
-1. プラットフォームのUIから選択したパスキーでWebAuthn認証
-2. PRF値からNostr鍵を再生成
-3. 認証状態の更新
-4. タイムライン画面へ自動遷移
+1. プラットフォーム UI から選択したパスキーで WebAuthn 認証
+2. PRF 値から Nostr 鍵を再導出
+3. 認証状態を更新し、アカウント画面へ遷移
 
-#### 秘密鍵のインポート
-1. 秘密鍵入力（nsecまたは16進数形式）
-2. 新規パスキーの作成
-3. 秘密鍵をパスキーで保護（PWK）
-4. 認証状態の更新
-5. タイムライン画面へ自動遷移
+#### KeyInfo（PWK データ）インポート
+1. KeyInfo の JSON をファイルまたはテキストで入力
+2. 妥当性チェック後 `setCurrentKeyInfo()` でセット
+3. 認証状態を更新し、アカウント画面へ遷移
 
-### 5.3 メッセージ投稿フロー
+### 5.3 ログアウトフロー
 
-1. メッセージ作成（kind=1のテキストノート）
-2. 復号した秘密鍵でイベント署名
-3. 設定されたリレーへのメッセージ送信
+1. `logout()` を呼び出し
+2. SDK の `NostrKeyInfo` をクリア（`clearStoredKeyInfo()`）
+3. 公開鍵・認証状態をリセット
+4. アカウント画面（未認証状態）へ遷移
 
-### 5.4 ログアウトフロー
-
-1. ログアウト関数の呼び出し
-2. SDKのNostrKeyInfoをクリア
-3. 認証状態のリセット
-4. ストアの状態更新
-5. アカウント画面への遷移（未認証状態）
-
-## 6. ユーザー状態と状態遷移
-
-アプリケーションのユーザー状態は主に認証状態（isLoggedIn）と公開鍵情報の有無によって管理されています。
+## 6. ユーザー状態と画面遷移
 
 ### 6.1 状態モデル
 
-1. **未ログイン状態**:
-   - `isLoggedIn = false`, `publicKey = null`
-   - 初回起動時や認証情報クリア後の状態
-   - AccountScreenはAuthScreenコンポーネントを表示
+ユーザー状態は主に認証状態（`isLoggedIn`）と公開鍵情報の有無で管理されます。「`NostrKeyInfo` が存在すること」をログイン状態と定義します。
 
-2. **ログイン状態**:
-   - `isLoggedIn = true`, `publicKey ≠ null`
-   - パスキー認証後またはlocalStorageから復元後
-   - AccountScreenはプロフィールとリレー状態を表示
-
-### 6.2 状態遷移のフローダイアグラム
+1. **未ログイン状態**: `isLoggedIn = false`, `publicKey = null`。`AccountScreen` は `AuthScreen` を表示
+2. **ログイン状態**: `isLoggedIn = true`, `publicKey ≠ null`。`AccountScreen` は公開鍵情報を表示
 
 ```mermaid
 graph TD
     A[初期状態: 未認証] -->|パスキー作成| B[認証済み状態]
     A -->|既存パスキーログイン| B
-    A -->|秘密鍵インポート| B
-    B -->|署名操作等| B
+    A -->|KeyInfo インポート| B
+    B -->|署名・暗号操作等| B
     B -->|ログアウト| A
-    
-    %% 再訪問・復元フロー
-    C[アプリ起動] -->|localStorage確認| D{認証情報あり?}
+
+    C[アプリ起動] -->|localStorage 確認| D{NostrKeyInfo あり?}
     D -->|Yes| B
     D -->|No| A
 ```
 
-### 6.3 画面状態と遷移
+### 6.2 画面状態と遷移
 
-アプリケーションは4つの主要画面（`account`, `timeline`, `settings`, `import`）を持ち、これらはURLハッシュと連動しています。画面状態はappState.tsの`currentScreen`ストアで管理されます。
+通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、`FooterMenu` で切り替えます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
 
 ```mermaid
 graph LR
-    Account((アカウント)) <--> Timeline((タイムライン))
+    Account((アカウント)) <--> Key((鍵管理))
     Account <--> Settings((設定))
-    Account <--> Import((インポート))
-    Timeline <--> Settings
+    Key <--> Settings
+    Iframe((iframe ホスト))
 ```
 
-### 6.4 設定の管理
+## 7. iframe ホストモード
 
-アプリケーション設定は以下のように管理されます：
+`#/iframe` ルートでアクセスされると、このアプリは通常 UI を描画せず、別 origin の Nostr アプリから `postMessage` で署名・暗号化要求を受け付ける **NIP-07 署名プロバイダ**として動作します。
 
-- **言語設定**: `currentLanguage`ストアとlocalStorage
-- **リレー設定**: `activeRelays`ストアとlocalStorage
-- **キャッシュ設定**: `cacheSecrets`および`cacheTimeout`ストアとlocalStorage
+主な構成要素：
 
-これらの設定はユーザーインターフェイスを通じて変更でき、変更はリアルタイムでSDKや関連コンポーネントに反映されます。
+- **`iframe-mode.ts`** - `NosskeyIframeHost` の起動（`startIframeHost()`）と consent ブリッジ（`onConsent` / `approveConsent` / `rejectConsent` / `pendingConsent` ストア）
+- **`IframeHostScreen.svelte`** - エントリ画面。Storage Access API によるリカバリフローを実行
+- **`ConsentDialog.svelte`** - 同意要求モーダル（拒否 / 常に許可 / 一度だけ許可の 3 ボタン）
+- **`consent-gating.ts`** + **`app-state.ts`** - 同意ポリシー（`ConsentPolicy`）と信頼済みオリジン（`TrustedOriginEntry`）による同意ゲーティング
 
-## 7. 技術的考慮事項
+対応メソッドは `getPublicKey` / `signEvent` / `getRelays` / `nip44_encrypt` / `nip44_decrypt` / `nip04_encrypt` / `nip04_decrypt` の 7 種です。
 
-### 7.1 WebAuthn/Passkey対応
+詳細な仕組み（通信フロー・Storage Partitioning 対応・テーマ／言語の受け渡し）は [`docs/ja/iframe-host.ja.md`](../../docs/ja/iframe-host.ja.md) を参照してください。
 
-- `localhost`または`HTTPS`環境での実行が必要
-- 最新のChrome、Firefox、Safariなどのモダンブラウザでの動作を想定
+## 8. 技術的考慮事項
 
-### 7.2 UI/UXの設計
+### 8.1 WebAuthn / Passkey 対応
 
-- 4つの主要画面によるシンプルなナビゲーション
+- `localhost` または `HTTPS` 環境での実行が必要
+- WebAuthn PRF 拡張をサポートするブラウザ・認証器が必要（[PRF 対応表](../../docs/ja/prf-support-tables.ja.md)）
+
+### 8.2 UI / UX の設計
+
+- 通常 UI は 3 画面のシンプルなナビゲーション
 - フッターメニューによる直感的な画面切り替え
-- 認証状態に応じた適切な画面表示の制御
+- テーマは CSS variables で管理し、ライト／ダーク／自動に対応
 
-## 8. 開発・実行方法
+## 9. 開発・実行方法
 
 ```bash
 # リポジトリのクローン
 git clone https://github.com/ocknamo/nosskey-sdk.git
 cd nosskey-sdk
 
-# 依存関係のインストールとビルド
+# 依存関係のインストールと SDK のビルド
 npm install
 npm run build
 
@@ -394,4 +333,4 @@ npm install
 npm run dev
 ```
 
-ブラウザで http://localhost:5173 にアクセスしてアプリケーションを利用できます。
+ブラウザで http://localhost:5173 にアクセスしてアプリケーションを利用できます。iframe ホストモードは http://localhost:5173/#/iframe で動作します。
