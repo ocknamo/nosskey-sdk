@@ -29,9 +29,9 @@ PRF拡張の出力値を直接Nostrのシークレットキーとして使用す
 - Chrome 118以降または Safari 18以降推奨
 - PRF拡張をサポートする認証器が必要:
   - Chromium 118+ + Google Password Manager Passkey
-  - Chromium 118+ / Safari 18 + CTAP2セキュリティキー（YubiKey 5シリーズ等）
+  - Chromium 118+ + CTAP2セキュリティキー（YubiKey 5シリーズ等）
   - macOS 15・iOS 18以降のApple Passkeys (Touch ID / Face ID)
-  - ※Windows Helloは2025年4月時点でPRF拡張未対応
+  - ※Windows Helloは近年のWindows（WebAuthnプラットフォームAPI `WEBAUTHN_API_VERSION_8`）と対応ブラウザ（Chrome 147+ / Firefox 148+ 等）の組み合わせでPRF拡張に対応（対応開始ビルドの詳細は要実機確認）
 
 PRF拡張対応の詳細は[こちら](../../docs/ja/prf-support-tables.ja.md)を参照してください。
 
