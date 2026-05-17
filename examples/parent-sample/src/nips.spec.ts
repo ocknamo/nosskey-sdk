@@ -97,6 +97,18 @@ describe('nip04Encrypt / nip04Decrypt', () => {
     expect(result).toBe('cipher04');
   });
 
+  it('decrypt returns { ok: true, plaintext } on success', async () => {
+    const nostr = createNostrMock();
+    vi.mocked(nostr.nip04.decrypt).mockResolvedValue('plain04');
+    const result = await nip04Decrypt({
+      nostr,
+      peer: PEER,
+      ciphertext: 'cipher',
+      log: vi.fn(),
+    });
+    expect(result).toEqual({ ok: true, plaintext: 'plain04' });
+  });
+
   it('decrypt returns { ok: false } when nostr rejects', async () => {
     const nostr = createNostrMock();
     vi.mocked(nostr.nip04.decrypt).mockRejectedValue(new Error('mac mismatch'));
@@ -150,6 +162,31 @@ describe('signAndPublishNote', () => {
       publish,
     });
     expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('logs a publish failure when publish rejects', async () => {
+    const nostr = createNostrMock();
+    const signed: NostrEvent = {
+      kind: 1,
+      content: 'hi',
+      tags: [],
+      created_at: 1700000000,
+      pubkey: 'p'.repeat(64),
+      id: 'i'.repeat(64),
+      sig: 's'.repeat(128),
+    };
+    vi.mocked(nostr.signEvent).mockResolvedValue(signed);
+    const publish = vi.fn().mockRejectedValue(new Error('relay down'));
+    const log = vi.fn();
+    await signAndPublishNote({
+      nostr,
+      content: 'hi',
+      relayUrl: 'wss://example',
+      log,
+      publish,
+    });
+    expect(publish).toHaveBeenCalledWith(signed);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('Publish failed'));
   });
 });
 
@@ -234,5 +271,22 @@ describe('nip04SendDm', () => {
       publish,
     });
     expect(publish).toHaveBeenCalled();
+  });
+
+  it('logs a publish failure when publish rejects', async () => {
+    const nostr = createNostrMock();
+    vi.mocked(nostr.nip04.encrypt).mockResolvedValue('cipher04');
+    vi.mocked(nostr.signEvent).mockResolvedValue(buildSignedKind4('cipher04'));
+    const publish = vi.fn().mockRejectedValue(new Error('relay down'));
+    const log = vi.fn();
+    await nip04SendDm({
+      nostr,
+      peer: PEER,
+      plaintext: 'hi',
+      log,
+      publish,
+    });
+    expect(publish).toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('NIP-04 DM publish failed'));
   });
 });

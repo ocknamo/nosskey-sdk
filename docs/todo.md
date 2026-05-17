@@ -56,8 +56,8 @@
 - [ ] `nosskey-elements` パッケージ追加 — `<nosskey-button>` Web Components として提供
 
 ## テスト関連
-- [ ] テストの完全性確認：すべての機能とエッジケースのカバレッジ
-- [ ] エラー処理のテスト強化
+- [x] テストの完全性確認：すべての機能とエッジケースのカバレッジ — 全4ワークスペースの未テスト公開関数・エッジケースを補完。nosskey-sdk: `bytesToBase64`/`base64ToBytes` の単体テスト、`secp-utils.ts`(`liftEvenXOnly`/`ecdhSharedX`)の新規テストファイル、NIP-44 平文長境界(1/65535バイト)・改竄ペイロード(version/MAC)テストを追加。nosskey-iframe: `isEncryptMethod`/`isDecryptMethod`・`iframe` getter のテストを追加。`examples/svelte-app` は vitest 設定が無く既存4 spec が未実行だったため `vitest.config.ts`・`test`/`test:coverage` スクリプト・依存(vitest/happy-dom/coverage-v8)を追加して有効化し、`event-kind-labels.ts` のテストも新規追加
+- [x] エラー処理のテスト強化 — 例外・拒否パスを重点補完。nosskey-sdk: ストレージ書き込み失敗(`#saveKeyInfoToStorage` の `setItem` 例外)、NIP-44 nonce override 長さ検証、NIP-04 不正IV長・非ブロック整列 ciphertext、secp256k1 の鍵長・公開鍵検証。nosskey-iframe client: 結果型不一致・Window/Document/コンテナ欠落・`crypto.randomUUID` 不在フォールバック・ready前 destroy・destroy後リクエスト。host: Window 欠落・`event.source` null・decrypt 系の NO_KEY/INVALID_REQUEST・非Error 例外の INTERNAL 化と visibility 復帰。あわせて `#saveKeyInfoToStorage` が書き込み失敗時に unhandled rejection を起こす不具合を read 側と同じ catch+log パターンで修正
 
 ## 品質とセキュリティ
 - [ ] 外部セキュリティレビュー

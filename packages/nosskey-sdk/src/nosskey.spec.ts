@@ -910,6 +910,39 @@ describe('NosskeyManager', () => {
       expect(customStorage.getItem).toHaveBeenCalledWith('nosskey_keyinfo');
       expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('from-custom-storage');
     });
+
+    it('storage.setItem が例外を投げても unhandled rejection を起こさずエラーをログする', async () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const rejections: unknown[] = [];
+      const onRejection = (reason: unknown) => rejections.push(reason);
+      process.on('unhandledRejection', onRejection);
+      try {
+        const customStorage = createMockStorage();
+        (customStorage.setItem as ReturnType<typeof vi.fn>).mockImplementation(() => {
+          throw new Error('QuotaExceededError');
+        });
+        const nosskey = new NosskeyManager({
+          storageOptions: { enabled: true, storage: customStorage },
+        });
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(mockCredentialId),
+          pubkey: 'persist-failure',
+          salt: '6e6f7374722d70776b',
+        };
+
+        expect(() => nosskey.setCurrentKeyInfo(keyInfo)).not.toThrow();
+        // 書き込みに失敗しても in-memory の NostrKeyInfo は保持される
+        expect(nosskey.getCurrentKeyInfo()?.pubkey).toBe('persist-failure');
+        expect(errorSpy).toHaveBeenCalled();
+        // #saveKeyInfoToStorage は async。catch を外すと void 呼び出しで
+        // unhandled rejection になるため、マイクロタスク消化後も発生しないことを確認。
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(rejections).toEqual([]);
+      } finally {
+        process.off('unhandledRejection', onRejection);
+        errorSpy.mockRestore();
+      }
+    });
   });
 
   describe('createNostrKey with username オプション', () => {

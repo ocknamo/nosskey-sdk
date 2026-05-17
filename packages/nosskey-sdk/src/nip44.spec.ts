@@ -2,7 +2,7 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 import { describe, expect, it } from 'vitest';
 import vectors from './__fixtures__/nip44-vectors.json' with { type: 'json' };
 import { __nip44Internal, nip44Decrypt, nip44Encrypt } from './nip44.js';
-import { bytesToHex, hexToBytes } from './utils.js';
+import { base64ToBytes, bytesToBase64, bytesToHex, hexToBytes } from './utils.js';
 
 interface ConversationKeyVector {
   sec1: string;
@@ -159,5 +159,56 @@ describe('NIP-44 v2: roundtrip with random nonce', () => {
 
     const payload = nip44Encrypt('hello, world! こんにちは 🌍', aliceSec, bobPub);
     expect(nip44Decrypt(payload, bobSec, alicePub)).toBe('hello, world! こんにちは 🌍');
+  });
+});
+
+describe('NIP-44 v2: nonce override validation', () => {
+  const aliceSec = hexToBytes('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  const bobPub = bytesToHex(
+    schnorr.getPublicKey(
+      hexToBytes('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
+    )
+  );
+
+  it('rejects a nonce override that is not 32 bytes', () => {
+    expect(() => nip44Encrypt('hi', aliceSec, bobPub, new Uint8Array(16))).toThrow(
+      'NIP-44: nonce override must be 32 bytes.'
+    );
+  });
+});
+
+describe('NIP-44 v2: plaintext length boundaries', () => {
+  const aliceSec = hexToBytes('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  const bobSec = hexToBytes('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  const alicePub = bytesToHex(schnorr.getPublicKey(aliceSec));
+  const bobPub = bytesToHex(schnorr.getPublicKey(bobSec));
+
+  // 1 and 65535 are the inclusive plaintext-length bounds; 32/33 straddle the
+  // first calc_padded_len bucket boundary.
+  it.each([1, 32, 33, 65535])('roundtrips a %d-byte plaintext', (len) => {
+    const text = 'a'.repeat(len);
+    const payload = nip44Encrypt(text, aliceSec, bobPub);
+    expect(nip44Decrypt(payload, bobSec, alicePub)).toBe(text);
+  });
+});
+
+describe('NIP-44 v2: tampered payload rejection', () => {
+  const aliceSec = hexToBytes('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  const bobSec = hexToBytes('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  const alicePub = bytesToHex(schnorr.getPublicKey(aliceSec));
+  const bobPub = bytesToHex(schnorr.getPublicKey(bobSec));
+
+  it('rejects a payload with an unsupported version byte', () => {
+    const bytes = base64ToBytes(nip44Encrypt('hello', aliceSec, bobPub));
+    bytes[0] = 0x01; // canonical version is 0x02
+    expect(() => nip44Decrypt(bytesToBase64(bytes), bobSec, alicePub)).toThrow(
+      /unsupported version/
+    );
+  });
+
+  it('rejects a payload whose MAC has been altered', () => {
+    const bytes = base64ToBytes(nip44Encrypt('hello', aliceSec, bobPub));
+    bytes[bytes.length - 1] ^= 0xff; // flip the final MAC byte
+    expect(() => nip44Decrypt(bytesToBase64(bytes), bobSec, alicePub)).toThrow(/invalid MAC/);
   });
 });

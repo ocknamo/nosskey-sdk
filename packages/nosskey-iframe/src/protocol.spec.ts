@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   NOSSKEY_ERROR_CODES,
   type NosskeyErrorCode,
+  isDecryptMethod,
+  isEncryptMethod,
   isNosskeyReady,
   isNosskeyRequest,
   isNosskeyResponse,
@@ -134,6 +136,20 @@ describe('protocol: isNosskeyResponse', () => {
   it('rejects missing id', () => {
     expect(isNosskeyResponse({ type: 'nosskey:response', result: 1 })).toBe(false);
   });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['array', []],
+    ['string', 'x'],
+    ['number', 7],
+  ])('rejects non-object-shaped value: %s', (_label, value) => {
+    expect(isNosskeyResponse(value)).toBe(false);
+  });
+
+  it('rejects a response whose error is not an object', () => {
+    expect(isNosskeyResponse({ type: 'nosskey:response', id: 'r1', error: 'boom' })).toBe(false);
+  });
 });
 
 describe('protocol: isNosskeyReady', () => {
@@ -174,6 +190,32 @@ describe('protocol: isNosskeyVisibility', () => {
   it.each([null, undefined, 'nosskey:visibility', 0, []])('rejects %s', (value) => {
     expect(isNosskeyVisibility(value)).toBe(false);
   });
+});
+
+describe('protocol: isEncryptMethod', () => {
+  it.each(['nip44_encrypt', 'nip04_encrypt'] as const)('returns true for %s', (method) => {
+    expect(isEncryptMethod(method)).toBe(true);
+  });
+
+  it.each(['getPublicKey', 'signEvent', 'getRelays', 'nip44_decrypt', 'nip04_decrypt'] as const)(
+    'returns false for %s',
+    (method) => {
+      expect(isEncryptMethod(method)).toBe(false);
+    }
+  );
+});
+
+describe('protocol: isDecryptMethod', () => {
+  it.each(['nip44_decrypt', 'nip04_decrypt'] as const)('returns true for %s', (method) => {
+    expect(isDecryptMethod(method)).toBe(true);
+  });
+
+  it.each(['getPublicKey', 'signEvent', 'getRelays', 'nip44_encrypt', 'nip04_encrypt'] as const)(
+    'returns false for %s',
+    (method) => {
+      expect(isDecryptMethod(method)).toBe(false);
+    }
+  );
 });
 
 describe('protocol: NOSSKEY_ERROR_CODES', () => {
