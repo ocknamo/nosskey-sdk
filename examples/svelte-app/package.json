@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "cd ../.. && biome check ./examples/svelte-app/src",
     "format": "cd ../.. && biome check --write ./examples/svelte-app/src",
@@ -15,10 +17,13 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tsconfig/svelte": "^5.0.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "happy-dom": "^20.9.0",
     "svelte": "^5.55.3",
     "svelte-check": "^4.1.5",
     "typescript": "~5.7.2",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "vitest": "^3.1.2"
   },
   "dependencies": {
     "bech32": "^2.0.0",

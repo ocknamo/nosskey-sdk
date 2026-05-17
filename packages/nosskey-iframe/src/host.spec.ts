@@ -362,6 +362,45 @@ describe('NosskeyIframeHost', () => {
     host.stop();
   });
 
+  it('wraps a non-Error manager rejection as INTERNAL and still hides the iframe', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const manager = makeManager({
+      // Reject with a plain string rather than an Error to exercise String(err).
+      signEvent: vi.fn(() => Promise.reject('manager-non-error-failure')),
+    });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      {
+        type: 'nosskey:request',
+        id: 'i2',
+        method: 'signEvent',
+        params: { event: { kind: 1, content: '' } },
+      },
+      'https://parent.example'
+    );
+
+    const err = (win.sent[0].data as { error: { code: string; message: string } }).error;
+    expect(err.code).toBe('INTERNAL');
+    expect(err.message).toBe('manager-non-error-failure');
+    // The finally block must still hide the iframe after the operation fails.
+    const visibilityMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls
+      .map((c) => c[0])
+      .filter(isNosskeyVisibility);
+    expect(visibilityMessages.map((m) => m.visible)).toEqual([true, false]);
+    host.stop();
+  });
+
   it('returns INTERNAL when requireUserConsent is true but onConsent is missing', async () => {
     const win = createFakeWindow() as DispatchableWindow;
     const host = new NosskeyIframeHost({
@@ -522,6 +561,34 @@ describe('NosskeyIframeHost', () => {
     expect(win.sent).toHaveLength(0);
   });
 
+  it('throws when no Window is available', () => {
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(() => new NosskeyIframeHost({ manager: makeManager() })).toThrow(/requires a Window/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('drops the reply when event.source is null', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const manager = makeManager({ getPublicKey: vi.fn(async () => 'deadbeef') });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      window: win as unknown as Window,
+    });
+    host.start();
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 's1', method: 'getPublicKey' },
+      'https://parent.example',
+      null
+    );
+    // Without a source Window there is nowhere to post the response.
+    expect(win.sent).toHaveLength(0);
+    host.stop();
+  });
+
   describe('nip44 / nip04 encrypt / decrypt', () => {
     const peerPub = 'a'.repeat(64);
 
@@ -672,6 +739,71 @@ describe('NosskeyIframeHost', () => {
         'https://parent.example'
       );
       expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('INVALID_REQUEST');
+      host.stop();
+    });
+
+    it('returns INVALID_REQUEST when nip44_decrypt params are missing', async () => {
+      const win = createFakeWindow() as DispatchableWindow;
+      const host = new NosskeyIframeHost({
+        manager: makeManager(),
+        allowedOrigins: ['https://parent.example'],
+        onConsent: async () => true,
+        window: win as unknown as Window,
+      });
+      host.start();
+      await win.dispatchMessage(
+        { type: 'nosskey:request', id: 'n7', method: 'nip44_decrypt' },
+        'https://parent.example'
+      );
+      expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('INVALID_REQUEST');
+      host.stop();
+    });
+
+    it('returns NO_KEY for nip44_decrypt when no key is configured', async () => {
+      const win = createFakeWindow() as DispatchableWindow;
+      const manager = makeManager({ hasKeyInfo: () => false });
+      const host = new NosskeyIframeHost({
+        manager,
+        allowedOrigins: ['https://parent.example'],
+        onConsent: async () => true,
+        window: win as unknown as Window,
+      });
+      host.start();
+      await win.dispatchMessage(
+        {
+          type: 'nosskey:request',
+          id: 'd1',
+          method: 'nip44_decrypt',
+          params: { pubkey: peerPub, ciphertext: 'cipher' },
+        },
+        'https://parent.example'
+      );
+      expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('NO_KEY');
+      expect(manager.nip44Decrypt).not.toHaveBeenCalled();
+      host.stop();
+    });
+
+    it('returns NO_KEY for nip04_decrypt when no key is configured', async () => {
+      const win = createFakeWindow() as DispatchableWindow;
+      const manager = makeManager({ hasKeyInfo: () => false });
+      const host = new NosskeyIframeHost({
+        manager,
+        allowedOrigins: ['https://parent.example'],
+        onConsent: async () => true,
+        window: win as unknown as Window,
+      });
+      host.start();
+      await win.dispatchMessage(
+        {
+          type: 'nosskey:request',
+          id: 'd2',
+          method: 'nip04_decrypt',
+          params: { pubkey: peerPub, ciphertext: 'cbc?iv=zz' },
+        },
+        'https://parent.example'
+      );
+      expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('NO_KEY');
+      expect(manager.nip04Decrypt).not.toHaveBeenCalled();
       host.stop();
     });
   });

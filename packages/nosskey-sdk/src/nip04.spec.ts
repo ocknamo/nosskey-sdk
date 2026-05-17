@@ -1,7 +1,7 @@
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { describe, expect, it } from 'vitest';
 import { __nip04Internal, nip04Decrypt, nip04Encrypt } from './nip04.js';
-import { bytesToHex, hexToBytes } from './utils.js';
+import { bytesToBase64, bytesToHex, hexToBytes } from './utils.js';
 
 describe('NIP-04', () => {
   const aliceSec = hexToBytes('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
@@ -41,6 +41,17 @@ describe('NIP-04', () => {
   it('rejects IV of wrong length', () => {
     const iv = new Uint8Array(8);
     expect(() => nip04Encrypt('x', aliceSec, bobPub, iv)).toThrow();
+  });
+
+  it('rejects a decoded IV that is not 16 bytes', () => {
+    // 'AAAA' decodes to 3 bytes, far short of the required 16-byte IV.
+    expect(() => nip04Decrypt('AAAA?iv=AAAA', aliceSec, bobPub)).toThrow(/IV must be 16 bytes/);
+  });
+
+  it('rejects a ciphertext whose length is not a multiple of the AES block size', () => {
+    const iv = bytesToBase64(new Uint8Array(16));
+    // 'AAAA' decodes to 3 bytes — not a multiple of the 16-byte CBC block.
+    expect(() => nip04Decrypt(`AAAA?iv=${iv}`, bobSec, alicePub)).toThrow();
   });
 
   it('rejects 64-char-mismatch peer pubkey', () => {
