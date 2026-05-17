@@ -277,9 +277,9 @@ export interface SignOptions {
 
 `nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数を公開しています。
 
-### 低レベル暗号化関数（NIP-44 / NIP-04）
+### 低レベル NIP-44 関数
 
-`NosskeyManager.nip44Encrypt()` などのメソッドが内部で秘密鍵を管理するのに対し、これらのスタンドアロン関数は秘密鍵（`Uint8Array`）を引数として直接受け取ります。**メソッドと同名でもシグネチャが異なる**点に注意してください。
+`NosskeyManager.nip44Encrypt()` メソッドが内部で秘密鍵を管理するのに対し、これらのスタンドアロン関数は秘密鍵（`Uint8Array`）を引数として直接受け取ります。**メソッドと同名でもシグネチャが異なる**点に注意してください。登録済みパスキー鍵ではなく ephemeral 秘密鍵で暗号化したいケース（NIP-17 gift-wrap など）で使用します。
 
 ```typescript
 function nip44Encrypt(
@@ -290,16 +290,9 @@ function nip44Encrypt(
 ): string
 
 function nip44Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
-
-function nip04Encrypt(
-  plaintext: string,
-  ourSecretKey: Uint8Array,
-  peerPubkeyHex: string,
-  ivOverride?: Uint8Array
-): string
-
-function nip04Decrypt(payload: string, ourSecretKey: Uint8Array, peerPubkeyHex: string): string
 ```
+
+NIP-04 の低レベル関数はエクスポートしていません。NIP-04 の暗号化/復号は `NosskeyManager` の `nip04Encrypt()` / `nip04Decrypt()` メソッドを使用してください。
 
 ### PRF ハンドラー関数
 

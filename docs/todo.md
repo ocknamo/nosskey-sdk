@@ -3,7 +3,7 @@
 ## ドキュメント関連
 - [ ] README.mdの充実：使用方法やサンプルコードの追加
 - [ ] 他のNostrライブラリとの統合例をドキュメントに追加
-- [x] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)、ja版 `createNostrKey` のシグネチャ(`options` 引数)、コンストラクタの `prfOptions`(+`GetPrfSecretOptions` 型)を両言語版に反映。barrel が公開する標準関数(nip44/nip04 低レベル関数・PRFハンドラー関数・バイト変換・テストユーティリティ)を「パッケージエクスポート」節として追加。`crypto-utils.ts` は削除済み
+- [x] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)、ja版 `createNostrKey` のシグネチャ(`options` 引数)、コンストラクタの `prfOptions`(+`GetPrfSecretOptions` 型)を両言語版に反映。barrel が公開する標準関数(nip44 低レベル関数・PRFハンドラー関数・バイト変換・テストユーティリティ)を「パッケージエクスポート」節として追加。`crypto-utils.ts` および外部利用の無い nip04 低レベル関数の barrel export は削除済み
 - [ ] iframe-host ドキュメント(`docs/{ja,en}/iframe-host`)を全面更新 — 「getPublicKey/signEvent の2メソッド」前提の記述を、7メソッドのNIP-07プロバイダの実態に修正。consent対象メソッド・`getRelays`・3ボタン同意ダイアログ・`startIframeHost`/`onConsent` サンプルコード・`theme`/`lang`/`embedded`・Storage Access API を反映
 - [x] `docs/iframe-expansion-plan.md` のステータス表を実態に修正 — Phase 1-B/1-C(nip44/nip04)・2-A/2-B(オリジン別許可・メソッド別ポリシー)は実装済みなのに「未実装」表記。localStorageキー名を `nosskey_trusted_origins_v2` に、ファイルパスを `src/components/screens/` に修正
 - [x] `docs/iframe-plan.md` をアーカイブ扱いにする — 完了済み・`iframe-expansion-plan.md` に統合された旨のバナーを追記(古い3メッセージ/2メソッドのプロトコル記述が現行と混同される)
