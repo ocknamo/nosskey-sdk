@@ -15,7 +15,7 @@
 - [x] NIP draft 英語版(`docs/nip-draft.md`)のタイトルを日本語版に合わせて修正 — `Passkey-Wrapped Keys`(旧wrap方式の名残)→ `Passkey-Derived Nostr Keys`
 
 ## 実装関連
-- [ ] salt値の不整合を解消 — 実際のPRF入力は `prf-handler.ts` の `'nostr-pwk'` だが、`NostrKeyInfo.salt` に書き込まれる `STANDARD_SALT`(`nosskey.ts`)・`types.ts` の JSDoc・`nip-draft` は `"nostr-key"`(hex `6e6f7374722d6b6579`)。salt は導出に未使用のため鍵は壊れないが、保存値と仕様記述が実装と食い違うため統一が必要(要方針決定)
+- [x] salt値の不整合を解消 — 実際のPRF入力 `'nostr-pwk'`(hex `6e6f7374722d70776b`) を正とし、`STANDARD_SALT`(`nosskey.ts`)・`types.ts` の JSDoc・`nip-draft`(和英)・インターフェース文書(和英) を統一。さらに `salt` を `getPrfSecret` の評価入力に配線し、`createNostrKey`/`signEventWithKeyInfo`/`exportNostrKey`/`nip44`/`nip04` で `keyInfo.salt` が実際に使われるようにした。旧誤値 `6e6f7374722d6b6579` で保存された既存 `NostrKeyInfo` は導出時・ストレージ読込時に標準値へ正規化して保護（`prf-handler.ts` の `'nostr-pwk'` 自体は非変更のため鍵は壊れない）
 - [x] `crypto-utils.ts`(AES-GCM の `deriveAesGcmKey`/`aesGcmEncrypt`/`aesGcmDecrypt`)を削除 — どこからも import されないデッドコードのため、ソース・テスト・barrel export を削除。`nosskey-specification` の「暗号化/復号アプローチ（代替手法）」は設計上の代替案の記述であり API 実装の主張ではないため変更不要
 - [ ] `NostrKeyInfo` のリレーへのバックアップを行うイベントの作成機能（リレーへのパブリッシュはSDKの責務外とする） — **優先度低**: `credentialId` / `salt` 等の機密性のあるメタデータを第三者リレーに送ることになり、Nostr pubkey と特定パスキーの紐付けがリンク可能になるプライバシーリスクがある。実装する場合は暗号化形式・許容リレーの設計を慎重に検討する必要あり
 - [ ] NIP-17 sealed DM (kind:14 + gift-wrap) サポート — 受け取った NIP-44 暗号文を kind:13 seal でラップし、ephemeral 鍵で kind:1059 gift-wrap 化する 3 段構成。SDK に「ランダム ephemeral 秘密鍵で署名する API」を追加する必要があり、現状の `signEvent`（登録済み鍵専用）とは別経路。**動作確認用の実装は `examples/parent-sample/src/nip17.ts` にあり、セクション 7 の "Send NIP-17 DM" で他クライアントとの受信検証が可能** (ブランチ `claude/nip44-iframe-sample-KnGuu`)。SDK 本体への昇格は再利用ニーズが出てから検討する。

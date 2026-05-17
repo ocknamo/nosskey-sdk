@@ -46,17 +46,17 @@ Only the minimum information needed to associate with the passkey is stored:
 {
   "credentialId": "a3f5b8c12d...9f", // Passkey identifier (hex format)
   "pubkey": "02ab34cd56...ef", // Nostr public key (hex format)
-  "salt": "6e6f7374722d6b6579", // Salt for PRF derivation (hex format, fixed value)
+  "salt": "6e6f7374722d70776b", // Salt used as the PRF evaluation input (hex format, fixed value)
   "username": "alice" // Username when creating the passkey (optional)
 }
 ```
 
 ### Salt Value Specification
 
-To generate the same Nostr key, the salt value must be unified across implementations. Standard salt value:
+The salt is used directly as the PRF evaluation input (`prf.eval.first`). To generate the same Nostr key, the salt value must be unified across implementations. Standard salt value:
 
 ```
-"nostr-key" (UTF-8 bytes: 0x6e6f7374722d6b6579)
+"nostr-pwk" (UTF-8 bytes: 0x6e6f7374722d70776b)
 ```
 
 ## Security Considerations

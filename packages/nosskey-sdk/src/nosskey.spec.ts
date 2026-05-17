@@ -6,7 +6,7 @@ import { seckeySigner } from '@rx-nostr/crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyManager } from './nosskey.js';
 import type { NostrEvent, NostrKeyInfo } from './types.js';
-import { bytesToHex } from './utils.js';
+import { bytesToHex, hexToBytes } from './utils.js';
 
 // @rx-nostr/crypto のモック
 vi.mock('@rx-nostr/crypto', () => {
@@ -146,7 +146,7 @@ describe('NosskeyManager', () => {
       expect(result).toHaveProperty('pubkey');
       expect(result).toHaveProperty('salt');
       expect(result.pubkey).toBe('test-pubkey');
-      expect(result.salt).toBe('6e6f7374722d6b6579'); // "nostr-key"のhex
+      expect(result.salt).toBe('6e6f7374722d70776b'); // "nostr-pwk"のhex
     });
 
     it('prfOptionsを指定してPRF取得をカスタマイズできる', async () => {
@@ -163,11 +163,15 @@ describe('NosskeyManager', () => {
 
       await nosskey.createNostrKey(credentialId);
 
-      expect(getPrfSecretSpy).toHaveBeenCalledWith(credentialId, {
-        rpId: 'example.com',
-        timeout: 60000,
-        userVerification: 'preferred',
-      });
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(
+        credentialId,
+        {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+        hexToBytes('6e6f7374722d70776b')
+      );
     });
 
     it('PRF値がゼロの場合はエラーを投げる', async () => {
@@ -201,7 +205,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -228,7 +232,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -240,11 +244,15 @@ describe('NosskeyManager', () => {
 
       await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
 
-      expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
-        rpId: 'example.com',
-        timeout: 60000,
-        userVerification: 'preferred',
-      });
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(
+        expect.any(Uint8Array),
+        {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+        hexToBytes('6e6f7374722d70776b')
+      );
     });
   });
 
@@ -254,7 +262,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       // PRF値自体がシークレットキー
@@ -292,18 +300,102 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
 
       await nosskey.exportNostrKey(mockKeyInfo);
 
-      expect(getPrfSecretSpy).toHaveBeenCalledWith(expect.any(Uint8Array), {
-        rpId: 'example.com',
-        timeout: 60000,
-        userVerification: 'preferred',
+      expect(getPrfSecretSpy).toHaveBeenCalledWith(
+        expect.any(Uint8Array),
+        {
+          rpId: 'example.com',
+          timeout: 60000,
+          userVerification: 'preferred',
+        },
+        hexToBytes('6e6f7374722d70776b')
+      );
+    });
+  });
+
+  describe('salt の導出への利用と正規化', () => {
+    it('signEventWithKeyInfo は keyInfo.salt をPRF評価入力として getPrfSecret に渡す', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const keyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d70776b',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
       });
+
+      await nosskey.signEventWithKeyInfo({ kind: 1, content: 'test', tags: [] }, keyInfo);
+
+      expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
+    });
+
+    it('旧salt値 (6e6f7374722d6b6579) は標準値へ正規化して導出に使われる', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const legacyKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
+      });
+
+      await nosskey.signEventWithKeyInfo({ kind: 1, content: 'test', tags: [] }, legacyKeyInfo);
+
+      expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
+    });
+
+    it('salt 未設定の keyInfo も標準値へ正規化して導出に使われる', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const keyInfoWithoutSalt = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+      } as NostrKeyInfo;
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
+      });
+
+      await nosskey.signEventWithKeyInfo(
+        { kind: 1, content: 'test', tags: [] },
+        keyInfoWithoutSalt
+      );
+
+      expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
+    });
+
+    it('exportNostrKey は旧salt値を標準値へ正規化して getPrfSecret に渡す', async () => {
+      const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+      const legacyKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy.mockResolvedValueOnce({
+        secret: new Uint8Array(32).fill(42),
+        id: mockCredentialId,
+      });
+
+      await nosskey.exportNostrKey(legacyKeyInfo);
+
+      expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
     });
   });
 
@@ -356,7 +448,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       nosskey.setCurrentKeyInfo(mockKeyInfo);
@@ -375,7 +467,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       nosskey.setCurrentKeyInfo(mockKeyInfo);
@@ -390,7 +482,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       mockLocalStorage['nosskey_keyinfo'] = JSON.stringify(mockKeyInfo);
 
@@ -408,7 +500,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       // NostrKeyInfoを設定してストレージに保存
@@ -423,6 +515,23 @@ describe('NosskeyManager', () => {
       // 現在のNostrKeyInfoも消去されていることを確認
       expect(nosskey.getCurrentKeyInfo()).toBeNull();
     });
+
+    it('ストレージの旧salt値は読込時に標準値へ正規化され修復保存される', () => {
+      const legacyKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d6b6579',
+      };
+      mockLocalStorage['nosskey_keyinfo'] = JSON.stringify(legacyKeyInfo);
+
+      const nosskey = new NosskeyManager();
+
+      // 読み込んだ keyInfo は標準salt値へ正規化されている
+      expect(nosskey.getCurrentKeyInfo()?.salt).toBe('6e6f7374722d70776b');
+
+      // ストレージ自体も標準値へ修復保存されている
+      expect(JSON.parse(mockLocalStorage['nosskey_keyinfo']).salt).toBe('6e6f7374722d70776b');
+    });
   });
 
   describe('NIP-07互換メソッド', () => {
@@ -431,7 +540,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       nosskey.setCurrentKeyInfo(mockKeyInfo);
@@ -454,7 +563,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -522,7 +631,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -548,7 +657,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -576,7 +685,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const mockEvent: NostrEvent = {
         kind: 1,
@@ -624,7 +733,7 @@ describe('NosskeyManager', () => {
       nosskey.setCurrentKeyInfo({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       });
       expect(nosskey.hasKeyInfo()).toBe(true);
     });
@@ -645,7 +754,7 @@ describe('NosskeyManager', () => {
       mockLocalStorage['nosskey_keyinfo'] = JSON.stringify({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'stored-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       });
 
       // hasKeyInfo がストレージから読み込むパスを通る
@@ -679,7 +788,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       nosskey.setCurrentKeyInfo(keyInfo);
 
@@ -697,7 +806,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       nosskey.setCurrentKeyInfo(keyInfo);
 
@@ -708,12 +817,12 @@ describe('NosskeyManager', () => {
       const keyInfoA: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'pubkey-from-storage-a',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const keyInfoB: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'pubkey-from-storage-b',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const storageA = createMockStorage();
       (storageA.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
@@ -738,7 +847,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'cached-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const customStorage = createMockStorage();
       (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
@@ -763,7 +872,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'cached-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const customStorage = createMockStorage();
       (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
@@ -787,7 +896,7 @@ describe('NosskeyManager', () => {
       const storedKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'from-custom-storage',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       const customStorage = createMockStorage();
       (customStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
@@ -839,7 +948,7 @@ describe('NosskeyManager', () => {
     const mockKeyInfo: NostrKeyInfo = {
       credentialId: bytesToHex(mockCredentialId),
       pubkey: 'test-pubkey',
-      salt: '6e6f7374722d6b6579',
+      salt: '6e6f7374722d70776b',
     };
     const mockEvent: NostrEvent = { kind: 1, content: 'test', tags: [] };
 
@@ -891,7 +1000,7 @@ describe('NosskeyManager', () => {
       const mockKeyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
@@ -929,7 +1038,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
       nosskey.setCurrentKeyInfo(keyInfo);
       expect(mockLocalStorage['nosskey_keyinfo']).toBeDefined();
@@ -1001,7 +1110,7 @@ describe('NosskeyManager', () => {
       const keyInfo: NostrKeyInfo = {
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       };
 
       expect(() => nosskey.setCurrentKeyInfo(keyInfo)).not.toThrow();
@@ -1031,7 +1140,7 @@ describe('NosskeyManager', () => {
       nosskey.setCurrentKeyInfo({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       });
 
       const ciphertext = await nosskey.nip44Encrypt(peerPubHex, 'こんにちは 🌸');
@@ -1051,7 +1160,7 @@ describe('NosskeyManager', () => {
       nosskey.setCurrentKeyInfo({
         credentialId: bytesToHex(mockCredentialId),
         pubkey: 'test-pubkey',
-        salt: '6e6f7374722d6b6579',
+        salt: '6e6f7374722d70776b',
       });
 
       const ciphertext = await nosskey.nip04Encrypt(peerPubHex, 'hello legacy DM');

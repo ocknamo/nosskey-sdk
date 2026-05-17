@@ -23,7 +23,7 @@ export interface NostrEvent {
 export interface NostrKeyInfo {
   credentialId: string; // クレデンシャルIDをhex形式で保存
   pubkey: string; // 公開鍵（hex形式）
-  salt: string; // PRF導出用のsalt（hex形式、固定値 "6e6f7374722d6b6579"）
+  salt: string; // PRF評価入力として使うsalt（hex形式、標準値 "6e6f7374722d70776b" = "nostr-pwk"）
   username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
 }
 

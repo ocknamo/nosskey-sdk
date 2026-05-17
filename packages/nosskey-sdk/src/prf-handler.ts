@@ -6,6 +6,7 @@
 import type { GetPrfSecretOptions, PasskeyCreationOptions } from './types.js';
 
 /* 定数 */
+// 標準のPRF評価入力（salt）。"nostr-pwk" のUTF-8バイト。
 const PRF_EVAL_INPUT = new TextEncoder().encode('nostr-pwk');
 
 /**
@@ -87,11 +88,13 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
  * クレデンシャルIDを使用してPRF秘密を取得
  * @param credentialId 特定のクレデンシャルIDを指定する場合。省略すると、ユーザーが選択したパスキーが使用される
  * @param options PRF取得オプション（rpId、timeout、userVerification）
+ * @param salt PRF評価入力（salt）。省略すると標準値 "nostr-pwk" が使用される
  * @returns PRF秘密と使用されたcredentialIDを含むオブジェクト
  */
 export async function getPrfSecret(
   credentialId?: Uint8Array,
-  options?: GetPrfSecretOptions
+  options?: GetPrfSecretOptions,
+  salt?: Uint8Array
 ): Promise<{ secret: Uint8Array; id: Uint8Array }> {
   const allowCredentials = credentialId ? [{ type: 'public-key' as const, id: credentialId }] : [];
 
@@ -100,7 +103,7 @@ export async function getPrfSecret(
     allowCredentials,
     userVerification: options?.userVerification || 'required',
     extensions: {
-      prf: { eval: { first: PRF_EVAL_INPUT } },
+      prf: { eval: { first: salt ?? PRF_EVAL_INPUT } },
     } as AuthenticationExtensionsClientInputs,
   };
 

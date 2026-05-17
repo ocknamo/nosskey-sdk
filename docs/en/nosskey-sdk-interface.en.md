@@ -16,7 +16,7 @@ Nosskey SDK adopts a method that directly derives Nostr private keys using the P
 export interface NostrKeyInfo {
   credentialId: string; // Credential ID stored in hex format
   pubkey: string; // Public key (hex format)
-  salt: string; // Salt for PRF derivation (hex format, fixed value "6e6f7374722d6b6579")
+  salt: string; // Salt used as the PRF evaluation input (hex format, standard value "6e6f7374722d70776b" = "nostr-pwk")
   username?: string; // Username when creating passkey (only if available)
 }
 ```
@@ -305,7 +305,8 @@ function createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 
 function getPrfSecret(
   credentialId?: Uint8Array,
-  options?: GetPrfSecretOptions
+  options?: GetPrfSecretOptions,
+  salt?: Uint8Array // PRF evaluation input; defaults to the standard value "nostr-pwk"
 ): Promise<{ secret: Uint8Array; id: Uint8Array }>
 ```
 

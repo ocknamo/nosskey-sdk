@@ -507,6 +507,24 @@ describe('prf-handler', () => {
       expect(callArgs.publicKey.timeout).toBeUndefined();
       expect(callArgs.publicKey.userVerification).toBe('required');
     });
+
+    it('salt引数を指定するとPRF評価入力に反映される', async () => {
+      const customSalt = new Uint8Array([1, 2, 3, 4]);
+
+      await getPrfSecret(mockCredentialId, undefined, customSalt);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.extensions.prf.eval.first).toBe(customSalt);
+    });
+
+    it('salt引数未指定時は標準値 "nostr-pwk" が使用される', async () => {
+      await getPrfSecret(mockCredentialId);
+
+      const callArgs = (navigator.credentials.get as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.publicKey.extensions.prf.eval.first).toEqual(
+        new TextEncoder().encode('nostr-pwk')
+      );
+    });
   });
 
   describe('定数と内部処理', () => {
