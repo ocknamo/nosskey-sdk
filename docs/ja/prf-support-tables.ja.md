@@ -12,7 +12,7 @@
 | | Firefox | 135 以降 | ON | Firefox 135（2025-02-04）でデフォルト有効化（フラグ不要）。147 で登録時 PRF をバックポート、148+ で Windows Hello との登録・認証の両対応。Android 版 Firefox は未対応 |
 | **プラットフォーム<br>オーセンティケータ** | Google Password Manager Passkey<br>(Android 14+ / Chrome 116+) | 116 | ON | Chromium で PRF が利用可能、ハイブリッド経路も対応 |
 | | Apple Passkeys<br>(Touch ID / Face ID on macOS 15・iOS 18 以降) | 18 / 15 | ON | 自動パスキーアップグレードと同時に PRF サポート |
-| | Windows Hello<br>(Windows 11) | — | 対応（条件付き） | 2026 年初頭の Windows 累積更新で hmac-secret 対応が追加（`WEBAUTHN_API_VERSION_8`）。利用には Windows 11 の対応ビルドに加え、PRF 対応ブラウザ（Chrome 147+ / Firefox 148+ 等）が必要 |
+| | Windows Hello<br>(Windows 11) | — | 対応（条件付き） | Windows の WebAuthn プラットフォーム API（`WEBAUTHN_API_VERSION_8`）が PRF（hmac-secret）評価に対応。利用には対応版の Windows 11 と PRF 対応ブラウザ（Chrome 147+ / Firefox 148+ 等）の組み合わせが必要。対応開始の Windows ビルドは公式に明文化されておらず、実機での確認を推奨 |
 | | 外付け FIDO2 Security Key<br>(YubiKey 5, Feitian, Solo v2…) | FW 5.2+ | ON | PRF は CTAP2 hmac-secret 拡張を利用。主要キーは既に実装 |
 | **標準仕様** | WebAuthn L3 #prf-extension | — | — | 仕様定義・IDL (Web Authentication: An API for accessing Public Key Credentials - Level 3) |
 
@@ -35,7 +35,7 @@
   - もしくは Chromium 系ブラウザ ＋ CTAP2 セキュリティキー（Safari は外付けセキュリティキーでの PRF が未対応のため対象外）
 
 - Apple Passkeys はプラットフォーム側で PRF を生成できるため、利用者が鍵の存在を意識する必要がありません。
-- Windows Hello は 2026 年初頭の Windows 累積更新で PRF（hmac-secret）に対応しました。利用には OS の対応ビルドに加え、PRF 対応ブラウザ（Chrome 147+／Firefox 148+ 等）が必要です。旧環境向けには外付けキーや Google Password Manager を併用する回避策が引き続き有効です。
+- Windows Hello は、Windows の WebAuthn プラットフォーム API（`WEBAUTHN_API_VERSION_8`）が PRF（hmac-secret）評価に対応したことで、PRF 対応ブラウザ（Chrome 147+／Firefox 148+ 等）と組み合わせて PRF を利用できるようになりました。対応開始の正確な Windows ビルドは公式に明文化されておらず（コミュニティ報告では 2026 年初頭の累積更新とされる）、実機での動作確認を推奨します。要件を満たさない旧環境向けには、外付けキーや Google Password Manager を併用する回避策が引き続き有効です。
 - Firefox は 135（2025-02-04）以降、PRF 拡張をデフォルト有効でサポートしています（フラグ設定は不要）。
 
 これで、ラップ／アンラップ方式を採用する際に「どの組み合わせで PRF が動くか」が一目で確認できます。
