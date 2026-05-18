@@ -4,6 +4,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
+import { buildScreenUrl } from '../../utils/app-navigation.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -149,6 +150,14 @@ function handleClose(): void {
   postVisibility(false);
 }
 
+// Open the standalone app's account screen in a new tab so the user can
+// register or sign in with a passkey. A new tab is required: this screen
+// runs inside the (often cross-origin) signing iframe, where in-place
+// navigation would not reach the first-party setup flow.
+function openSetup(): void {
+  window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
+}
+
 type CardConfig = {
   title: string;
   description: string;
@@ -157,6 +166,10 @@ type CardConfig = {
   action?: {
     label: string;
     variant: ActionVariant;
+    onclick: () => void;
+  };
+  secondaryLink?: {
+    label: string;
     onclick: () => void;
   };
 };
@@ -175,6 +188,7 @@ function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
           variant: 'warning',
           onclick: () => void requestAccess(),
         },
+        secondaryLink: { label: t.openSetup, onclick: openSetup },
       };
     case 'denied':
       return {
@@ -187,6 +201,7 @@ function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
           variant: 'danger',
           onclick: () => void requestAccess(),
         },
+        secondaryLink: { label: t.openSetup, onclick: openSetup },
       };
     case 'granted':
       return {
@@ -201,6 +216,11 @@ function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
         description: t.noKey,
         icon: 'key_off',
         tone: 'warning',
+        action: {
+          label: t.openSetup,
+          variant: 'primary',
+          onclick: openSetup,
+        },
       };
     case 'unsupported':
       return {
@@ -208,6 +228,11 @@ function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
         description: `${t.storageAccessUnsupported} ${t.noKey}`,
         icon: 'info',
         tone: 'warning',
+        action: {
+          label: t.openSetup,
+          variant: 'primary',
+          onclick: openSetup,
+        },
       };
   }
 }
@@ -263,6 +288,18 @@ onDestroy(() => {
           >
             {card.action.label}
           </Button>
+        </div>
+      {/if}
+
+      {#if card.secondaryLink}
+        <div class="card-setup-link">
+          <button
+            type="button"
+            class="setup-link"
+            onclick={card.secondaryLink.onclick}
+          >
+            {card.secondaryLink.label}
+          </button>
         </div>
       {/if}
     </div>
@@ -376,6 +413,32 @@ onDestroy(() => {
   .card-action :global(.btn) {
     width: auto;
     min-width: 160px;
+  }
+
+  .card-setup-link {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  .setup-link {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .setup-link:hover {
+    color: var(--color-button-primary-hover);
+  }
+
+  .setup-link:focus-visible {
+    outline: none;
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   /* Mobile-first: tighter spacing on narrow viewports */
