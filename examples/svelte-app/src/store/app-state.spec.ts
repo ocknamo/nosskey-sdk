@@ -114,3 +114,55 @@ describe('settings persistence after a storage grant', () => {
     });
   });
 });
+
+describe('cross-context sync via storage events', () => {
+  it('reloads settings when another context changes a watched key', () => {
+    const firstParty = grantFirstPartyStorage();
+    firstParty.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+    firstParty.setItem(
+      'nosskey_trusted_origins_v2',
+      JSON.stringify([{ origin: 'https://parent.example', methods: ['signEvent'] }])
+    );
+
+    // 別タブ / iframe からの書き込み相当。実際のブラウザでは書き込んだ当人には
+    // storage イベントは発火しないが、テストでは経路検証のため明示的に dispatch する。
+    window.dispatchEvent(new StorageEvent('storage', { key: 'nosskey_consent_policy' }));
+
+    expect(get(consentPolicy)).toEqual({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    expect(get(trustedOrigins)).toEqual([
+      { origin: 'https://parent.example', methods: ['signEvent'] },
+    ]);
+  });
+
+  it('reloads settings when storage is cleared (event.key === null)', () => {
+    const firstParty = grantFirstPartyStorage({
+      nosskey_consent_policy: JSON.stringify({ signEvent: 'always', nip44: 'ask', nip04: 'ask' }),
+    });
+    reloadSettings();
+    expect(get(consentPolicy).signEvent).toBe('always');
+
+    firstParty.clear();
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+
+    expect(get(consentPolicy)).toEqual({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+  });
+
+  it('ignores storage events for keys it does not own', () => {
+    const firstParty = grantFirstPartyStorage();
+    reloadSettings();
+    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    // ストレージ側だけ deny に差し替える（in-memory は always のまま）。
+    firstParty.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated_key' }));
+
+    // 監視外キーなので reloadSettings は呼ばれず、in-memory は always のまま。
+    expect(get(consentPolicy).signEvent).toBe('always');
+  });
+});

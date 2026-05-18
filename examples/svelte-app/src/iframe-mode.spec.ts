@@ -1,7 +1,13 @@
 import type { ConsentRequest } from 'nosskey-iframe';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { approveConsent, onConsent, pendingConsent, rejectConsent } from './iframe-mode.js';
+import {
+  approveConsent,
+  onConsent,
+  onConsentWithFreshSettings,
+  pendingConsent,
+  rejectConsent,
+} from './iframe-mode.js';
 import { consentPolicy, denyCounts, resetDenyCounts, trustedOrigins } from './store/app-state.js';
 
 const origin = 'https://parent.example';
@@ -119,5 +125,39 @@ describe('onConsent', () => {
     const result = await onConsent(signRequest);
     expect(result).toBe(false);
     expect(get(denyCounts).signEvent).toBe(1);
+  });
+});
+
+describe('onConsentWithFreshSettings', () => {
+  it('re-reads persisted settings so a settings-page deny overrides a stale always store', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // iframe の in-memory ストアは古い「always 許可」のまま。
+    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    // 設定画面タブが localStorage を deny に書き換えたことを模す。永続化 subscriber に
+    // 上書きされないよう、ストア set より後にストレージへ直接書き込む。
+    localStorage.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+
+    const result = await onConsentWithFreshSettings(signRequest);
+
+    expect(result).toBe(false);
+    expect(get(denyCounts).signEvent).toBe(1);
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it('re-reads persisted settings so a revoked trusted origin falls back to the dialog', async () => {
+    // 古い「常に許可」が in-memory に残っている状態。
+    trustedOrigins.set([{ origin, methods: ['signEvent'] }]);
+    consentPolicy.set({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+    // 設定画面タブが信頼リストを空にした（信頼解除）ことを模す。
+    localStorage.setItem('nosskey_trusted_origins_v2', JSON.stringify([]));
+
+    const promise = onConsentWithFreshSettings(signRequest);
+    // 信頼解除が読み直されたので自動承認されず、同意ダイアログ待ちになる。
+    expect(get(pendingConsent)).not.toBeNull();
+    rejectConsent();
+    expect(await promise).toBe(false);
   });
 });

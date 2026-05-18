@@ -61,6 +61,11 @@ export const currentTheme = writable<ThemeMode>('dark');
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
 let embeddedThemeOverride = false;
 
+// `reloadSettings()` 実行中は true。ストレージ→メモリの一方向ロード中に
+// 永続化 subscriber が同じ値を書き戻す（冗長な setItem と余計な storage
+// イベント発火）のを抑止する。
+let applyingExternalUpdate = false;
+
 /**
  * 設定の永続化先 Storage を解決する。SDK マネージャが Storage Access API
  * グラント後のハンドルを保持していれば、それを使う。これはリレー設定が読む
@@ -232,10 +237,12 @@ try {
 
   // 設定が変更されたら保存
   cacheSecrets.subscribe((value) => {
+    if (applyingExternalUpdate) return;
     resolveSettingsStorage()?.setItem('nosskey_cache_secrets', String(value));
   });
 
   cacheTimeout.subscribe((value) => {
+    if (applyingExternalUpdate) return;
     resolveSettingsStorage()?.setItem('nosskey_cache_timeout', String(value));
   });
 
@@ -250,12 +257,32 @@ try {
   consentPolicy.set(loadConsentPolicy());
 
   trustedOrigins.subscribe((value) => {
+    if (applyingExternalUpdate) return;
     resolveSettingsStorage()?.setItem(TRUSTED_ORIGINS_KEY, JSON.stringify(value));
   });
 
   consentPolicy.subscribe((value) => {
+    if (applyingExternalUpdate) return;
     resolveSettingsStorage()?.setItem(CONSENT_POLICY_KEY, JSON.stringify(value));
   });
+
+  // 別ドキュメント（設定画面タブ / 署名 iframe）が同じ first-party ストレージへ
+  // 設定を書き込んだら storage イベントで通知される。リロード無しで即時同期するため
+  // 監視キーの変更時に reloadSettings() で読み直す。storage イベントは変更を行った
+  // 当人のドキュメントには発火しないため自己トリガはしない。
+  if (typeof window !== 'undefined') {
+    const WATCHED_SETTINGS_KEYS = new Set<string>([
+      TRUSTED_ORIGINS_KEY,
+      CONSENT_POLICY_KEY,
+      'nosskey_cache_secrets',
+      'nosskey_cache_timeout',
+    ]);
+    window.addEventListener('storage', (event) => {
+      // key が null なのは clear() 由来。監視キー以外は無視する。
+      if (event.key !== null && !WATCHED_SETTINGS_KEYS.has(event.key)) return;
+      reloadSettings();
+    });
+  }
 } catch (e) {
   console.error('設定の初期化に失敗しました:', e);
 }
@@ -270,10 +297,18 @@ try {
  * 向かう。テーマは埋め込み時に親オリジンが指定する既存仕様のため対象外。
  */
 export function reloadSettings(): void {
-  cacheSecrets.set(loadCacheSecretsSetting());
-  cacheTimeout.set(loadCacheTimeoutSetting());
-  trustedOrigins.set(loadTrustedOrigins());
-  consentPolicy.set(loadConsentPolicy());
+  // ロードした値を永続化 subscriber が即座に書き戻さないよう抑止する。
+  // Svelte writable の subscriber は set() 内で同期実行されるため、
+  // try/finally のスコープで全 set() の通知を覆える。
+  applyingExternalUpdate = true;
+  try {
+    cacheSecrets.set(loadCacheSecretsSetting());
+    cacheTimeout.set(loadCacheTimeoutSetting());
+    trustedOrigins.set(loadTrustedOrigins());
+    consentPolicy.set(loadConsentPolicy());
+  } finally {
+    applyingExternalUpdate = false;
+  }
 }
 
 // リセット関数

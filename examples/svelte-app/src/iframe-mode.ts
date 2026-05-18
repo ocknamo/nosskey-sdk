@@ -3,7 +3,12 @@ import { NosskeyIframeHost } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';
-import { consentPolicy, incrementDenyCount, trustedOrigins } from './store/app-state.js';
+import {
+  consentPolicy,
+  incrementDenyCount,
+  reloadSettings,
+  trustedOrigins,
+} from './store/app-state.js';
 import { evaluateConsent, policyKeyFor } from './utils/consent-gating.js';
 
 export interface ApproveOptions {
@@ -73,6 +78,17 @@ export function onConsent(request: ConsentRequest): Promise<boolean> {
   });
 }
 
+/**
+ * `NosskeyIframeHost` に渡す `onConsent` 実装。判定の直前に永続化設定を読み直す。
+ * 設定画面タブで「拒否 / 信頼解除」されても storage イベントが cross-site iframe に
+ * 届くとは限らないため、署名リクエストごとにストレージから直接読み直して
+ * `onConsent`（純粋判定）に渡し、設定変更を確実に反映する。
+ */
+export function onConsentWithFreshSettings(request: ConsentRequest): Promise<boolean> {
+  reloadSettings();
+  return onConsent(request);
+}
+
 export function approveConsent(options?: ApproveOptions): void {
   pendingConsent.update((current) => {
     current?.resolve(true, options);
@@ -102,7 +118,7 @@ export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {
     // ここで原点フィルタを行うものではない。プロダクション統合時は親オリジンを限定すること。
     allowedOrigins: '*',
     requireUserConsent: true,
-    onConsent,
+    onConsent: onConsentWithFreshSettings,
     // Read through the SDK's storage handle so we hit first-party storage
     // when the user has granted access (Chromium keeps window.localStorage
     // partitioned even after the grant — only the handle points at it).
