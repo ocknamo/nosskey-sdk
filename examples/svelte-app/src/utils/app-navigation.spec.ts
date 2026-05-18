@@ -17,6 +17,12 @@ describe('buildScreenUrl', () => {
     ).toBe('http://localhost:5173/index.html#/iframe');
   });
 
+  it('appends the hash directly to a pathname without a trailing slash', () => {
+    expect(buildScreenUrl({ origin: 'https://nosskey.app', pathname: '/app' }, 'account')).toBe(
+      'https://nosskey.app/app#/account'
+    );
+  });
+
   it('does not carry over an existing query string', () => {
     // Location.search is intentionally ignored — only origin + pathname are used.
     const loc = { origin: 'https://example.com', pathname: '/' };

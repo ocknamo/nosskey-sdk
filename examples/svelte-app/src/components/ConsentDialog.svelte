@@ -68,8 +68,10 @@ function handleReject() {
 }
 
 // Open the standalone app's settings screen in a new tab so the user can
-// review trusted sites and the consent policy. A new tab is required:
-// this dialog runs inside the (often cross-origin) signing iframe.
+// review trusted sites and the consent policy. A new tab (rather than
+// in-place navigation) is used because the consent prompt is shown while
+// the app is acting as the signing iframe — navigating away would tear
+// down the iframe host.
 function openConsentSettings(): void {
   window.open(buildScreenUrl(window.location, 'settings'), '_blank', 'noopener');
 }
