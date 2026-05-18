@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { get } from 'svelte/store';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
 import { consentPolicy, reloadSettings, trustedOrigins } from './app-state.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
@@ -164,5 +164,25 @@ describe('cross-context sync via storage events', () => {
 
     // 監視外キーなので reloadSettings は呼ばれず、in-memory は always のまま。
     expect(get(consentPolicy).signEvent).toBe('always');
+  });
+
+  it('does not write loaded values back to storage during reloadSettings', () => {
+    const firstParty = grantFirstPartyStorage({
+      nosskey_consent_policy: JSON.stringify({ signEvent: 'always', nip44: 'ask', nip04: 'ask' }),
+    });
+    const setItemSpy = vi.spyOn(firstParty, 'setItem');
+
+    reloadSettings();
+
+    // applyingExternalUpdate ガードにより、読み込んだ値を永続化 subscriber が
+    // 書き戻さない（冗長な setItem と余計な storage イベントを防ぐ）。
+    expect(setItemSpy).not.toHaveBeenCalled();
+
+    // ガードは reloadSettings の外では解除され、通常の変更は永続化される。
+    consentPolicy.set({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    expect(setItemSpy).toHaveBeenCalledWith(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
   });
 });

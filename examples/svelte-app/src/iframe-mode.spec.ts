@@ -8,6 +8,7 @@ import {
   pendingConsent,
   rejectConsent,
 } from './iframe-mode.js';
+import { getNosskeyManager, resetNosskeyManager } from './services/nosskey-manager.service.js';
 import { consentPolicy, denyCounts, resetDenyCounts, trustedOrigins } from './store/app-state.js';
 
 const origin = 'https://parent.example';
@@ -33,6 +34,10 @@ const nip04Request: ConsentRequest = {
 };
 
 beforeEach(() => {
+  // 各テストを独立させる: SDK マネージャのハンドル / ストレージ残留を持ち越さない。
+  resetNosskeyManager();
+  localStorage.clear();
+  sessionStorage.clear();
   trustedOrigins.set([]);
   consentPolicy.set({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
   resetDenyCounts();
@@ -159,5 +164,25 @@ describe('onConsentWithFreshSettings', () => {
     expect(get(pendingConsent)).not.toBeNull();
     rejectConsent();
     expect(await promise).toBe(false);
+  });
+
+  it('reads through the granted SDK storage handle (SAA first-party path)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // in-memory ストアは古い「always 許可」のまま（localStorage に書かれる）。
+    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    // SAA グラント後の first-party ストレージハンドルを sessionStorage で代用し、
+    // 設定画面が deny を書き込んだ状態を模す。reloadSettings は
+    // resolveSettingsStorage() 経由でこのハンドルを優先して読む。
+    sessionStorage.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+    getNosskeyManager().setStorageOptions({ storage: sessionStorage });
+
+    const result = await onConsentWithFreshSettings(signRequest);
+
+    expect(result).toBe(false);
+    expect(get(denyCounts).signEvent).toBe(1);
+    expect(warn).toHaveBeenCalledOnce();
   });
 });
