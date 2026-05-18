@@ -175,7 +175,13 @@ export class NosskeyManager implements NosskeyManagerLike {
     if (!storage) return;
 
     const key = this.#storageOptions.storageKey || 'nosskey_keyinfo';
-    storage.setItem(key, JSON.stringify(keyInfo));
+    try {
+      storage.setItem(key, JSON.stringify(keyInfo));
+    } catch (e) {
+      // 書き込み失敗（容量超過など）は致命的ではないため、ログのみで握り潰す。
+      // async メソッドのため、握り潰さないと void 呼び出し側で unhandled rejection になる。
+      console.error('Failed to persist NostrKeyInfo', e);
+    }
   }
 
   /**

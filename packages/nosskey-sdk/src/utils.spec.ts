@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytesToHex, hexToBytes } from './utils.js';
+import { base64ToBytes, bytesToBase64, bytesToHex, hexToBytes } from './utils.js';
 
 describe('バイト変換ユーティリティ', () => {
   describe('bytesToHex', () => {
@@ -65,6 +65,47 @@ describe('バイト変換ユーティリティ', () => {
       for (let i = 0; i < result.length; i++) {
         expect(result[i]).toBe(expected[i]);
       }
+    });
+  });
+
+  describe('bytesToBase64', () => {
+    it('Uint8Array を base64 文字列に変換できること', () => {
+      // 'hello' をASCIIコードで表すと [104, 101, 108, 108, 111]
+      const input = new Uint8Array([104, 101, 108, 108, 111]);
+      expect(bytesToBase64(input)).toBe('aGVsbG8=');
+    });
+
+    it('空のバイト配列を空の文字列に変換できること', () => {
+      expect(bytesToBase64(new Uint8Array([]))).toBe('');
+    });
+
+    it('非ASCIIのバイト値も変換できること', () => {
+      const input = new Uint8Array([0, 15, 16, 128, 255]);
+      expect(bytesToBase64(input)).toBe('AA8QgP8=');
+    });
+  });
+
+  describe('base64ToBytes', () => {
+    it('base64 文字列を Uint8Array に変換できること', () => {
+      const result = base64ToBytes('aGVsbG8=');
+      expect(result instanceof Uint8Array).toBe(true);
+      expect(Array.from(result)).toEqual([104, 101, 108, 108, 111]);
+    });
+
+    it('空の文字列を空のバイト配列に変換できること', () => {
+      expect(base64ToBytes('').length).toBe(0);
+    });
+  });
+
+  describe('bytesToBase64 / base64ToBytes ラウンドトリップ', () => {
+    it('ASCII データを往復変換しても一致すること', () => {
+      const input = new Uint8Array([104, 101, 108, 108, 111]);
+      expect(Array.from(base64ToBytes(bytesToBase64(input)))).toEqual(Array.from(input));
+    });
+
+    it('バイナリ（非ASCII）データを往復変換しても一致すること', () => {
+      const input = new Uint8Array([0, 15, 16, 128, 200, 255]);
+      expect(Array.from(base64ToBytes(bytesToBase64(input)))).toEqual(Array.from(input));
     });
   });
 });
