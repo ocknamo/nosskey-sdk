@@ -50,7 +50,7 @@
 - [x] ダイアログ表示内容の整理 — `kindLabel()` で kind ラベル化、content は 100 文字プレビュー、`<details>` で raw event JSON を折りたたみ表示、nip44/nip04 では `renderPeerPubkey()` で相手 pubkey を短縮表示（`examples/svelte-app/src/components/ConsentDialog.svelte`）
 - [x] スタイル整理 — `--color-card` / `--color-text` 等の CSS variables 化と `@media (max-width: 480px)` レスポンシブ対応（`ConsentDialog.svelte`）
 - [x] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由。`NosskeyIframeClient` に `theme` / `lang` オプションを追加し `buildIframeUrl()` で URL に自動付与、Svelte アプリ側の受信 (`app-state.ts` / `i18n-store.ts`) も対応済み。PR #52
-- [ ] 設定ページへのリンク遷移 — NO_KEY エラー時のセットアップ誘導
+- [x] 設定ページへのリンク遷移 — NO_KEY エラー時のセットアップ誘導 — `IframeHostScreen` の鍵が使えない4状態(`noKeyExists`/`unsupported` は主ボタン、`partitioned`/`denied` は副リンク)に、別タブで account 画面(`#/account`、パスキー登録・ログイン)を開く「セットアップを開く」導線を追加。あわせて `ConsentDialog` の許可ダイアログにも settings 画面(`#/settings`、信頼済みサイト・同意ポリシー)を開く「同意設定を開く」小リンクを追加。URL 組み立ては純粋関数 `buildScreenUrl`(`utils/app-navigation.ts`)に切り出し単体テスト追加。doc 6-D の protocol メッセージ(`nosskey:setup_required`)追加は「任意」のため見送り
 
 #### Phase 7: フレームワーク導入しやすさの改善（低優先）
 - [ ] `nosskey-elements` パッケージ追加 — `<nosskey-button>` Web Components として提供

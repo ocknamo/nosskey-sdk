@@ -240,6 +240,7 @@ export interface TranslationData {
       unknown: string;
     };
     approveAndTrust: string;
+    openSettings: string;
   };
   iframeHost: {
     running: string;
@@ -255,6 +256,7 @@ export interface TranslationData {
     grantedTitle: string;
     noKeyTitle: string;
     unsupportedTitle: string;
+    openSetup: string;
   };
 }
 
@@ -513,10 +515,12 @@ export const ja: TranslationData = {
       unknown: 'その他のイベント',
     },
     approveAndTrust: '常に許可して承認',
+    openSettings: '同意設定を開く',
   },
   iframeHost: {
     running: 'Nosskey iframe が起動中です。親アプリからの署名リクエストを待機します。',
-    noKey: '鍵が設定されていません。別タブで設定画面を開き、パスキーでログインしてください。',
+    noKey:
+      '鍵が設定されていません。下のボタンからセットアップ画面を開き、パスキーで登録またはログインしてください。',
     partitionedWarning:
       'このサイトは別ドメインから埋め込まれています。鍵にアクセスするには、下のボタンを押してストレージアクセスを許可してください。',
     grantStorageAccess: 'ストレージアクセスを許可',
@@ -530,6 +534,7 @@ export const ja: TranslationData = {
     grantedTitle: '許可されました',
     noKeyTitle: '鍵が見つかりません',
     unsupportedTitle: 'このブラウザは未対応です',
+    openSetup: 'セットアップを開く',
   },
 };
 
@@ -788,10 +793,12 @@ export const en: TranslationData = {
       unknown: 'Other event',
     },
     approveAndTrust: 'Approve and always allow',
+    openSettings: 'Open consent settings',
   },
   iframeHost: {
     running: 'Nosskey iframe is running and waiting for signing requests from the parent app.',
-    noKey: 'No key configured. Open the settings page in another tab and sign in with a passkey.',
+    noKey:
+      'No key configured. Use the button below to open the setup page, then register or sign in with a passkey.',
     partitionedWarning:
       'This page is embedded from a different domain. Grant storage access with the button below to reach your key.',
     grantStorageAccess: 'Grant storage access',
@@ -805,6 +812,7 @@ export const en: TranslationData = {
     grantedTitle: 'Access granted',
     noKeyTitle: 'No key found',
     unsupportedTitle: 'Browser not supported',
+    openSetup: 'Open setup',
   },
 };
 

@@ -2,6 +2,7 @@
 import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
+import { buildScreenUrl } from '../utils/app-navigation.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
 import { kindLabel } from '../utils/event-kind-labels.js';
 import Button from './ui/button/Button.svelte';
@@ -64,6 +65,13 @@ function handleApproveAlways() {
 
 function handleReject() {
   rejectConsent();
+}
+
+// Open the standalone app's settings screen in a new tab so the user can
+// review trusted sites and the consent policy. A new tab is required:
+// this dialog runs inside the (often cross-origin) signing iframe.
+function openConsentSettings(): void {
+  window.open(buildScreenUrl(window.location, 'settings'), '_blank', 'noopener');
 }
 </script>
 
@@ -140,6 +148,12 @@ function handleReject() {
         <Button variant="secondary" size="small" onclick={handleApproveOnce}>
           {$i18n.t.consent.approveOnce}
         </Button>
+      </div>
+
+      <div class="consent-settings-link">
+        <button type="button" class="settings-link" onclick={openConsentSettings}>
+          {$i18n.t.consent.openSettings}
+        </button>
       </div>
     </div>
   </div>
@@ -265,6 +279,32 @@ function handleReject() {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .consent-settings-link {
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .settings-link {
+    background: none;
+    border: none;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+  }
+
+  .settings-link:hover {
+    color: var(--color-text-secondary);
+  }
+
+  .settings-link:focus-visible {
+    outline: none;
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   /* Embedded mode: parent modal already provides the backdrop and card frame,
