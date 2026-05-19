@@ -36,6 +36,9 @@ export function formatError(err: unknown): string {
 
 export type DecryptResult = { ok: true; plaintext: string } | { ok: false; message: string };
 
+/** Generic outcome for multi-step actions whose callers want to surface a single success/failure summary. */
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
 export interface EncryptInputs {
   nostr: NostrProvider;
   peer: string;
@@ -112,7 +115,7 @@ export interface SignAndPublishInputs {
   publish: (event: NostrEvent) => Promise<void>;
 }
 
-export async function signAndPublishNote(inputs: SignAndPublishInputs): Promise<void> {
+export async function signAndPublishNote(inputs: SignAndPublishInputs): Promise<ActionResult> {
   const { nostr, content, log, publish } = inputs;
   const draft: NostrEvent = {
     kind: 1,
@@ -126,16 +129,20 @@ export async function signAndPublishNote(inputs: SignAndPublishInputs): Promise<
   try {
     signed = await nostr.signEvent(draft);
   } catch (err) {
-    log(`signEvent failed: ${formatError(err)}`);
-    return;
+    const error = formatError(err);
+    log(`signEvent failed: ${error}`);
+    return { ok: false, error };
   }
   log(`Signed event: ${JSON.stringify(signed, null, 2)}`);
 
   try {
     await publish(signed);
   } catch (err) {
-    log(`Publish failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`Publish failed: ${error}`);
+    return { ok: false, error };
   }
+  return { ok: true };
 }
 
 export interface Nip04SendDmInputs {
@@ -148,12 +155,14 @@ export interface Nip04SendDmInputs {
   onCiphertext?: (ciphertext: string) => void;
 }
 
-export async function nip04SendDm(inputs: Nip04SendDmInputs): Promise<void> {
+export async function nip04SendDm(inputs: Nip04SendDmInputs): Promise<ActionResult> {
   const { nostr, peer, plaintext, log, publish, onCiphertext } = inputs;
 
   log(`NIP-04 DM: encrypting to ${peer.slice(0, 8)}…`);
   const ciphertext = await nip04Encrypt({ nostr, peer, plaintext, log });
-  if (ciphertext === null) return;
+  if (ciphertext === null) {
+    return { ok: false, error: 'NIP-04 encrypt failed' };
+  }
   onCiphertext?.(ciphertext);
 
   const draft: NostrEvent = {
@@ -167,14 +176,18 @@ export async function nip04SendDm(inputs: Nip04SendDmInputs): Promise<void> {
   try {
     signed = await nostr.signEvent(draft);
   } catch (err) {
-    log(`NIP-04 DM signEvent failed: ${formatError(err)}`);
-    return;
+    const error = formatError(err);
+    log(`NIP-04 DM signEvent failed: ${error}`);
+    return { ok: false, error };
   }
   log(`NIP-04 DM: signed event id ${signed.id ?? '(missing id)'}.`);
 
   try {
     await publish(signed);
   } catch (err) {
-    log(`NIP-04 DM publish failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`NIP-04 DM publish failed: ${error}`);
+    return { ok: false, error };
   }
+  return { ok: true };
 }

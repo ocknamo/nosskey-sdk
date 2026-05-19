@@ -12,6 +12,7 @@ import {
   signAndPublishNote,
 } from './nips.js';
 import { publishEvent } from './relay.js';
+import { createToaster } from './toast.js';
 import {
   type LangChoice,
   type ThemeChoice,
@@ -37,9 +38,11 @@ declare global {
 const app = requireEl<HTMLDivElement>(document, '#app');
 const modal = requireEl<HTMLDivElement>(document, '#iframe-modal');
 const modalCard = requireEl<HTMLDivElement>(modal, '.iframe-modal__card');
+const toastContainer = requireEl<HTMLDivElement>(document, '#toast-container');
 
 const ui = queryUiElements(app);
 const log = createLogger(ui.log);
+const toaster = createToaster(toastContainer);
 
 installModalVisibilityListener(modal);
 
@@ -53,6 +56,7 @@ async function connect(): Promise<void> {
   const iframeUrl = ui.iframeUrl.value.trim();
   if (!iframeUrl) {
     log('Connect aborted: iframe URL is empty.');
+    toaster.show('Connect aborted: iframe URL is empty.', 'error');
     return;
   }
   setStatus(ui.status, 'connecting…');
@@ -60,6 +64,7 @@ async function connect(): Promise<void> {
   const langChoice = ui.parentLang.value as LangChoice;
   log(`Mounting iframe ${iframeUrl} with theme=${themeChoice}, lang=${langChoice}`);
   applyParentTheme(resolveTheme(themeChoice));
+  const progress = toaster.show('Connecting to iframe…', 'progress');
   let next: NosskeyIframeClient | null = null;
   try {
     next = new NosskeyIframeClient({ iframeUrl, theme: themeChoice, lang: langChoice });
@@ -71,6 +76,7 @@ async function connect(): Promise<void> {
     // the newer connect() owns the `client` slot now.
     if (client !== next) {
       next.destroy();
+      progress.dismiss();
       return;
     }
     window.nostr = {
@@ -89,8 +95,10 @@ async function connect(): Promise<void> {
     setConnectedUI(ui, true);
     setStatus(ui.status, 'connected', 'ok');
     log('Received nosskey:ready. window.nostr is now available.');
+    progress.settle('Connected. window.nostr is available.', 'success');
   } catch (err) {
-    log(`Connect failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`Connect failed: ${error}`);
     next?.destroy();
     // Only reset shared UI state if this connect() still owns the client slot.
     if (next === null || client === next) {
@@ -101,6 +109,7 @@ async function connect(): Promise<void> {
       clearParentTheme();
       setStatus(ui.status, 'connect failed', 'err');
     }
+    progress.settle(`Connect failed: ${error}`, 'error');
   }
 }
 
@@ -114,16 +123,20 @@ function disconnect(): void {
   clearParentTheme();
   setStatus(ui.status, 'disconnected');
   log('Iframe destroyed; window.nostr removed.');
+  toaster.show('Disconnected.', 'info');
 }
 
 async function getPubkey(): Promise<void> {
   if (!window.nostr) return;
   log('Requesting window.nostr.getPublicKey()…');
+  const progress = toaster.show('Fetching public key…', 'progress');
   try {
     const pubkey = await window.nostr.getPublicKey();
     log(`pubkey: ${pubkey}`);
+    progress.settle(`Public key: ${pubkey.slice(0, 8)}…${pubkey.slice(-4)}`, 'success');
   } catch (err) {
-    log(`getPublicKey failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`getPublicKey failed: ${error}`);
     if (err instanceof NosskeyIframeError && err.code === 'NO_KEY') {
       log(
         'Hint: browser storage may be partitioned for this cross-origin iframe. ' +
@@ -132,22 +145,26 @@ async function getPubkey(): Promise<void> {
           'tab, create a passkey, and try again.'
       );
     }
+    progress.settle(`getPublicKey failed: ${error}`, 'error');
   }
 }
 
 async function getRelays(): Promise<void> {
   if (!window.nostr) return;
   log('Requesting window.nostr.getRelays()…');
+  const progress = toaster.show('Fetching relays…', 'progress');
   try {
     const relays = await window.nostr.getRelays();
     const count = Object.keys(relays).length;
     const formatted = count === 0 ? '{}' : JSON.stringify(relays, null, 2);
     ui.relaysOutput.textContent = formatted;
     log(`getRelays: ${count} relay(s) returned`);
+    progress.settle(`getRelays: ${count} relay(s) returned`, 'success');
   } catch (err) {
     const message = formatError(err);
     log(`getRelays failed: ${message}`);
     ui.relaysOutput.textContent = `Error: ${message}`;
+    progress.settle(`getRelays failed: ${message}`, 'error');
   }
 }
 
@@ -156,15 +173,22 @@ async function signAndPublish(): Promise<void> {
   const relay = parseRelayUrl(ui.relayUrl.value);
   if (!relay.ok) {
     log(`Sign aborted: ${relay.reason}.`);
+    toaster.show(`Sign aborted: ${relay.reason}`, 'error');
     return;
   }
-  await signAndPublishNote({
+  const progress = toaster.show('Signing & publishing…', 'progress');
+  const result = await signAndPublishNote({
     nostr: window.nostr,
     content: ui.note.value,
     relayUrl: relay.value,
     log,
     publish: (event) => publish(relay.value, event),
   });
+  if (result.ok) {
+    progress.settle(`Note published to ${relay.value}.`, 'success');
+  } else {
+    progress.settle(`Sign & publish failed: ${result.error}`, 'error');
+  }
 }
 
 async function fillSelfPubkey(target: HTMLInputElement, label: string): Promise<void> {
@@ -173,8 +197,11 @@ async function fillSelfPubkey(target: HTMLInputElement, label: string): Promise<
   try {
     target.value = await window.nostr.getPublicKey();
     log(`${label}: peer pubkey set to own pubkey.`);
+    toaster.show(`${label}: peer set to your pubkey.`, 'info');
   } catch (err) {
-    log(`${label}: getPublicKey failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`${label}: getPublicKey failed: ${error}`);
+    toaster.show(`${label}: getPublicKey failed: ${error}`, 'error');
   }
 }
 
@@ -183,8 +210,10 @@ async function runNip44Encrypt(): Promise<void> {
   const peer = parsePeerPubkey(ui.nip44Peer.value);
   if (!peer.ok) {
     log(`NIP-44 encrypt aborted: ${peer.reason}.`);
+    toaster.show(`NIP-44 encrypt aborted: ${peer.reason}`, 'error');
     return;
   }
+  const progress = toaster.show('NIP-44 encrypting…', 'progress');
   const ciphertext = await nip44Encrypt({
     nostr: window.nostr,
     peer: peer.value,
@@ -193,6 +222,9 @@ async function runNip44Encrypt(): Promise<void> {
   });
   if (ciphertext !== null) {
     ui.nip44Ciphertext.value = ciphertext;
+    progress.settle('NIP-44 encrypt OK.', 'success');
+  } else {
+    progress.settle('NIP-44 encrypt failed.', 'error');
   }
 }
 
@@ -202,8 +234,10 @@ async function runNip44Decrypt(): Promise<void> {
   const ciphertext = ui.nip44Ciphertext.value.trim();
   if (!peer.ok || !ciphertext) {
     log('NIP-44 decrypt aborted: peer pubkey or ciphertext is empty.');
+    toaster.show('NIP-44 decrypt aborted: peer pubkey or ciphertext is empty.', 'error');
     return;
   }
+  const progress = toaster.show('NIP-44 decrypting…', 'progress');
   const result = await nip44Decrypt({
     nostr: window.nostr,
     peer: peer.value,
@@ -211,6 +245,11 @@ async function runNip44Decrypt(): Promise<void> {
     log,
   });
   ui.nip44Decrypted.textContent = result.ok ? result.plaintext : `Error: ${result.message}`;
+  if (result.ok) {
+    progress.settle('NIP-44 decrypt OK.', 'success');
+  } else {
+    progress.settle(`NIP-44 decrypt failed: ${result.message}`, 'error');
+  }
 }
 
 async function runNip04Encrypt(): Promise<void> {
@@ -218,8 +257,10 @@ async function runNip04Encrypt(): Promise<void> {
   const peer = parsePeerPubkey(ui.nip04Peer.value);
   if (!peer.ok) {
     log(`NIP-04 encrypt aborted: ${peer.reason}.`);
+    toaster.show(`NIP-04 encrypt aborted: ${peer.reason}`, 'error');
     return;
   }
+  const progress = toaster.show('NIP-04 encrypting…', 'progress');
   const ciphertext = await nip04Encrypt({
     nostr: window.nostr,
     peer: peer.value,
@@ -228,6 +269,9 @@ async function runNip04Encrypt(): Promise<void> {
   });
   if (ciphertext !== null) {
     ui.nip04Ciphertext.value = ciphertext;
+    progress.settle('NIP-04 encrypt OK.', 'success');
+  } else {
+    progress.settle('NIP-04 encrypt failed.', 'error');
   }
 }
 
@@ -237,8 +281,10 @@ async function runNip04Decrypt(): Promise<void> {
   const ciphertext = ui.nip04Ciphertext.value.trim();
   if (!peer.ok || !ciphertext) {
     log('NIP-04 decrypt aborted: peer pubkey or ciphertext is empty.');
+    toaster.show('NIP-04 decrypt aborted: peer pubkey or ciphertext is empty.', 'error');
     return;
   }
+  const progress = toaster.show('NIP-04 decrypting…', 'progress');
   const result = await nip04Decrypt({
     nostr: window.nostr,
     peer: peer.value,
@@ -246,6 +292,11 @@ async function runNip04Decrypt(): Promise<void> {
     log,
   });
   ui.nip04Decrypted.textContent = result.ok ? result.plaintext : `Error: ${result.message}`;
+  if (result.ok) {
+    progress.settle('NIP-04 decrypt OK.', 'success');
+  } else {
+    progress.settle(`NIP-04 decrypt failed: ${result.message}`, 'error');
+  }
 }
 
 async function runNip04SendDm(): Promise<void> {
@@ -253,14 +304,17 @@ async function runNip04SendDm(): Promise<void> {
   const peer = parsePeerPubkey(ui.nip04Peer.value);
   if (!peer.ok) {
     log(`NIP-04 DM aborted: ${peer.reason}.`);
+    toaster.show(`NIP-04 DM aborted: ${peer.reason}`, 'error');
     return;
   }
   const relay = parseRelayUrl(ui.relayUrl.value);
   if (!relay.ok) {
     log('NIP-04 DM aborted: relay URL (section 4) is empty.');
+    toaster.show('NIP-04 DM aborted: relay URL (section 4) is empty.', 'error');
     return;
   }
-  await nip04SendDm({
+  const progress = toaster.show('NIP-04 DM: encrypting, signing & publishing…', 'progress');
+  const result = await nip04SendDm({
     nostr: window.nostr,
     peer: peer.value,
     plaintext: ui.nip04Plaintext.value,
@@ -270,6 +324,11 @@ async function runNip04SendDm(): Promise<void> {
       ui.nip04Ciphertext.value = ciphertext;
     },
   });
+  if (result.ok) {
+    progress.settle(`NIP-04 DM published to ${relay.value}.`, 'success');
+  } else {
+    progress.settle(`NIP-04 DM failed: ${result.error}`, 'error');
+  }
 }
 
 async function runNip17SendDm(): Promise<void> {
@@ -278,20 +337,25 @@ async function runNip17SendDm(): Promise<void> {
   const peer = parsePeerPubkey(ui.nip17Peer.value);
   if (!peer.ok) {
     log(`NIP-17 DM aborted: ${peer.reason}.`);
+    toaster.show(`NIP-17 DM aborted: ${peer.reason}`, 'error');
     return;
   }
   const relay = parseRelayUrl(ui.relayUrl.value);
   if (!relay.ok) {
     log('NIP-17 DM aborted: relay URL (section 4) is empty.');
+    toaster.show('NIP-17 DM aborted: relay URL (section 4) is empty.', 'error');
     return;
   }
 
+  const progress = toaster.show('NIP-17 DM: sealing & publishing…', 'progress');
   log('NIP-17 DM: resolving sender pubkey…');
   let senderPubkey: string;
   try {
     senderPubkey = await nostr.getPublicKey();
   } catch (err) {
-    log(`NIP-17 DM getPublicKey failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`NIP-17 DM getPublicKey failed: ${error}`);
+    progress.settle(`NIP-17 DM failed: ${error}`, 'error');
     return;
   }
 
@@ -307,8 +371,11 @@ async function runNip17SendDm(): Promise<void> {
     });
     log(`NIP-17 DM: gift wrap id ${result.giftWrap.id ?? '(missing id)'}`);
     log(`NIP-17 DM: ephemeral pubkey ${result.ephemeralPubkey}`);
+    progress.settle(`NIP-17 DM published to ${relay.value}.`, 'success');
   } catch (err) {
-    log(`NIP-17 DM failed: ${formatError(err)}`);
+    const error = formatError(err);
+    log(`NIP-17 DM failed: ${error}`);
+    progress.settle(`NIP-17 DM failed: ${error}`, 'error');
   }
 }
 

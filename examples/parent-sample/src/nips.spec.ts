@@ -137,7 +137,7 @@ describe('signAndPublishNote', () => {
     vi.mocked(nostr.signEvent).mockResolvedValue(signed);
     const publish = vi.fn().mockResolvedValue(undefined);
     const log = vi.fn();
-    await signAndPublishNote({
+    const result = await signAndPublishNote({
       nostr,
       content: 'hi',
       relayUrl: 'wss://example',
@@ -148,13 +148,14 @@ describe('signAndPublishNote', () => {
       expect.objectContaining({ kind: 1, content: 'hi', tags: [] })
     );
     expect(publish).toHaveBeenCalledWith(signed);
+    expect(result).toEqual({ ok: true });
   });
 
   it('does not publish when signEvent rejects', async () => {
     const nostr = createNostrMock();
     vi.mocked(nostr.signEvent).mockRejectedValue(new Error('user rejected'));
     const publish = vi.fn();
-    await signAndPublishNote({
+    const result = await signAndPublishNote({
       nostr,
       content: 'hi',
       relayUrl: 'wss://example',
@@ -162,6 +163,7 @@ describe('signAndPublishNote', () => {
       publish,
     });
     expect(publish).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('user rejected') });
   });
 
   it('logs a publish failure when publish rejects', async () => {
@@ -178,7 +180,7 @@ describe('signAndPublishNote', () => {
     vi.mocked(nostr.signEvent).mockResolvedValue(signed);
     const publish = vi.fn().mockRejectedValue(new Error('relay down'));
     const log = vi.fn();
-    await signAndPublishNote({
+    const result = await signAndPublishNote({
       nostr,
       content: 'hi',
       relayUrl: 'wss://example',
@@ -187,6 +189,7 @@ describe('signAndPublishNote', () => {
     });
     expect(publish).toHaveBeenCalledWith(signed);
     expect(log).toHaveBeenCalledWith(expect.stringContaining('Publish failed'));
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('relay down') });
   });
 });
 
@@ -209,7 +212,7 @@ describe('nip04SendDm', () => {
     vi.mocked(nostr.signEvent).mockResolvedValue(buildSignedKind4('cipher04'));
     const publish = vi.fn().mockResolvedValue(undefined);
     const onCiphertext = vi.fn();
-    await nip04SendDm({
+    const result = await nip04SendDm({
       nostr,
       peer: PEER,
       plaintext: 'hello',
@@ -223,6 +226,7 @@ describe('nip04SendDm', () => {
       expect.objectContaining({ kind: 4, content: 'cipher04', tags: [['p', PEER]] })
     );
     expect(publish).toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
   });
 
   it('aborts without signing or publishing if encrypt fails', async () => {
@@ -230,7 +234,7 @@ describe('nip04SendDm', () => {
     vi.mocked(nostr.nip04.encrypt).mockRejectedValue(new Error('encrypt failed'));
     const publish = vi.fn();
     const onCiphertext = vi.fn();
-    await nip04SendDm({
+    const result = await nip04SendDm({
       nostr,
       peer: PEER,
       plaintext: 'hi',
@@ -241,6 +245,7 @@ describe('nip04SendDm', () => {
     expect(nostr.signEvent).not.toHaveBeenCalled();
     expect(publish).not.toHaveBeenCalled();
     expect(onCiphertext).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
   });
 
   it('does not publish when signEvent fails', async () => {
@@ -248,7 +253,7 @@ describe('nip04SendDm', () => {
     vi.mocked(nostr.nip04.encrypt).mockResolvedValue('cipher04');
     vi.mocked(nostr.signEvent).mockRejectedValue(new Error('user rejected'));
     const publish = vi.fn();
-    await nip04SendDm({
+    const result = await nip04SendDm({
       nostr,
       peer: PEER,
       plaintext: 'hi',
@@ -256,6 +261,7 @@ describe('nip04SendDm', () => {
       publish,
     });
     expect(publish).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('user rejected') });
   });
 
   it('works without onCiphertext callback', async () => {
@@ -263,7 +269,7 @@ describe('nip04SendDm', () => {
     vi.mocked(nostr.nip04.encrypt).mockResolvedValue('cipher04');
     vi.mocked(nostr.signEvent).mockResolvedValue(buildSignedKind4('cipher04'));
     const publish = vi.fn().mockResolvedValue(undefined);
-    await nip04SendDm({
+    const result = await nip04SendDm({
       nostr,
       peer: PEER,
       plaintext: 'hi',
@@ -271,6 +277,7 @@ describe('nip04SendDm', () => {
       publish,
     });
     expect(publish).toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
   });
 
   it('logs a publish failure when publish rejects', async () => {
@@ -279,7 +286,7 @@ describe('nip04SendDm', () => {
     vi.mocked(nostr.signEvent).mockResolvedValue(buildSignedKind4('cipher04'));
     const publish = vi.fn().mockRejectedValue(new Error('relay down'));
     const log = vi.fn();
-    await nip04SendDm({
+    const result = await nip04SendDm({
       nostr,
       peer: PEER,
       plaintext: 'hi',
@@ -288,5 +295,6 @@ describe('nip04SendDm', () => {
     });
     expect(publish).toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(expect.stringContaining('NIP-04 DM publish failed'));
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('relay down') });
   });
 });
