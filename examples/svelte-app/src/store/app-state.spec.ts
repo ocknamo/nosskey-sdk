@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { get } from 'svelte/store';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
 import { consentPolicy, reloadSettings, trustedOrigins } from './app-state.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
@@ -112,5 +112,77 @@ describe('settings persistence after a storage grant', () => {
       nip44: 'ask',
       nip04: 'ask',
     });
+  });
+});
+
+describe('cross-context sync via storage events', () => {
+  it('reloads settings when another context changes a watched key', () => {
+    const firstParty = grantFirstPartyStorage();
+    firstParty.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+    firstParty.setItem(
+      'nosskey_trusted_origins_v2',
+      JSON.stringify([{ origin: 'https://parent.example', methods: ['signEvent'] }])
+    );
+
+    // 別タブ / iframe からの書き込み相当。実際のブラウザでは書き込んだ当人には
+    // storage イベントは発火しないが、テストでは経路検証のため明示的に dispatch する。
+    window.dispatchEvent(new StorageEvent('storage', { key: 'nosskey_consent_policy' }));
+
+    expect(get(consentPolicy)).toEqual({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    expect(get(trustedOrigins)).toEqual([
+      { origin: 'https://parent.example', methods: ['signEvent'] },
+    ]);
+  });
+
+  it('reloads settings when storage is cleared (event.key === null)', () => {
+    const firstParty = grantFirstPartyStorage({
+      nosskey_consent_policy: JSON.stringify({ signEvent: 'always', nip44: 'ask', nip04: 'ask' }),
+    });
+    reloadSettings();
+    expect(get(consentPolicy).signEvent).toBe('always');
+
+    firstParty.clear();
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+
+    expect(get(consentPolicy)).toEqual({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+  });
+
+  it('ignores storage events for keys it does not own', () => {
+    const firstParty = grantFirstPartyStorage();
+    reloadSettings();
+    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    // ストレージ側だけ deny に差し替える（in-memory は always のまま）。
+    firstParty.setItem(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated_key' }));
+
+    // 監視外キーなので reloadSettings は呼ばれず、in-memory は always のまま。
+    expect(get(consentPolicy).signEvent).toBe('always');
+  });
+
+  it('does not write loaded values back to storage during reloadSettings', () => {
+    const firstParty = grantFirstPartyStorage({
+      nosskey_consent_policy: JSON.stringify({ signEvent: 'always', nip44: 'ask', nip04: 'ask' }),
+    });
+    const setItemSpy = vi.spyOn(firstParty, 'setItem');
+
+    reloadSettings();
+
+    // applyingExternalUpdate ガードにより、読み込んだ値を永続化 subscriber が
+    // 書き戻さない（冗長な setItem と余計な storage イベントを防ぐ）。
+    expect(setItemSpy).not.toHaveBeenCalled();
+
+    // ガードは reloadSettings の外では解除され、通常の変更は永続化される。
+    consentPolicy.set({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    expect(setItemSpy).toHaveBeenCalledWith(
+      'nosskey_consent_policy',
+      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+    );
   });
 });
