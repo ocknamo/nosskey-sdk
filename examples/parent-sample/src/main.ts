@@ -100,7 +100,10 @@ async function connect(): Promise<void> {
     const error = formatError(err);
     log(`Connect failed: ${error}`);
     next?.destroy();
-    // Only reset shared UI state if this connect() still owns the client slot.
+    // Only reset shared UI state — and surface the failure toast — if this
+    // connect() still owns the client slot. A concurrent re-mount may have
+    // already replaced us with a fresh, possibly-successful connect; we must
+    // not overwrite its toast with our stale error.
     if (next === null || client === next) {
       client = null;
       window.nostr = undefined;
@@ -108,8 +111,10 @@ async function connect(): Promise<void> {
       setModalVisible(modal, false);
       clearParentTheme();
       setStatus(ui.status, 'connect failed', 'err');
+      progress.settle(`Connect failed: ${error}`, 'error');
+    } else {
+      progress.dismiss();
     }
-    progress.settle(`Connect failed: ${error}`, 'error');
   }
 }
 
