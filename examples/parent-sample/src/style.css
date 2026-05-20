@@ -236,12 +236,12 @@ body.parent-theme-light .iframe-modal__card {
   gap: 10px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: #1f2329;
-  color: #f5f6f8;
+  background: #ffffff;
+  color: #1f2329;
   font-size: 0.9rem;
   line-height: 1.4;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  border-left: 4px solid rgba(255, 255, 255, 0.4);
+  border-left: 4px solid rgba(0, 0, 0, 0.4);
   max-width: 100%;
   min-width: 240px;
   word-break: break-word;
@@ -265,7 +265,7 @@ body.parent-theme-light .iframe-modal__card {
 }
 
 .toast--progress {
-  border-left-color: #adb5bd;
+  border-left-color: #495057;
 }
 
 .toast__message {
@@ -291,8 +291,8 @@ body.parent-theme-light .iframe-modal__card {
 .toast__spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: #f5f6f8;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #1f2329;
   border-radius: 50%;
   display: none;
   flex-shrink: 0;
