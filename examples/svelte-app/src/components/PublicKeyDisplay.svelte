@@ -26,6 +26,9 @@ publicKey.subscribe((value) => {
       console.error('npub変換エラー:', error);
       npubAddress = 'Error: Could not convert to npub';
     }
+  } else {
+    // ログアウト等で公開鍵が無くなったら前ユーザの npub を残さない。
+    npubAddress = '';
   }
 });
 

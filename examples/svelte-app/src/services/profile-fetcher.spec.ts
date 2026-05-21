@@ -144,6 +144,43 @@ describe('fetchKind0Profile', () => {
     expect(await promise).toBeNull();
   });
 
+  it('他者の鍵で署名されたなりすまし kind:0 は無視する', async () => {
+    const factory = freshFactory();
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
+      wsFactory: factory,
+      timeoutMs: 1000,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const ws = FakeWebSocket.instances[0];
+    const sub = JSON.parse(ws.sent[0])[1];
+    // 攻撃者が他者鍵(OTHER_SK)で署名したイベントの pubkey フィールドだけを
+    // 被害者(TEST_PUBKEY)にすり替えても、署名はその pubkey の id に対して
+    // 成立しないため署名検証で弾かれる（なりすまし耐性の核心ケース）。
+    const spoofed = buildSignedKind0(OTHER_SK, { picture: 'https://evil/x.png' }, 1000);
+    spoofed.pubkey = TEST_PUBKEY;
+    ws.emit(['EVENT', sub, spoofed]);
+    ws.emit(['EOSE', sub]);
+    expect(await promise).toBeNull();
+  });
+
+  it('sig が不正な hex の kind:0 は無視する', async () => {
+    const factory = freshFactory();
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
+      wsFactory: factory,
+      timeoutMs: 1000,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const ws = FakeWebSocket.instances[0];
+    const sub = JSON.parse(ws.sent[0])[1];
+    const evt = buildSignedKind0(TEST_SK, { picture: 'https://x/a.png' }, 1000);
+    // 不正な hex の sig は検証中の例外（hexToBytes）として握りつぶされ false になる。
+    ws.emit(['EVENT', sub, { ...evt, sig: 'not-hex' }]);
+    ws.emit(['EOSE', sub]);
+    expect(await promise).toBeNull();
+  });
+
   it('content が不正な JSON のイベントは無視する', async () => {
     const factory = freshFactory();
     const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
