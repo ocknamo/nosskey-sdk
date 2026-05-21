@@ -3,25 +3,28 @@ import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
+import ProfileAvatar from './ProfileAvatar.svelte';
 import IconButton from './ui/button/IconButton.svelte';
 
 // 状態変数
+let publicKeyHex = $state('');
 let publicKeyShort = $state('');
 let npubAddress = $state('');
 let showCopiedMessage = $state(false);
 
-// パブリックキーを取得
-let publicKeyValue = '';
+// `publicKey` は SPA ライフタイムに一致するシングルトンストアで、このカードは
+// Account 画面が存在する限り常時表示されるため unsubscribe は省略する
+// （既存コードベースの subscribe パターンと揃える）。
 publicKey.subscribe((value) => {
-  publicKeyValue = value || '';
+  publicKeyHex = value || '';
 
-  if (publicKeyValue) {
+  if (publicKeyHex) {
     // 公開鍵を表示用に整形
-    publicKeyShort = `${publicKeyValue.slice(0, 8)}...${publicKeyValue.slice(-8)}`;
+    publicKeyShort = `${publicKeyHex.slice(0, 8)}...${publicKeyHex.slice(-8)}`;
 
     // npub形式に変換
     try {
-      npubAddress = hexToNpub(publicKeyValue);
+      npubAddress = hexToNpub(publicKeyHex);
     } catch (error) {
       console.error('npub変換エラー:', error);
       npubAddress = 'Error: Could not convert to npub';
@@ -48,26 +51,29 @@ function copyNpubToClipboard() {
 </script>
 
 <div class="pubkey-container">
-  <div class="pubkey-display">
-    <h3>{$i18n.t.nostr.publicKey}</h3>
-    <p>{publicKeyShort}</p>
-    <div class="npub-container">
-      <div class="npub-wrapper">
-        <p class="npub">
-          {npubAddress.length > 20
-            ? `${npubAddress.slice(0, 12)}...${npubAddress.slice(-8)}`
-            : npubAddress}
-        </p>
-        <IconButton
-          onclick={copyNpubToClipboard}
-          title={$i18n.t.nostr.copyToClipboard}
-        >
-          <img src={CopyIcon} alt="Copy" />
-        </IconButton>
+  <div class="pubkey-header">
+    <ProfileAvatar pubkey={publicKeyHex} />
+    <div class="pubkey-display">
+      <h3>{$i18n.t.nostr.publicKey}</h3>
+      <p>{publicKeyShort}</p>
+      <div class="npub-container">
+        <div class="npub-wrapper">
+          <p class="npub">
+            {npubAddress.length > 20
+              ? `${npubAddress.slice(0, 12)}...${npubAddress.slice(-8)}`
+              : npubAddress}
+          </p>
+          <IconButton
+            onclick={copyNpubToClipboard}
+            title={$i18n.t.nostr.copyToClipboard}
+          >
+            <img src={CopyIcon} alt="Copy" />
+          </IconButton>
+        </div>
+        {#if showCopiedMessage}
+          <span class="copied-message">{$i18n.t.nostr.copiedToClipboard}</span>
+        {/if}
       </div>
-      {#if showCopiedMessage}
-        <span class="copied-message">{$i18n.t.nostr.copiedToClipboard}</span>
-      {/if}
     </div>
   </div>
 </div>
@@ -80,7 +86,15 @@ function copyNpubToClipboard() {
     margin-bottom: 20px;
   }
 
+  .pubkey-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
   .pubkey-display {
+    flex: 1;
+    min-width: 0;
     word-break: break-all;
   }
 
@@ -112,5 +126,11 @@ function copyNpubToClipboard() {
   h3 {
     margin-top: 0;
     margin-bottom: 10px;
+  }
+
+  @media (max-width: 480px) {
+    .pubkey-header {
+      gap: 12px;
+    }
   }
 </style>

@@ -8,7 +8,6 @@
 ### 高優先度（重要なUX改善とセキュリティ）
 
 ### 中優先度（基本機能強化）
-- [ ] ユーザのアイコン画像をカードに表示
 - [ ] テストの充実
 
 ### 低優先度（機能拡張・検証）
@@ -53,6 +52,7 @@
 - [x] TLの表示もマシにする
 - [x] ボタンの色などを改善
 - [x] アプリ設定とコアなアカウント設定を分けたい
+- [x] ユーザのアイコン画像をカードに表示 — `PublicKeyDisplay.svelte` に丸型アバターを追加。`services/profile-fetcher.ts`(ネイティブ WebSocket で kind:0 を REQ/EVENT/EOSE 取得、複数リレー並列＋created_at 最大採用＋タイムアウト)、`services/profile-cache.ts`(localStorage `nosskey_profile_cache`、`isSafePictureUrl` で https のみ許可・ループバック拒否)、`store/profile-store.ts`(stale-while-revalidate、`publicKey` 購読、iframe モードでは no-op)。
 - [ ] より詳細な攻撃ベクトルの検討とリスク評価
 - [ ] 複数アカウント対応
 

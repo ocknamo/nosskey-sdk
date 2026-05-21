@@ -82,6 +82,8 @@ export interface TranslationData {
     publicKey: string;
     copyToClipboard: string;
     copiedToClipboard: string;
+    profileAvatarAlt: string;
+    profileFallbackAlt: string;
   };
   key: {
     title: string;
@@ -345,6 +347,8 @@ export const ja: TranslationData = {
     publicKey: '公開鍵',
     copyToClipboard: 'クリップボードにコピー',
     copiedToClipboard: 'コピーしました',
+    profileAvatarAlt: 'プロフィール画像',
+    profileFallbackAlt: 'アバター未設定',
   },
   key: {
     title: '鍵管理',
@@ -623,6 +627,8 @@ export const en: TranslationData = {
     publicKey: 'Public Key',
     copyToClipboard: 'Copy to Clipboard',
     copiedToClipboard: 'Copied',
+    profileAvatarAlt: 'Profile picture',
+    profileFallbackAlt: 'No avatar',
   },
   key: {
     title: 'Key Management',
