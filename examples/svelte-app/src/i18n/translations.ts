@@ -283,8 +283,7 @@ export const ja: TranslationData = {
   },
   appWarning: {
     title: '注意事項',
-    prfCompatibility:
-      '一部の端末・環境ではPRF拡張が**まだ**サポートされていません。Windows HelloやFirefox（デフォルト設定）では利用できません。また、BitwardenなどのソフトウェアパスキーではPRF拡張が対応していない場合があります。',
+    prfCompatibility: '一部の端末・環境はサポートされていません。',
   },
   auth: {
     title: 'Nosskey デモ',
@@ -559,8 +558,7 @@ export const en: TranslationData = {
   },
   appWarning: {
     title: 'Important Notice',
-    prfCompatibility:
-      'PRF extension is not **yet** supported on some devices and environments. It is not available on Windows Hello or Firefox (default settings). Additionally, software passkeys like Bitwarden may not support PRF extension.',
+    prfCompatibility: 'Some devices and environments are not supported.',
   },
   auth: {
     title: 'Nosskey Demo',
