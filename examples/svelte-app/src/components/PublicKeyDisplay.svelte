@@ -2,53 +2,35 @@
 import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
-import { currentProfile } from '../store/profile-store.js';
 import { hexToNpub } from '../utils/bech32-converter.js';
+import ProfileAvatar from './ProfileAvatar.svelte';
 import IconButton from './ui/button/IconButton.svelte';
 
 // 状態変数
+let publicKeyHex = $state('');
 let publicKeyShort = $state('');
 let npubAddress = $state('');
 let showCopiedMessage = $state(false);
-let pictureUrl = $state<string | null>(null);
-let pictureBroken = $state(false);
-let pubkeyInitials = $state('');
 
-// `publicKey` / `currentProfile` は SPA ライフタイムに一致するシングルトンストアで、
-// このカードは Account 画面が存在する限り常時表示されるため unsubscribe は省略する。
-// （既存コードベースの subscribe パターンと揃える。短命なリストアイテム等で再利用する
-// 場合は onDestroy 解除を検討すること）
-let publicKeyValue = '';
+// `publicKey` は SPA ライフタイムに一致するシングルトンストアで、このカードは
+// Account 画面が存在する限り常時表示されるため unsubscribe は省略する
+// （既存コードベースの subscribe パターンと揃える）。
 publicKey.subscribe((value) => {
-  publicKeyValue = value || '';
+  publicKeyHex = value || '';
 
-  if (publicKeyValue) {
+  if (publicKeyHex) {
     // 公開鍵を表示用に整形
-    publicKeyShort = `${publicKeyValue.slice(0, 8)}...${publicKeyValue.slice(-8)}`;
-    pubkeyInitials = publicKeyValue.slice(0, 2).toUpperCase();
+    publicKeyShort = `${publicKeyHex.slice(0, 8)}...${publicKeyHex.slice(-8)}`;
 
     // npub形式に変換
     try {
-      npubAddress = hexToNpub(publicKeyValue);
+      npubAddress = hexToNpub(publicKeyHex);
     } catch (error) {
       console.error('npub変換エラー:', error);
       npubAddress = 'Error: Could not convert to npub';
     }
   }
 });
-
-// プロフィール画像 URL の購読。pubkey 切替時にロードエラーフラグもリセットする。
-currentProfile.subscribe((profile) => {
-  const next = profile?.picture ?? null;
-  if (next !== pictureUrl) {
-    pictureBroken = false;
-  }
-  pictureUrl = next;
-});
-
-function handlePictureError() {
-  pictureBroken = true;
-}
 
 // クリップボードにコピー
 function copyNpubToClipboard() {
@@ -70,24 +52,7 @@ function copyNpubToClipboard() {
 
 <div class="pubkey-container">
   <div class="pubkey-header">
-    <div class="avatar">
-      {#if pictureUrl && !pictureBroken}
-        <img
-          src={pictureUrl}
-          alt={$i18n.t.nostr.profileAvatarAlt}
-          referrerpolicy="no-referrer"
-          onerror={handlePictureError}
-        />
-      {:else}
-        <span
-          class="avatar-fallback"
-          role="img"
-          aria-label={$i18n.t.nostr.profileFallbackAlt}
-        >
-          {pubkeyInitials}
-        </span>
-      {/if}
-    </div>
+    <ProfileAvatar pubkey={publicKeyHex} />
     <div class="pubkey-display">
       <h3>{$i18n.t.nostr.publicKey}</h3>
       <p>{publicKeyShort}</p>
@@ -125,33 +90,6 @@ function copyNpubToClipboard() {
     display: flex;
     align-items: center;
     gap: 16px;
-  }
-
-  .avatar {
-    flex-shrink: 0;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    overflow: hidden;
-    background-color: var(--color-card);
-    border: 1px solid var(--color-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .avatar-fallback {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: var(--color-text-muted);
-    user-select: none;
   }
 
   .pubkey-display {
@@ -193,15 +131,6 @@ function copyNpubToClipboard() {
   @media (max-width: 480px) {
     .pubkey-header {
       gap: 12px;
-    }
-
-    .avatar {
-      width: 52px;
-      height: 52px;
-    }
-
-    .avatar-fallback {
-      font-size: 1.1rem;
     }
   }
 </style>
