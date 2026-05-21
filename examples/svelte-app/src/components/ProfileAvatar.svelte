@@ -58,8 +58,8 @@ function handlePictureError() {
 <style>
   .avatar {
     flex-shrink: 0;
-    width: 64px;
-    height: 64px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
     overflow: hidden;
     background-color: var(--color-card);
@@ -77,7 +77,7 @@ function handlePictureError() {
   }
 
   .avatar-fallback {
-    font-size: 1.4rem;
+    font-size: 2.6rem;
     font-weight: 600;
     color: var(--color-text-muted);
     user-select: none;
@@ -85,12 +85,12 @@ function handlePictureError() {
 
   @media (max-width: 480px) {
     .avatar {
-      width: 52px;
-      height: 52px;
+      width: 96px;
+      height: 96px;
     }
 
     .avatar-fallback {
-      font-size: 1.1rem;
+      font-size: 2rem;
     }
   }
 </style>

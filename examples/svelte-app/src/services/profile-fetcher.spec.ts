@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { OTHER_SK, TEST_PUBKEY, TEST_SK, buildSignedKind0 } from './kind0-test-utils.js';
 import { fetchKind0Profile } from './profile-fetcher.js';
 
 /**
@@ -53,31 +54,17 @@ afterEach(() => {
   FakeWebSocket.instances = [];
 });
 
-function buildKind0(pubkey: string, content: object, created_at: number) {
-  return {
-    id: 'fake',
-    kind: 0,
-    pubkey,
-    created_at,
-    content: JSON.stringify(content),
-    tags: [],
-    sig: '',
-  };
-}
-
-const PUBKEY = 'a'.repeat(64);
-
 describe('fetchKind0Profile', () => {
   it('relays が空なら null を返す（接続を試みない）', async () => {
     const factory = freshFactory();
-    const result = await fetchKind0Profile(PUBKEY, [], { wsFactory: factory });
+    const result = await fetchKind0Profile(TEST_PUBKEY, [], { wsFactory: factory });
     expect(result).toBeNull();
     expect(FakeWebSocket.instances.length).toBe(0);
   });
 
   it('EVENT→EOSE で picture を抽出して返す', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://relay.example'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://relay.example'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });
@@ -92,7 +79,7 @@ describe('fetchKind0Profile', () => {
     ws.emit([
       'EVENT',
       subId,
-      buildKind0(PUBKEY, { picture: 'https://x/a.png', name: 'alice' }, 1000),
+      buildSignedKind0(TEST_SK, { picture: 'https://x/a.png', name: 'alice' }, 1000),
     ]);
     ws.emit(['EOSE', subId]);
     const result = await promise;
@@ -106,7 +93,7 @@ describe('fetchKind0Profile', () => {
 
   it('複数リレーで created_at の最新を採用する', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://a', 'wss://b'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a', 'wss://b'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });
@@ -115,9 +102,9 @@ describe('fetchKind0Profile', () => {
     const [wsA, wsB] = FakeWebSocket.instances;
     const subA = JSON.parse(wsA.sent[0])[1];
     const subB = JSON.parse(wsB.sent[0])[1];
-    wsA.emit(['EVENT', subA, buildKind0(PUBKEY, { picture: 'https://a/old.png' }, 100)]);
+    wsA.emit(['EVENT', subA, buildSignedKind0(TEST_SK, { picture: 'https://a/old.png' }, 100)]);
     wsA.emit(['EOSE', subA]);
-    wsB.emit(['EVENT', subB, buildKind0(PUBKEY, { picture: 'https://b/new.png' }, 200)]);
+    wsB.emit(['EVENT', subB, buildSignedKind0(TEST_SK, { picture: 'https://b/new.png' }, 200)]);
     wsB.emit(['EOSE', subB]);
     const result = await promise;
     expect(result?.picture).toBe('https://b/new.png');
@@ -126,7 +113,7 @@ describe('fetchKind0Profile', () => {
 
   it('期待しない pubkey の EVENT は無視する', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://a'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });
@@ -134,14 +121,32 @@ describe('fetchKind0Profile', () => {
     await Promise.resolve();
     const ws = FakeWebSocket.instances[0];
     const sub = JSON.parse(ws.sent[0])[1];
-    ws.emit(['EVENT', sub, buildKind0('b'.repeat(64), { picture: 'https://evil/x' }, 999)]);
+    ws.emit(['EVENT', sub, buildSignedKind0(OTHER_SK, { picture: 'https://evil/x' }, 999)]);
+    ws.emit(['EOSE', sub]);
+    expect(await promise).toBeNull();
+  });
+
+  it('署名が一致しない EVENT は無視する', async () => {
+    const factory = freshFactory();
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
+      wsFactory: factory,
+      timeoutMs: 1000,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const ws = FakeWebSocket.instances[0];
+    const sub = JSON.parse(ws.sent[0])[1];
+    // 正しく署名したイベントの content を後から差し替えると sig が一致しなくなる。
+    const tampered = buildSignedKind0(TEST_SK, { picture: 'https://x/a.png' }, 1000);
+    tampered.content = JSON.stringify({ picture: 'https://evil/x.png' });
+    ws.emit(['EVENT', sub, tampered]);
     ws.emit(['EOSE', sub]);
     expect(await promise).toBeNull();
   });
 
   it('content が不正な JSON のイベントは無視する', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://a'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });
@@ -149,7 +154,8 @@ describe('fetchKind0Profile', () => {
     await Promise.resolve();
     const ws = FakeWebSocket.instances[0];
     const sub = JSON.parse(ws.sent[0])[1];
-    ws.emit(['EVENT', sub, { kind: 0, pubkey: PUBKEY, created_at: 1, content: '{not-json' }]);
+    // content が不正な JSON でも署名自体は正しい（content 文字列全体に署名）。
+    ws.emit(['EVENT', sub, buildSignedKind0(TEST_SK, '{not-json', 1)]);
     ws.emit(['EOSE', sub]);
     expect(await promise).toBeNull();
   });
@@ -158,7 +164,7 @@ describe('fetchKind0Profile', () => {
     vi.useFakeTimers();
     try {
       const factory = freshFactory();
-      const promise = fetchKind0Profile(PUBKEY, ['wss://a'], {
+      const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
         wsFactory: factory,
         timeoutMs: 100,
       });
@@ -178,7 +184,7 @@ describe('fetchKind0Profile', () => {
       throw new Error('boom');
     };
     expect(
-      await fetchKind0Profile(PUBKEY, ['wss://a'], {
+      await fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
         wsFactory: factory,
         timeoutMs: 100,
       })
@@ -187,7 +193,7 @@ describe('fetchKind0Profile', () => {
 
   it('socket onerror が発火した場合は null を返してクローズする', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://a'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });
@@ -201,7 +207,7 @@ describe('fetchKind0Profile', () => {
 
   it('全リレーが応答しないと null を返す（onclose 経由）', async () => {
     const factory = freshFactory();
-    const promise = fetchKind0Profile(PUBKEY, ['wss://a', 'wss://b'], {
+    const promise = fetchKind0Profile(TEST_PUBKEY, ['wss://a', 'wss://b'], {
       wsFactory: factory,
       timeoutMs: 1000,
     });

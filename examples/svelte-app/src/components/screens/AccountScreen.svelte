@@ -34,9 +34,7 @@ onMount(async () => {
 
   <CardSection title={$i18n.t.appWarning.title}>
     <ul>
-      <li>{$i18n.t.appWarning.demoDescription}</li>
       <li>{$i18n.t.appWarning.prfCompatibility}</li>
-      <li>{$i18n.t.appWarning.domainChange}</li>
     </ul>
   </CardSection>
 

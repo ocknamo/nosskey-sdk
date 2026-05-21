@@ -28,8 +28,6 @@ export interface TranslationData {
   };
   appWarning: {
     title: string;
-    domainChange: string;
-    demoDescription: string;
     prfCompatibility: string;
   };
   auth: {
@@ -285,10 +283,6 @@ export const ja: TranslationData = {
   },
   appWarning: {
     title: '注意事項',
-    domainChange:
-      'パスキーは異なるドメインでは使用できないため、ドメインの異なるアプリで使用するにはこれまで通り秘密鍵のエクスポートが必要です。',
-    demoDescription:
-      'このアプリはパスキーのPRF拡張を用いたNostr鍵管理のUXのデモンストレーションです。そのためクライアントとしての機能は限定的です。',
     prfCompatibility:
       '一部の端末・環境ではPRF拡張が**まだ**サポートされていません。Windows HelloやFirefox（デフォルト設定）では利用できません。また、BitwardenなどのソフトウェアパスキーではPRF拡張が対応していない場合があります。',
   },
@@ -565,10 +559,6 @@ export const en: TranslationData = {
   },
   appWarning: {
     title: 'Important Notice',
-    domainChange:
-      'Passkeys cannot be used across different domains, so traditional private key export is still required to use with applications on different domains.',
-    demoDescription:
-      'This application is a UX demonstration of Nostr key management using Passkey PRF extension. Therefore, its functionality as a client is limited.',
     prfCompatibility:
       'PRF extension is not **yet** supported on some devices and environments. It is not available on Windows Hello or Firefox (default settings). Additionally, software passkeys like Bitwarden may not support PRF extension.',
   },

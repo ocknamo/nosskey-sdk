@@ -8,7 +8,15 @@
  * 複数リレーに並列接続し、得られた EVENT のうち最も新しい (`created_at` 最大)
  * ものの `content` を JSON として解析して返す。タイムアウトと AbortSignal で
  * 必ず全 socket をクローズする。
+ *
+ * 受け取った kind:0 は `verifyEventSignature` で schnorr 署名を検証してから
+ * 採用する。検証しないと、悪意あるリレーが他人になりすました kind:0 を返した
+ * 場合にそれを画像・名前として表示してしまう。
  */
+
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { hexToBytes } from '@noble/hashes/utils.js';
 
 export interface Kind0ProfileResult {
   picture?: string;
@@ -30,6 +38,8 @@ interface NostrEventLike {
   pubkey?: unknown;
   created_at?: unknown;
   content?: unknown;
+  tags?: unknown;
+  sig?: unknown;
 }
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -152,6 +162,25 @@ function fetchFromOneRelay(
   });
 }
 
+/**
+ * Nostr イベントの schnorr 署名を検証する。NIP-01 のシリアライズ
+ * `[0, pubkey, created_at, kind, tags, content]` から event id を再計算し、
+ * `sig` がその id に対する `pubkey` の署名であることを確認する。
+ * 署名フィールドが無い・壊れている・検証に失敗した場合は false。
+ */
+function verifyEventSignature(e: NostrEventLike): boolean {
+  if (typeof e.sig !== 'string' || typeof e.pubkey !== 'string') return false;
+  if (typeof e.kind !== 'number' || typeof e.created_at !== 'number') return false;
+  if (typeof e.content !== 'string' || !Array.isArray(e.tags)) return false;
+  try {
+    const serialized = JSON.stringify([0, e.pubkey, e.created_at, e.kind, e.tags, e.content]);
+    const id = sha256(new TextEncoder().encode(serialized));
+    return schnorr.verify(hexToBytes(e.sig), id, hexToBytes(e.pubkey));
+  } catch {
+    return false;
+  }
+}
+
 function parseKind0Event(event: unknown, expectedPubkey: string): Kind0ProfileResult | null {
   if (!event || typeof event !== 'object') return null;
   const e = event as NostrEventLike;
@@ -159,6 +188,10 @@ function parseKind0Event(event: unknown, expectedPubkey: string): Kind0ProfileRe
   if (typeof e.pubkey !== 'string' || e.pubkey !== expectedPubkey) return null;
   if (typeof e.created_at !== 'number') return null;
   if (typeof e.content !== 'string') return null;
+  if (!verifyEventSignature(e)) {
+    console.warn('[nosskey] profile fetch: invalid kind:0 signature, dropping event');
+    return null;
+  }
   let metadata: unknown;
   try {
     metadata = JSON.parse(e.content);
