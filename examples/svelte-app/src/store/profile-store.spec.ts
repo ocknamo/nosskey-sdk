@@ -1,12 +1,17 @@
 // @vitest-environment happy-dom
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  OTHER_PUBKEY,
+  OTHER_SK,
+  TEST_PUBKEY,
+  TEST_SK,
+  buildSignedKind0,
+} from '../services/kind0-test-utils.js';
 import { PROFILE_CACHE_KEY } from '../services/profile-cache.js';
 import { RELAYS_STORAGE_KEY } from '../services/relays-store.js';
 import { publicKey } from './app-state.js';
 import { clearCurrentProfile, currentProfile, loadProfileForPubkey } from './profile-store.js';
-
-const PUBKEY = 'a'.repeat(64);
 
 beforeEach(() => {
   publicKey.set(null);
@@ -17,7 +22,7 @@ beforeEach(() => {
 describe('loadProfileForPubkey', () => {
   it('リレー未設定なら fetch は呼ばれず loading=false で着地する', async () => {
     let called = false;
-    await loadProfileForPubkey(PUBKEY, {
+    await loadProfileForPubkey(TEST_PUBKEY, {
       relays: [],
       fetcherOptions: {
         wsFactory: () => {
@@ -34,7 +39,7 @@ describe('loadProfileForPubkey', () => {
     localStorage.setItem(
       PROFILE_CACHE_KEY,
       JSON.stringify({
-        [PUBKEY]: {
+        [TEST_PUBKEY]: {
           picture: 'https://cache.example/old.png',
           name: 'cached',
           updatedAt: 100,
@@ -46,7 +51,7 @@ describe('loadProfileForPubkey', () => {
       picture: 'https://new.example/new.png',
       created_at: 500,
     });
-    await loadProfileForPubkey(PUBKEY, {
+    await loadProfileForPubkey(TEST_PUBKEY, {
       relays: ['wss://r'],
       fetcherOptions: { wsFactory: fakeWs, timeoutMs: 1000 },
     });
@@ -57,7 +62,7 @@ describe('loadProfileForPubkey', () => {
 
   it('fetcher が null を返したら loading=false に降格する', async () => {
     const fakeWs = makeImmediateProfileFactory(null);
-    await loadProfileForPubkey(PUBKEY, {
+    await loadProfileForPubkey(TEST_PUBKEY, {
       relays: ['wss://r'],
       fetcherOptions: { wsFactory: fakeWs, timeoutMs: 1000 },
     });
@@ -69,7 +74,7 @@ describe('loadProfileForPubkey', () => {
       picture: 'http://example.com/x.png',
       created_at: 1,
     });
-    await loadProfileForPubkey(PUBKEY, {
+    await loadProfileForPubkey(TEST_PUBKEY, {
       relays: ['wss://r'],
       fetcherOptions: { wsFactory: fakeWs, timeoutMs: 1000 },
     });
@@ -89,7 +94,9 @@ describe('loadProfileForPubkey', () => {
       visited.push(url);
       return immediateProfileSocket(url, { picture: 'https://x/a.png', created_at: 10 });
     };
-    await loadProfileForPubkey(PUBKEY, { fetcherOptions: { wsFactory: fakeWs, timeoutMs: 1000 } });
+    await loadProfileForPubkey(TEST_PUBKEY, {
+      fetcherOptions: { wsFactory: fakeWs, timeoutMs: 1000 },
+    });
     expect(visited).toEqual(['wss://read']);
   });
 
@@ -103,7 +110,7 @@ describe('loadProfileForPubkey', () => {
     const factory = () => {
       throw new Error('boom');
     };
-    await loadProfileForPubkey(PUBKEY, {
+    await loadProfileForPubkey(TEST_PUBKEY, {
       relays: ['wss://r'],
       fetcherOptions: { wsFactory: factory, timeoutMs: 1000 },
     });
@@ -111,10 +118,9 @@ describe('loadProfileForPubkey', () => {
   });
 
   it('pubkey 切替で古い fetch の結果は破棄される', async () => {
-    const OTHER = 'b'.repeat(64);
     // 古い pubkey 向けの fetch をスタートし、応答前に新 pubkey でロードを掛ける
     let releaseOld: (() => void) | null = null;
-    const stallingFactory = (url: string) => {
+    const stallingFactory = (_url: string) => {
       const ws = {
         readyState: 0,
         onopen: null as (() => void) | null,
@@ -137,12 +143,7 @@ describe('loadProfileForPubkey', () => {
             data: JSON.stringify([
               'EVENT',
               'sub-old',
-              {
-                kind: 0,
-                pubkey: PUBKEY,
-                created_at: 1,
-                content: JSON.stringify({ picture: 'https://old.example/p.png' }),
-              },
+              buildSignedKind0(TEST_SK, { picture: 'https://old.example/p.png' }, 1),
             ]),
           });
         };
@@ -151,7 +152,7 @@ describe('loadProfileForPubkey', () => {
       return ws as any;
     };
 
-    const oldPromise = loadProfileForPubkey(PUBKEY, {
+    const oldPromise = loadProfileForPubkey(TEST_PUBKEY, {
       relays: ['wss://old'],
       fetcherOptions: { wsFactory: stallingFactory, timeoutMs: 500 },
     });
@@ -160,11 +161,11 @@ describe('loadProfileForPubkey', () => {
     await Promise.resolve();
 
     // 新 pubkey でリロード（即時 EOSE で settle する factory）
-    const newPromise = loadProfileForPubkey(OTHER, {
+    const newPromise = loadProfileForPubkey(OTHER_PUBKEY, {
       relays: ['wss://new'],
       fetcherOptions: {
         wsFactory: (url: string) =>
-          immediateProfileSocketForPubkey(url, OTHER, {
+          immediateProfileSocketForKey(url, OTHER_SK, {
             picture: 'https://new.example/p.png',
             created_at: 999,
           }),
@@ -182,9 +183,9 @@ describe('loadProfileForPubkey', () => {
   });
 });
 
-function immediateProfileSocketForPubkey(
+function immediateProfileSocketForKey(
   _url: string,
-  pubkey: string,
+  sk: Uint8Array,
   result: { picture?: string; created_at: number }
 ): WebSocket {
   type Listener = ((ev: { data: string }) => void) | (() => void) | null;
@@ -203,12 +204,7 @@ function immediateProfileSocketForPubkey(
           data: JSON.stringify([
             'EVENT',
             subId,
-            {
-              kind: 0,
-              pubkey,
-              created_at: result.created_at,
-              content: JSON.stringify({ picture: result.picture }),
-            },
+            buildSignedKind0(sk, { picture: result.picture }, result.created_at),
           ]),
         });
         this.onmessage?.({ data: JSON.stringify(['EOSE', subId]) });
@@ -250,15 +246,11 @@ function immediateProfileSocket(
             data: JSON.stringify([
               'EVENT',
               subId,
-              {
-                id: 'x',
-                kind: 0,
-                pubkey: PUBKEY,
-                created_at: result.created_at,
-                content: JSON.stringify({ picture: result.picture, name: result.name }),
-                tags: [],
-                sig: '',
-              },
+              buildSignedKind0(
+                TEST_SK,
+                { picture: result.picture, name: result.name },
+                result.created_at
+              ),
             ]),
           });
         }
