@@ -402,9 +402,9 @@ export const ja: TranslationData = {
     theme: {
       title: 'テーマ設定',
       description: 'アプリケーションの外観を変更できます。',
-      light: 'ライトモード',
-      dark: 'ダークモード',
-      auto: 'システム設定に従う',
+      light: 'ライト',
+      dark: 'ダーク',
+      auto: '自動',
       changed: 'テーマを変更しました',
     },
     relays: {
@@ -677,9 +677,9 @@ export const en: TranslationData = {
     theme: {
       title: 'Theme Settings',
       description: 'Change the appearance of the application.',
-      light: 'Light Mode',
-      dark: 'Dark Mode',
-      auto: 'Follow System Setting',
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto',
       changed: 'Theme changed',
     },
     relays: {

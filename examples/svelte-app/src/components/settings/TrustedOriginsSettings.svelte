@@ -39,7 +39,12 @@ function methodLabel(method: PolicyKey): string {
         <li class="origin-item">
           <div class="origin-header">
             <code class="origin-url" title={entry.origin}>{entry.origin}</code>
-            <Button variant="danger" size="small" onclick={() => removeAll(entry.origin)}>
+            <Button
+              variant="danger"
+              size="small"
+              fullWidth={false}
+              onclick={() => removeAll(entry.origin)}
+            >
               {$i18n.t.settings.trustedOrigins.removeAllButton}
             </Button>
           </div>
@@ -50,6 +55,7 @@ function methodLabel(method: PolicyKey): string {
                 <Button
                   variant="secondary"
                   size="small"
+                  fullWidth={false}
                   onclick={() => removeMethod(entry.origin, method)}
                 >
                   {$i18n.t.settings.trustedOrigins.removeButton}

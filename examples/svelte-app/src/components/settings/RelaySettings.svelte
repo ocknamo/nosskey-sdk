@@ -89,6 +89,7 @@ function relayEntries(map: RelayMap): Array<[string, { read: boolean; write: boo
           <Button
             variant="danger"
             size="small"
+            fullWidth={false}
             onclick={() => removeRelay(url)}
           >
             {$i18n.t.settings.relays.removeButton}

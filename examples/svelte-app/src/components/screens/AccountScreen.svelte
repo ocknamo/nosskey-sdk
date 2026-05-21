@@ -30,12 +30,8 @@ onMount(async () => {
 </script>
 
 <div class="account-screen">
-  <h1 class="screen-title">{$i18n.t.navigation.account}</h1>
-
-  <CardSection title={$i18n.t.appWarning.title}>
-    <ul>
-      <li>{$i18n.t.appWarning.prfCompatibility}</li>
-    </ul>
+  <CardSection title={$i18n.t.appWarning.title} compact>
+    <p class="warning-text">{$i18n.t.appWarning.prfCompatibility}</p>
   </CardSection>
 
   {#if !login}
@@ -58,7 +54,9 @@ onMount(async () => {
     gap: 20px;
   }
 
-  h1 {
+  .warning-text {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
     margin: 0;
   }
 
