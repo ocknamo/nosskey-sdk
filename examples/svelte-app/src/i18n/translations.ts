@@ -424,8 +424,8 @@ export const ja: TranslationData = {
       description:
         '同意ダイアログで「このサイトを常に許可」を選んだサイトとメソッドの一覧です。許可はメソッドごとに記録され、他のメソッドは別途確認されます。削除すると次回から再度確認が表示されます。',
       empty: '信頼済みサイトはまだありません。',
-      removeButton: 'このメソッドを削除',
-      removeAllButton: 'すべて削除',
+      removeButton: '削除',
+      removeAllButton: '削除',
       confirmRemove: 'このメソッドの自動許可を解除しますか？',
       confirmRemoveAll: 'このサイトの自動許可をすべて解除しますか？',
     },
@@ -699,8 +699,8 @@ export const en: TranslationData = {
       description:
         'Sites and methods you marked as "always allow" in the consent dialog. Trust is recorded per method; other methods are confirmed separately. Removing an entry will make the dialog reappear on the next request.',
       empty: 'No trusted sites yet.',
-      removeButton: 'Remove this method',
-      removeAllButton: 'Remove all',
+      removeButton: 'Remove',
+      removeAllButton: 'Remove',
       confirmRemove: 'Remove auto-approval for this method?',
       confirmRemoveAll: 'Remove auto-approval for this site entirely?',
     },

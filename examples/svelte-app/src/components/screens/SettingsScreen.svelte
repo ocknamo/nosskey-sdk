@@ -9,11 +9,11 @@ import ThemeSettings from '../settings/theme-settings.svelte';
 </script>
 
 <div class="settings-container">
-  <LanguageSettings />
-  <ThemeSettings />
   <RelaySettings />
   <ConsentPolicySettings />
   <TrustedOriginsSettings />
+  <LanguageSettings />
+  <ThemeSettings />
   <AppInfo />
 </div>
 

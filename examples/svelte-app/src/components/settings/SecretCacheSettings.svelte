@@ -3,6 +3,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { cacheSecrets, cacheTimeout } from '../../store/secret-cache-settings.js';
 import CardSection from '../ui/CardSection.svelte';
+import SettingMessage from '../ui/SettingMessage.svelte';
 import Button from '../ui/button/Button.svelte';
 
 // 状態変数
@@ -119,11 +120,7 @@ function clearCache() {
       </Button>
     </div>
 
-    {#if cacheSettingMessage}
-      <div class="result-message">
-        {cacheSettingMessage}
-      </div>
-    {/if}
+    <SettingMessage message={cacheSettingMessage} />
   </div>
 </CardSection>
 
@@ -177,19 +174,5 @@ function clearCache() {
 
   .cache-clear {
     margin-top: 20px;
-  }
-
-  .result-message {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: var(--color-success-bg);
-    border: 1px solid var(--color-success-border);
-    border-radius: 8px;
-    font-weight: bold;
-    color: var(--color-success);
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease,
-      color 0.3s ease;
   }
 </style>

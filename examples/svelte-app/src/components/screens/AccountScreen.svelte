@@ -4,7 +4,6 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { isLoggedIn, publicKey } from '../../store/app-state.js';
 import PublicKeyDisplay from '../PublicKeyDisplay.svelte';
-import CardSection from '../ui/CardSection.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
 const login = $derived($isLoggedIn);
@@ -30,9 +29,10 @@ onMount(async () => {
 </script>
 
 <div class="account-screen">
-  <CardSection title={$i18n.t.appWarning.title} compact>
-    <p class="warning-text">{$i18n.t.appWarning.prfCompatibility}</p>
-  </CardSection>
+  <div class="warning-bar" role="note">
+    <strong class="warning-bar__title">{$i18n.t.appWarning.title}</strong>
+    <span class="warning-bar__text">{$i18n.t.appWarning.prfCompatibility}</span>
+  </div>
 
   {#if !login}
     <AuthScreen />
@@ -54,10 +54,27 @@ onMount(async () => {
     gap: 20px;
   }
 
-  .warning-text {
+  .warning-bar {
+    background-color: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    border-left: 4px solid var(--color-warning);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     font-size: 0.8rem;
-    color: var(--color-text-secondary);
-    margin: 0;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
+  }
+
+  .warning-bar__title {
+    color: var(--color-warning);
+  }
+
+  .warning-bar__text {
+    color: var(--color-text);
   }
 
   .account-info {
