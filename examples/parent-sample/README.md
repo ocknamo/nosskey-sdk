@@ -8,6 +8,13 @@ Runs on port **5174** by default so it lives on a different origin than the
 host example (`svelte-app` on port 5173), exercising the cross-origin
 `postMessage` path that production deployments actually use.
 
+A live build of this sample is hosted at
+<https://ocknamo.github.io/nosskey-sdk/>.
+
+> For a step-by-step guide to embedding the iframe into your own app, see the
+> integration guide: [English](../../docs/en/iframe-integration.en.md) /
+> [日本語](../../docs/ja/iframe-integration.ja.md).
+
 ## What it demonstrates
 
 1. Mount `NosskeyIframeClient` against a host URL (default
