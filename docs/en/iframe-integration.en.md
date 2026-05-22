@@ -157,7 +157,7 @@ The iframe host automatically recovers from this via the Storage Access API:
 3. The browser shows a permission dialog. On approval, the iframe re-reads the key from first-party storage and hides itself again.
 4. The parent app simply retries `getPublicKey()` / `signEvent()` and they succeed.
 
-This flow is handled automatically by the host and `NosskeyIframeClient`, but **you must place the iframe somewhere visible so the user can click the "Grant storage access" button** (see the previous section). If the user denies permission, or the browser does not support the Storage Access API, the fallback is to have the user open `nosskey.app` directly in a separate tab.
+This flow is handled automatically by the host and `NosskeyIframeClient`, but **you must place the iframe somewhere visible so the user can click the "Grant storage access" button** (see the previous section). The iframe host's status card also includes a link to open `nosskey.app` in a separate tab. This is a path for the user to create a passkey (Nosskey identity) or sign in at first-party scope, primarily for the case where no key exists yet. Note that if the browser partitions storage and the Storage Access API permission cannot be obtained, the user needs to grant the permission again.
 
 See [`iframe-host.en.md`](./iframe-host.en.md#storage-partitioning--storage-access-api) for details.
 
