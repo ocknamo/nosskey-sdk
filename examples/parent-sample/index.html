@@ -78,9 +78,9 @@
           from this iframe — both encrypt and decrypt will use the same key,
           so you can verify the round trip without a second account.
         </p>
-        <label for="nip44-peer">Peer public key (hex, 64 chars)</label>
+        <label for="nip44-peer">Peer public key (hex or npub)</label>
         <div class="row">
-          <input id="nip44-peer" type="text" placeholder="64 hex characters" />
+          <input id="nip44-peer" type="text" placeholder="64 hex characters or npub1…" />
           <button id="nip44-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip44-plaintext" style="margin-top:12px;">Plaintext</label>
@@ -102,9 +102,9 @@
           spec itself. Use NIP-44 for new messages. This section is provided
           only to verify interop with older clients.
         </p>
-        <label for="nip04-peer">Peer public key (hex, 64 chars)</label>
+        <label for="nip04-peer">Peer public key (hex or npub)</label>
         <div class="row">
-          <input id="nip04-peer" type="text" placeholder="64 hex characters" />
+          <input id="nip04-peer" type="text" placeholder="64 hex characters or npub1…" />
           <button id="nip04-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip04-plaintext" style="margin-top:12px;">Plaintext</label>
@@ -138,9 +138,9 @@
           Two consent dialogs appear (NIP-44 encrypt for the seal, then sign
           kind:13). The Relay URL is shared with section 4.
         </p>
-        <label for="nip17-peer">Peer public key (hex, 64 chars)</label>
+        <label for="nip17-peer">Peer public key (hex or npub)</label>
         <div class="row">
-          <input id="nip17-peer" type="text" placeholder="64 hex characters" />
+          <input id="nip17-peer" type="text" placeholder="64 hex characters or npub1…" />
           <button id="nip17-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip17-plaintext" style="margin-top:12px;">Message</label>
