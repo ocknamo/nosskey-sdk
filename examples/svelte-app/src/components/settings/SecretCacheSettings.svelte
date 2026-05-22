@@ -8,6 +8,7 @@ import Button from '../ui/button/Button.svelte';
 
 // 状態変数
 let cacheSettingMessage = $state('');
+let cacheMessageType = $state<'success' | 'error'>('success');
 let isCaching = $state(true);
 let timeoutSeconds = $state(300); // デフォルト5分（300秒）
 
@@ -28,6 +29,7 @@ function updateCacheSetting(value: boolean) {
   // storeを更新（keyManager.serviceがサブスクライブして自動的に反映）
   cacheSecrets.set(value);
 
+  cacheMessageType = 'success';
   cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
   setTimeout(() => {
     cacheSettingMessage = '';
@@ -43,6 +45,7 @@ function updateTimeoutSetting(event: Event) {
     timeoutSeconds = value;
     cacheTimeout.set(value); // keyManager.serviceがサブスクライブして自動的に反映
 
+    cacheMessageType = 'success';
     cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
     setTimeout(() => {
       cacheSettingMessage = '';
@@ -55,8 +58,10 @@ function clearCache() {
   const success = clearSecretCache();
 
   if (success) {
+    cacheMessageType = 'success';
     cacheSettingMessage = $i18n.t.settings.cacheSettings.clearSuccess;
   } else {
+    cacheMessageType = 'error';
     cacheSettingMessage = $i18n.t.settings.cacheSettings.clearError;
   }
 
@@ -120,7 +125,7 @@ function clearCache() {
       </Button>
     </div>
 
-    <SettingMessage message={cacheSettingMessage} />
+    <SettingMessage message={cacheSettingMessage} type={cacheMessageType} />
   </div>
 </CardSection>
 

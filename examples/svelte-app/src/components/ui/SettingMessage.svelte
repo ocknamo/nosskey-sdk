@@ -2,13 +2,14 @@
 // 設定変更時のフィードバックメッセージ（コントロール直下に表示）
 interface Props {
   message: string;
+  type?: 'success' | 'error';
 }
 
-const { message }: Props = $props();
+const { message, type = 'success' }: Props = $props();
 </script>
 
 {#if message}
-  <div class="setting-message" aria-live="polite">
+  <div class="setting-message" class:error={type === 'error'} aria-live="polite">
     {message}
   </div>
 {/if}
@@ -26,5 +27,11 @@ const { message }: Props = $props();
       background-color 0.3s ease,
       border-color 0.3s ease,
       color 0.3s ease;
+  }
+
+  .setting-message.error {
+    background-color: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning);
   }
 </style>
