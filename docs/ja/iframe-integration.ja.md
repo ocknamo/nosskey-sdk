@@ -20,24 +20,21 @@
 
 親ページと iframe は `window.postMessage` で JSON-RPC 風のメッセージを交換します。`NosskeyIframeClient` がこの通信を隠蔽するため、`postMessage` を直接書く必要はありません。
 
-```
-親アプリ                              nosskey.app/#/iframe
-────────                              ────────────────────
-new NosskeyIframeClient(...)
-  │ iframe 要素を生成・マウント
-  ▼
-                                      iframe ホスト起動
-  await client.ready() ◄────────────  nosskey:ready
-  │
-  ▼
-window.nostr = { ... } を設定
+```mermaid
+sequenceDiagram
+    actor U as ユーザー
+    participant P as 親アプリ
+    participant I as iframe ホスト<br/>(nosskey.app/#/iframe)
 
-client.signEvent(event)
-  │ nosskey:request ───────────────►  consent ダイアログ表示
-  │                                     │ ユーザーが承認
-  │ nosskey:response ◄────────────────  WebAuthn PRF で署名
-  ▼
-署名済みイベントを取得
+    P->>I: iframe を生成・マウント
+    I-->>P: nosskey:ready
+    Note over P: client.ready() が解決し<br/>window.nostr = { ... } を設定
+
+    P->>I: nosskey:request (signEvent など)
+    I->>U: consent ダイアログを表示
+    U->>I: 承認
+    Note over I: WebAuthn PRF で署名
+    I-->>P: nosskey:response (署名済みイベント)
 ```
 
 ポイント:

@@ -22,24 +22,21 @@ Intended audience: developers of cross-origin Nostr web apps.
 
 The parent page and the iframe exchange JSON-RPC-style messages over `window.postMessage`. `NosskeyIframeClient` hides this communication, so you do not need to write `postMessage` yourself.
 
-```
-Parent app                            nosskey.app/#/iframe
-──────────                            ────────────────────
-new NosskeyIframeClient(...)
-  │ create & mount the iframe element
-  ▼
-                                       iframe host starts
-  await client.ready() ◄─────────────  nosskey:ready
-  │
-  ▼
-set window.nostr = { ... }
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant P as Parent app
+    participant I as iframe host<br/>(nosskey.app/#/iframe)
 
-client.signEvent(event)
-  │ nosskey:request ────────────────►  show consent dialog
-  │                                      │ user approves
-  │ nosskey:response ◄─────────────────  sign via WebAuthn PRF
-  ▼
-receive the signed event
+    P->>I: create & mount the iframe
+    I-->>P: nosskey:ready
+    Note over P: client.ready() resolves and<br/>window.nostr = { ... } is set
+
+    P->>I: nosskey:request (signEvent, etc.)
+    I->>U: show consent dialog
+    U->>I: approve
+    Note over I: sign via WebAuthn PRF
+    I-->>P: nosskey:response (signed event)
 ```
 
 Key points:
