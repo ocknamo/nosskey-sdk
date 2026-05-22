@@ -185,6 +185,8 @@ window.nostr = {
 サーバは `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`
 を返す必要があります。
 
+自分のアプリへ iframe を埋め込む手順は [docs/ja/iframe-integration.ja.md](docs/ja/iframe-integration.ja.md) で詳しく解説しています。
+
 参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
 
 #### Storage Partitioning への対応

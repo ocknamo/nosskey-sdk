@@ -302,6 +302,7 @@ identity shared across every Nostr app**.
 
 ## Related documents
 
+- [iframe integration guide (for parent apps)](./iframe-integration.en.md) — how to embed the iframe into your own app
 - [Parent-page usage (root README)](../../README.md#iframe-mode-cross-origin-signing)
 - [`nosskey-iframe` package](../../packages/nosskey-iframe)
 - [iframe expansion plan](../iframe-expansion-plan.md) — roadmap and status
