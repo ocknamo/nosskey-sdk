@@ -22,8 +22,28 @@ describe('parsePeerPubkey', () => {
     expect(parsePeerPubkey(npub)).toEqual({ ok: true, value: hex });
   });
 
-  it('rejects an npub-prefixed string that is not a valid npub', () => {
+  it('accepts an uppercase NPUB and converts it to hex', () => {
+    const npub = 'NPUB180CVV07TJDRRGPA0J7J7TMNYL2YR6YR7L8J4S3EVF6U64TH6GKWSYJH6W6';
+    const hex = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+    expect(parsePeerPubkey(npub)).toEqual({ ok: true, value: hex });
+  });
+
+  it('rejects an npub-prefixed string that is too short to be a valid npub', () => {
     expect(parsePeerPubkey('npub1example')).toEqual({ ok: false, reason: 'invalid npub format' });
+  });
+
+  it('rejects an npub containing characters outside the bech32 charset', () => {
+    // 'b', 'i', 'o' are not in the bech32 charset
+    const badChar = `npub1${'b'.repeat(58)}`;
+    expect(parsePeerPubkey(badChar)).toEqual({ ok: false, reason: 'invalid npub format' });
+  });
+
+  it('rejects an npub whose last data symbol encodes non-zero padding bits', () => {
+    // The valid last DATA symbol is 's' (=16=0b10000, lower 4 padding bits = 0).
+    // Replacing it with 'l' (=31=0b11111, lower 4 bits = 0b1111 ≠ 0) must be rejected.
+    // Note: last 6 chars are the checksum — the tampered symbol is at position 56.
+    const tampered = 'npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwlyjh6w6';
+    expect(parsePeerPubkey(tampered)).toEqual({ ok: false, reason: 'invalid npub format' });
   });
 
   it('accepts a non-npub non-empty value as-is (no format validation)', () => {

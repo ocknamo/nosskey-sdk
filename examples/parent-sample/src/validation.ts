@@ -8,6 +8,12 @@ export type ParseResult<T> = { ok: true; value: T } | { ok: false; reason: strin
 
 const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
+/**
+ * Decodes an npub bech32 string to a 64-character lowercase hex pubkey.
+ * Checksum is not verified (acceptable for a sample app); padding bits are
+ * validated to reject npub strings that differ only in their trailing symbol.
+ * Returns null for any malformed input.
+ */
 function npubToHex(npub: string): string | null {
   try {
     const lower = npub.toLowerCase();
@@ -34,6 +40,8 @@ function npubToHex(npub: string): string | null {
         bytes.push((acc >> bits) & 0xff);
       }
     }
+    // leftover padding bits must be zero per bech32 spec
+    if (bits > 0 && (acc & ((1 << bits) - 1)) !== 0) return null;
     if (bytes.length !== 32) return null;
     return bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
   } catch {
