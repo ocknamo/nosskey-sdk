@@ -1,5 +1,7 @@
 # Nosskey iframe Integration Guide (for parent apps)
 
+> **Note:** This is a beta feature still under development and may not be fully tested.
+
 > **Note:** The Japanese version ([`iframe-integration.ja.md`](../ja/iframe-integration.ja.md)) is the original document. This English version is a machine translation, so its accuracy cannot be guaranteed. If anything is unclear, please refer to the Japanese version.
 
 This document is a step-by-step guide for **developers who want to embed the Nosskey signing iframe into their own Nostr web app**. Using the production host [`https://nosskey.app/#/iframe`](https://nosskey.app/#/iframe) as the example, it explains how to integrate via the `NosskeyIframeClient` from the [`nosskey-iframe`](../../packages/nosskey-iframe) package.

@@ -1,5 +1,7 @@
 # Nosskey iframe 埋め込みガイド (親アプリ向け)
 
+> **注意:** これは開発中のベータ機能であり、動作確認が不十分な可能性があります。
+
 このドキュメントは、**自分の Nostr Web アプリに Nosskey の署名 iframe を埋め込んで利用したい開発者**向けの手順書です。本番ホスト [`https://nosskey.app/#/iframe`](https://nosskey.app/#/iframe) を例に、[`nosskey-iframe`](../../packages/nosskey-iframe) パッケージの `NosskeyIframeClient` を使った統合方法を解説します。
 
 > iframe ホスト側 (`examples/svelte-app` の `#/iframe` ルート) の内部構造については [`iframe-host.ja.md`](./iframe-host.ja.md) を参照してください。
