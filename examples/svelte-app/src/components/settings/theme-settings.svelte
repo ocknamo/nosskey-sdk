@@ -2,8 +2,10 @@
 import { i18n } from '../../i18n/i18n-store.js';
 import { type ThemeMode, currentTheme } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import SettingMessage from '../ui/SettingMessage.svelte';
 
 let selectedTheme: ThemeMode = 'auto';
+let themeMessage = $state('');
 
 // 現在の設定を読み込み
 currentTheme.subscribe((value) => {
@@ -16,29 +18,9 @@ const handleThemeChange = (event: Event) => {
   selectedTheme = newTheme;
   currentTheme.set(newTheme);
 
-  // テーマ変更のフィードバック
-  const message = document.createElement('div');
-  message.textContent = $i18n.t.settings.theme.changed;
-  message.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--color-primary);
-      color: var(--color-text-on-primary);
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 1000;
-      box-shadow: 0 4px 12px var(--color-shadow-strong);
-      animation: fadeInOut 3s ease-in-out;
-    `;
-
-  document.body.appendChild(message);
+  themeMessage = $i18n.t.settings.theme.changed;
   setTimeout(() => {
-    if (message.parentNode) {
-      message.parentNode.removeChild(message);
-    }
+    themeMessage = '';
   }, 3000);
 };
 </script>
@@ -59,6 +41,8 @@ const handleThemeChange = (event: Event) => {
       <option value="dark">{$i18n.t.settings.theme.dark}</option>
     </select>
   </div>
+
+  <SettingMessage message={themeMessage} />
 </CardSection>
 
 <style>

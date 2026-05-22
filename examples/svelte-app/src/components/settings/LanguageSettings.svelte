@@ -1,6 +1,7 @@
 <script lang="ts">
 import { changeLanguage, i18n } from '../../i18n/i18n-store.js';
 import CardSection from '../ui/CardSection.svelte';
+import SettingMessage from '../ui/SettingMessage.svelte';
 
 // 状態変数
 let languageMessage = $state('');
@@ -41,11 +42,7 @@ function updateLanguage(lang: 'ja' | 'en') {
       </label>
     </div>
 
-    {#if languageMessage}
-      <div class="result-message">
-        {languageMessage}
-      </div>
-    {/if}
+    <SettingMessage message={languageMessage} />
   </div>
 </CardSection>
 
@@ -75,19 +72,5 @@ function updateLanguage(lang: 'ja' | 'en') {
 
   .radio-group input[type="radio"] {
     margin-right: 10px;
-  }
-
-  .result-message {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: var(--color-success-bg);
-    border: 1px solid var(--color-success-border);
-    border-radius: 8px;
-    font-weight: bold;
-    color: var(--color-success);
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease,
-      color 0.3s ease;
   }
 </style>

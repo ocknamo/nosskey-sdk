@@ -11,6 +11,7 @@ import {
   storageCorruption,
 } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import SettingMessage from '../ui/SettingMessage.svelte';
 import Button from '../ui/button/Button.svelte';
 
 const OPTIONS: ConsentDecision[] = ['ask', 'always', 'deny'];
@@ -81,9 +82,7 @@ function optionLabel(option: ConsentDecision): string {
     </div>
   {/if}
 
-  {#if savedMessage}
-    <div class="saved-message" aria-live="polite">{savedMessage}</div>
-  {/if}
+  <SettingMessage message={savedMessage} />
 </CardSection>
 
 <style>
@@ -150,15 +149,5 @@ function optionLabel(option: ConsentDecision): string {
     margin-top: 12px;
     display: flex;
     justify-content: flex-end;
-  }
-
-  .saved-message {
-    margin-top: 12px;
-    padding: 8px 12px;
-    background-color: var(--color-success-bg);
-    border: 1px solid var(--color-success-border);
-    border-radius: 8px;
-    color: var(--color-success);
-    font-size: 0.9rem;
   }
 </style>
