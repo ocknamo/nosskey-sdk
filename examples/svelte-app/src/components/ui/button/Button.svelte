@@ -6,6 +6,7 @@ const {
   disabled = false,
   size = 'medium' as ButtonSize,
   variant = 'primary' as ButtonVariant,
+  fullWidth = true,
   onclick = undefined,
   buttonType = 'button' as 'button' | 'submit' | 'reset',
   title = undefined,
@@ -24,7 +25,7 @@ function handleClick() {
   type={buttonType as "button" | "submit" | "reset"}
   {disabled}
   {title}
-  class={`btn btn-${variant} btn-${size} ${className}`}
+  class={`btn btn-${variant} btn-${size} ${fullWidth ? '' : 'btn-auto-width'} ${className}`}
   onclick={handleClick}
 >
   {@render children?.()}
@@ -55,6 +56,11 @@ function handleClick() {
   .btn:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+  }
+
+  .btn-auto-width {
+    width: auto;
+    max-width: none;
   }
 
   /* Primary Button */

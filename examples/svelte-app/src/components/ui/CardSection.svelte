@@ -1,11 +1,19 @@
 <script lang="ts">
+import type { Snippet } from 'svelte';
+
 // 共通のカードセクションコンポーネント
-export let title: string;
+interface Props {
+  title: string;
+  compact?: boolean;
+  children?: Snippet;
+}
+
+const { title, compact = false, children }: Props = $props();
 </script>
 
-<div class="card-section">
+<div class="card-section" class:compact>
   <h2>{title}</h2>
-  <slot />
+  {@render children?.()}
 </div>
 
 <style>
@@ -27,10 +35,26 @@ export let title: string;
     }
   }
 
+  .card-section.compact {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .card-section.compact {
+      padding: 12px;
+    }
+  }
+
   h2 {
     margin-bottom: 15px;
     color: var(--color-titles);
     text-align: left;
     transition: color 0.3s ease;
+  }
+
+  .card-section.compact h2 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
   }
 </style>

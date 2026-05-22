@@ -1,11 +1,9 @@
 <script lang="ts">
-import { onMount } from 'svelte';
 import { i18n } from '../i18n/i18n-store.js';
 import { currentScreen } from '../store/app-state.js';
 
 // 現在の画面を監視
 let screen = $state('account');
-let isVisible = $state(false);
 
 currentScreen.subscribe((value) => {
   screen = value;
@@ -24,54 +22,9 @@ function getPageTitle(screenName: string): string {
       return 'Nosskey';
   }
 }
-
-// h1タイトルの可視性を監視
-onMount(() => {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        // h1が画面外に出た時にヘッダーバーを表示
-        isVisible = !entry.isIntersecting;
-      }
-    },
-    {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0,
-    }
-  );
-
-  // 画面変更時にh1要素を再監視
-  const observeH1 = () => {
-    // 既存の監視を停止
-    observer.disconnect();
-
-    // 少し遅延してからh1を探す（DOM更新を待つ）
-    setTimeout(() => {
-      const h1Elements = document.querySelectorAll('.screen-title');
-      for (const h1 of h1Elements) {
-        observer.observe(h1);
-      }
-    }, 100);
-  };
-
-  // 初回監視開始
-  observeH1();
-
-  // 画面変更時に監視対象を更新
-  const unsubscribe = currentScreen.subscribe(() => {
-    observeH1();
-  });
-
-  // クリーンアップ
-  return () => {
-    observer.disconnect();
-    unsubscribe();
-  };
-});
 </script>
 
-<header class="header-bar" class:visible={isVisible}>
+<header class="header-bar">
   <div class="header-content">
     <div class="header-left">
       <h1 class="app-title">Nosskey</h1>
@@ -95,15 +48,9 @@ onMount(() => {
     box-shadow: 0 2px 10px var(--color-shadow);
     z-index: 100;
     border-bottom: 1px solid var(--color-border);
-    transform: translateY(-100%);
     transition:
-      transform 0.3s ease-in-out,
       background-color 0.3s ease,
       border-color 0.3s ease;
-  }
-
-  .header-bar.visible {
-    transform: translateY(0);
   }
 
   .header-content {
