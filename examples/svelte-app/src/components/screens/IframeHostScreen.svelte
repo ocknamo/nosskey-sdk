@@ -3,7 +3,6 @@ import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { processStandaloneHandoff } from '../../services/opener-handoff.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
 import ConsentDialog from '../ConsentDialog.svelte';
@@ -29,10 +28,6 @@ let stopHost: (() => void) | null = null;
 let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);
-
-// `openSetup()` で開いたスタンドアロンタブの参照。ハンドオフ message の
-// `event.source` 検証に使う。閉じられた場合は null のままで構わない。
-let standaloneSetupWindow: Window | null = null;
 
 function postVisibility(visible: boolean): void {
   if (window.parent && window.parent !== window) {
@@ -183,42 +178,31 @@ function handleClose(): void {
 // runs inside the (often cross-origin) signing iframe, where in-place
 // navigation would not reach the first-party setup flow.
 //
-// We intentionally do NOT pass 'noopener' so the opened tab keeps a
-// window.opener reference back to this iframe. Both tabs share the same
-// origin (nosskey.app), so opener access is permitted by browsers. The
-// standalone tab uses this to postMessage the freshly created
-// NostrKeyInfo back here for a zero-delay handoff (see
-// `handleStandaloneHandoff`).
+// `noopener` is intentional: the registration tab does NOT need a
+// `window.opener` reference back to this iframe. The first-party cookie
+// written by `MultiStorage` in the setup tab is what carries the
+// NostrKeyInfo across, and `handleVisibilityRecheck` picks it up on
+// return. Keep the `noopener` flag — removing it (e.g. for a postMessage
+// handoff) is unnecessary and would weaken the security default.
 function openSetup(): void {
-  standaloneSetupWindow = window.open(buildScreenUrl(window.location, 'account'), '_blank');
+  window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
 }
 
-// Live handoff: the standalone tab posts NostrKeyInfo back here after
-// passkey registration / login. Guarded by same-origin + source identity
-// so an arbitrary cross-origin frame cannot inject a fabricated key.
-function handleStandaloneHandoff(event: MessageEvent): void {
-  const keyInfo = processStandaloneHandoff(event, {
-    origin: window.location.origin,
-    source: standaloneSetupWindow,
-  });
-  if (!keyInfo) return;
-
-  const manager = getNosskeyManager();
-  manager.setCurrentKeyInfo(keyInfo);
-  uiState = 'running';
-  postVisibility(false);
-  // 同じタブからの再送（リロード等）に対して冗長な再書き込みをしないよう
-  // 参照をクリア。次の openSetup() でまた新しいウィンドウ参照が入る。
-  standaloneSetupWindow = null;
-}
-
-// Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again.
-// Helps users who close the standalone setup tab manually and return to
-// the parent: any silent SAA re-grant or freshly-mirrored cookie is
-// picked up without requiring them to re-click "Grant storage access".
+// Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again
+// after the user returns from the standalone setup tab. On Safari/iOS this
+// is what bridges the first-party cookie write done by the standalone tab
+// into the iframe's view: silent SAA grant resolves (Safari remembers a
+// prior grant), applyStorageGrant swaps the manager to CookieStorage, and
+// hasKeyInfo() reads the freshly written NostrKeyInfo. On Chromium/Firefox
+// it just reruns the existing happy-path detection.
+//
+// Skip when we're already in a healthy state: visibilitychange and pageshow
+// can fire close together (e.g. BFCache restore), and Safari has been seen
+// to throttle / error on rapid back-to-back silent SAA calls.
 function handleVisibilityRecheck(): void {
   if (typeof document === 'undefined') return;
   if (document.visibilityState !== 'visible') return;
+  if (uiState === 'running' || uiState === 'granted') return;
   void detectInitialState();
 }
 
@@ -306,10 +290,6 @@ onMount(() => {
     document.body.classList.add('nosskey-embedded');
   }
   stopHost = startIframeHost();
-  // Install listeners BEFORE detectInitialState so we don't miss a fast
-  // postMessage from a standalone tab that was already mid-flight (e.g.
-  // user reloads parent while the setup tab is still open).
-  window.addEventListener('message', handleStandaloneHandoff);
   document.addEventListener('visibilitychange', handleVisibilityRecheck);
   window.addEventListener('pageshow', handleVisibilityRecheck);
   void detectInitialState();
@@ -319,10 +299,8 @@ onDestroy(() => {
   document.body.classList.remove('nosskey-embedded');
   stopHost?.();
   stopHost = null;
-  window.removeEventListener('message', handleStandaloneHandoff);
   document.removeEventListener('visibilitychange', handleVisibilityRecheck);
   window.removeEventListener('pageshow', handleVisibilityRecheck);
-  standaloneSetupWindow = null;
 });
 </script>
 

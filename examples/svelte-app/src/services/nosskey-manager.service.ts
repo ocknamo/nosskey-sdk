@@ -76,6 +76,10 @@ export function getNosskeyManager(): NosskeyManager {
       typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
         ? window.localStorage
         : null;
+    // localStorage が無い経路 (SSR / Storage Disabled な Private Browsing 等)
+    // は CookieStorage 単独にフォールバック。ただし CookieStorage の Set-Cookie
+    // 属性は `Secure` 必須なので、HTTPS でないとそもそも書き込みが効かない。
+    // 通常ブラウザでは lsBackend が必ず存在するため本経路は実質テスト/SSR 専用。
     const storage: Storage = lsBackend
       ? new MultiStorage({ primary: lsBackend, mirrors: [cookieStorage] })
       : cookieStorage;

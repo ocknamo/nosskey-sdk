@@ -146,9 +146,10 @@ async function getPubkey(): Promise<void> {
       log(
         'Hint: no key is registered for this iframe origin yet. Click ' +
           '"Grant storage access" / "Open setup" in the visible iframe above, ' +
-          'then register or sign in with a passkey in the new tab — the iframe ' +
-          'will pick up the key automatically when you return. On Safari/iOS the ' +
-          'key is persisted via a first-party cookie at the iframe origin.'
+          'then register or sign in with a passkey in the new tab. When you ' +
+          'return to this tab the iframe re-checks storage on visibility — on ' +
+          'Safari/iOS the key is read from a first-party cookie at the iframe ' +
+          'origin, on Chromium/Firefox from the unpartitioned localStorage handle.'
       );
     }
     progress.settle(`getPublicKey failed: ${error}`, 'error');

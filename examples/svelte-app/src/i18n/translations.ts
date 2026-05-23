@@ -519,7 +519,7 @@ export const ja: TranslationData = {
     noKey:
       '鍵が設定されていません。下のボタンからセットアップ画面を開き、パスキーで登録またはログインしてください。',
     partitionedWarning:
-      'このサイトは別ドメインから埋め込まれています。鍵にアクセスするには、下のボタンを押してストレージアクセスを許可してください。',
+      'このサイトは別ドメインから埋め込まれています。鍵にアクセスするには、下のボタンを押してストレージアクセスを許可してください。別タブでパスキー登録を済ませた後に戻ってきた場合も、まずこのボタンを押してください。',
     grantStorageAccess: 'ストレージアクセスを許可',
     storageAccessGranted: 'アクセスが許可されました。鍵を読み込みました。',
     storageAccessDenied:
@@ -794,7 +794,7 @@ export const en: TranslationData = {
     noKey:
       'No key configured. Use the button below to open the setup page, then register or sign in with a passkey.',
     partitionedWarning:
-      'This page is embedded from a different domain. Grant storage access with the button below to reach your key.',
+      'This page is embedded from a different domain. Grant storage access with the button below to reach your key. If you just finished registering a passkey in the setup tab and returned here, click the button first.',
     grantStorageAccess: 'Grant storage access',
     storageAccessGranted: 'Access granted. Key loaded.',
     storageAccessDenied:

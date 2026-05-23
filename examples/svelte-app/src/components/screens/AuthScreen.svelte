@@ -3,7 +3,6 @@ import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { notifyOpenerIfSameOrigin } from '../../services/opener-handoff.js';
 import * as appState from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -110,10 +109,6 @@ async function login(credentialId: string) {
     // SDKにKeyInfoを設定（内部でストレージにも保存される）
     keyManager.setCurrentKeyInfo(keyInfo);
 
-    // iframe 経由で開かれたタブなら opener へ NostrKeyInfo を返し、iframe
-    // 側でログイン状態を即時反映できるようにする（同一 origin 限定）。
-    notifyOpenerIfSameOrigin(keyInfo);
-
     // 公開鍵を取得して状態を更新
     const pubKey = await keyManager.getPublicKey();
     appState.publicKey.set(pubKey);
@@ -140,9 +135,6 @@ async function loginWithExistingPasskey() {
 
     // SDKに鍵情報を設定（内部でストレージにも保存される）
     keyManager.setCurrentKeyInfo(keyInfo);
-
-    // iframe 経由で開かれたタブなら opener へ NostrKeyInfo を返す。
-    notifyOpenerIfSameOrigin(keyInfo);
 
     // 公開鍵を取得して状態を更新
     const pubKey = await keyManager.getPublicKey();
@@ -223,9 +215,6 @@ async function loginWithKeyInfoData(keyInfoJsonText: string) {
 
     // KeyInfoをセット
     keyManager.setCurrentKeyInfo(keyData);
-
-    // iframe 経由で開かれたタブなら opener へ NostrKeyInfo を返す。
-    notifyOpenerIfSameOrigin(keyData);
 
     // 公開鍵を取得して状態を更新
     const pubKey = await keyManager.getPublicKey();
