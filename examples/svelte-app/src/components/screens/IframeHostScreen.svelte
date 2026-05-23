@@ -182,8 +182,16 @@ function handleClose(): void {
 // `window.opener` reference back to this iframe. The first-party cookie
 // written by `MultiStorage` in the setup tab is what carries the
 // NostrKeyInfo across, and `handleVisibilityRecheck` picks it up on
-// return. Keep the `noopener` flag — removing it (e.g. for a postMessage
-// handoff) is unnecessary and would weaken the security default.
+// return. Keep the `noopener` flag — removing it weakens the security
+// default for no functional gain.
+//
+// 経緯: 一度 `noopener` を外して setup タブ → `window.opener.postMessage`
+// で NostrKeyInfo を即時受け渡しする live handoff 経路を入れた (commit
+// f196f5c) が、Cookie + visibilitychange だけで主要ケースが成立し、
+// postMessage 経路の追加価値は「SAA grant 前に setup を開いた」エッジ
+// ケースと体感速度だけと判明したため commit 6c6d18f で削除した。再導入
+// する前に、まずその 2 点だけのために `noopener` を外す価値があるかを
+// 検討すること。
 function openSetup(): void {
   window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
 }
