@@ -305,22 +305,33 @@ const client = new NosskeyIframeClient({
 
 ## Phase 5: ブラウザ対応拡大（将来）
 
-### 5-A: Safari 向け `window.open()` フォールバック
+### 5-A: Safari / iOS 向け Cookie ＋ opener postMessage ブリッジ
 
-**現状**: Safari は iframe 内での WebAuthn が不安定（PRF 拡張のサポートも限定的）。
-**方針**: Safari の PRF サポートが安定した段階で対応を検討する。現時点は調査フェーズ。
+**状態**: 実装済み。
 
-**設計案:**
-```typescript
-interface NosskeyIframeClientOptions {
-  mode?: 'iframe' | 'popup' | 'auto'; // 'auto' でブラウザ判定
-  popupUrl?: string; // ポップアップ URL（デフォルト iframeUrl の #/popup）
-}
-```
+**背景**: WebKit (Safari / iOS) はクロスオリジン iframe の `localStorage` を partition し、`document.requestStorageAccess()` 後も localStorage は partition されたまま（unpartition されるのは cookie のみ）。Chromium の `requestStorageAccess({ all: true })` 相当の API は無く、`handle.localStorage` も存在しない。このため、別タブでパスキー登録した結果が iframe からは見えず `NO_KEY` になる問題があった。
 
-**変更ファイル:**
-- `packages/nosskey-iframe/src/client.ts` — ポップアップモード追加
-- `examples/svelte-app/src/App.svelte` — `#/popup` ルート対応
+**方針**: client 側 API は変更せず、svelte-app 内部の仕組みだけで Safari/iOS を吸収する。秘密鍵を含まない `NostrKeyInfo`（`{credentialId, pubkey, salt, username?}`）を以下 2 経路で iframe に橋渡しする。
+
+**メカニズム**:
+
+1. **`CookieStorage` + `MultiStorage`** — `examples/svelte-app/src/services/cookie-storage.ts` と `multi-storage.ts` で `Storage` インターフェース互換のデュアルライト機構を実装。スタンドアロンタブでは `localStorage` を primary、`CookieStorage` をミラーとし、`setCurrentKeyInfo` のたびに first-party cookie へ自動ミラーする。
+2. **opener postMessage ライブ受け渡し** — iframe (`IframeHostScreen`) が `window.open(...)` で同一 origin のスタンドアロンタブを開く際に `noopener` を外し、スタンドアロンタブ側 (`AuthScreen`) は登録/ログイン成功直後に `notifyOpenerIfSameOrigin(keyInfo)` で opener へ `nosskey:standalone-key-registered` メッセージを送る。iframe 側は `event.origin === self.origin` かつ `event.source === openedWindow` の二重ガードで検証してから `manager.setCurrentKeyInfo(keyInfo)` する。
+3. **`applyStorageGrant` Safari 経路** — SAA grant の `handle` が null かつ Safari 判定なら manager の storage を `CookieStorage` に切り替え、cookie 経由で `NostrKeyInfo` を rehydrate できるようにする。
+4. **`visibilitychange` / `pageshow` 再判定** — iframe が再可視化されたタイミングで `detectInitialState()` を再実行。Chromium UX も改善。
+
+**制約**:
+- Cookie 属性は `Path=/; SameSite=None; Secure; Max-Age=31536000`。`SameSite=None` には `Secure` が必須で、これは HTTPS 必須を意味する。`http://localhost` 開発時は cookie パスがサイレントに無効化されるが、`MultiStorage` が mirror 失敗を隔離しているため primary (localStorage) 動作には影響しない。
+- `NostrKeyInfo` は秘密鍵を含まないため cookie / 同一 origin postMessage 経由で渡しても安全（実際の秘密鍵導出は WebAuthn PRF を都度実行）。
+
+**実装ファイル**:
+- `examples/svelte-app/src/services/cookie-storage.ts` (新規)
+- `examples/svelte-app/src/services/multi-storage.ts` (新規)
+- `examples/svelte-app/src/services/opener-handoff.ts` (新規)
+- `examples/svelte-app/src/services/nosskey-manager.service.ts` — MultiStorage 注入、`getCookieStorage()` export
+- `examples/svelte-app/src/components/screens/AuthScreen.svelte` — `setCurrentKeyInfo` 直後の opener 通知
+- `examples/svelte-app/src/components/screens/IframeHostScreen.svelte` — `openSetup` の noopener 除去、handoff listener、visibilitychange 再判定、Safari 時 CookieStorage 切替
+- `examples/parent-sample/src/main.ts` — NO_KEY ヒント文更新
 
 ---
 

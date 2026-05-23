@@ -2,7 +2,8 @@
 import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
-import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { processStandaloneHandoff } from '../../services/opener-handoff.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
 import ConsentDialog from '../ConsentDialog.svelte';
@@ -28,6 +29,10 @@ let stopHost: (() => void) | null = null;
 let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);
+
+// `openSetup()` で開いたスタンドアロンタブの参照。ハンドオフ message の
+// `event.source` 検証に使う。閉じられた場合は null のままで構わない。
+let standaloneSetupWindow: Window | null = null;
 
 function postVisibility(visible: boolean): void {
   if (window.parent && window.parent !== window) {
@@ -118,18 +123,41 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     // into the SDK singleton so both this screen and the NosskeyIframeHost
     // (which shares the same manager) read the unpartitioned store.
     manager.setStorageOptions({ storage: handle.localStorage });
+  } else if (isLikelyWebKit()) {
+    // Safari/iOS (and any other WebKit-based iOS browser — see
+    // isLikelyWebKit comment): SAA grant unpartitions cookies but NOT
+    // localStorage. The standalone tab mirrors NostrKeyInfo into a
+    // first-party cookie via MultiStorage; switch the manager to read from
+    // that CookieStorage so we can rehydrate the key after a parent reload.
+    // setStorageOptions drops the in-memory cache when storage reference
+    // changes, so the next hasKeyInfo() reads fresh from cookies.
+    manager.setStorageOptions({ storage: getCookieStorage() });
   }
   // The SDK manager now points at first-party storage (the SAA handle on
   // Chromium; on Firefox the grant un-partitions window.localStorage and the
-  // manager keeps no handle). Reload app settings so consent policy, trusted
-  // origins and cache options resolve through that same storage — the one
-  // the relay sync already reads via manager.getStorageOptions().storage.
+  // manager keeps no handle; on Safari the CookieStorage swap above). Reload
+  // app settings so consent policy, trusted origins and cache options resolve
+  // through that same storage — the one the relay sync already reads via
+  // manager.getStorageOptions().storage.
   reloadSettings();
   if (manager.hasKeyInfo()) {
     uiState = 'granted';
   } else {
     uiState = 'noKeyExists';
   }
+}
+
+// iOS / iPadOS では Apple のポリシーで全ブラウザが WebKit を使うため、
+// CriOS (iOS Chrome) / FxiOS (iOS Firefox) / EdgiOS (iOS Edge) すべて
+// Safari と同じ Storage Access API の制約（cookie のみ unpartition、
+// localStorage は partition のまま）を受ける。よって関数名は「Safari」
+// 限定ではなく「WebKit」とし、cookie 経路フォールバックの対象に含める。
+function isLikelyWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // デスクトップ Chromium / Android Chrome / デスクトップ Edge は UA に
+  // "Safari" を含むが本来の WebKit ではないので除外する。
+  return /Safari/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua);
 }
 
 async function requestAccess(): Promise<void> {
@@ -154,8 +182,44 @@ function handleClose(): void {
 // register or sign in with a passkey. A new tab is required: this screen
 // runs inside the (often cross-origin) signing iframe, where in-place
 // navigation would not reach the first-party setup flow.
+//
+// We intentionally do NOT pass 'noopener' so the opened tab keeps a
+// window.opener reference back to this iframe. Both tabs share the same
+// origin (nosskey.app), so opener access is permitted by browsers. The
+// standalone tab uses this to postMessage the freshly created
+// NostrKeyInfo back here for a zero-delay handoff (see
+// `handleStandaloneHandoff`).
 function openSetup(): void {
-  window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
+  standaloneSetupWindow = window.open(buildScreenUrl(window.location, 'account'), '_blank');
+}
+
+// Live handoff: the standalone tab posts NostrKeyInfo back here after
+// passkey registration / login. Guarded by same-origin + source identity
+// so an arbitrary cross-origin frame cannot inject a fabricated key.
+function handleStandaloneHandoff(event: MessageEvent): void {
+  const keyInfo = processStandaloneHandoff(event, {
+    origin: window.location.origin,
+    source: standaloneSetupWindow,
+  });
+  if (!keyInfo) return;
+
+  const manager = getNosskeyManager();
+  manager.setCurrentKeyInfo(keyInfo);
+  uiState = 'running';
+  postVisibility(false);
+  // 同じタブからの再送（リロード等）に対して冗長な再書き込みをしないよう
+  // 参照をクリア。次の openSetup() でまた新しいウィンドウ参照が入る。
+  standaloneSetupWindow = null;
+}
+
+// Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again.
+// Helps users who close the standalone setup tab manually and return to
+// the parent: any silent SAA re-grant or freshly-mirrored cookie is
+// picked up without requiring them to re-click "Grant storage access".
+function handleVisibilityRecheck(): void {
+  if (typeof document === 'undefined') return;
+  if (document.visibilityState !== 'visible') return;
+  void detectInitialState();
 }
 
 type CardConfig = {
@@ -242,6 +306,12 @@ onMount(() => {
     document.body.classList.add('nosskey-embedded');
   }
   stopHost = startIframeHost();
+  // Install listeners BEFORE detectInitialState so we don't miss a fast
+  // postMessage from a standalone tab that was already mid-flight (e.g.
+  // user reloads parent while the setup tab is still open).
+  window.addEventListener('message', handleStandaloneHandoff);
+  document.addEventListener('visibilitychange', handleVisibilityRecheck);
+  window.addEventListener('pageshow', handleVisibilityRecheck);
   void detectInitialState();
 });
 
@@ -249,6 +319,10 @@ onDestroy(() => {
   document.body.classList.remove('nosskey-embedded');
   stopHost?.();
   stopHost = null;
+  window.removeEventListener('message', handleStandaloneHandoff);
+  document.removeEventListener('visibilitychange', handleVisibilityRecheck);
+  window.removeEventListener('pageshow', handleVisibilityRecheck);
+  standaloneSetupWindow = null;
 });
 </script>
 
