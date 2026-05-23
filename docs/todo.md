@@ -39,6 +39,7 @@
 - [ ] ヘルスチェック（ping/pong） — 定期的な接続確認メッセージ
 - [ ] 自動再接続 — 接続断検知後の iframe 再マウント
 - [ ] `nosskey:error` プロアクティブ通知 — iframe 側エラーを親へ通知
+- [ ] 長時間放置後の orphan request タイムアウト対策 — 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題。`pagehide` / `freeze` で client 側に "needs revalidate" フラグを立て次操作前に `ready()` 再確認するか、`nosskey:ready` 再受信時に client 側で「ready 再到来」を検出して in-flight request を再送する、いずれかの設計を検討。BFCache 復元自体は iframe 側の `pageshow` 再判定で鍵 rehydrate される (PR #75) ので、課題は親 SDK 側の "iframe が再ロードされたか" 検出に絞られる
 
 #### Phase 4: マルチキー対応
 - [ ] `switchKey(credentialId)` メソッド — iframe 経由でのキー切り替え
