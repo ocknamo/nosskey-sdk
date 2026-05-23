@@ -2,7 +2,7 @@
 import { onDestroy, onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
-import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
 import ConsentDialog from '../ConsentDialog.svelte';
@@ -118,18 +118,41 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     // into the SDK singleton so both this screen and the NosskeyIframeHost
     // (which shares the same manager) read the unpartitioned store.
     manager.setStorageOptions({ storage: handle.localStorage });
+  } else if (isLikelyWebKit()) {
+    // Safari/iOS (and any other WebKit-based iOS browser — see
+    // isLikelyWebKit comment): SAA grant unpartitions cookies but NOT
+    // localStorage. The standalone tab mirrors NostrKeyInfo into a
+    // first-party cookie via MultiStorage; switch the manager to read from
+    // that CookieStorage so we can rehydrate the key after a parent reload.
+    // setStorageOptions drops the in-memory cache when storage reference
+    // changes, so the next hasKeyInfo() reads fresh from cookies.
+    manager.setStorageOptions({ storage: getCookieStorage() });
   }
   // The SDK manager now points at first-party storage (the SAA handle on
   // Chromium; on Firefox the grant un-partitions window.localStorage and the
-  // manager keeps no handle). Reload app settings so consent policy, trusted
-  // origins and cache options resolve through that same storage — the one
-  // the relay sync already reads via manager.getStorageOptions().storage.
+  // manager keeps no handle; on Safari the CookieStorage swap above). Reload
+  // app settings so consent policy, trusted origins and cache options resolve
+  // through that same storage — the one the relay sync already reads via
+  // manager.getStorageOptions().storage.
   reloadSettings();
   if (manager.hasKeyInfo()) {
     uiState = 'granted';
   } else {
     uiState = 'noKeyExists';
   }
+}
+
+// iOS / iPadOS では Apple のポリシーで全ブラウザが WebKit を使うため、
+// CriOS (iOS Chrome) / FxiOS (iOS Firefox) / EdgiOS (iOS Edge) すべて
+// Safari と同じ Storage Access API の制約（cookie のみ unpartition、
+// localStorage は partition のまま）を受ける。よって関数名は「Safari」
+// 限定ではなく「WebKit」とし、cookie 経路フォールバックの対象に含める。
+function isLikelyWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // デスクトップ Chromium / Android Chrome / デスクトップ Edge は UA に
+  // "Safari" を含むが本来の WebKit ではないので除外する。
+  return /Safari/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua);
 }
 
 async function requestAccess(): Promise<void> {
@@ -154,8 +177,41 @@ function handleClose(): void {
 // register or sign in with a passkey. A new tab is required: this screen
 // runs inside the (often cross-origin) signing iframe, where in-place
 // navigation would not reach the first-party setup flow.
+//
+// `noopener` is intentional: the registration tab does NOT need a
+// `window.opener` reference back to this iframe. The first-party cookie
+// written by `MultiStorage` in the setup tab is what carries the
+// NostrKeyInfo across, and `handleVisibilityRecheck` picks it up on
+// return. Keep the `noopener` flag — removing it weakens the security
+// default for no functional gain.
+//
+// 経緯: 一度 `noopener` を外して setup タブ → `window.opener.postMessage`
+// で NostrKeyInfo を即時受け渡しする live handoff 経路を入れた (commit
+// f196f5c) が、Cookie + visibilitychange だけで主要ケースが成立し、
+// postMessage 経路の追加価値は「SAA grant 前に setup を開いた」エッジ
+// ケースと体感速度だけと判明したため commit 6c6d18f で削除した。再導入
+// する前に、まずその 2 点だけのために `noopener` を外す価値があるかを
+// 検討すること。
 function openSetup(): void {
   window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
+}
+
+// Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again
+// after the user returns from the standalone setup tab. On Safari/iOS this
+// is what bridges the first-party cookie write done by the standalone tab
+// into the iframe's view: silent SAA grant resolves (Safari remembers a
+// prior grant), applyStorageGrant swaps the manager to CookieStorage, and
+// hasKeyInfo() reads the freshly written NostrKeyInfo. On Chromium/Firefox
+// it just reruns the existing happy-path detection.
+//
+// Skip when we're already in a healthy state: visibilitychange and pageshow
+// can fire close together (e.g. BFCache restore), and Safari has been seen
+// to throttle / error on rapid back-to-back silent SAA calls.
+function handleVisibilityRecheck(): void {
+  if (typeof document === 'undefined') return;
+  if (document.visibilityState !== 'visible') return;
+  if (uiState === 'running' || uiState === 'granted') return;
+  void detectInitialState();
 }
 
 type CardConfig = {
@@ -242,6 +298,8 @@ onMount(() => {
     document.body.classList.add('nosskey-embedded');
   }
   stopHost = startIframeHost();
+  document.addEventListener('visibilitychange', handleVisibilityRecheck);
+  window.addEventListener('pageshow', handleVisibilityRecheck);
   void detectInitialState();
 });
 
@@ -249,6 +307,8 @@ onDestroy(() => {
   document.body.classList.remove('nosskey-embedded');
   stopHost?.();
   stopHost = null;
+  document.removeEventListener('visibilitychange', handleVisibilityRecheck);
+  window.removeEventListener('pageshow', handleVisibilityRecheck);
 });
 </script>
 
