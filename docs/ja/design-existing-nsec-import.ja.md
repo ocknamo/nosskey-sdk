@@ -25,7 +25,7 @@ Nosskey SDK は現在、WebAuthn パスキーの PRF 拡張出力をそのまま
 
 本設計は、ユーザーが手元の nsec を SDK に渡し、それを **WebAuthn PRF 由来の鍵で暗号化して localStorage に保存**する **wrap モード** を追加するためのものである。保存後は PRF 直接モードと**区別なく**既存 API（`signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `getPublicKey` / `exportNostrKey`）で操作できる。
 
-関連既存ドキュメント `docs/ja/nosskey-specification.ja.md` の「代替アプローチ：秘密鍵の暗号化/復号」を**具体実装レベルまで詳細化**する位置付けである。
+関連既存ドキュメント `docs/ja/nosskey-specification.ja.md` の「代替アプローチ：秘密鍵の暗号化/復号」を**具体実装レベルまで詳細化**する位置付けである。なお、既存仕様書では暗号方式として AES-GCM を例示しているが、本設計書では監査負荷とコード再利用性を優先し **NIP-44 v2 に統一**する（採用根拠は § 13）。既存仕様書側の文言更新は別途行う。
 
 ---
 
@@ -146,6 +146,8 @@ flowchart TD
 
 既存の `nip44Encrypt(plaintext, ourSk, peerPk)` をそのまま流用し、`ourSk = KEK`, `peerPk = KEK·G` として呼び出す。これにより**新規 crypto コードを書かずに**安全な AEAD ラッピングが得られる。
 
+> 補足: `seckeySigner` は `(seckeyHex: string) => EventSigner` のため、本設計書のシーケンス図で `seckeySigner(KEK)` / `seckeySigner(nsec)` と表現している箇所は、実装上 `bytesToHex(KEK)` / `bytesToHex(nsec)` で 16 進文字列に変換してから渡す。`nip44Encrypt` 自身は `ourSk: Uint8Array` を直接受け取るため変換不要。
+
 ```mermaid
 sequenceDiagram
   participant Caller as 呼び出し側
@@ -184,7 +186,7 @@ sequenceDiagram
 
 ### 6.4 plaintext / ペイロードのサイズ
 
-- plaintext: `nsecHex` (64 chars, 64 bytes UTF-8) → NIP-44 v2 パディングで 64B（ちょうどバケット境界）
+- plaintext: `nsecHex` (32B 秘密鍵を hex 化したもの = 64 chars, hex は ASCII なので 64 bytes) → NIP-44 v2 パディングで 64B（ちょうどバケット境界）
 - ペイロード合計: `1(ver) + 32(nonce) + 2(len) + 64(padded plaintext) + 32(mac) = 131 bytes` → base64 約 176 chars
 - localStorage 1 エントリとして問題のないサイズ
 
@@ -216,9 +218,15 @@ interface NosskeyManagerLike {
   nip04Encrypt(peerPubkey, plaintext): Promise<string>;
   nip04Decrypt(peerPubkey, payload): Promise<string>;
   getPublicKey(): Promise<string>;
-  exportNostrKey(): Promise<string>;
+  exportNostrKey(
+    keyInfo: NostrKeyInfo,
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<string>;
 }
 ```
+
+> 注: `exportNostrKey` は現状 `keyInfo: NostrKeyInfo` 必須の既存シグネチャをそのまま維持する。wrap モード対応は内部実装（`#getSecretKey` 経路）に閉じ、公開 API は無変更。
 
 ### 7.2 内部振る舞いの違い
 
@@ -323,7 +331,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  Start([SDK 起動 / loadCurrentKeyInfo]) --> R[localStorage 読込]
+  Start([SDK 起動 / getCurrentKeyInfo]) --> R[localStorage 読込]
   R --> N{NostrKeyInfo<br/>あり?}
   N -->|なし| F[未登録<br/>→ AuthScreen 表示]
   N -->|あり| W{wrapped<br/>定義?}
@@ -340,7 +348,7 @@ sequenceDiagram
   actor User
   participant App
   participant SDK as NosskeySDK
-  participant GetSK as "#getSecretKey"
+  participant GetSK as getSecretKey
 
   User->>App: 「秘密鍵を表示」
   App->>SDK: exportNostrKey()
@@ -362,8 +370,8 @@ stateDiagram-v2
   NoKey --> Wrap: importNostrKey
   PrfDirect --> PrfDirect: signEvent / nip44.* / nip04.* / export
   Wrap --> Wrap: signEvent / nip44.* / nip04.* / export
-  PrfDirect --> NoKey: clearKeyInfo
-  Wrap --> NoKey: clearKeyInfo
+  PrfDirect --> NoKey: clearStoredKeyInfo
+  Wrap --> NoKey: clearStoredKeyInfo
   note right of Wrap
     NostrKeyInfo.wrapped が定義済
     操作毎に PRF → NIP-44 復号
