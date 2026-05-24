@@ -23,6 +23,8 @@
 - [x] Nosskey-iframe(仮)の参照実装の作成 — 段階5〜7完了 (Svelteアプリの `#/iframe` ルート、ConsentDialog、Timeline/relay 機能削除、README 追記)。ブランチ `claude/continue-iframe-support-mCrAL`。段階8 (E2E 手動検証) は別途
 - [x] iframe を埋め込む親ページ側のサンプル実装 (`NosskeyIframeClient` を使った最小デモ) を `examples/parent-sample/` に追加
 - [x] parent-sample に NIP-44 / NIP-04 encrypt/decrypt UI と NIP-04 kind:4 DM 送信ボタンを追加 (任意ピア宛 DM 動作確認用)
+- [ ] サンプルアプリの登録ログイン画面のデザイン UX 改善 — `examples/svelte-app` の account 画面（パスキー登録・ログインフロー）の見た目と操作感を整理
+- [ ] 既存鍵の活用検討 — ユーザーが既に持っている Nostr 秘密鍵を Nosskey（パスキー PRF）で暗号化して保存し、PRF 由来鍵と同じ UX（`signEvent` / `nip44` / `nip04` 等）で使えるようにする設計を検討。鍵インポート API・保存形式（PRF 派生鍵で暗号化した nsec）・既存 `createNostrKey` との関係を整理する
 
 ### iframe機能拡充（詳細: `docs/iframe-expansion-plan.md`）
 
