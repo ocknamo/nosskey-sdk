@@ -27,3 +27,4 @@ export type {
   NosskeyVisibility,
   RelayMap,
 } from './protocol.js';
+export type { NosskeyManagerLike, NostrEvent } from './types.js';

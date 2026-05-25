@@ -139,3 +139,5 @@ dist
 /packages/nosskey-sdk/README.md
 /packages/nosskey-sdk/README.ja.md
 /packages/nosskey-sdk/LICENSE
+# Copied at publish-time from repo root (see packages/nosskey-iframe prepublishOnly)
+/packages/nosskey-iframe/LICENSE

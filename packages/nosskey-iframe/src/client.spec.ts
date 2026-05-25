@@ -1,6 +1,6 @@
-import type { NostrEvent } from 'nosskey-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeClient, NosskeyIframeError } from './client.js';
+import type { NostrEvent } from './types.js';
 
 /**
  * Minimal DOM harness. We construct a fake window/document/container so the

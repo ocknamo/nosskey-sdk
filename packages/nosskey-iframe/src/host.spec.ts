@@ -1,7 +1,7 @@
-import type { NosskeyManagerLike, NostrEvent } from 'nosskey-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeHost } from './host.js';
 import { isNosskeyReady, isNosskeyResponse, isNosskeyVisibility } from './protocol.js';
+import type { NosskeyManagerLike, NostrEvent } from './types.js';
 
 /**
  * Builds a `NosskeyManagerLike` test double where every method is a vitest spy
@@ -13,23 +13,9 @@ function makeManager(overrides: Partial<NosskeyManagerLike> = {}): NosskeyManage
       throw new Error(`unexpected call: ${name}`);
     });
   const base: NosskeyManagerLike = {
+    hasKeyInfo: vi.fn(() => true),
     getPublicKey: unimplemented('getPublicKey'),
     signEvent: unimplemented('signEvent'),
-    setCurrentKeyInfo: vi.fn(),
-    getCurrentKeyInfo: vi.fn(() => null),
-    hasKeyInfo: vi.fn(() => true),
-    setStorageOptions: vi.fn(),
-    getStorageOptions: vi.fn(() => ({ enabled: true })),
-    clearStoredKeyInfo: vi.fn(),
-    isPrfSupported: unimplemented('isPrfSupported'),
-    createPasskey: unimplemented('createPasskey'),
-    createNostrKey: unimplemented('createNostrKey'),
-    signEventWithKeyInfo: unimplemented('signEventWithKeyInfo'),
-    setCacheOptions: vi.fn(),
-    getCacheOptions: vi.fn(() => ({ enabled: false })),
-    clearCachedKey: vi.fn(),
-    clearAllCachedKeys: vi.fn(),
-    exportNostrKey: unimplemented('exportNostrKey'),
     nip44Encrypt: unimplemented('nip44Encrypt'),
     nip44Decrypt: unimplemented('nip44Decrypt'),
     nip04Encrypt: unimplemented('nip04Encrypt'),

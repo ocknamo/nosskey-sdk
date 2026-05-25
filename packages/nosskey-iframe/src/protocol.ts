@@ -6,7 +6,7 @@
  *
  * @packageDocumentation
  */
-import type { NostrEvent } from 'nosskey-sdk';
+import type { NostrEvent } from './types.js';
 
 /** Supported NIP-07 methods the iframe provider can execute. */
 export type NosskeyMethod =
