@@ -12,9 +12,12 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 
 リリースタグを切る前に終わらせる必要がある項目。
 
-- [ ] **バージョニング** — `package.json` のバージョン番号（現在 0.0.0）を初期リリース用に更新。対象ワークスペース: `packages/nosskey-sdk`, `packages/nosskey-iframe`, `examples/*`。リリース順序・semver ポリシー（SDK と iframe をロックステップで上げるか独立か）を決める必要あり。
+- [ ] **バージョニング** — `package.json` のバージョン番号（現在 0.0.0）を初期リリース用に更新。対象ワークスペース: `packages/nosskey-sdk`, `packages/nosskey-iframe`, `examples/*`。リリース順序・semver ポリシー（SDK と iframe をロックステップで上げるか独立か）を決める必要あり。**publish 方針は決定済み: `nosskey-sdk` と `nosskey-iframe` を独立 publish（理由は下記 nosskey-iframe 整理項目参照）。**
 - [ ] **外部セキュリティレビュー** — レビュー範囲（SDK コア / iframe protocol・host・client / consent ロジック）と発注先の判断が必要。
 - [ ] **README.md / README.ja.md の充実** — 使用方法やサンプルコードの追加。NIP-44/NIP-04 節は追加済み。残るのは「Getting Started で動くサンプル」と「iframe 統合の最短手順」。
+- [ ] **`nosskey-iframe` を独立 publish する前の整理** — publish 方針として「SDK 同梱ではなく独立パッケージ」を採用（client は SDK ゼロ依存で出せる / iframe protocol は SDK と別ライフサイクルで動く）。publish 前に以下 2 点を整理する:
+    - `packages/nosskey-iframe/package.json` の `dependencies.nosskey-sdk: "*"` を **`peerDependencies`** に降格。host を使うアプリだけが SDK を入れる形にし、重複インストール・version skew を防ぐ。バージョン指定子も `"*"` から適切な範囲（例: `"^0.1.0"`）に変更。
+    - `nosskey-iframe` の README/docs を **「client のみ使う場合（外部親アプリ）」** と **「host を建てる場合（nosskey.app 相当の署名プロバイダ実装）」** の 2 セクションに分けて記載。SDK 依存の有無・必要な permission・最小サンプルコードを節ごとに明示。
 
 ## P1: リリース前に強く推奨（UX・整合性）
 
