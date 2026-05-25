@@ -40,6 +40,7 @@
 | 3-A | ping/pong ヘルスチェック | 低〜中 | S |
 | 3-B | 自動再接続 | 低〜中 | M |
 | 3-C | `nosskey:error` 通知 | 低 | S |
+| 3-D | 長時間放置後の orphan request タイムアウト対策 | 中 | M |
 | 4-A | マルチキー切り替え | 低 | M |
 | 5-A | Safari fallback | 低（将来） | L |
 | 6-A | ダイアログ表示内容整理 | 中 | S |
@@ -283,6 +284,28 @@ const client = new NosskeyIframeClient({
   onError?: (code, message) => void;
 });
 ```
+
+---
+
+### 3-D: 長時間放置後の orphan request タイムアウト対策
+
+**概要**: 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題への対策。BFCache 復元自体は iframe 側の `pageshow` 再判定で鍵 rehydrate される (PR #75) ため、課題は親 SDK 側の「iframe が再ロードされたか」検出に絞られる。
+
+**設計方針（いずれかを採用）**:
+
+- **方針 A**: client 側で `pagehide` / `freeze` を監視し「needs revalidate」フラグを立てる。次操作前に `ready()` を再確認してから request を送る。
+- **方針 B**: `nosskey:ready` 再受信を client 側で検出し、in-flight だった request を再送する。
+
+3-A（ping/pong）が入っていれば検出は ping のタイムアウトでも可能だが、ping 間隔（デフォルト 30 秒）の隙間に最初の操作が刺さるケースを救えないため、3-D は別途必要。
+
+**変更ファイル候補:**
+
+| ファイル | 変更内容 |
+|----------|---------|
+| `packages/nosskey-iframe/src/client.ts` | `pagehide` / `freeze` リスナ追加、in-flight request の再送ロジック、`ready()` 再確認 |
+| `packages/nosskey-iframe/src/client.spec.ts` | discard → 復元 → first request の再送が成功するシナリオの単体テスト |
+
+**Phase 3 完了の定義**: 接続断・iframe discard・予期しないエラーのいずれが起きても、親アプリ側で適切にハンドリング・自動回復できるようになっていること。
 
 ---
 
