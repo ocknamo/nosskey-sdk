@@ -153,7 +153,8 @@ const keyMgr = new NosskeyManager({
 Nosskey can be embedded as an iframe signing provider so that multiple Nostr
 web apps share a single passkey bound to the Nosskey host origin. The
 companion package [`nosskey-iframe`](packages/nosskey-iframe) ships both the
-host-side bridge and a parent-page client.
+host-side bridge and a parent-page client. For standalone usage of the
+package on its own, see [`packages/nosskey-iframe/README.md`](packages/nosskey-iframe/README.md).
 
 ### Browser Support
 

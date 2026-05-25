@@ -4,7 +4,6 @@
  *
  * @packageDocumentation
  */
-import type { NostrEvent } from 'nosskey-sdk';
 import {
   type NosskeyRequest,
   type NosskeyResponse,
@@ -13,6 +12,7 @@ import {
   isNosskeyResponse,
   isNosskeyVisibility,
 } from './protocol.js';
+import type { NostrEvent } from './types.js';
 
 /** WebAuthn permission policy required for the iframe to use passkeys. */
 const IFRAME_ALLOW = 'publickey-credentials-get; publickey-credentials-create';

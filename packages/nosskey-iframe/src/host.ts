@@ -4,7 +4,6 @@
  *
  * @packageDocumentation
  */
-import type { NosskeyManagerLike, NostrEvent } from 'nosskey-sdk';
 import {
   type NosskeyErrorCode,
   type NosskeyMethod,
@@ -15,6 +14,7 @@ import {
   type RelayMap,
   isNosskeyRequest,
 } from './protocol.js';
+import type { NosskeyManagerLike, NostrEvent } from './types.js';
 
 /** Caller-side data passed to an {@link NosskeyIframeHostOptions.onConsent} handler. */
 export interface ConsentRequest {
