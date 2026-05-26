@@ -1,17 +1,23 @@
 <script lang="ts">
+import { isLoggedIn } from '../../store/app-state.js';
 import ExportKeyInfoComponent from '../settings/ExportKeyInfoComponent.svelte';
 import ExportSecretKey from '../settings/ExportSecretKey.svelte';
+import ImportKeyInfo from '../settings/ImportKeyInfo.svelte';
 import LocalStorageSection from '../settings/LocalStorageSection.svelte';
 import LogoutSection from '../settings/LogoutSection.svelte';
 import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 </script>
 
 <div class="settings-container">
-  <SecretCacheSettings />
-  <ExportKeyInfoComponent />
-  <ExportSecretKey />
-  <LogoutSection />
-  <LocalStorageSection />
+  {#if $isLoggedIn}
+    <SecretCacheSettings />
+    <ExportKeyInfoComponent />
+    <ExportSecretKey />
+    <LogoutSection />
+    <LocalStorageSection />
+  {:else}
+    <ImportKeyInfo />
+  {/if}
 </div>
 
 <style>

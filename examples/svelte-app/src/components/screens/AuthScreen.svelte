@@ -5,49 +5,30 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import * as appState from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
-import FileInputButton from '../ui/button/FileInputButton.svelte';
-import ToggleButton from '../ui/button/ToggleButton.svelte';
+import TabButton from '../ui/button/TabButton.svelte';
 
-// 状態変数
-let isSupported = $state(false);
+type AuthTab = 'login' | 'register';
+
 let isLoading = $state(false);
 let errorMessage = $state('');
-let isPrfChecked = $state(false);
 // biome-ignore lint: svelte
 let username = $state('');
-let createdCredentialId = $state(''); // 新規作成したパスキーのID
-let isPasskeyCreated = $state(false); // パスキーが作成済みかどうか
+let createdCredentialId = $state('');
+let isPasskeyCreated = $state(false);
+let activeTab = $state<AuthTab>('login');
 
-// UI表示制御
-// biome-ignore lint: svelte
-let showAdvancedOptions = $state(false);
-// biome-ignore lint: svelte
-let showDeveloperSection = $state(false);
-// biome-ignore lint: svelte
-let showKeyInfoTextarea = $state(false);
-
-// KeyInfoインポート関連の状態変数
-// biome-ignore lint: svelte
-let keyInfoTextInput = $state('');
-let keyInfoImportError = $state('');
-
-// NosskeyManagerのシングルトンインスタンスを取得
 const keyManager = getNosskeyManager();
 
-// 初期化関数
 async function initialize() {
   isLoading = true;
   try {
-    // 鍵情報が存在するか確認
     if (keyManager.hasKeyInfo()) {
-      // 公開鍵を取得して状態を更新
       const pubKey = await keyManager.getPublicKey();
       appState.publicKey.set(pubKey);
       appState.isLoggedIn.set(true);
-
-      // PRF拡張対応確認をスキップして認証済み状態に
-      return; // 初期化処理を終了
+      return;
     }
   } catch (error) {
     console.error('初期化エラー:', error);
@@ -57,29 +38,11 @@ async function initialize() {
   }
 }
 
-// PRF対応確認
-async function checkPrfSupport() {
-  isLoading = true;
-  errorMessage = '';
-  try {
-    // PRF拡張がサポートされているか確認
-    isSupported = await keyManager.isPrfSupported();
-    isPrfChecked = true;
-  } catch (error) {
-    console.error('PRF対応確認エラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.prfCheck} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
-}
-
-// 新規パスキー作成
 async function createNew() {
   isLoading = true;
   errorMessage = '';
 
   try {
-    // 新しいパスキーを作成
     const newCredentialId = await keyManager.createPasskey({
       user: {
         name: username || 'user@nosskey',
@@ -97,24 +60,21 @@ async function createNew() {
   }
 }
 
-// 特定のcredentialIdでログイン
-async function login(credentialId: string) {
+async function login(credentialId?: string) {
   isLoading = true;
   errorMessage = '';
 
   try {
-    // PRFを直接Nostrキーとして使用
-    const keyInfo = await keyManager.createNostrKey(hexToBytes(credentialId));
+    const keyInfo = credentialId
+      ? await keyManager.createNostrKey(hexToBytes(credentialId))
+      : await keyManager.createNostrKey();
 
-    // SDKにKeyInfoを設定（内部でストレージにも保存される）
     keyManager.setCurrentKeyInfo(keyInfo);
 
-    // 公開鍵を取得して状態を更新
     const pubKey = await keyManager.getPublicKey();
     appState.publicKey.set(pubKey);
     appState.isLoggedIn.set(true);
 
-    // アカウント画面に遷移
     appState.currentScreen.set('account');
   } catch (error) {
     console.error('ログインエラー:', error);
@@ -124,116 +84,11 @@ async function login(credentialId: string) {
   }
 }
 
-// 既存のパスキーでログイン（credentialIdなし）
-async function loginWithExistingPasskey() {
-  isLoading = true;
+function selectTab(tab: AuthTab) {
+  activeTab = tab;
   errorMessage = '';
-
-  try {
-    // PRFを直接Nostrキーとして使用（credentialIdなしで呼び出し）
-    const keyInfo = await keyManager.createNostrKey();
-
-    // SDKに鍵情報を設定（内部でストレージにも保存される）
-    keyManager.setCurrentKeyInfo(keyInfo);
-
-    // 公開鍵を取得して状態を更新
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('ログインエラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isLoading = false;
-  }
 }
 
-// サポート対象外の場合のメッセージ
-function getUnsupportedMessage() {
-  const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
-  const isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
-
-  if (isChrome) {
-    return 'Chrome では chrome://flags から #enable-webauthn-new-discovery-mechanism と #enable-webauthn-extensions を有効にしてください。';
-  }
-
-  if (isFirefox) {
-    return 'Firefox では about:config から webauthn:enable_prf を true に設定してください。';
-  }
-
-  return 'お使いのブラウザでは WebAuthn PRF 拡張がサポートされていません。Chrome または Firefox の最新版をお試しください。';
-}
-
-// KeyInfoファイルアップロードの処理
-async function handleKeyInfoFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
-
-  const file = input.files[0];
-  isLoading = true;
-  keyInfoImportError = '';
-
-  try {
-    const fileContent = await file.text();
-    await loginWithKeyInfoData(fileContent);
-  } catch (error) {
-    console.error('KeyInfoファイル読み込みエラー:', error);
-    keyInfoImportError = `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}`;
-    isLoading = false;
-  }
-}
-
-// KeyInfoテキストでのログイン処理
-async function loginWithKeyInfoText() {
-  if (!keyInfoTextInput) return;
-
-  isLoading = true;
-  keyInfoImportError = '';
-
-  try {
-    await loginWithKeyInfoData(keyInfoTextInput);
-  } catch (error) {
-    console.error('KeyInfoテキスト処理エラー:', error);
-    keyInfoImportError = `KeyInfo処理エラー: ${error instanceof Error ? error.message : String(error)}`;
-    isLoading = false;
-  }
-}
-
-// KeyInfoデータ（JSONテキスト）からのログイン処理
-async function loginWithKeyInfoData(keyInfoJsonText: string) {
-  try {
-    // JSONをパース
-    const keyData = JSON.parse(keyInfoJsonText);
-
-    // KeyInfoが有効かチェック
-    if (!keyData.v || !keyData.alg || !keyData.credentialId || !keyData.pubkey) {
-      throw new Error('有効なKeyInfoデータではありません');
-    }
-
-    // KeyInfoをセット
-    keyManager.setCurrentKeyInfo(keyData);
-
-    // 公開鍵を取得して状態を更新
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-
-    // アカウント画面に遷移
-    appState.currentScreen.set('account');
-  } catch (error) {
-    console.error('KeyInfoログインエラー:', error);
-    throw new Error(
-      `KeyInfoログインエラー: ${error instanceof Error ? error.message : String(error)}`
-    );
-  } finally {
-    isLoading = false;
-  }
-}
-
-// コンポーネントのマウント時に初期化
 $effect(() => {
   initialize();
 });
@@ -252,192 +107,84 @@ $effect(() => {
       <p>{$i18n.t.auth.loading}</p>
     </div>
   {:else}
-    <!-- メインアクションセクション（新規ユーザー向け） -->
-    <CardSection title={$i18n.t.auth.quickStartTitle}>
-      <div class="quick-start-section">
-        <div class="recommendation-badge new-user">
-          {$i18n.t.auth.newUserRecommended}
-        </div>
-
-        <h3>{$i18n.t.auth.passkeySectionTitle}</h3>
-        <p class="section-description">{$i18n.t.auth.passkeySectionDesc}</p>
-
-        <!-- クロスデバイス認証の説明 -->
-        <div class="info-box">
-          <h4>{$i18n.t.auth.crossDeviceTitle}</h4>
-          <p>{$i18n.t.auth.crossDeviceDesc}</p>
-        </div>
-
-        <div class="username-input">
-          <label for="username">{$i18n.t.auth.username}</label>
-          <input
-            id="username"
-            type="text"
-            bind:value={username}
-            placeholder={$i18n.t.auth.usernamePlaceholder}
-            disabled={isLoading}
-          />
-        </div>
-
-        {#if !isPasskeyCreated}
-          <Button onclick={createNew} disabled={isLoading} size="large">
-            {$i18n.t.auth.createNew}
-          </Button>
-        {:else}
-          <div class="success-message">
-            <div class="success-icon">✅</div>
-            <h4>{$i18n.t.auth.passkeyCreated}</h4>
-            <p>{$i18n.t.auth.firstLogin}</p>
-            <Button
-              variant="success"
-              onclick={() => login(createdCredentialId)}
-              disabled={isLoading}
-              className="success-action-button"
-            >
-              {$i18n.t.auth.proceedWithLogin}
-            </Button>
-          </div>
-        {/if}
-      </div>
-    </CardSection>
-
-    <!-- 既存ユーザー向けセクション -->
-    <CardSection title={$i18n.t.auth.existingUserTitle}>
-      <div class="existing-user-section">
-        <div class="recommendation-badge existing-user">
-          {$i18n.t.auth.returningUserRecommended}
-        </div>
-
-        <h3>{$i18n.t.auth.existingPasskeyTitle}</h3>
-        <p class="section-description">{$i18n.t.auth.existingPasskeyDesc}</p>
-
-        <Button
-          variant="secondary"
-          onclick={loginWithExistingPasskey}
-          disabled={isLoading}
-          className="secondary-action-button"
-        >
-          {$i18n.t.auth.loginWith}
-        </Button>
-      </div>
-    </CardSection>
-
-    <!-- 高度なオプション -->
-    <div class="advanced-section">
-      <ToggleButton
-        onclick={() => (showAdvancedOptions = !showAdvancedOptions)}
-        expanded={showAdvancedOptions}
-        className="toggle-section-button"
+    <div
+      class="auth-tabs"
+      role="tablist"
+      aria-label={$i18n.t.auth.title}
+    >
+      <TabButton
+        active={activeTab === "login"}
+        onclick={() => selectTab("login")}
+        className="auth-tab"
       >
-        {$i18n.t.auth.advancedOptionsTitle}
-      </ToggleButton>
-
-      {#if showAdvancedOptions}
-        <div class="advanced-content">
-          <!-- KeyInfoインポートセクション -->
-          <CardSection title={$i18n.t.auth.keyInfoImportTitle}>
-            <div class="key-info-import-section">
-              <p class="section-description">
-                {$i18n.t.auth.keyInfoImportDesc}
-              </p>
-
-              <div class="key-info-input-container">
-                <FileInputButton
-                  onchange={handleKeyInfoFileUpload}
-                  accept="application/json"
-                  disabled={isLoading}
-                  inputId="key-info-file-input"
-                >
-                  {$i18n.t.auth.keyInfoFileSelect}
-                </FileInputButton>
-
-                <div class="divider">
-                  <span>{$i18n.t.auth.orText}</span>
-                </div>
-
-                <ToggleButton
-                  onclick={() => (showKeyInfoTextarea = !showKeyInfoTextarea)}
-                  expanded={showKeyInfoTextarea}
-                  size="small"
-                  className="toggle-text-input-button"
-                >
-                  {$i18n.t.auth.keyDataInput}
-                </ToggleButton>
-              </div>
-
-              {#if showKeyInfoTextarea}
-                <div class="key-info-textarea-container">
-                  <textarea
-                    bind:value={keyInfoTextInput}
-                    placeholder={$i18n.t.auth.keyDataPlaceholder}
-                    class="key-info-textarea"
-                  ></textarea>
-                  <Button
-                    variant="success"
-                    onclick={loginWithKeyInfoText}
-                    disabled={isLoading || !keyInfoTextInput}
-                    className="key-info-login-button"
-                  >
-                    {isLoading
-                      ? $i18n.t.auth.keyInfoLoginProcessing
-                      : $i18n.t.auth.keyInfoLoginButton}
-                  </Button>
-                </div>
-              {/if}
-
-              {#if keyInfoImportError}
-                <div class="error-message">
-                  {keyInfoImportError}
-                </div>
-              {/if}
-            </div>
-          </CardSection>
-
-          <!-- 開発者向けセクション -->
-          <div class="developer-section">
-            <ToggleButton
-              onclick={() => (showDeveloperSection = !showDeveloperSection)}
-              expanded={showDeveloperSection}
-              size="small"
-              className="toggle-section-button small"
-            >
-              {$i18n.t.auth.developerSection}
-            </ToggleButton>
-
-            {#if showDeveloperSection}
-              <CardSection title="">
-                <div class="developer-content">
-                  <p class="developer-description">
-                    {$i18n.t.auth.prfDebugInfo}
-                  </p>
-
-                  {#if !isPrfChecked}
-                    <Button
-                      variant="secondary"
-                      onclick={checkPrfSupport}
-                      size="small"
-                      className="developer-action-button"
-                    >
-                      {$i18n.t.auth.checkPrf}
-                    </Button>
-                  {:else if !isSupported}
-                    <div class="error-message">
-                      <h4>{$i18n.t.auth.unsupportedTitle}</h4>
-                      <p>{getUnsupportedMessage()}</p>
-                    </div>
-                  {:else}
-                    <div class="success-message small">
-                      <span class="success-icon">✅</span>
-                      <p>{$i18n.t.auth.prfSupportedMessage}</p>
-                    </div>
-                  {/if}
-                </div>
-              </CardSection>
-            {/if}
-          </div>
-        </div>
-      {/if}
+        {$i18n.t.auth.tabLogin}
+      </TabButton>
+      <TabButton
+        active={activeTab === "register"}
+        onclick={() => selectTab("register")}
+        className="auth-tab"
+      >
+        {$i18n.t.auth.tabRegister}
+      </TabButton>
     </div>
+
+    {#if activeTab === "login"}
+      <CardSection title={$i18n.t.auth.tabLogin}>
+        <div class="tab-panel">
+          <div class="panel-heading">
+            <h3>{$i18n.t.auth.loginWith}</h3>
+            <HelpTip text={$i18n.t.auth.loginTip} />
+          </div>
+
+          <Button onclick={() => login()} disabled={isLoading} size="large">
+            {$i18n.t.auth.loginWith}
+          </Button>
+        </div>
+      </CardSection>
+    {:else}
+      <CardSection title={$i18n.t.auth.tabRegister}>
+        <div class="tab-panel">
+          <div class="panel-heading">
+            <h3>{$i18n.t.auth.tabRegister}</h3>
+            <HelpTip text={$i18n.t.auth.registerTip} />
+          </div>
+
+          <div class="username-input">
+            <label for="username">
+              {$i18n.t.auth.username}
+              <HelpTip text={$i18n.t.auth.usernameTip} />
+            </label>
+            <input
+              id="username"
+              type="text"
+              bind:value={username}
+              placeholder={$i18n.t.auth.usernamePlaceholder}
+              disabled={isLoading}
+            />
+          </div>
+
+          {#if !isPasskeyCreated}
+            <Button onclick={createNew} disabled={isLoading} size="large">
+              {$i18n.t.auth.createNew}
+            </Button>
+          {:else}
+            <div class="success-message">
+              <div class="success-icon">✅</div>
+              <h4>{$i18n.t.auth.passkeyCreated}</h4>
+              <p>{$i18n.t.auth.firstLogin}</p>
+              <Button
+                variant="success"
+                onclick={() => login(createdCredentialId)}
+                disabled={isLoading}
+                className="success-action-button"
+              >
+                {$i18n.t.auth.proceedWithLogin}
+              </Button>
+            </div>
+          {/if}
+        </div>
+      </CardSection>
+    {/if}
   {/if}
 
   {#if errorMessage}
@@ -456,7 +203,6 @@ $effect(() => {
     text-align: center;
   }
 
-  /* ヒーローセクション */
   .hero-section {
     margin-bottom: 32px;
   }
@@ -475,7 +221,6 @@ $effect(() => {
     line-height: 1.5;
   }
 
-  /* ローディングセクション */
   .loading-section {
     display: flex;
     flex-direction: column;
@@ -502,79 +247,48 @@ $effect(() => {
     }
   }
 
-  /* レコメンデーションバッジ */
-  .recommendation-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 12px;
+  .auth-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    margin: 0 auto 20px;
+    max-width: 360px;
   }
 
-  .recommendation-badge.new-user {
-    background-color: var(--color-success-bg);
-    color: var(--color-button-success);
-    border: 1px solid var(--color-button-success);
+  .auth-tabs :global(.auth-tab) {
+    flex: 1;
   }
 
-  .recommendation-badge.existing-user {
-    background-color: var(--color-info-bg);
-    color: var(--color-info);
-    border: 1px solid var(--color-info);
-  }
-
-  /* セクション共通 */
-  .section-description {
-    color: var(--color-text-secondary);
-    line-height: 1.6;
-    margin-bottom: 20px;
-  }
-
-  .quick-start-section,
-  .existing-user-section {
+  .tab-panel {
     text-align: left;
   }
 
-  .quick-start-section h3,
-  .existing-user-section h3 {
+  .panel-heading {
+    display: flex;
+    align-items: center;
     margin: 0 0 12px 0;
+  }
+
+  .panel-heading h3 {
+    margin: 0;
     color: var(--color-text-primary);
     font-size: 1.25rem;
   }
 
-  /* 情報ボックス */
-  .info-box {
-    margin: 16px 0;
-    padding: 16px;
-    background-color: var(--color-info-bg);
-    border-left: 4px solid var(--color-info);
-    border-radius: 4px;
-    text-align: left;
-  }
-
-  .info-box h4 {
-    margin: 0 0 8px 0;
-    color: var(--color-info);
-    font-size: 1rem;
-  }
-
-  .info-box p {
-    margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
-
-  /* ユーザー名入力 */
   .username-input {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 20px 0;
+    margin: 0 0 20px 0;
     text-align: left;
   }
 
   .username-input label {
+    display: inline-flex;
+    align-items: center;
     font-weight: 500;
     color: var(--color-text-primary);
   }
@@ -592,7 +306,6 @@ $effect(() => {
     border-color: var(--color-button-primary);
   }
 
-  /* 成功メッセージ */
   .success-message {
     padding: 20px;
     background-color: var(--color-success-bg);
@@ -600,14 +313,6 @@ $effect(() => {
     border-radius: 8px;
     text-align: center;
     margin: 16px 0;
-  }
-
-  .success-message.small {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    text-align: left;
   }
 
   .success-message h4 {
@@ -621,92 +326,8 @@ $effect(() => {
     color: var(--color-text-secondary);
   }
 
-  .success-message.small p {
-    margin: 0;
-  }
-
   .success-icon {
     font-size: 1.2rem;
-  }
-
-  /* 高度なオプションセクション */
-  .advanced-section {
-    margin-top: 40px;
-  }
-
-  .advanced-content {
-    margin-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  /* KeyInfoインポートセクション */
-  .key-info-import-section {
-    text-align: left;
-  }
-
-  .key-info-input-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 16px 0;
-  }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin: 8px 0;
-  }
-
-  .divider::before,
-  .divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background-color: var(--color-border-medium);
-  }
-
-  .divider span {
-    color: var(--color-text-secondary);
-    font-size: 0.9rem;
-  }
-
-  .key-info-textarea-container {
-    margin-top: 16px;
-  }
-
-  .key-info-textarea {
-    width: 100%;
-    height: 120px;
-    padding: 12px;
-    border: 2px solid var(--color-border-medium);
-    border-radius: 6px;
-    font-family: ui-monospace, "Courier New", monospace;
-    font-size: 0.85rem;
-    resize: vertical;
-    margin-bottom: 12px;
-    transition: border-color 0.2s ease;
-  }
-
-  .key-info-textarea:focus {
-    outline: none;
-    border-color: var(--color-button-primary);
-  }
-
-  .developer-section {
-    margin-top: 16px;
-  }
-
-  .developer-content {
-    text-align: left;
-  }
-
-  .developer-description {
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 16px;
   }
 
   .error-message {
@@ -740,11 +361,6 @@ $effect(() => {
 
     .screen-title {
       font-size: 1.8rem;
-    }
-
-    .recommendation-badge {
-      font-size: 0.8rem;
-      padding: 3px 10px;
     }
   }
 </style>

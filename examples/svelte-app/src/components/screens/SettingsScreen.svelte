@@ -1,8 +1,8 @@
 <script lang="ts">
 import AppInfo from '../settings/AppInfo.svelte';
 import ConsentPolicySettings from '../settings/ConsentPolicySettings.svelte';
+import DeveloperSection from '../settings/DeveloperSection.svelte';
 import LanguageSettings from '../settings/LanguageSettings.svelte';
-import LocalStorageSection from '../settings/LocalStorageSection.svelte';
 import RelaySettings from '../settings/RelaySettings.svelte';
 import TrustedOriginsSettings from '../settings/TrustedOriginsSettings.svelte';
 import ThemeSettings from '../settings/theme-settings.svelte';
@@ -15,6 +15,7 @@ import ThemeSettings from '../settings/theme-settings.svelte';
   <LanguageSettings />
   <ThemeSettings />
   <AppInfo />
+  <DeveloperSection />
 </div>
 
 <style>
