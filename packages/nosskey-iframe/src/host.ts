@@ -126,9 +126,9 @@ export class NosskeyIframeHost {
 
     // Re-emit nosskey:ready on every pageshow so the parent client can
     // recover from iframe document discard/reload. BFCache restore fires
-    // pageshow with persisted=true; ordinary load fires pageshow with
-    // persisted=false after start()'s initial emission below, which is
-    // harmlessly redundant for the parent.
+    // pageshow with persisted=true. Ordinary load also fires pageshow with
+    // persisted=false; on the parent side this is harmlessly redundant
+    // with the initial emission made at the end of start().
     this.#pageshowListener = () => this.#emitReady();
     this.#options.window.addEventListener(
       'pageshow',

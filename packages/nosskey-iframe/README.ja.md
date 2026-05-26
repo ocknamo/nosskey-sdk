@@ -76,7 +76,7 @@ Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*
 
 ### リロード復旧 (`revalidateOnReload`)
 
-デフォルトで client は iframe document の discard/reload を生き残ります（長時間放置された親タブや BFCache 復元など）。host が `nosskey:ready` を再送出すると、in-flight のリクエストは同じ id で再 post され、timeout カウントダウンもリセットされます。結果として、呼び出し側の `signEvent()` / `getPublicKey()` Promise は 60 秒タイムアウトでハングせず、復帰した host が応答した時点で resolve します。リクエストあたりの最悪待ち時間は `timeout` + iframe リロード時間になります。
+デフォルトで client は iframe document の discard/reload を生き残ります（長時間放置された親タブや BFCache 復元など）。host が `nosskey:ready` を再送出すると、in-flight のリクエストは同じ id で再 post され、timeout カウントダウンもリセットされます。結果として、呼び出し側の `signEvent()` / `getPublicKey()` Promise は 60 秒タイムアウトでハングせず、復帰した host が応答した時点で resolve します。1 回の復旧サイクルあたりの待ち時間は最大で `timeout` + iframe リロード時間。リロードが連続発生する場合は再送ごとにカウントダウンがリセットされるため、待ち時間はさらに延びる可能性があります。
 
 旧来の単発挙動 (ready が 1 回だけ resolve、`contentWindow` が無いリクエストは即時 reject) に戻したい場合は `revalidateOnReload: false` を渡してください。
 

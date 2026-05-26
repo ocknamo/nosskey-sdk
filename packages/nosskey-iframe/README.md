@@ -82,8 +82,9 @@ long-idle parent tab or a BFCache restore). When the host re-emits
 `nosskey:ready`, any in-flight requests are re-posted with the same id and
 their timeout countdown is reset, so the caller's `signEvent()` /
 `getPublicKey()` promise resolves once the recovered host responds instead of
-hanging until the 60-second timeout fires. Worst-case wait per request is
-`timeout` + iframe reload time.
+hanging until the 60-second timeout fires. A single recovery cycle therefore
+costs up to `timeout` + iframe reload time; each subsequent reload resets the
+countdown again, so prolonged repeated reloads can extend the wait further.
 
 Pass `revalidateOnReload: false` to restore the legacy single-shot behavior
 (ready resolves exactly once; a request whose iframe `contentWindow` is

@@ -31,11 +31,11 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 リリース後の v0.1.x 〜 v0.2 系で消化する想定。
 
 ### iframe 接続堅牢化（Phase 3）
-P1 の 3-D とセットで一括対応すると効率的。
 
 - [ ] **ヘルスチェック（ping/pong）（Phase 3-A）** — 定期的な接続確認メッセージ。
 - [ ] **自動再接続（Phase 3-B）** — 接続断検知後の iframe 再マウント。
 - [ ] **`nosskey:error` プロアクティブ通知（Phase 3-C）** — iframe 側エラーを親へ通知。
+- [ ] **Phase 3-D follow-up: host 側で同 id リクエストを dedup** — 現在の orphan recovery は client が同じ id で再 post するが、host (`packages/nosskey-iframe/src/host.ts`) には id ベースの dedup が無い。BFCache 復帰時に message listener が生きていて consent dialog 表示中というレース条件で、`signEvent` 等の同意ダイアログが二重に開きうる。先勝ち（既存 in-flight があれば再 post を黙殺）/ 後勝ち（既存をキャンセルして新規優先）/ 結果共有（既存 Promise の結果を再返信）のいずれかの方針を決めて host に `#inFlight: Map<id, Promise>` を導入。spec も追加。
 
 ### 新機能・拡張
 - [ ] **既存鍵の活用検討** — ユーザーが既に持っている Nostr 秘密鍵を Nosskey（パスキー PRF）で暗号化して保存し、PRF 由来鍵と同じ UX（`signEvent` / `nip44` / `nip04` 等）で使えるようにする設計を検討。鍵インポート API・保存形式（PRF 派生鍵で暗号化した nsec）・既存 `createNostrKey` との関係を整理する。需要は高いがセキュリティ設計レビューが必要。

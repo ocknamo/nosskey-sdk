@@ -30,15 +30,11 @@ interface Harness {
   container: FakeElement;
   dispatch: (data: unknown, origin: string, source?: unknown) => void;
   dispatchAsIframe: (data: unknown, origin?: string) => void;
-  dispatchPageshow: () => void;
-  dispatchPagehide: () => void;
   iframes: FakeIframe[];
 }
 
 function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
   const listeners: Array<(event: MessageEvent) => void> = [];
-  const pageshowListeners: Array<() => void> = [];
-  const pagehideListeners: Array<() => void> = [];
   const iframes: FakeIframe[] = [];
 
   const createElement = (tagName: string) => {
@@ -89,35 +85,13 @@ function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
 
   const win = {
     addEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type === 'message') {
-        listeners.push(handler as (event: MessageEvent) => void);
-        return;
-      }
-      if (type === 'pageshow') {
-        pageshowListeners.push(handler as unknown as () => void);
-        return;
-      }
-      if (type === 'pagehide') {
-        pagehideListeners.push(handler as unknown as () => void);
-        return;
-      }
+      if (type !== 'message') return;
+      listeners.push(handler as (event: MessageEvent) => void);
     },
     removeEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type === 'message') {
-        const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
-        if (idx >= 0) listeners.splice(idx, 1);
-        return;
-      }
-      if (type === 'pageshow') {
-        const idx = pageshowListeners.indexOf(handler as unknown as () => void);
-        if (idx >= 0) pageshowListeners.splice(idx, 1);
-        return;
-      }
-      if (type === 'pagehide') {
-        const idx = pagehideListeners.indexOf(handler as unknown as () => void);
-        if (idx >= 0) pagehideListeners.splice(idx, 1);
-        return;
-      }
+      if (type !== 'message') return;
+      const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
+      if (idx >= 0) listeners.splice(idx, 1);
     },
     document: doc,
     location: { href: 'https://parent.example/app/' },
@@ -142,23 +116,7 @@ function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
     dispatch(data, origin, iframe.contentWindow);
   };
 
-  const dispatchPageshow = () => {
-    for (const handler of [...pageshowListeners]) handler();
-  };
-  const dispatchPagehide = () => {
-    for (const handler of [...pagehideListeners]) handler();
-  };
-
-  return {
-    window: win,
-    document: doc,
-    container,
-    dispatch,
-    dispatchAsIframe,
-    dispatchPageshow,
-    dispatchPagehide,
-    iframes,
-  };
+  return { window: win, document: doc, container, dispatch, dispatchAsIframe, iframes };
 }
 
 describe('NosskeyIframeClient', () => {
@@ -937,7 +895,7 @@ describe('NosskeyIframeClient', () => {
       client.destroy();
     });
 
-    it('pagehide does not block subsequent requests; next ready resolves them', async () => {
+    it('re-send postMessage failures do not poison other pending requests', async () => {
       const client = new NosskeyIframeClient({
         iframeUrl: 'https://nosskey.example/iframe',
         window: harness.window,
@@ -947,36 +905,37 @@ describe('NosskeyIframeClient', () => {
       const iframe = harness.iframes[0];
       harness.dispatchAsIframe({ type: 'nosskey:ready' });
 
-      harness.dispatchPagehide();
-
-      const pending = client.getPublicKey();
-      // The request was still posted to the (still-mounted) contentWindow.
-      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
-      const [request] = iframe.contentWindow.postMessage.mock.calls[0];
-
-      // Iframe restores from BFCache and re-emits ready.
-      harness.dispatchAsIframe({ type: 'nosskey:ready' });
-      // Re-sent.
+      const first = client.getPublicKey();
+      const second = client.getRelays();
       expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(2);
+      const [firstReq] = iframe.contentWindow.postMessage.mock.calls[0];
+      const [secondReq] = iframe.contentWindow.postMessage.mock.calls[1];
 
-      harness.dispatchAsIframe({ type: 'nosskey:response', id: request.id, result: 'pk' });
-      await expect(pending).resolves.toBe('pk');
-      client.destroy();
-    });
-
-    it('destroy() removes pagehide/pageshow listeners', () => {
-      const client = new NosskeyIframeClient({
-        iframeUrl: 'https://nosskey.example/iframe',
-        window: harness.window,
-        document: harness.document,
-        container: harness.container as unknown as HTMLElement,
+      // Make the next postMessage throw once (simulating a transient failure
+      // for the first re-send), then succeed for the rest.
+      let calls = 0;
+      iframe.contentWindow.postMessage.mockImplementation(() => {
+        calls += 1;
+        if (calls === 1) throw new Error('postMessage failed');
       });
+
+      // Re-emit ready; the re-send loop must not abort on the failed call.
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      // Both pending requests were attempted (one failed, one succeeded);
+      // total post count is initial 2 + 2 re-send attempts = 4.
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(4);
+
+      // Both still resolve when their responses arrive.
+      harness.dispatchAsIframe({ type: 'nosskey:response', id: firstReq.id, result: 'pk' });
+      harness.dispatchAsIframe({
+        type: 'nosskey:response',
+        id: secondReq.id,
+        result: {},
+      });
+      await expect(first).resolves.toBe('pk');
+      await expect(second).resolves.toEqual({});
       client.destroy();
-      // Dispatching after destroy must not throw and must not affect anything.
-      expect(() => {
-        harness.dispatchPagehide();
-        harness.dispatchPageshow();
-      }).not.toThrow();
     });
   });
 });
