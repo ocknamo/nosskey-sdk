@@ -128,7 +128,7 @@ $effect(() => {
       <CardSection title={$i18n.t.auth.tabLogin}>
         <div class="tab-panel">
           <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.loginTip} />
+            <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
           </div>
 
           <Button onclick={() => login()} disabled={isLoading} size="large">
@@ -140,13 +140,13 @@ $effect(() => {
       <CardSection title={$i18n.t.auth.tabRegister}>
         <div class="tab-panel">
           <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.registerTip} />
+            <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
           </div>
 
           <div class="username-input">
             <div class="username-label-row">
               <label for="username">{$i18n.t.auth.username}</label>
-              <HelpTip text={$i18n.t.auth.usernameTip} />
+              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
             </div>
             <input
               id="username"
