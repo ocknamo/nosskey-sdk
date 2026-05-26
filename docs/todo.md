@@ -25,18 +25,18 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 
 - [ ] **サンプルアプリの登録ログイン画面のデザイン UX 改善** — `examples/svelte-app` の account 画面（パスキー登録・ログインフロー）の見た目と操作感を整理。ファーストインプレッションに直結。
 - [ ] **nosskey-iframe と他アプリを iframe で組み合わせて1つの Nostr アプリとして構築** — nosskey-iframe を NIP-07 署名プロバイダとして埋め込みつつ、別の Nostr クライアント（タイムライン・DM 等）を同一ページに並置し、単一 Nostr アプリとして動作させる統合パターンの設計と参照実装。導入障壁を下げる効果が大きい。
-- [ ] **長時間放置後の orphan request タイムアウト対策（Phase 3-D）** — 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題。`pagehide` / `freeze` で client 側に "needs revalidate" フラグを立て次操作前に `ready()` 再確認するか、`nosskey:ready` 再受信時に client 側で「ready 再到来」を検出して in-flight request を再送する、いずれかの設計を検討。BFCache 復元自体は iframe 側の `pageshow` 再判定で鍵 rehydrate される (PR #75) ので、課題は親 SDK 側の "iframe が再ロードされたか" 検出に絞られる。実害バグ寄り。
 
 ## P2: 中期で取り組む（堅牢化・新機能）
 
 リリース後の v0.1.x 〜 v0.2 系で消化する想定。
 
 ### iframe 接続堅牢化（Phase 3）
-P1 の 3-D とセットで一括対応すると効率的。
+3-A〜3-D はセットで一括対応すると効率的。
 
 - [ ] **ヘルスチェック（ping/pong）（Phase 3-A）** — 定期的な接続確認メッセージ。
 - [ ] **自動再接続（Phase 3-B）** — 接続断検知後の iframe 再マウント。
 - [ ] **`nosskey:error` プロアクティブ通知（Phase 3-C）** — iframe 側エラーを親へ通知。
+- [ ] **長時間放置後の orphan request タイムアウト対策（Phase 3-D）** — 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題。`pagehide` / `freeze` で client 側に "needs revalidate" フラグを立て次操作前に `ready()` 再確認するか、`nosskey:ready` 再受信時に client 側で「ready 再到来」を検出して in-flight request を再送する、いずれかの設計を検討。BFCache 復元自体は iframe 側の `pageshow` 再判定で鍵 rehydrate される (PR #75) ので、課題は親 SDK 側の "iframe が再ロードされたか" 検出に絞られる。実害報告があり次第対応。
 
 ### 新機能・拡張
 - [ ] **既存鍵の活用検討** — ユーザーが既に持っている Nostr 秘密鍵を Nosskey（パスキー PRF）で暗号化して保存し、PRF 由来鍵と同じ UX（`signEvent` / `nip44` / `nip04` 等）で使えるようにする設計を検討。鍵インポート API・保存形式（PRF 派生鍵で暗号化した nsec）・既存 `createNostrKey` との関係を整理する。需要は高いがセキュリティ設計レビューが必要。
