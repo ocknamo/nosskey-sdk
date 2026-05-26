@@ -30,11 +30,15 @@ interface Harness {
   container: FakeElement;
   dispatch: (data: unknown, origin: string, source?: unknown) => void;
   dispatchAsIframe: (data: unknown, origin?: string) => void;
+  dispatchPageshow: () => void;
+  dispatchPagehide: () => void;
   iframes: FakeIframe[];
 }
 
 function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
   const listeners: Array<(event: MessageEvent) => void> = [];
+  const pageshowListeners: Array<() => void> = [];
+  const pagehideListeners: Array<() => void> = [];
   const iframes: FakeIframe[] = [];
 
   const createElement = (tagName: string) => {
@@ -85,13 +89,35 @@ function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
 
   const win = {
     addEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type !== 'message') return;
-      listeners.push(handler as (event: MessageEvent) => void);
+      if (type === 'message') {
+        listeners.push(handler as (event: MessageEvent) => void);
+        return;
+      }
+      if (type === 'pageshow') {
+        pageshowListeners.push(handler as unknown as () => void);
+        return;
+      }
+      if (type === 'pagehide') {
+        pagehideListeners.push(handler as unknown as () => void);
+        return;
+      }
     },
     removeEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type !== 'message') return;
-      const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
-      if (idx >= 0) listeners.splice(idx, 1);
+      if (type === 'message') {
+        const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
+        if (idx >= 0) listeners.splice(idx, 1);
+        return;
+      }
+      if (type === 'pageshow') {
+        const idx = pageshowListeners.indexOf(handler as unknown as () => void);
+        if (idx >= 0) pageshowListeners.splice(idx, 1);
+        return;
+      }
+      if (type === 'pagehide') {
+        const idx = pagehideListeners.indexOf(handler as unknown as () => void);
+        if (idx >= 0) pagehideListeners.splice(idx, 1);
+        return;
+      }
     },
     document: doc,
     location: { href: 'https://parent.example/app/' },
@@ -116,7 +142,23 @@ function createHarness(iframeOrigin = 'https://nosskey.example'): Harness {
     dispatch(data, origin, iframe.contentWindow);
   };
 
-  return { window: win, document: doc, container, dispatch, dispatchAsIframe, iframes };
+  const dispatchPageshow = () => {
+    for (const handler of [...pageshowListeners]) handler();
+  };
+  const dispatchPagehide = () => {
+    for (const handler of [...pagehideListeners]) handler();
+  };
+
+  return {
+    window: win,
+    document: doc,
+    container,
+    dispatch,
+    dispatchAsIframe,
+    dispatchPageshow,
+    dispatchPagehide,
+    iframes,
+  };
 }
 
 describe('NosskeyIframeClient', () => {
@@ -503,12 +545,13 @@ describe('NosskeyIframeClient', () => {
     client.destroy();
   });
 
-  it('request rejects when the iframe has no contentWindow', async () => {
+  it('request rejects when the iframe has no contentWindow (revalidateOnReload: false)', async () => {
     const client = new NosskeyIframeClient({
       iframeUrl: 'https://nosskey.example/iframe',
       window: harness.window,
       document: harness.document,
       container: harness.container as unknown as HTMLElement,
+      revalidateOnReload: false,
     });
     // Simulate a not-yet-loaded iframe.
     (harness.iframes[0] as unknown as { contentWindow: null }).contentWindow = null;
@@ -748,6 +791,192 @@ describe('NosskeyIframeClient', () => {
       });
       client.destroy();
       await expect(client.getPublicKey()).rejects.toThrow(/has been destroyed/);
+    });
+  });
+
+  describe('revalidate on iframe reload', () => {
+    it('re-posts in-flight requests when a second nosskey:ready arrives', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+      });
+      const iframe = harness.iframes[0];
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      const pending = client.getPublicKey();
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
+      const [firstRequest] = iframe.contentWindow.postMessage.mock.calls[0];
+
+      // Iframe reloads and re-emits ready.
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      // The same request id should have been re-posted.
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(2);
+      const [secondRequest] = iframe.contentWindow.postMessage.mock.calls[1];
+      expect(secondRequest).toEqual(firstRequest);
+
+      harness.dispatchAsIframe({
+        type: 'nosskey:response',
+        id: firstRequest.id,
+        result: 'deadbeef',
+      });
+      await expect(pending).resolves.toBe('deadbeef');
+      client.destroy();
+    });
+
+    it('resets the timeout countdown on each re-send so recovery is given full timeout', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+        timeout: 100,
+      });
+      const iframe = harness.iframes[0];
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      const pending = client.getPublicKey();
+      const [request] = iframe.contentWindow.postMessage.mock.calls[0];
+
+      // 80ms elapses without a response — would time out at 100ms.
+      await vi.advanceTimersByTimeAsync(80);
+      // Iframe reloads now.
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      // Another 80ms passes — total 160ms; with the old single-shot timer
+      // this would already be a timeout. With the reset, we still have 20ms
+      // of headroom before the new 100ms expires.
+      await vi.advanceTimersByTimeAsync(80);
+      harness.dispatchAsIframe({ type: 'nosskey:response', id: request.id, result: 'late-ok' });
+      await expect(pending).resolves.toBe('late-ok');
+      client.destroy();
+    });
+
+    it('repeated reloads re-send each pending request once per ready', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+      });
+      const iframe = harness.iframes[0];
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      const pending = client.getPublicKey();
+      const [request] = iframe.contentWindow.postMessage.mock.calls[0];
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
+
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(2);
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(3);
+
+      // Each re-send used the same id.
+      for (const call of iframe.contentWindow.postMessage.mock.calls) {
+        expect((call[0] as { id: string }).id).toBe(request.id);
+      }
+
+      harness.dispatchAsIframe({ type: 'nosskey:response', id: request.id, result: 'pk' });
+      await expect(pending).resolves.toBe('pk');
+      client.destroy();
+    });
+
+    it('holds a request as pending when contentWindow is null (revalidateOnReload default)', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+      });
+      const iframe = harness.iframes[0];
+      const originalContentWindow = iframe.contentWindow;
+      // Simulate "iframe document just got discarded" — contentWindow null.
+      (iframe as unknown as { contentWindow: typeof originalContentWindow | null }).contentWindow =
+        null;
+
+      const pending = client.getPublicKey();
+      // The request must not have been posted yet (nowhere to post to).
+      expect(originalContentWindow.postMessage).not.toHaveBeenCalled();
+
+      // Iframe finishes reloading: contentWindow comes back and ready arrives.
+      (iframe as unknown as { contentWindow: typeof originalContentWindow }).contentWindow =
+        originalContentWindow;
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      expect(originalContentWindow.postMessage).toHaveBeenCalledTimes(1);
+      const [request] = originalContentWindow.postMessage.mock.calls[0];
+      harness.dispatchAsIframe({ type: 'nosskey:response', id: request.id, result: 'pk' });
+      await expect(pending).resolves.toBe('pk');
+      client.destroy();
+    });
+
+    it('does not re-send pending requests when revalidateOnReload is false', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+        revalidateOnReload: false,
+        timeout: 50,
+      });
+      const iframe = harness.iframes[0];
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      const pending = client.getPublicKey();
+      const settled = expect(pending).rejects.toThrow(/timed out/);
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
+
+      // Second ready arrives — with revalidateOnReload off, no re-send.
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60);
+      await settled;
+      client.destroy();
+    });
+
+    it('pagehide does not block subsequent requests; next ready resolves them', async () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+      });
+      const iframe = harness.iframes[0];
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+
+      harness.dispatchPagehide();
+
+      const pending = client.getPublicKey();
+      // The request was still posted to the (still-mounted) contentWindow.
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(1);
+      const [request] = iframe.contentWindow.postMessage.mock.calls[0];
+
+      // Iframe restores from BFCache and re-emits ready.
+      harness.dispatchAsIframe({ type: 'nosskey:ready' });
+      // Re-sent.
+      expect(iframe.contentWindow.postMessage).toHaveBeenCalledTimes(2);
+
+      harness.dispatchAsIframe({ type: 'nosskey:response', id: request.id, result: 'pk' });
+      await expect(pending).resolves.toBe('pk');
+      client.destroy();
+    });
+
+    it('destroy() removes pagehide/pageshow listeners', () => {
+      const client = new NosskeyIframeClient({
+        iframeUrl: 'https://nosskey.example/iframe',
+        window: harness.window,
+        document: harness.document,
+        container: harness.container as unknown as HTMLElement,
+      });
+      client.destroy();
+      // Dispatching after destroy must not throw and must not affect anything.
+      expect(() => {
+        harness.dispatchPagehide();
+        harness.dispatchPageshow();
+      }).not.toThrow();
     });
   });
 });

@@ -25,7 +25,6 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 
 - [ ] **サンプルアプリの登録ログイン画面のデザイン UX 改善** — `examples/svelte-app` の account 画面（パスキー登録・ログインフロー）の見た目と操作感を整理。ファーストインプレッションに直結。
 - [ ] **nosskey-iframe と他アプリを iframe で組み合わせて1つの Nostr アプリとして構築** — nosskey-iframe を NIP-07 署名プロバイダとして埋め込みつつ、別の Nostr クライアント（タイムライン・DM 等）を同一ページに並置し、単一 Nostr アプリとして動作させる統合パターンの設計と参照実装。導入障壁を下げる効果が大きい。
-- [ ] **長時間放置後の orphan request タイムアウト対策（Phase 3-D）** — 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題。`pagehide` / `freeze` で client 側に "needs revalidate" フラグを立て次操作前に `ready()` 再確認するか、`nosskey:ready` 再受信時に client 側で「ready 再到来」を検出して in-flight request を再送する、いずれかの設計を検討。BFCache 復元自体は iframe 側の `pageshow` 再判定で鍵 rehydrate される (PR #75) ので、課題は親 SDK 側の "iframe が再ロードされたか" 検出に絞られる。実害バグ寄り。
 
 ## P2: 中期で取り組む（堅牢化・新機能）
 
@@ -86,6 +85,9 @@ P1 の 3-D とセットで一括対応すると効率的。
 - [x] `getRelays()` の追加 — リレー設定の取得 (iframe `onGetRelays` コールバック + Svelte UI、SDK 非変更方針)
 - [x] `nip44.encrypt / decrypt` の追加 — NIP-44 v2 を SDK (`packages/nosskey-sdk/src/nip44.ts`)、iframe protocol/host/client、ConsentDialog で実装。公式テストベクター (`__fixtures__/nip44-vectors.json`) 全件パス。ブランチ `claude/review-todos-nFRqm`
 - [x] `nip04.encrypt / decrypt` の追加 — NIP-04（レガシー DM、AES-256-CBC）を SDK (`packages/nosskey-sdk/src/nip04.ts`)、iframe、ConsentDialog で実装。ラウンドトリップテスト追加。ブランチ `claude/review-todos-nFRqm`
+
+### iframe Phase 3: 接続堅牢化
+- [x] **長時間放置後の orphan request タイムアウト対策（Phase 3-D）** — 親タブが長時間放置されて iframe document が discard された後、最初の operation が in-flight でも受け手が居らず `NosskeyIframeClient` のデフォルト 60 秒 timeout reject になる問題に対応。host (`packages/nosskey-iframe/src/host.ts`) で `pageshow` を契機に `nosskey:ready` を再送出し、client (`packages/nosskey-iframe/src/client.ts`) では ready 再到来時に in-flight pending を同じ id で再 post する。`#readyEpoch` で多重再送を制御し、再送毎に timeout を reset。新オプション `revalidateOnReload`（デフォルト true）を追加し、`false` 指定で旧挙動（単発 ready / `!contentWindow` で即時 reject）に戻せる。`pagehide` 受信時の "needs revalidate" フラグも補助的に併用。テストは `client.spec.ts` / `host.spec.ts` のハーネスを `pageshow`/`pagehide` 対応に拡張し、再送・timer reset・連続 reload・`revalidateOnReload:false` 回帰・destroy 後の安全性等を追加。
 
 ### iframe Phase 2: UX・セキュリティ改善
 - [x] オリジン別の許可記憶 — 「このサイトを常に許可」で origin×method を `localStorage` (`nosskey_trusted_origins_v2`、設計書の `nosskey_trusted_origins` から v1 ユーザー無し前提で破壊的置換) に保存。`examples/svelte-app/src/store/app-state.ts` (`TrustedOriginEntry` / 永続化) + `examples/svelte-app/src/utils/consent-gating.ts` (`evaluateConsent`) + `ConsentDialog.svelte`

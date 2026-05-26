@@ -75,6 +75,20 @@ Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*
 
 Without that header Chromium refuses to run WebAuthn inside the iframe.
 
+### Reload recovery (`revalidateOnReload`)
+
+By default the client survives an iframe document discard/reload (e.g. after a
+long-idle parent tab or a BFCache restore). When the host re-emits
+`nosskey:ready`, any in-flight requests are re-posted with the same id and
+their timeout countdown is reset, so the caller's `signEvent()` /
+`getPublicKey()` promise resolves once the recovered host responds instead of
+hanging until the 60-second timeout fires. Worst-case wait per request is
+`timeout` + iframe reload time.
+
+Pass `revalidateOnReload: false` to restore the legacy single-shot behavior
+(ready resolves exactly once; a request whose iframe `contentWindow` is
+missing rejects immediately).
+
 For a complete walk-through (storage partitioning, Storage Access API recovery, error handling, UX modal patterns) see
 [`docs/en/iframe-integration.en.md`](../../docs/en/iframe-integration.en.md).
 A runnable demo lives at [`examples/parent-sample`](../../examples/parent-sample).
@@ -138,7 +152,7 @@ When you ship to production, verify each item:
 | Export | Role | Description |
 |---|---|---|
 | `NosskeyIframeClient` | Client | Mounts the iframe and forwards NIP-07 calls. |
-| `NosskeyIframeClientOptions` | Client | Constructor options (iframe URL, container, timeout, theme, lang). |
+| `NosskeyIframeClientOptions` | Client | Constructor options (iframe URL, container, timeout, theme, lang, revalidateOnReload). |
 | `NosskeyIframeError` | Client | Typed error thrown by client methods. |
 | `NosskeyIframeHost` | Host | Listens to `postMessage` and answers via a `NosskeyManager`. |
 | `NosskeyIframeHostOptions` | Host | Constructor options (manager, allowed origins, consent hooks). |

@@ -46,6 +46,21 @@ export interface NosskeyIframeClientOptions {
   window?: Window;
   /** Override `document` for iframe creation. Primarily useful for tests. */
   document?: Document;
+  /**
+   * When true (default), the client re-sends any in-flight requests if the
+   * iframe re-emits `nosskey:ready` (e.g. after the iframe document was
+   * discarded and reloaded while the parent tab was idle). The parent's
+   * `pagehide` is also tracked so the next request after a tab suspension
+   * waits for a fresh ready instead of immediately rejecting. Worst-case
+   * wait per request becomes `timeout` + iframe reload time, since each
+   * re-send resets the timeout countdown.
+   *
+   * Set to `false` to restore the legacy single-shot ready behavior (ready
+   * resolves exactly once; a request whose iframe contentWindow is missing
+   * rejects immediately).
+   * @default true
+   */
+  revalidateOnReload?: boolean;
 }
 
 interface ResolvedOptions {
@@ -55,12 +70,16 @@ interface ResolvedOptions {
   timeout: number;
   window: Window;
   document: Document;
+  revalidateOnReload: boolean;
 }
 
 interface Pending {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
   timer: ReturnType<typeof setTimeout>;
+  request: NosskeyRequest;
+  /** Epoch of the most recent `nosskey:ready` under which this request was posted. */
+  lastSentEpoch: number;
 }
 
 /**
@@ -119,6 +138,7 @@ function resolveOptions(options: NosskeyIframeClientOptions): ResolvedOptions {
     timeout: options.timeout ?? 60000,
     window: win,
     document: doc,
+    revalidateOnReload: options.revalidateOnReload !== false,
   };
 }
 
@@ -145,6 +165,12 @@ export class NosskeyIframeClient {
   readonly #readyPromise: Promise<void>;
   #isReady = false;
   #destroyed = false;
+  /** Increments on every received `nosskey:ready`; used to detect iframe reload. */
+  #readyEpoch = 0;
+  /** Set by parent `pagehide`; cleared on next `nosskey:ready` or `pageshow`. */
+  #needsRevalidate = false;
+  #pageshowListener: (() => void) | null = null;
+  #pagehideListener: (() => void) | null = null;
 
   constructor(options: NosskeyIframeClientOptions) {
     this.#options = resolveOptions(options);
@@ -168,6 +194,25 @@ export class NosskeyIframeClient {
 
     this.#listener = (event: MessageEvent) => this.#handleMessage(event);
     this.#options.window.addEventListener('message', this.#listener);
+
+    if (this.#options.revalidateOnReload) {
+      this.#pagehideListener = () => {
+        this.#needsRevalidate = true;
+      };
+      this.#pageshowListener = () => {
+        // The actual recovery happens when the iframe re-emits nosskey:ready
+        // (handled in #handleMessage). pageshow alone doesn't tell us whether
+        // the iframe was discarded, so we just rely on the ready re-arrival.
+      };
+      this.#options.window.addEventListener(
+        'pagehide',
+        this.#pagehideListener as unknown as EventListener
+      );
+      this.#options.window.addEventListener(
+        'pageshow',
+        this.#pageshowListener as unknown as EventListener
+      );
+    }
   }
 
   /** The underlying iframe element (exposed for styling/visibility control). */
@@ -263,6 +308,20 @@ export class NosskeyIframeClient {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#options.window.removeEventListener('message', this.#listener);
+    if (this.#pagehideListener) {
+      this.#options.window.removeEventListener(
+        'pagehide',
+        this.#pagehideListener as unknown as EventListener
+      );
+      this.#pagehideListener = null;
+    }
+    if (this.#pageshowListener) {
+      this.#options.window.removeEventListener(
+        'pageshow',
+        this.#pageshowListener as unknown as EventListener
+      );
+      this.#pageshowListener = null;
+    }
     for (const [, pending] of this.#pending) {
       clearTimeout(pending.timer);
       pending.reject(new Error('NosskeyIframeClient destroyed.'));
@@ -295,13 +354,24 @@ export class NosskeyIframeClient {
         this.#pending.delete(id);
         reject(new Error(`Nosskey iframe request timed out after ${this.#options.timeout}ms.`));
       }, this.#options.timeout);
-      this.#pending.set(id, { resolve, reject, timer });
+      this.#pending.set(id, {
+        resolve,
+        reject,
+        timer,
+        request,
+        lastSentEpoch: this.#readyEpoch,
+      });
 
       const target = this.#iframe.contentWindow;
       if (!target) {
-        clearTimeout(timer);
-        this.#pending.delete(id);
-        reject(new Error('Nosskey iframe is not ready to receive messages.'));
+        if (!this.#options.revalidateOnReload) {
+          clearTimeout(timer);
+          this.#pending.delete(id);
+          reject(new Error('Nosskey iframe is not ready to receive messages.'));
+          return;
+        }
+        // With revalidateOnReload, hold the request as pending; the next
+        // `nosskey:ready` re-arrival will trigger a re-post.
         return;
       }
       target.postMessage(request, this.#options.iframeOrigin);
@@ -316,10 +386,7 @@ export class NosskeyIframeClient {
       return;
     }
     if (isNosskeyReady(event.data)) {
-      if (!this.#isReady) {
-        this.#isReady = true;
-        this.#readyResolve?.();
-      }
+      this.#handleReady();
       return;
     }
     if (isNosskeyVisibility(event.data)) {
@@ -337,6 +404,34 @@ export class NosskeyIframeClient {
       this.#iframe.removeAttribute('aria-hidden');
     } else {
       this.#iframe.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  #handleReady(): void {
+    this.#readyEpoch += 1;
+    this.#needsRevalidate = false;
+    if (!this.#isReady) {
+      this.#isReady = true;
+      this.#readyResolve?.();
+    }
+    if (!this.#options.revalidateOnReload) return;
+    // Re-send any pending requests that were posted before this ready epoch.
+    // Reset each timer so a request that was 50/60s into its countdown gets a
+    // fresh full timeout window after recovery.
+    const target = this.#iframe.contentWindow;
+    if (!target) return;
+    const currentEpoch = this.#readyEpoch;
+    for (const [id, pending] of this.#pending) {
+      if (pending.lastSentEpoch >= currentEpoch) continue;
+      clearTimeout(pending.timer);
+      pending.timer = setTimeout(() => {
+        this.#pending.delete(id);
+        pending.reject(
+          new Error(`Nosskey iframe request timed out after ${this.#options.timeout}ms.`)
+        );
+      }, this.#options.timeout);
+      pending.lastSentEpoch = currentEpoch;
+      target.postMessage(pending.request, this.#options.iframeOrigin);
     }
   }
 

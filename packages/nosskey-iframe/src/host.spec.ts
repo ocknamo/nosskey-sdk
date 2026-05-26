@@ -39,17 +39,31 @@ interface FakeWindow extends Partial<Window> {
 
 function createFakeWindow(): FakeWindow {
   const listeners: Array<(event: MessageEvent) => void> = [];
+  const pageshowListeners: Array<() => void> = [];
   const sent: Array<{ data: unknown; targetOrigin: string }> = [];
   const win = {
     sent,
     addEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type !== 'message') return;
-      listeners.push(handler as (event: MessageEvent) => void);
+      if (type === 'message') {
+        listeners.push(handler as (event: MessageEvent) => void);
+        return;
+      }
+      if (type === 'pageshow') {
+        pageshowListeners.push(handler as unknown as () => void);
+        return;
+      }
     },
     removeEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type !== 'message') return;
-      const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
-      if (idx >= 0) listeners.splice(idx, 1);
+      if (type === 'message') {
+        const idx = listeners.indexOf(handler as (event: MessageEvent) => void);
+        if (idx >= 0) listeners.splice(idx, 1);
+        return;
+      }
+      if (type === 'pageshow') {
+        const idx = pageshowListeners.indexOf(handler as unknown as () => void);
+        if (idx >= 0) pageshowListeners.splice(idx, 1);
+        return;
+      }
     },
     postMessage(data: unknown, targetOrigin: string | { targetOrigin: string } = '*') {
       const origin = typeof targetOrigin === 'string' ? targetOrigin : targetOrigin.targetOrigin;
@@ -60,6 +74,7 @@ function createFakeWindow(): FakeWindow {
     },
   } as unknown as FakeWindow & {
     dispatchMessage: (data: unknown, origin: string, source?: Window | null) => Promise<void>;
+    dispatchPageshow: () => void;
   };
 
   // Helper used by tests to drive the listener synchronously but wait for
@@ -79,11 +94,22 @@ function createFakeWindow(): FakeWindow {
     }
   };
 
+  (
+    win as unknown as {
+      dispatchPageshow: () => void;
+    }
+  ).dispatchPageshow = () => {
+    for (const handler of [...pageshowListeners]) {
+      handler();
+    }
+  };
+
   return win as unknown as FakeWindow;
 }
 
 type DispatchableWindow = FakeWindow & {
   dispatchMessage: (data: unknown, origin: string, source?: Window | null) => Promise<void>;
+  dispatchPageshow: () => void;
 };
 
 describe('NosskeyIframeHost', () => {
@@ -110,6 +136,43 @@ describe('NosskeyIframeHost', () => {
     const [readyMsg] = (parent.postMessage as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(isNosskeyReady(readyMsg)).toBe(true);
     host.stop();
+  });
+
+  it('re-emits nosskey:ready on pageshow so the parent can detect reload', () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const host = new NosskeyIframeHost({
+      manager: makeManager(),
+      window: win as unknown as Window,
+    });
+    host.start();
+    const initial = (parent.postMessage as unknown as ReturnType<typeof vi.fn>).mock.calls.length;
+    expect(initial).toBe(1);
+
+    win.dispatchPageshow();
+
+    const calls = (parent.postMessage as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.length).toBe(2);
+    expect(isNosskeyReady(calls[1][0])).toBe(true);
+    host.stop();
+  });
+
+  it('stop() removes the pageshow listener so further pageshow events do not post', () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const host = new NosskeyIframeHost({
+      manager: makeManager(),
+      window: win as unknown as Window,
+    });
+    host.start();
+    host.stop();
+
+    win.dispatchPageshow();
+
+    // Only the initial nosskey:ready from start() should have been posted.
+    expect((parent.postMessage as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
   });
 
   it('warns when allowedOrigins is "*"', () => {

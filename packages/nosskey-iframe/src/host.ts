@@ -92,12 +92,16 @@ function buildError(code: NosskeyErrorCode, message: string) {
 
 /**
  * Installs a `message` listener inside the iframe and routes requests to the
- * configured {@link NosskeyManagerLike}. Emits `nosskey:ready` on start.
+ * configured {@link NosskeyManagerLike}. Emits `nosskey:ready` on start, and
+ * re-emits on every `pageshow` so that a parent {@link NosskeyIframeClient}
+ * can detect iframe document discard/reload (e.g. after long idle or
+ * BFCache restore) and re-send any orphaned in-flight requests.
  */
 export class NosskeyIframeHost {
   readonly #options: ResolvedOptions;
   #started = false;
   #listener: ((event: MessageEvent) => Promise<void>) | null = null;
+  #pageshowListener: (() => void) | null = null;
 
   constructor(options: NosskeyIframeHostOptions) {
     this.#options = resolveOptions(options);
@@ -120,11 +124,18 @@ export class NosskeyIframeHost {
     this.#listener = (event: MessageEvent) => this.#handleMessage(event);
     this.#options.window.addEventListener('message', this.#listener as unknown as EventListener);
 
-    const ready: NosskeyReady = { type: 'nosskey:ready' };
-    const parent = this.#options.window.parent;
-    if (parent && parent !== this.#options.window) {
-      parent.postMessage(ready, '*');
-    }
+    // Re-emit nosskey:ready on every pageshow so the parent client can
+    // recover from iframe document discard/reload. BFCache restore fires
+    // pageshow with persisted=true; ordinary load fires pageshow with
+    // persisted=false after start()'s initial emission below, which is
+    // harmlessly redundant for the parent.
+    this.#pageshowListener = () => this.#emitReady();
+    this.#options.window.addEventListener(
+      'pageshow',
+      this.#pageshowListener as unknown as EventListener
+    );
+
+    this.#emitReady();
   }
 
   /** Remove the message listener. Safe to call multiple times. */
@@ -137,6 +148,21 @@ export class NosskeyIframeHost {
         this.#listener as unknown as EventListener
       );
       this.#listener = null;
+    }
+    if (this.#pageshowListener) {
+      this.#options.window.removeEventListener(
+        'pageshow',
+        this.#pageshowListener as unknown as EventListener
+      );
+      this.#pageshowListener = null;
+    }
+  }
+
+  #emitReady(): void {
+    const ready: NosskeyReady = { type: 'nosskey:ready' };
+    const parent = this.#options.window.parent;
+    if (parent && parent !== this.#options.window) {
+      parent.postMessage(ready, '*');
     }
   }
 

@@ -74,6 +74,12 @@ Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*
 
 このヘッダがないと Chromium は iframe 内での WebAuthn 実行を拒否します。
 
+### リロード復旧 (`revalidateOnReload`)
+
+デフォルトで client は iframe document の discard/reload を生き残ります（長時間放置された親タブや BFCache 復元など）。host が `nosskey:ready` を再送出すると、in-flight のリクエストは同じ id で再 post され、timeout カウントダウンもリセットされます。結果として、呼び出し側の `signEvent()` / `getPublicKey()` Promise は 60 秒タイムアウトでハングせず、復帰した host が応答した時点で resolve します。リクエストあたりの最悪待ち時間は `timeout` + iframe リロード時間になります。
+
+旧来の単発挙動 (ready が 1 回だけ resolve、`contentWindow` が無いリクエストは即時 reject) に戻したい場合は `revalidateOnReload: false` を渡してください。
+
 詳細な統合手順 (storage partitioning、Storage Access API による復旧、エラーハンドリング、モーダル UX 等) は
 [`docs/ja/iframe-integration.ja.md`](../../docs/ja/iframe-integration.ja.md) を参照。
 動作可能なデモは [`examples/parent-sample`](../../examples/parent-sample) にあります。
@@ -137,7 +143,7 @@ host.start();
 | Export | 役割 | 説明 |
 |---|---|---|
 | `NosskeyIframeClient` | Client | iframe をマウントし NIP-07 呼び出しを転送する。 |
-| `NosskeyIframeClientOptions` | Client | コンストラクタオプション (iframe URL、container、timeout、theme、lang)。 |
+| `NosskeyIframeClientOptions` | Client | コンストラクタオプション (iframe URL、container、timeout、theme、lang、revalidateOnReload)。 |
 | `NosskeyIframeError` | Client | client メソッドが投げる型付きエラー。 |
 | `NosskeyIframeHost` | Host | `postMessage` を listen し、`NosskeyManager` 経由で応答する。 |
 | `NosskeyIframeHostOptions` | Host | コンストラクタオプション (manager、許可オリジン、consent hook)。 |
