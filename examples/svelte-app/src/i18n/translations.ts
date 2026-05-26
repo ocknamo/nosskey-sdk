@@ -19,6 +19,7 @@ export interface TranslationData {
     copied: string;
     loading: string;
     edit: string;
+    help: string;
     errorMessages: {
       init: string;
       prfCheck: string;
@@ -33,48 +34,19 @@ export interface TranslationData {
   auth: {
     title: string;
     subtitle: string;
-    checkPrf: string;
-    unsupportedTitle: string;
     createNew: string;
     loginWith: string;
-    login: string;
     loading: string;
     username: string;
     usernamePlaceholder: string;
-    importTitle: string;
-    importSubtitle: string;
-    secretKey: string;
-    secretKeyHelp: string;
-    importButton: string;
-    accountTitle: string;
-    appDescription: string;
-    passkeySectionTitle: string;
-    passkeySectionDesc: string;
-    crossDeviceTitle: string;
-    crossDeviceDesc: string;
-    existingPasskeyTitle: string;
-    existingPasskeyDesc: string;
-    developerSection: string;
-    prfDebugInfo: string;
-    prfSupportedMessage: string;
     firstLogin: string;
     passkeyCreated: string;
     proceedWithLogin: string;
-    keyInfoImportTitle: string;
-    keyInfoImportDesc: string;
-    keyInfoFileSelect: string;
-    keyDataInput: string;
-    keyDataPlaceholder: string;
-    keyInfoLoginButton: string;
-    keyInfoLoginProcessing: string;
-    orText: string;
-    quickStartTitle: string;
-    quickStartDesc: string;
-    existingUserTitle: string;
-    existingUserDesc: string;
-    advancedOptionsTitle: string;
-    newUserRecommended: string;
-    returningUserRecommended: string;
+    tabLogin: string;
+    tabRegister: string;
+    loginTip: string;
+    registerTip: string;
+    usernameTip: string;
   };
   nostr: {
     publicKey: string;
@@ -193,6 +165,23 @@ export interface TranslationData {
       saved: string;
       corruptionWarning: string;
     };
+    developer: {
+      title: string;
+      description: string;
+      checkPrf: string;
+      prfSupported: string;
+      prfUnsupportedTitle: string;
+    };
+    import: {
+      title: string;
+      description: string;
+      fileSelect: string;
+      dataInput: string;
+      dataPlaceholder: string;
+      loginButton: string;
+      processing: string;
+      or: string;
+    };
   };
   navigation: {
     account: string;
@@ -274,6 +263,7 @@ export const ja: TranslationData = {
     copied: 'コピーしました',
     loading: '読み込み中...',
     edit: '編集',
+    help: 'ヘルプ',
     errorMessages: {
       init: '初期化エラー:',
       prfCheck: 'PRF対応確認エラー:',
@@ -288,53 +278,21 @@ export const ja: TranslationData = {
   auth: {
     title: 'Nosskey デモ',
     subtitle: 'パスキーで保管するNostr秘密鍵を活用したクライアント',
-    checkPrf: 'PRF拡張対応確認',
-    unsupportedTitle: 'PRF拡張がサポートされていません',
     createNew: '新規作成',
-    loginWith: '既存のパスキーでログイン',
-    login: 'ログイン',
+    loginWith: 'パスキーでログイン',
     firstLogin: '初回ログイン',
     passkeyCreated: 'パスキーが作成されました',
     proceedWithLogin: 'ログインして続ける',
     loading: 'ロード中...',
     username: 'ユーザー名',
     usernamePlaceholder: 'ユーザー名を入力',
-    importTitle: '既存のNostr鍵をインポート',
-    importSubtitle:
-      '既存の秘密鍵をパスキーで保護します。PRFを直接秘密鍵として使用せず、秘密鍵の暗号化に使用します',
-    secretKey: 'Nostr秘密鍵',
-    secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
-    importButton: 'インポート',
-    accountTitle: 'Nostrアカウント',
-    appDescription:
-      'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。パスキーはプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となります',
-    passkeySectionTitle: 'パスキーでアカウント作成',
-    passkeySectionDesc:
-      'パスキーは生体認証や端末のセキュリティ機能を使った簡単で安全な認証方法です。',
-    crossDeviceTitle: '幅広い端末で利用可能',
-    crossDeviceDesc:
-      'お使いの端末が直接対応していなくても、ブラウザのQRコードまたは通知を使って、スマートフォンなどを認証器として利用できます。',
-    existingPasskeyTitle: '既存のパスキーでログイン',
-    existingPasskeyDesc:
-      '以前作成したパスキーで再度ログイン。インポートしたNostr Keyの復元は"まだ"サポートされていません',
-    developerSection: '開発者向け',
-    prfDebugInfo: 'PRF拡張確認はデバッグ用途です',
-    prfSupportedMessage: 'PRF拡張がサポートされています',
-    keyInfoImportTitle: 'バックアップした鍵情報でログイン',
-    keyInfoImportDesc: '以前にエクスポートした鍵情報ファイルまたはデータを使用してログインします。',
-    keyInfoFileSelect: '📁鍵情報ファイルを選択',
-    keyDataInput: '鍵情報データを入力',
-    keyDataPlaceholder: '鍵情報データをここに貼り付けてください',
-    keyInfoLoginButton: '鍵情報データでログイン',
-    keyInfoLoginProcessing: '処理中...',
-    orText: 'または',
-    quickStartTitle: 'はじめる',
-    quickStartDesc: '新規ユーザー向けの最も簡単な方法',
-    existingUserTitle: '既存ユーザー',
-    existingUserDesc: '以前に作成したアカウントでログイン',
-    advancedOptionsTitle: '高度なオプション',
-    newUserRecommended: '新規ユーザーにおすすめ',
-    returningUserRecommended: '既存ユーザーにおすすめ',
+    tabLogin: 'ログイン',
+    tabRegister: '新規登録',
+    loginTip:
+      '以前作成したパスキーで再度ログインします。インポートしたNostr鍵の復元は"まだ"サポートされていません。',
+    registerTip:
+      'パスキーは生体認証や端末のセキュリティ機能を使った安全な認証方法です。お使いの端末が直接対応していなくても、QRコードや通知を使ってスマートフォンなどを認証器として利用できます。',
+    usernameTip: 'パスキーの表示名として使われます。任意項目で、未入力でも問題ありません。',
   },
   nostr: {
     publicKey: '公開鍵',
@@ -465,6 +423,23 @@ export const ja: TranslationData = {
       saveFileTitle: 'ファイルに保存',
       noCurrentKeyInfo: '現在の鍵情報が見つかりません。ログイン状態を確認してください。',
     },
+    developer: {
+      title: '開発者向け',
+      description: 'PRF拡張対応の確認はデバッグ用途です。',
+      checkPrf: 'PRF拡張対応確認',
+      prfSupported: 'PRF拡張がサポートされています',
+      prfUnsupportedTitle: 'PRF拡張がサポートされていません',
+    },
+    import: {
+      title: '鍵情報でログイン',
+      description: '以前にエクスポートした鍵情報ファイルまたはデータを使用してログインします。',
+      fileSelect: '📁鍵情報ファイルを選択',
+      dataInput: '鍵情報データを入力',
+      dataPlaceholder: '鍵情報データをここに貼り付けてください',
+      loginButton: '鍵情報データでログイン',
+      processing: '処理中...',
+      or: 'または',
+    },
   },
   navigation: {
     account: 'アカウント',
@@ -549,6 +524,7 @@ export const en: TranslationData = {
     copied: 'Copied',
     loading: 'Loading...',
     edit: 'Edit',
+    help: 'Help',
     errorMessages: {
       init: 'Initialization Error:',
       prfCheck: 'PRF Support Check Error:',
@@ -563,53 +539,21 @@ export const en: TranslationData = {
   auth: {
     title: 'Nosskey Demo',
     subtitle: 'Client using Nosskey',
-    checkPrf: 'Check PRF Extension Support',
-    unsupportedTitle: 'PRF Extension Not Supported',
     createNew: 'Create New',
-    loginWith: 'Login with Existing Passkey',
-    login: 'Login',
+    loginWith: 'Login with Passkey',
     loading: 'Loading...',
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
-    importTitle: 'Import Existing Nostr Key',
-    importSubtitle:
-      'Protect your existing secret key with a passkey. Do not use PRF directly as private key, use PRF for encryption of private key',
-    secretKey: 'Nostr Secret Key',
-    secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
-    importButton: 'Import',
-    accountTitle: 'Nostr account',
-    appDescription:
-      'This app uses passkey authentication to securely manage your Nostr keys. Passkey is cloud-backed by the platform, eliminating the need for cumbersome private key management.',
-    passkeySectionTitle: 'Create Account with Passkey',
-    passkeySectionDesc:
-      'Passkeys are a simple and secure authentication method using biometrics or your device security features.',
-    crossDeviceTitle: 'Available on a wide range of devices',
-    crossDeviceDesc:
-      "Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
-    existingPasskeyTitle: 'Login with Existing Passkey',
-    existingPasskeyDesc:
-      'Login again with previously created passkey. Recovery of imported Nostr Key is not "yet" supported.',
-    developerSection: 'For Developers',
-    prfDebugInfo: 'PRF extension check is for debugging purposes',
-    prfSupportedMessage: 'PRF extension is supported',
     firstLogin: 'First Login',
     passkeyCreated: 'Passkey Created Successfully',
     proceedWithLogin: 'Proceed with Login',
-    keyInfoImportTitle: 'Login with Backed Up KeyInfo',
-    keyInfoImportDesc: 'Use a previously exported KeyInfo file or data to login.',
-    keyInfoFileSelect: '📁Select KeyInfo File',
-    keyDataInput: 'Enter KeyInfo Data',
-    keyDataPlaceholder: 'Paste your Key data here',
-    keyInfoLoginButton: 'Login with Key Data',
-    keyInfoLoginProcessing: 'Processing...',
-    orText: 'or',
-    quickStartTitle: 'Get Started',
-    quickStartDesc: 'Simplest way for new users',
-    existingUserTitle: 'Returning Users',
-    existingUserDesc: 'Login with previously created account',
-    advancedOptionsTitle: 'Advanced Options',
-    newUserRecommended: 'Recommended for new users',
-    returningUserRecommended: 'Recommended for existing users',
+    tabLogin: 'Login',
+    tabRegister: 'Sign Up',
+    loginTip:
+      'Sign in again with a previously created passkey. Recovery of imported Nostr keys is not "yet" supported.',
+    registerTip:
+      "Passkeys are a secure authentication method using biometrics or your device's security features. Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
+    usernameTip: 'Used as the display name for your passkey. Optional — you can leave it blank.',
   },
   nostr: {
     publicKey: 'Public Key',
@@ -739,6 +683,23 @@ export const en: TranslationData = {
       saveFile: 'Save',
       saveFileTitle: 'Save to file',
       noCurrentKeyInfo: 'Current KeyInfo not found. Please check your login status.',
+    },
+    developer: {
+      title: 'For Developers',
+      description: 'PRF extension support check is for debugging purposes.',
+      checkPrf: 'Check PRF Extension Support',
+      prfSupported: 'PRF extension is supported',
+      prfUnsupportedTitle: 'PRF Extension Not Supported',
+    },
+    import: {
+      title: 'Login with KeyInfo',
+      description: 'Use a previously exported KeyInfo file or data to login.',
+      fileSelect: '📁Select KeyInfo File',
+      dataInput: 'Enter KeyInfo Data',
+      dataPlaceholder: 'Paste your Key data here',
+      loginButton: 'Login with Key Data',
+      processing: 'Processing...',
+      or: 'or',
     },
   },
   navigation: {
