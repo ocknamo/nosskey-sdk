@@ -36,15 +36,9 @@ export interface TranslationData {
     subtitle: string;
     createNew: string;
     loginWith: string;
-    login: string;
     loading: string;
     username: string;
     usernamePlaceholder: string;
-    secretKey: string;
-    secretKeyHelp: string;
-    importButton: string;
-    accountTitle: string;
-    appDescription: string;
     firstLogin: string;
     passkeyCreated: string;
     proceedWithLogin: string;
@@ -286,19 +280,12 @@ export const ja: TranslationData = {
     subtitle: 'パスキーで保管するNostr秘密鍵を活用したクライアント',
     createNew: '新規作成',
     loginWith: 'パスキーでログイン',
-    login: 'ログイン',
     firstLogin: '初回ログイン',
     passkeyCreated: 'パスキーが作成されました',
     proceedWithLogin: 'ログインして続ける',
     loading: 'ロード中...',
     username: 'ユーザー名',
     usernamePlaceholder: 'ユーザー名を入力',
-    secretKey: 'Nostr秘密鍵',
-    secretKeyHelp: '秘密鍵は設定後にサーバーに送信されず、ブラウザ内で処理されます',
-    importButton: 'インポート',
-    accountTitle: 'Nostrアカウント',
-    appDescription:
-      'このアプリはパスキー認証を使ってNostr鍵を安全に管理します。パスキーはプラットフォームによりクラウドバックアップされるため煩雑な秘密鍵管理が不要となります',
     tabLogin: 'ログイン',
     tabRegister: '新規登録',
     loginTip:
@@ -554,16 +541,9 @@ export const en: TranslationData = {
     subtitle: 'Client using Nosskey',
     createNew: 'Create New',
     loginWith: 'Login with Passkey',
-    login: 'Login',
     loading: 'Loading...',
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
-    secretKey: 'Nostr Secret Key',
-    secretKeyHelp: 'Your secret key is processed locally and never sent to any server',
-    importButton: 'Import',
-    accountTitle: 'Nostr account',
-    appDescription:
-      'This app uses passkey authentication to securely manage your Nostr keys. Passkey is cloud-backed by the platform, eliminating the need for cumbersome private key management.',
     firstLogin: 'First Login',
     passkeyCreated: 'Passkey Created Successfully',
     proceedWithLogin: 'Proceed with Login',

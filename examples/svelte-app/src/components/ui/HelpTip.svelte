@@ -8,7 +8,9 @@ interface Props {
 const { text }: Props = $props();
 
 // 1コンポーネントインスタンスごとに一意の id を発番し aria-describedby と紐付ける。
-const tipId = `help-tip-${crypto.randomUUID()}`;
+// `crypto.randomUUID()` は古い jsdom テスト環境などで存在しないことがあるため
+// Math.random ベースのフォールバックを併用する。
+const tipId = `help-tip-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 </script>
 
 <span class="help-tip">

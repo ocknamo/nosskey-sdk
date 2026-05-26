@@ -107,11 +107,7 @@ $effect(() => {
       <p>{$i18n.t.auth.loading}</p>
     </div>
   {:else}
-    <div
-      class="auth-tabs"
-      role="tablist"
-      aria-label={$i18n.t.auth.title}
-    >
+    <div class="auth-tabs">
       <TabButton
         active={activeTab === "login"}
         onclick={() => selectTab("login")}
@@ -131,8 +127,7 @@ $effect(() => {
     {#if activeTab === "login"}
       <CardSection title={$i18n.t.auth.tabLogin}>
         <div class="tab-panel">
-          <div class="panel-heading">
-            <h3>{$i18n.t.auth.loginWith}</h3>
+          <div class="panel-help">
             <HelpTip text={$i18n.t.auth.loginTip} />
           </div>
 
@@ -144,16 +139,15 @@ $effect(() => {
     {:else}
       <CardSection title={$i18n.t.auth.tabRegister}>
         <div class="tab-panel">
-          <div class="panel-heading">
-            <h3>{$i18n.t.auth.tabRegister}</h3>
+          <div class="panel-help">
             <HelpTip text={$i18n.t.auth.registerTip} />
           </div>
 
           <div class="username-input">
-            <label for="username">
-              {$i18n.t.auth.username}
+            <div class="username-label-row">
+              <label for="username">{$i18n.t.auth.username}</label>
               <HelpTip text={$i18n.t.auth.usernameTip} />
-            </label>
+            </div>
             <input
               id="username"
               type="text"
@@ -266,16 +260,10 @@ $effect(() => {
     text-align: left;
   }
 
-  .panel-heading {
+  .panel-help {
     display: flex;
-    align-items: center;
-    margin: 0 0 12px 0;
-  }
-
-  .panel-heading h3 {
-    margin: 0;
-    color: var(--color-text-primary);
-    font-size: 1.25rem;
+    justify-content: flex-end;
+    margin: 0 0 8px 0;
   }
 
   .username-input {
@@ -286,9 +274,12 @@ $effect(() => {
     text-align: left;
   }
 
-  .username-input label {
-    display: inline-flex;
+  .username-label-row {
+    display: flex;
     align-items: center;
+  }
+
+  .username-label-row label {
     font-weight: 500;
     color: var(--color-text-primary);
   }
