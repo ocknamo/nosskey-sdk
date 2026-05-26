@@ -1,11 +1,21 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 
+type Placement = 'center' | 'start' | 'end';
+
 interface Props {
   text: string;
+  /**
+   * バブルをトリガに対してどう揃えるか。
+   * `center` はトリガ中央寄せ（デフォルト）。
+   * `start` はトリガの左端にバブル左端を揃え、右方向へ伸ばす。
+   * `end`   はトリガの右端にバブル右端を揃え、左方向へ伸ばす。
+   * 画面端付近のトリガでビューポート外にはみ出さないよう、呼び出し側で指定する。
+   */
+  placement?: Placement;
 }
 
-const { text }: Props = $props();
+const { text, placement = 'center' }: Props = $props();
 
 // 1コンポーネントインスタンスごとに一意の id を発番し aria-describedby と紐付ける。
 // `crypto.randomUUID()` は古い jsdom テスト環境などで存在しないことがあるため
@@ -20,7 +30,11 @@ const tipId = `help-tip-${globalThis.crypto?.randomUUID?.() ?? Math.random().toS
     aria-describedby={tipId}
     aria-label={$i18n.t.common.help}
   >?</button>
-  <span role="tooltip" id={tipId} class="help-tip__bubble">{text}</span>
+  <span
+    role="tooltip"
+    id={tipId}
+    class="help-tip__bubble help-tip__bubble--{placement}"
+  >{text}</span>
 </span>
 
 <style>
@@ -60,11 +74,15 @@ const tipId = `help-tip-${globalThis.crypto?.randomUUID?.() ?? Math.random().toS
     outline: none;
   }
 
+  /*
+   * 非表示時は `display: none` で layout から完全に外す。
+   * `visibility: hidden` だと scrollable overflow に参加してしまい、
+   * トリガがビューポート右端付近にあるとき横スクロールが発生する。
+   */
   .help-tip__bubble {
+    display: none;
     position: absolute;
     bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
     width: max-content;
     max-width: min(240px, calc(100vw - 32px));
     padding: 8px 10px;
@@ -78,18 +96,24 @@ const tipId = `help-tip-${globalThis.crypto?.randomUUID?.() ?? Math.random().toS
     line-height: 1.4;
     text-align: left;
     white-space: normal;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition:
-      opacity 0.15s ease,
-      visibility 0.15s ease;
     z-index: 10;
+  }
+
+  .help-tip__bubble--center {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .help-tip__bubble--start {
+    left: 0;
+  }
+
+  .help-tip__bubble--end {
+    right: 0;
   }
 
   .help-tip:hover .help-tip__bubble,
   .help-tip:focus-within .help-tip__bubble {
-    opacity: 1;
-    visibility: visible;
+    display: block;
   }
 </style>

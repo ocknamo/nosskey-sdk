@@ -351,6 +351,13 @@ onMount(() => {
     background-color: var(--color-background);
     margin: 0;
     padding: 0;
+    /*
+     * モバイルでは内部要素（ツールチップやはみ出した要素）が原因で
+     * 横スクロールが発生しないよう、body レベルで横方向の overflow を抑止する。
+     * `clip` は新しいスクロールコンテナを作らないため、`position: fixed` の
+     * ヘッダ／フッタやモーダルの挙動に影響しない。
+     */
+    overflow-x: clip;
     transition:
       color 0.3s ease,
       background-color 0.3s ease;
