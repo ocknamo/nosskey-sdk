@@ -276,8 +276,8 @@ export const ja: TranslationData = {
     prfCompatibility: '一部の端末・環境はサポートされていません。',
   },
   auth: {
-    title: 'Nosskey デモ',
-    subtitle: 'パスキーで保管するNostr秘密鍵を活用したクライアント',
+    title: 'Nosskey',
+    subtitle: 'Nostrアカウントをパスキーで',
     createNew: '新規作成',
     loginWith: 'パスキーでログイン',
     firstLogin: '初回ログイン',
@@ -288,8 +288,7 @@ export const ja: TranslationData = {
     usernamePlaceholder: 'ユーザー名を入力',
     tabLogin: 'ログイン',
     tabRegister: '新規登録',
-    loginTip:
-      '以前作成したパスキーで再度ログインします。インポートしたNostr鍵の復元は"まだ"サポートされていません。',
+    loginTip: '以前作成したパスキーで再度ログインします',
     registerTip:
       'パスキーは生体認証や端末のセキュリティ機能を使った安全な認証方法です。お使いの端末が直接対応していなくても、QRコードや通知を使ってスマートフォンなどを認証器として利用できます。',
     usernameTip: 'パスキーの表示名として使われます。任意項目で、未入力でも問題ありません。',
@@ -537,8 +536,8 @@ export const en: TranslationData = {
     prfCompatibility: 'Some devices and environments are not supported.',
   },
   auth: {
-    title: 'Nosskey Demo',
-    subtitle: 'Client using Nosskey',
+    title: 'Nosskey',
+    subtitle: 'Your Nostr account, with a passkey',
     createNew: 'Create New',
     loginWith: 'Login with Passkey',
     loading: 'Loading...',
@@ -549,8 +548,7 @@ export const en: TranslationData = {
     proceedWithLogin: 'Proceed with Login',
     tabLogin: 'Login',
     tabRegister: 'Sign Up',
-    loginTip:
-      'Sign in again with a previously created passkey. Recovery of imported Nostr keys is not "yet" supported.',
+    loginTip: 'Sign in again with a previously created passkey',
     registerTip:
       "Passkeys are a secure authentication method using biometrics or your device's security features. Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     usernameTip: 'Used as the display name for your passkey. Optional — you can leave it blank.',

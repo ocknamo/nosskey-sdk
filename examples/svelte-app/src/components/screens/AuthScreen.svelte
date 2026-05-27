@@ -199,6 +199,10 @@ $effect(() => {
     margin-bottom: 32px;
   }
 
+  .hero-section img {
+    border-radius: 16px;
+  }
+
   .screen-title {
     font-size: 2.2rem;
     font-weight: 700;
