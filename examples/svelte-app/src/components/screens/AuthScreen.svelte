@@ -126,11 +126,10 @@ $effect(() => {
 
     {#if activeTab === "login"}
       <CardSection title={$i18n.t.auth.tabLogin}>
+        {#snippet titleAside()}
+          <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
+        {/snippet}
         <div class="tab-panel">
-          <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
-          </div>
-
           <Button onclick={() => login()} disabled={isLoading} size="large">
             {$i18n.t.auth.loginWith}
           </Button>
@@ -138,11 +137,10 @@ $effect(() => {
       </CardSection>
     {:else}
       <CardSection title={$i18n.t.auth.tabRegister}>
+        {#snippet titleAside()}
+          <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
+        {/snippet}
         <div class="tab-panel">
-          <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
-          </div>
-
           <div class="username-input">
             <div class="username-label-row">
               <label for="username">{$i18n.t.auth.username}</label>
@@ -191,14 +189,24 @@ $effect(() => {
 
 <style>
   .auth-container {
-    max-width: 640px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 20px;
     text-align: center;
   }
 
+  @media (max-width: 600px) {
+    .auth-container {
+      padding: 12px 8px;
+    }
+  }
+
   .hero-section {
     margin-bottom: 32px;
+  }
+
+  .hero-section img {
+    border-radius: 16px;
   }
 
   .screen-title {
@@ -249,7 +257,6 @@ $effect(() => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     margin: 0 auto 20px;
-    max-width: 360px;
   }
 
   .auth-tabs :global(.auth-tab) {
@@ -257,13 +264,7 @@ $effect(() => {
   }
 
   .tab-panel {
-    text-align: left;
-  }
-
-  .panel-help {
-    display: flex;
-    justify-content: flex-end;
-    margin: 0 0 8px 0;
+    text-align: center;
   }
 
   .username-input {
@@ -346,10 +347,6 @@ $effect(() => {
   }
 
   @media (max-width: 480px) {
-    .auth-container {
-      padding: 15px 10px;
-    }
-
     .screen-title {
       font-size: 1.8rem;
     }
