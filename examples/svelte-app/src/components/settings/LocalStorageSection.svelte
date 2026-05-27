@@ -1,6 +1,6 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
-import { currentScreen, resetState } from '../../store/app-state.js';
+import { currentScreen, logout } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -16,8 +16,8 @@ function clearLocalStorage() {
     // メッセージを表示
     clearResult = $i18n.t.settings.localStorage.cleared;
 
-    // アプリケーションの状態をリセット
-    resetState();
+    // アプリケーションの状態をリセット（SDK内のキー情報もクリアしてログアウト）
+    logout();
 
     // 3秒後にメッセージをクリア
     setTimeout(() => {
