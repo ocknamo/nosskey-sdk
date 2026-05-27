@@ -126,11 +126,10 @@ $effect(() => {
 
     {#if activeTab === "login"}
       <CardSection title={$i18n.t.auth.tabLogin}>
+        {#snippet titleAside()}
+          <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
+        {/snippet}
         <div class="tab-panel">
-          <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
-          </div>
-
           <Button onclick={() => login()} disabled={isLoading} size="large">
             {$i18n.t.auth.loginWith}
           </Button>
@@ -138,11 +137,10 @@ $effect(() => {
       </CardSection>
     {:else}
       <CardSection title={$i18n.t.auth.tabRegister}>
+        {#snippet titleAside()}
+          <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
+        {/snippet}
         <div class="tab-panel">
-          <div class="panel-help">
-            <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
-          </div>
-
           <div class="username-input">
             <div class="username-label-row">
               <label for="username">{$i18n.t.auth.username}</label>
@@ -258,12 +256,6 @@ $effect(() => {
 
   .tab-panel {
     text-align: left;
-  }
-
-  .panel-help {
-    display: flex;
-    justify-content: flex-end;
-    margin: 0 0 8px 0;
   }
 
   .username-input {
