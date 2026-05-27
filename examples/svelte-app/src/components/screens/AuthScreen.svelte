@@ -189,10 +189,16 @@ $effect(() => {
 
 <style>
   .auth-container {
-    max-width: 640px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 20px;
     text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .auth-container {
+      padding: 12px 8px;
+    }
   }
 
   .hero-section {
@@ -251,7 +257,6 @@ $effect(() => {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     margin: 0 auto 20px;
-    max-width: 360px;
   }
 
   .auth-tabs :global(.auth-tab) {
@@ -259,7 +264,7 @@ $effect(() => {
   }
 
   .tab-panel {
-    text-align: left;
+    text-align: center;
   }
 
   .username-input {
@@ -342,10 +347,6 @@ $effect(() => {
   }
 
   @media (max-width: 480px) {
-    .auth-container {
-      padding: 15px 10px;
-    }
-
     .screen-title {
       font-size: 1.8rem;
     }
