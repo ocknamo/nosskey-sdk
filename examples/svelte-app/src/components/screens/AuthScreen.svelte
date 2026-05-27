@@ -190,7 +190,9 @@ $effect(() => {
 <style>
   .auth-container {
     max-width: 700px;
-    margin: 0 auto;
+    /* 親 .account-screen は flex column のため、cross-axis に auto margin を置くと
+       free space を吸収して shrink-to-fit になる。stretch に任せるため 0 にする。 */
+    margin: 0;
     padding: 20px;
     text-align: center;
   }
