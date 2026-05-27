@@ -73,7 +73,8 @@ const { title, compact = false, children, titleAside }: Props = $props();
   h2 {
     margin: 0;
     min-width: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Hiragino Sans",
+      "Yu Gothic UI", Meiryo, sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.04em;
