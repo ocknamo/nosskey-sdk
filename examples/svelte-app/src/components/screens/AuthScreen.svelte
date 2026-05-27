@@ -17,7 +17,7 @@ let errorMessage = $state('');
 let username = $state('');
 let createdCredentialId = $state('');
 let isPasskeyCreated = $state(false);
-let activeTab = $state<AuthTab>('login');
+let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'register');
 
 const keyManager = getNosskeyManager();
 
@@ -74,6 +74,7 @@ async function login(credentialId?: string) {
     const pubKey = await keyManager.getPublicKey();
     appState.publicKey.set(pubKey);
     appState.isLoggedIn.set(true);
+    appState.markLoggedInBefore();
 
     appState.currentScreen.set('account');
   } catch (error) {

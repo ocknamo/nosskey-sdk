@@ -311,6 +311,23 @@ export function reloadSettings(): void {
   }
 }
 
+const HAS_LOGGED_IN_BEFORE_KEY = 'nosskey_has_logged_in_before';
+
+/**
+ * ログアウトを跨いで残る「過去ログイン履歴」フラグ。
+ * 鍵情報 (`nosskey_pwk`) と独立しているため `clearStoredKeyInfo` の影響を受けない。
+ * 認証画面のデフォルトタブ判定 (新規 → register / 再訪 → login) に使う。
+ */
+export function hasLoggedInBefore(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(HAS_LOGGED_IN_BEFORE_KEY) === 'true';
+}
+
+export function markLoggedInBefore(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(HAS_LOGGED_IN_BEFORE_KEY, 'true');
+}
+
 // リセット関数
 export const resetState = () => {
   currentScreen.set('account');
