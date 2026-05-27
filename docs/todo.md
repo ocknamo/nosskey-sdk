@@ -12,7 +12,7 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 
 リリースタグを切る前に終わらせる必要がある項目。
 
-- [ ] **バージョニング** — `package.json` のバージョン番号（現在 0.0.0）を初期リリース用に更新。対象ワークスペース: `packages/nosskey-sdk`, `packages/nosskey-iframe`, `examples/*`。リリース順序・semver ポリシー（SDK と iframe をロックステップで上げるか独立か）を決める必要あり。**publish 方針は決定済み: `nosskey-sdk` と `nosskey-iframe` を独立 publish（理由は下記 nosskey-iframe 整理項目参照）。**
+- [ ] **バージョニング** — `package.json` のバージョン番号（現在 0.0.0）を初期リリース用に更新。対象ワークスペース: `packages/nosskey-sdk`, `packages/nosskey-iframe`, `examples/*`。リリース順序・semver ポリシー（SDK と iframe をロックステップで上げるか独立か）を決める必要あり。**publish 方針は決定済み: `nosskey-sdk` と `nosskey-iframe` を独立 publish。理由 = client は SDK ゼロ依存で出せる / iframe protocol は SDK と別ライフサイクルで動く（詳細はアーカイブ「`nosskey-iframe` を独立 publish する前の整理」項目参照）。**
 - [ ] **外部セキュリティレビュー** — レビュー範囲（SDK コア / iframe protocol・host・client / consent ロジック）と発注先の判断が必要。
 
 ## P1: リリース前に強く推奨（UX・整合性）
@@ -57,7 +57,7 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 ## アーカイブ（完了済み）
 
 ### ドキュメント関連
-- [x] **README.md / README.ja.md の充実** — Getting Started に相当する Basic Usage Examples（パスキー作成・鍵生成・NIP-44 暗号化サンプル）と「iframe Mode (Cross-origin Signing)」セクション（最短手順 + `docs/{ja,en}/iframe-integration` への詳細リンク）を両言語版に追加済み。NIP-44/NIP-04 節は既に反映済み。PR #61/#74 系。
+- [x] **README.md / README.ja.md の充実** — Getting Started に相当する Basic Usage Examples（パスキー作成・鍵生成・NIP-44 暗号化サンプル）と「iframe Mode (Cross-origin Signing)」セクション（最短手順 + `docs/{ja,en}/iframe-integration` への詳細リンク）を両言語版に追加済み。NIP-44/NIP-04 節は既に反映済み。`docs: sync iframe-host, README, and svelte-app docs with current code` (#61)・`docs: add bilingual iframe embedding integration guide` (#74) 等で順次反映。
 - [x] SDKインターフェースドキュメント(`docs/{ja,en}/nosskey-sdk-interface`)を実装に同期 — NIP-44/NIP-04 の4メソッド(`nip44Encrypt/Decrypt`・`nip04Encrypt/Decrypt`)、ja版 `createNostrKey` のシグネチャ(`options` 引数)、コンストラクタの `prfOptions`(+`GetPrfSecretOptions` 型)を両言語版に反映。barrel が公開する標準関数(nip44 低レベル関数・PRFハンドラー関数・バイト変換・テストユーティリティ)を「パッケージエクスポート」節として追加。`crypto-utils.ts` および外部利用の無い nip04 低レベル関数の barrel export は削除済み
 - [x] iframe-host ドキュメント(`docs/{ja,en}/iframe-host`)を全面更新 — 「getPublicKey/signEvent の2メソッド」前提の記述を、7メソッドのNIP-07プロバイダの実態に修正。consent対象メソッド・`getRelays`・3ボタン同意ダイアログ・`evaluateConsent`/`onConsent`/`startIframeHost` の現行サンプルコード・consentポリシー/信頼済みオリジン・`theme`/`lang`/`embedded`・Storage Access API を反映。日英を同内容で更新
 - [x] `docs/iframe-expansion-plan.md` のステータス表を実態に修正 — Phase 1-B/1-C(nip44/nip04)・2-A/2-B(オリジン別許可・メソッド別ポリシー)は実装済みなのに「未実装」表記。localStorageキー名を `nosskey_trusted_origins_v2` に、ファイルパスを `src/components/screens/` に修正
@@ -93,8 +93,6 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 - [x] スタイル整理 — `--color-card` / `--color-text` 等の CSS variables 化と `@media (max-width: 480px)` レスポンシブ対応（`ConsentDialog.svelte`）
 - [x] テーマ・言語を親から渡す — URL クエリパラメータ (`?theme=dark&lang=en`) 経由。`NosskeyIframeClient` に `theme` / `lang` オプションを追加し `buildIframeUrl()` で URL に自動付与、Svelte アプリ側の受信 (`app-state.ts` / `i18n-store.ts`) も対応済み。PR #52
 - [x] 設定ページへのリンク遷移 — NO_KEY エラー時のセットアップ誘導 — `IframeHostScreen` の鍵が使えない4状態(`noKeyExists`/`unsupported` は主ボタン、`partitioned`/`denied` は副リンク)に、別タブで account 画面(`#/account`、パスキー登録・ログイン)を開く「セットアップを開く」導線を追加。あわせて `ConsentDialog` の許可ダイアログにも settings 画面(`#/settings`、信頼済みサイト・同意ポリシー)を開く「同意設定を開く」小リンクを追加。URL 組み立ては純粋関数 `buildScreenUrl`(`utils/app-navigation.ts`)に切り出し単体テスト追加。doc 6-D の protocol メッセージ(`nosskey:setup_required`)追加は「任意」のため見送り
-
-### サンプルアプリ UX
 - [x] **サンプルアプリの登録ログイン画面のデザイン UX 改善** — `examples/svelte-app/src/components/screens/AuthScreen.svelte` を中心に PR #83/#84/#85/#86/#88 で連続改善。PR #83 で login/register をタブ分割し help tooltip (`HelpTip`) を追加、PR #84 でモバイル横スクロール抑止、PR #85 で auth カードのタイトル行に tooltip 位置を揃え、PR #86 で flex column 親で auth-container を伸張、PR #88 で過去ログイン履歴に応じてデフォルトタブを切替。
 
 ### テスト関連
