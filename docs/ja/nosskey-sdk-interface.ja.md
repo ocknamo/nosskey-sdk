@@ -184,8 +184,9 @@ async importNostrKey(
 - PRF 出力（KEK）が全 0 の場合も拒否されます（極めて稀）。
 
 セキュリティメモ:
-- 入力された `seckey` バッファは関数完了時に SDK 内部で `.fill(0)` されます。呼び出し側でも前後でゼロ化することを推奨します。
+- 入力された `seckey` バッファ（`Uint8Array`）は関数完了時に SDK 内部で `.fill(0)` されます。呼び出し側でも前後でゼロ化することを推奨します。
 - 戻り値の `NostrKeyInfo` を `setCurrentKeyInfo()` でセットすれば、以降の `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` が wrap モードで透過的に動作します（API は PRF 直接モードと完全に同一）。
+- **メモリゼロ化の制約**: SDK 内部で秘密鍵を `seckeySigner` 渡しや NIP-44 平文経路に通すため、一時的に hex 文字列（`string`）化されます。JS の `string` は immutable で書き戻し API が無いため、`Uint8Array.fill(0)` 相当のゼロ化は不可能で、**GC タイミングまでヒープに残存します**。`importNostrKey` / `exportNostrKey` / 復号後の `signEvent` などで発生します。ブラウザヒープに直接アクセスできる攻撃者を想定する場合は、この制約を理解した上で利用してください。
 
 ### 署名メソッド
 
