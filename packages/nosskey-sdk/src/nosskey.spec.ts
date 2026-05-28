@@ -133,6 +133,145 @@ describe('NosskeyManager', () => {
       expect(credentialId.length).toBeGreaterThan(0);
       expect(navigator.credentials.create).toHaveBeenCalled();
     });
+
+    it('create 時に標準 salt と wrap salt の両方を PRF eval に渡す', async () => {
+      const nosskey = new NosskeyManager();
+      await nosskey.createPasskey();
+
+      const callArgs = (navigator.credentials.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const prfEval = callArgs.publicKey.extensions.prf.eval;
+      // first = "nostr-pwk", second = "nostr-pwk-wrap"
+      expect(prfEval.first).toEqual(hexToBytes('6e6f7374722d70776b'));
+      expect(prfEval.second).toEqual(hexToBytes('6e6f7374722d70776b2d77726170'));
+    });
+  });
+
+  describe('createPasskey からの PRF キャッシュ', () => {
+    // create 時に first/second 両方の PRF を返す mock。get は呼ばれたら失敗させ、
+    // 「キャッシュ経路で UV が 1 回も追加発生しないこと」を保証する。
+    beforeEach(async () => {
+      // importNostrKey は実物 nip44Encrypt が動くため、kek からの公開鍵が有効な
+      // 32 バイト x 座標である必要がある。top-level の seckeySigner mock は
+      // 'test-pubkey' を返すので、ここでは secp256k1 schnorr で実値の公開鍵を
+      // 返すよう差し替える。
+      const { schnorr } = await import('@noble/curves/secp256k1.js');
+      vi.mocked(seckeySigner).mockImplementation(
+        (skHex: string) =>
+          ({
+            getPublicKey: async () => bytesToHex(schnorr.getPublicKey(hexToBytes(skHex))),
+            signEvent: vi.fn(),
+          }) as unknown as ReturnType<typeof seckeySigner>
+      );
+
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: {
+                  first: new Uint8Array(32).fill(mockPrfResultValue).buffer,
+                  second: new Uint8Array(32).fill(mockPrfResultValue + 1).buffer,
+                },
+              },
+            })),
+          })),
+          get: vi.fn(async () => {
+            throw new Error('navigator.credentials.get should not be called');
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      // top-level vi.mock 由来の seckeySigner 挙動に戻す
+      // (clearAllMocks では mockImplementation は維持されるため、ここで明示復元)
+      vi.mocked(seckeySigner).mockImplementation(
+        () =>
+          ({
+            signEvent: vi.fn(async (event: NostrEvent) => ({
+              ...event,
+              id: 'test-event-id',
+              sig: 'test-signature',
+            })),
+            getPublicKey: vi.fn(async () => 'test-pubkey'),
+          }) as unknown as ReturnType<typeof seckeySigner>
+      );
+    });
+
+    it('createPasskey 直後の createNostrKey は get() を呼ばずキャッシュを消費する', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      const keyInfo = await nosskey.createNostrKey(credentialId);
+
+      expect(keyInfo.salt).toBe('6e6f7374722d70776b');
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('createPasskey 直後の importNostrKey は get() を呼ばずキャッシュを消費する', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      const seckey = new Uint8Array(32).fill(7);
+      const keyInfo = await nosskey.importNostrKey(seckey, credentialId);
+
+      expect(keyInfo.wrapped).toBeDefined();
+      expect(keyInfo.salt).toBe('6e6f7374722d70776b2d77726170');
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('一度消費したキャッシュは次回 get() フォールバックに切り替わる', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      // 1 回目: キャッシュ消費（get は呼ばれない）
+      await nosskey.createNostrKey(credentialId);
+
+      // 2 回目に備えて get を本来の挙動に戻す。標準 salt 由来 PRF を返す。
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await nosskey.createNostrKey(credentialId);
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('credentialId 引数を省略した createNostrKey はキャッシュを照合せず get() にフォールバック', async () => {
+      const nosskey = new NosskeyManager();
+      await nosskey.createPasskey();
+
+      // get を本来の挙動に戻す
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await nosskey.createNostrKey();
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('createNostrKey', () => {

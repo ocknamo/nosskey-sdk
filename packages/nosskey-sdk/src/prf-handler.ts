@@ -45,16 +45,49 @@ export async function isPrfSupported(): Promise<boolean> {
 }
 
 /**
+ * パスキー作成の戻り値。
+ * - `id`: 作成された credential の rawId
+ * - `prfFirst` / `prfSecond`: create 時に同時に eval された PRF 出力。
+ *   ブラウザ/オーセンティケータが PRF を作成時に返さない場合（PRF 非対応、
+ *   または `extensions.prf.eval` を要求していないケース）は undefined。
+ *   NosskeyManager がここで返った PRF を内部キャッシュして、直後の
+ *   `getPrfSecret()` 呼び出し（= 2 回目の UV）を省略するために使う。
+ */
+export interface CreatePasskeyResult {
+  id: Uint8Array;
+  prfFirst?: Uint8Array;
+  prfSecond?: Uint8Array;
+}
+
+/**
  * パスキーを作成（PRF拡張もリクエスト）
  * @param options パスキー作成オプション
- * @returns Credentialの識別子を返す
+ * @param prfSalts 作成時に同時に eval する PRF salt（first/second の2 入力）。
+ *                 指定された salt について返る PRF は呼び出し側がキャッシュして
+ *                 再利用できる（直後の get() を省略可能にする目的）。
+ *                 `options.extensions` が指定されている場合はそちらが優先される。
+ * @returns 作成された credential の id と、create 時に取得できた PRF 出力
  */
-export async function createPasskey(options: PasskeyCreationOptions = {}): Promise<Uint8Array> {
+export async function createPasskey(
+  options: PasskeyCreationOptions = {},
+  prfSalts?: { first?: Uint8Array; second?: Uint8Array }
+): Promise<CreatePasskeyResult> {
   // ブラウザ環境とNodeテスト環境の両方に対応
   const rpName = options.rp?.name || (typeof location !== 'undefined' ? location.host : 'Nosskey');
   const rpId = options.rp?.id;
   const userName = options.user?.name || 'user@example.com';
   const userDisplayName = options.user?.displayName || 'Nosskey user';
+
+  // PRF eval を組み立て（呼び出し側で options.extensions を明示指定していない場合のみ使用）。
+  // first を指定すると create 時に PRF が即時 eval され、戻り値で受け取れる。
+  // Chrome on Android では create 時に PRF を eval しておかないと、直後の get で
+  // results.first === undefined になる「PRF 初期化遅延」既知挙動を踏むため、
+  // 既定で first を必ず付ける（呼び出し側が salt を指定しなくても標準値を使う）。
+  const firstSalt = prfSalts?.first ?? PRF_EVAL_INPUT;
+  const prfEval: { first: Uint8Array; second?: Uint8Array } = { first: firstSalt };
+  if (prfSalts?.second) {
+    prfEval.second = prfSalts.second;
+  }
 
   // パスキーを作成
   const credentialCreationOptions: CredentialCreationOptions = {
@@ -74,14 +107,29 @@ export async function createPasskey(options: PasskeyCreationOptions = {}): Promi
         userVerification: 'required',
       },
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      extensions: options.extensions || { prf: {} }, // PRF拡張を要求
+      extensions: options.extensions || { prf: { eval: prfEval } },
     } as PublicKeyCredentialCreationOptions,
   };
   const cred = (await navigator.credentials.create(
     credentialCreationOptions
   )) as PublicKeyCredential;
 
-  return new Uint8Array(cred.rawId);
+  // create 時に eval された PRF を取り出す（オーセンティケータが対応していれば）
+  const extResults = (
+    cred as unknown as {
+      getClientExtensionResults?: () => {
+        prf?: { results?: { first?: ArrayBuffer; second?: ArrayBuffer } };
+      };
+    }
+  ).getClientExtensionResults?.();
+  const prfFirstBuf = extResults?.prf?.results?.first;
+  const prfSecondBuf = extResults?.prf?.results?.second;
+
+  return {
+    id: new Uint8Array(cred.rawId),
+    ...(prfFirstBuf && { prfFirst: new Uint8Array(prfFirstBuf) }),
+    ...(prfSecondBuf && { prfSecond: new Uint8Array(prfSecondBuf) }),
+  };
 }
 
 /**

@@ -193,9 +193,9 @@ describe('prf-handler', () => {
         configurable: true,
       });
 
-      const credentialId = await createPasskey();
+      const result = await createPasskey();
 
-      expect(credentialId).toEqual(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+      expect(result.id).toEqual(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
       expect(navigator.credentials.create).toHaveBeenCalled();
 
       const callArgs = (navigator.credentials.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
@@ -204,7 +204,9 @@ describe('prf-handler', () => {
       expect(publicKey.rp.name).toBe('example.com');
       expect(publicKey.user.name).toBe('user@example.com');
       expect(publicKey.user.displayName).toBe('Nosskey user');
-      expect(publicKey.extensions).toEqual({ prf: {} });
+      // デフォルトでも create 時に PRF eval を仕掛ける（first = "nostr-pwk"）
+      expect(publicKey.extensions.prf.eval.first).toEqual(new TextEncoder().encode('nostr-pwk'));
+      expect(publicKey.extensions.prf.eval.second).toBeUndefined();
     });
 
     it('Node環境（location未定義）でも動作する', async () => {
@@ -214,9 +216,9 @@ describe('prf-handler', () => {
         configurable: true,
       });
 
-      const credentialId = await createPasskey();
+      const result = await createPasskey();
 
-      expect(credentialId).toEqual(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+      expect(result.id).toEqual(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
       const callArgs = (navigator.credentials.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(callArgs.publicKey.rp.name).toBe('Nosskey');
@@ -301,6 +303,52 @@ describe('prf-handler', () => {
 
       // crypto.getRandomValuesが呼ばれていることを確認
       expect(crypto.getRandomValues).toHaveBeenCalledTimes(2);
+    });
+
+    it('prfSalts.first / second を渡すと extensions.prf.eval に両方反映される', async () => {
+      const firstSalt = new Uint8Array([10, 11, 12]);
+      const secondSalt = new Uint8Array([20, 21, 22]);
+
+      await createPasskey({}, { first: firstSalt, second: secondSalt });
+
+      const callArgs = (navigator.credentials.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const prfEval = callArgs.publicKey.extensions.prf.eval;
+      expect(prfEval.first).toBe(firstSalt);
+      expect(prfEval.second).toBe(secondSalt);
+    });
+
+    it('create が prf.results を返した場合 prfFirst / prfSecond として返す', async () => {
+      const firstBuf = new Uint8Array(32).fill(11).buffer;
+      const secondBuf = new Uint8Array(32).fill(22).buffer;
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: vi.fn(async () => ({
+            id: 'cred',
+            rawId: new Uint8Array([9, 9, 9]).buffer,
+            type: 'public-key',
+            getClientExtensionResults: vi.fn(() => ({
+              prf: { results: { first: firstBuf, second: secondBuf } },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      const result = await createPasskey(
+        {},
+        { first: new Uint8Array([1]), second: new Uint8Array([2]) }
+      );
+
+      expect(result.id).toEqual(new Uint8Array([9, 9, 9]));
+      expect(result.prfFirst).toEqual(new Uint8Array(32).fill(11));
+      expect(result.prfSecond).toEqual(new Uint8Array(32).fill(22));
+    });
+
+    it('create が PRF を返さない環境では prfFirst / prfSecond は undefined', async () => {
+      // beforeEach で設定された mockCredential は getClientExtensionResults を持たない
+      const result = await createPasskey();
+      expect(result.prfFirst).toBeUndefined();
+      expect(result.prfSecond).toBeUndefined();
     });
   });
 
