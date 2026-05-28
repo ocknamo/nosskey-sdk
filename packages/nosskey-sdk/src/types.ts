@@ -61,6 +61,17 @@ export interface GetPrfSecretOptions {
   timeout?: number;
   /** ユーザー検証要件 */
   userVerification?: UserVerificationRequirement;
+  /**
+   * パスキー作成時の residentKey 要件（createPasskey 時のみ使用）。
+   * Android Chrome の Credential Manager で Google Password Manager を
+   * 候補プロバイダに出すためには 'required' が必須。
+   */
+  residentKey?: ResidentKeyRequirement;
+  /**
+   * パスキー作成時の requireResidentKey 要件（createPasskey 時のみ使用）。
+   * WebAuthn L2 以前の実装は residentKey ではなくこちらを見るため新旧併用。
+   */
+  requireResidentKey?: boolean;
 }
 
 /**

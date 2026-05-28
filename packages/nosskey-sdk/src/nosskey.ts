@@ -69,10 +69,17 @@ export class NosskeyManager implements NosskeyManagerLike {
 
     // 重要なoptionなので外れないようにデフォルト値を設定
     const userVerification = options?.prfOptions?.userVerification ?? 'required';
+    const residentKey = options?.prfOptions?.residentKey ?? 'required';
+    const requireResidentKey = options?.prfOptions?.requireResidentKey ?? true;
     if (options?.prfOptions) {
-      this.#prfOptions = { ...options.prfOptions, userVerification };
+      this.#prfOptions = {
+        ...options.prfOptions,
+        userVerification,
+        residentKey,
+        requireResidentKey,
+      };
     } else {
-      this.#prfOptions = { userVerification };
+      this.#prfOptions = { userVerification, residentKey, requireResidentKey };
     }
 
     // ストレージが有効な場合、NostrKeyInfoの読み込みを試みる
@@ -298,15 +305,12 @@ export class NosskeyManager implements NosskeyManagerLike {
         name: this.#prfOptions.rpId,
       },
       authenticatorSelection: {
-        // residentKey / requireResidentKey を必ず付ける。これが無いと
-        // Android Chrome の Credential Manager は Google パスワード
-        // マネージャーを候補から外し、「この端末」だけが表示される
-        // （passkeys-debugger.io との差分で確認）。prf-handler 側にも
-        // 同名のデフォルトはあるが、ここで authenticatorSelection オブジェクト
-        // を作って渡してしまうとあちらの `||` フォールバックが効かないため、
-        // ラッパ側で揃える必要がある。
-        residentKey: 'required',
-        requireResidentKey: true,
+        // 既定値は #prfOptions 側でコンストラクタ時に解決済み
+        // （residentKey='required' / requireResidentKey=true / userVerification='required'）。
+        // これらは Android Chrome の Credential Manager で Google Password
+        // Manager を候補プロバイダに出すための条件として必須。
+        residentKey: this.#prfOptions.residentKey,
+        requireResidentKey: this.#prfOptions.requireResidentKey,
         userVerification: this.#prfOptions.userVerification,
       },
       ...options,
