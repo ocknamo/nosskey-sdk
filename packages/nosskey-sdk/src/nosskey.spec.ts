@@ -222,6 +222,39 @@ describe('NosskeyManager', () => {
       expect(navigator.credentials.get).not.toHaveBeenCalled();
     });
 
+    it('createNostrKey が standard を消費したら相方の wrap キャッシュも破棄される', async () => {
+      // 正常運用は片方しか呼ばれない（新規=createNostrKey または 既存=importNostrKey）。
+      // 未消費の相方 PRF を heap に残さないことの担保。standard 消費後に
+      // importNostrKey を呼ぶと get() フォールバックに切り替わるはず。
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      await nosskey.createNostrKey(credentialId);
+
+      // get を wrap salt 用 PRF を返すよう差し替え（mockCredential は first のみ持つので
+      // ここでは「呼ばれた回数」を主眼に確認）
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue + 1).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      const seckey = new Uint8Array(32).fill(7);
+      await nosskey.importNostrKey(seckey, credentialId);
+
+      // wrap キャッシュが破棄されているので getPrfSecret 経由になる
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
+
     it('一度消費したキャッシュは次回 get() フォールバックに切り替わる', async () => {
       const nosskey = new NosskeyManager();
       const credentialId = await nosskey.createPasskey();
@@ -1459,6 +1492,13 @@ describe('NosskeyManager', () => {
         await expect(nosskey.importNostrKey(new Uint8Array(31))).rejects.toThrow(
           'importNostrKey: seckey must be a 32-byte Uint8Array'
         );
+      });
+
+      it('seckey が 32B 以外でも Uint8Array なら入力バッファはゼロ化される', async () => {
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const bad = new Uint8Array(31).fill(0x55);
+        await expect(nosskey.importNostrKey(bad)).rejects.toThrow();
+        expect(Array.from(bad)).toEqual(new Array(31).fill(0));
       });
 
       it('seckey が全 0 なら例外', async () => {
