@@ -4,12 +4,14 @@ import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import * as appState from '../../store/app-state.js';
+import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
 import TabButton from '../ui/button/TabButton.svelte';
 
 type AuthTab = 'login' | 'register';
+type CreationMethod = 'new' | 'import';
 
 let isLoading = $state(false);
 let errorMessage = $state('');
@@ -18,6 +20,10 @@ let username = $state('');
 let createdCredentialId = $state('');
 let isPasskeyCreated = $state(false);
 let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'register');
+// biome-ignore lint: svelte
+let creationMethod = $state<CreationMethod>('new');
+let nsecInput = $state('');
+let nsecError = $state('');
 
 const keyManager = getNosskeyManager();
 
@@ -55,6 +61,64 @@ async function createNew() {
   } catch (error) {
     console.error('パスキー作成エラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+async function importExisting() {
+  isLoading = true;
+  errorMessage = '';
+  nsecError = '';
+
+  const trimmed = nsecInput.trim();
+  if (!isValidNsec(trimmed)) {
+    nsecError = $i18n.t.auth.invalidNsec;
+    isLoading = false;
+    return;
+  }
+  const nsecHex = nsecToHex(trimmed);
+  if (!nsecHex) {
+    nsecError = $i18n.t.auth.invalidNsec;
+    isLoading = false;
+    return;
+  }
+  const seckey = hexToBytes(nsecHex);
+  // nsecToHex は bech32 デコードと prefix チェックのみで 32B を保証しない。
+  // SDK 側でも検証するが、UI レイヤで早期に弾いて分かりやすいメッセージを出す。
+  if (seckey.length !== 32) {
+    seckey.fill(0);
+    nsecError = $i18n.t.auth.invalidNsec;
+    isLoading = false;
+    return;
+  }
+
+  try {
+    const newCredentialId = await keyManager.createPasskey({
+      user: {
+        name: username || 'user@nosskey',
+        displayName: username || 'user@nosskey',
+      },
+    });
+    const keyInfo = await keyManager.importNostrKey(seckey, newCredentialId, {
+      username: username || undefined,
+    });
+    keyManager.setCurrentKeyInfo(keyInfo);
+
+    // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
+    // 入力欄も即座にクリアして DOM 上に nsec を残さない。
+    seckey.fill(0);
+    nsecInput = '';
+
+    const pubKey = await keyManager.getPublicKey();
+    appState.publicKey.set(pubKey);
+    appState.isLoggedIn.set(true);
+    appState.markLoggedInBefore();
+    appState.currentScreen.set('account');
+  } catch (error) {
+    seckey.fill(0);
+    console.error('nsec インポートエラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.importNsec} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
   }
@@ -142,25 +206,83 @@ $effect(() => {
           <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
         {/snippet}
         <div class="tab-panel">
-          <div class="username-input">
-            <div class="username-label-row">
-              <label for="username">{$i18n.t.auth.username}</label>
-              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
-            </div>
-            <input
-              id="username"
-              type="text"
-              bind:value={username}
-              placeholder={$i18n.t.auth.usernamePlaceholder}
-              disabled={isLoading}
-            />
-          </div>
-
           {#if !isPasskeyCreated}
-            <Button onclick={createNew} disabled={isLoading} size="large">
-              {$i18n.t.auth.createNew}
-            </Button>
+            <div class="creation-method-selector">
+              <TabButton
+                active={creationMethod === "new"}
+                onclick={() => (creationMethod = "new")}
+                className="creation-method-tab"
+              >
+                {$i18n.t.auth.methodNew}
+              </TabButton>
+              <TabButton
+                active={creationMethod === "import"}
+                onclick={() => (creationMethod = "import")}
+                className="creation-method-tab"
+              >
+                {$i18n.t.auth.methodImport}
+              </TabButton>
+            </div>
+
+            <div class="username-input">
+              <div class="username-label-row">
+                <label for="username">{$i18n.t.auth.username}</label>
+                <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+              </div>
+              <input
+                id="username"
+                type="text"
+                bind:value={username}
+                placeholder={$i18n.t.auth.usernamePlaceholder}
+                disabled={isLoading}
+              />
+            </div>
+
+            {#if creationMethod === "new"}
+              <Button onclick={createNew} disabled={isLoading} size="large">
+                {$i18n.t.auth.createNew}
+              </Button>
+            {:else}
+              <div class="nsec-input">
+                <div class="nsec-label-row">
+                  <label for="nsec">{$i18n.t.auth.nsecLabel}</label>
+                  <HelpTip text={$i18n.t.auth.nsecTip} placement="start" />
+                </div>
+                <input
+                  id="nsec"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  bind:value={nsecInput}
+                  placeholder={$i18n.t.auth.nsecPlaceholder}
+                  disabled={isLoading}
+                />
+                {#if nsecError}
+                  <div class="error-message">{nsecError}</div>
+                {/if}
+              </div>
+              <Button
+                onclick={importExisting}
+                disabled={isLoading || !nsecInput.trim()}
+                size="large"
+              >
+                {$i18n.t.auth.importNsec}
+              </Button>
+            {/if}
           {:else}
+            <div class="username-input">
+              <div class="username-label-row">
+                <label for="username">{$i18n.t.auth.username}</label>
+                <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+              </div>
+              <input
+                id="username"
+                type="text"
+                bind:value={username}
+                placeholder={$i18n.t.auth.usernamePlaceholder}
+                disabled
+              />
+            </div>
             <div class="success-message">
               <div class="success-icon">✅</div>
               <h4>{$i18n.t.auth.passkeyCreated}</h4>
@@ -266,8 +388,54 @@ $effect(() => {
     flex: 1;
   }
 
+  .creation-method-selector {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    margin: 0 0 20px 0;
+  }
+
+  .creation-method-selector :global(.creation-method-tab) {
+    flex: 1;
+  }
+
   .tab-panel {
     text-align: center;
+  }
+
+  .nsec-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 0 20px 0;
+    text-align: left;
+  }
+
+  .nsec-label-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .nsec-label-row label {
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .nsec-input input {
+    padding: 12px;
+    border-radius: 6px;
+    border: 2px solid var(--color-border-medium);
+    font-size: 1rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    transition: border-color 0.2s ease;
+  }
+
+  .nsec-input input:focus {
+    outline: none;
+    border-color: var(--color-button-primary);
   }
 
   .username-input {

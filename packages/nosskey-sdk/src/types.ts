@@ -22,9 +22,19 @@ export interface NostrEvent {
  */
 export interface NostrKeyInfo {
   credentialId: string; // クレデンシャルIDをhex形式で保存
-  pubkey: string; // 公開鍵（hex形式）
-  salt: string; // PRF評価入力として使うsalt（hex形式、標準値 "6e6f7374722d70776b" = "nostr-pwk"）
+  pubkey: string; // 公開鍵（hex形式）。wrapモードでは「インポートされた鍵」の公開鍵（KEK・GではなくユーザのNostr公開鍵）。
+  salt: string; // PRF評価入力として使うsalt（hex形式）。PRF直接モード: "6e6f7374722d70776b" / wrapモード: "6e6f7374722d70776b2d77726170"
   username?: string; // パスキー作成時のユーザー名（取得可能な場合のみ）
+  /**
+   * wrap モードのメタデータ。
+   * - undefined の場合は PRF 直接モード（PRF出力をそのまま秘密鍵として使用）
+   * - 設定されている場合は wrap モード（PRF 由来 KEK で nsec を NIP-44 v2 暗号化して保存）
+   */
+  wrapped?: {
+    v: 1; // データ形式バージョン
+    alg: 'nip44-v2'; // 暗号方式識別子
+    payload: string; // nip44Encrypt 戻り値（base64 エンコードされた NIP-44 v2 ペイロード）
+  };
 }
 
 /**
@@ -187,6 +197,24 @@ export interface NosskeyManagerLike {
    * @param options オプション
    */
   createNostrKey(credentialId?: Uint8Array, options?: KeyOptions): Promise<NostrKeyInfo>;
+
+  /**
+   * 既存の Nostr 秘密鍵（nsec）を PRF 由来 KEK で NIP-44 v2 暗号化して保存する（wrap モード）。
+   *
+   * 入力された seckey は SDK 内部で NIP-44 v2 自己宛 DM パターンで暗号化され、
+   * 暗号化済みペイロードが NostrKeyInfo.wrapped.payload に格納される。
+   * 完了時に呼び出し側から渡された seckey バッファは内部で 0 埋めされる。
+   *
+   * @param seckey 32 バイトの Nostr 秘密鍵（生バイト）
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   * @returns wrapped フィールドを含む NostrKeyInfo
+   */
+  importNostrKey(
+    seckey: Uint8Array,
+    credentialId?: Uint8Array,
+    options?: KeyOptions
+  ): Promise<NostrKeyInfo>;
 
   /**
    * イベントに署名

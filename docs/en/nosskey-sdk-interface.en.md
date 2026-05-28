@@ -10,16 +10,29 @@ Nosskey SDK adopts a method that directly derives Nostr private keys using the P
 
 ```typescript
 /**
- * Nostr key information (PRF direct usage method only)
- * PWKBlob abolished, holding only simple key information
+ * Nostr key information
+ * Two modes are distinguished by the presence/absence of the `wrapped` field:
+ *  - wrapped === undefined: PRF direct mode (PRF output is used as the Nostr private key)
+ *  - wrapped is set: wrap mode (nsec is NIP-44 v2 encrypted with a PRF-derived KEK)
  */
 export interface NostrKeyInfo {
   credentialId: string; // Credential ID stored in hex format
-  pubkey: string; // Public key (hex format)
-  salt: string; // Salt used as the PRF evaluation input (hex format, standard value "6e6f7374722d70776b" = "nostr-pwk")
+  pubkey: string; // Public key (hex format). In wrap mode this is the user's Nostr public key (the *imported* key, not KEK·G).
+  salt: string; // Salt used as the PRF evaluation input (hex format). PRF direct mode: "6e6f7374722d70776b" / wrap mode: "6e6f7374722d70776b2d77726170"
   username?: string; // Username when creating passkey (only if available)
+  /**
+   * Wrap-mode metadata.
+   * When set, the key is stored in wrap mode (nsec encrypted with a PRF-derived KEK using NIP-44 v2).
+   */
+  wrapped?: {
+    v: 1; // Data format version
+    alg: 'nip44-v2'; // Encryption algorithm identifier
+    payload: string; // The return value of nip44Encrypt (base64-encoded NIP-44 v2 payload)
+  };
 }
 ```
+
+`signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` transparently handle both modes by branching on the `wrapped` field internally, so callers don't need to distinguish modes.
 
 ### NostrEvent
 
@@ -145,7 +158,7 @@ async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 ```
 
 #### createNostrKey()
-Creates NostrKeyInfo using PRF value directly as Nostr secret key.
+Creates NostrKeyInfo using PRF value directly as Nostr secret key (PRF direct mode).
 
 ```typescript
 async createNostrKey(
@@ -153,6 +166,26 @@ async createNostrKey(
   options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
+
+#### importNostrKey()
+Imports an existing Nostr private key (32-byte raw nsec) and stores it encrypted by a PRF-derived KEK using NIP-44 v2 (wrap mode). The encrypted payload is produced by the self-DM pattern (`ourSk = KEK`, `peerPk = KEK·G`) and saved in `NostrKeyInfo.wrapped.payload`.
+
+```typescript
+async importNostrKey(
+  seckey: Uint8Array,
+  credentialId?: Uint8Array,
+  options?: KeyOptions
+): Promise<NostrKeyInfo>
+```
+
+Validation rules:
+- `seckey` must be a 32-byte `Uint8Array` (otherwise throws).
+- An all-zero `seckey` is rejected (invalid key).
+- An all-zero PRF output (KEK) is also rejected (extremely rare).
+
+Security notes:
+- The input `seckey` buffer is zeroed (`.fill(0)`) inside the SDK on completion. Callers are still encouraged to zero their own buffers before and after.
+- Once you call `setCurrentKeyInfo()` with the returned `NostrKeyInfo`, subsequent `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` operate transparently in wrap mode (API is identical to PRF direct mode).
 
 ### Signing Methods
 

@@ -28,6 +28,10 @@ const STANDARD_SALT = '6e6f7374722d70776b';
 // 実際の導出は常に "nostr-pwk" で行われていたため、標準値へ正規化して扱う。
 const LEGACY_SALT = '6e6f7374722d6b6579';
 
+// wrap モード用 salt 値（"nostr-pwk-wrap"のUTF-8バイトのhex）。PRF 直接モードと
+// ドメイン分離するため、wrap モードでは異なる salt から KEK を導出する。
+const WRAP_SALT = '6e6f7374722d70776b2d77726170';
+
 /**
  * NostrKeyInfo.salt をPRF評価入力として使える値に正規化する。
  * 未設定・旧誤値は標準salt値に置き換える（既存鍵の保護）。
@@ -356,6 +360,65 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * 既存の Nostr 秘密鍵（nsec）を PRF 由来 KEK で NIP-44 v2 暗号化して NostrKeyInfo を作成（wrap モード）。
+   *
+   * NIP-44 v2 自己宛 DM パターン: ourSk = KEK / peerPk = KEK·G として nsec を暗号化する。
+   * 復号時にも同じ KEK を PRF から取り出し、同じ KEK·G を peer 公開鍵として使うため
+   * 鍵管理上の追加情報は不要（wrapped.payload のみで完結する）。
+   *
+   * @param seckey 32 バイトの Nostr 秘密鍵
+   * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
+   * @param options オプション
+   */
+  async importNostrKey(
+    seckey: Uint8Array,
+    credentialId?: Uint8Array,
+    options: KeyOptions = {}
+  ): Promise<NostrKeyInfo> {
+    // 入力検証: 32 バイトの Uint8Array であること
+    if (!(seckey instanceof Uint8Array) || seckey.length !== 32) {
+      throw new Error('importNostrKey: seckey must be a 32-byte Uint8Array');
+    }
+    if (seckey.every((b) => b === 0)) {
+      throw new Error('importNostrKey: invalid seckey (all zeros)');
+    }
+
+    // PRF で KEK を取得（wrap salt を使ってドメイン分離）
+    const { secret: kek, id: responseId } = await getPrfSecret(
+      credentialId,
+      this.#prfOptions,
+      hexToBytes(WRAP_SALT)
+    );
+
+    try {
+      if (kek.every((b) => b === 0)) {
+        throw new Error('Invalid PRF output: all zeros');
+      }
+
+      const kekHex = bytesToHex(kek);
+      const kekPubkey = await seckeySigner(kekHex).getPublicKey();
+
+      const seckeyHex = bytesToHex(seckey);
+      const importedPubkey = await seckeySigner(seckeyHex).getPublicKey();
+
+      // 自己宛 DM パターンで暗号化: 平文 = nsec hex / ourSk = KEK / peerPk = KEK·G
+      const payload = nip44Encrypt(seckeyHex, kek, kekPubkey);
+
+      return {
+        credentialId: bytesToHex(credentialId || responseId),
+        pubkey: importedPubkey,
+        salt: WRAP_SALT,
+        ...(options.username && { username: options.username }),
+        wrapped: { v: 1, alg: 'nip44-v2', payload },
+      };
+    } finally {
+      // KEK と nsec 入力バッファをゼロ化（呼び出し側でも前後ゼロ化推奨）
+      kek.fill(0);
+      seckey.fill(0);
+    }
+  }
+
+  /**
    * イベントに署名
    * @param event 署名するNostrイベント
    * @param keyInfo NostrKeyInfo
@@ -386,25 +449,18 @@ export class NosskeyManager implements NosskeyManagerLike {
    * @returns エクスポートされた秘密鍵（16進数文字列）
    */
   async exportNostrKey(keyInfo: NostrKeyInfo, credentialId?: Uint8Array): Promise<string> {
-    // NostrKeyInfoからcredentialIdを取得（指定がある場合）
-    let usedCredentialId = credentialId;
+    // credentialId が明示指定された場合のみ keyInfo.credentialId を差し替える
+    // （wrap モードでも直接モードでも #getSecretKey が透過的に処理する）
+    const effectiveKeyInfo = credentialId
+      ? { ...keyInfo, credentialId: bytesToHex(credentialId) }
+      : keyInfo;
 
-    // credentialIdが指定されていない場合はNostrKeyInfoから取得を試みる
-    if (!usedCredentialId && keyInfo.credentialId) {
-      usedCredentialId = hexToBytes(keyInfo.credentialId);
+    const sk = await this.#getSecretKey(effectiveKeyInfo);
+    try {
+      return bytesToHex(sk.bytes);
+    } finally {
+      sk.release();
     }
-
-    // PRF値を取得（これが直接シークレットキー）。keyInfo.salt を導出入力に使用する。
-    const { secret: sk } = await getPrfSecret(
-      usedCredentialId,
-      this.#prfOptions,
-      hexToBytes(normalizeSalt(keyInfo.salt))
-    );
-
-    // 秘密鍵HEX文字列を取得
-    const skHex = bytesToHex(sk);
-
-    return skHex;
   }
 
   /**
@@ -487,6 +543,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     }
     const shouldUseCache = this.#keyCache.isEnabled();
 
+    // 1) キャッシュヒット → 平文 nsec をそのまま返す（wrap/直接モード共通）
     if (shouldUseCache) {
       const cached = this.#keyCache.getKey(keyInfo.credentialId);
       if (cached) {
@@ -494,16 +551,47 @@ export class NosskeyManager implements NosskeyManagerLike {
       }
     }
 
-    const { secret } = await getPrfSecret(
+    // 2) PRF を取得（直接モード: PRF出力がそのまま nsec / wrap モード: PRF出力が KEK）
+    const { secret: prf } = await getPrfSecret(
       hexToBytes(keyInfo.credentialId),
       this.#prfOptions,
       hexToBytes(normalizeSalt(keyInfo.salt))
     );
-    if (shouldUseCache) {
-      this.#keyCache.setKey(keyInfo.credentialId, secret);
-      return { bytes: secret, release: () => undefined };
+
+    // 3) wrap モード分岐: NIP-44 v2 復号で平文 nsec を取り出す
+    let nsec: Uint8Array;
+    if (keyInfo.wrapped) {
+      if (keyInfo.wrapped.alg !== 'nip44-v2') {
+        prf.fill(0);
+        throw new Error(`Unsupported wrap algorithm: ${keyInfo.wrapped.alg}`);
+      }
+      try {
+        const kekPubkey = await seckeySigner(bytesToHex(prf)).getPublicKey();
+        const nsecHex = nip44Decrypt(keyInfo.wrapped.payload, prf, kekPubkey);
+        nsec = hexToBytes(nsecHex);
+      } finally {
+        // KEK は復号成否に関わらずゼロ化（nsec は別バッファなので破壊しない）
+        prf.fill(0);
+      }
+    } else {
+      // PRF 直接モード: prf がそのまま nsec として扱われる（同一バッファ参照）
+      nsec = prf;
     }
-    return { bytes: secret, release: () => this.#clearKey(secret) };
+
+    // 4) キャッシュ保存 / release ハンドラ
+    if (shouldUseCache) {
+      this.#keyCache.setKey(keyInfo.credentialId, nsec);
+      if (keyInfo.wrapped) {
+        // wrap モードのみ: KeyCache がコピーを持つので元バッファは即ゼロ化
+        nsec.fill(0);
+      }
+      const cached = this.#keyCache.getKey(keyInfo.credentialId);
+      if (!cached) {
+        throw new Error('Internal error: KeyCache lost just-stored key');
+      }
+      return { bytes: cached, release: () => undefined };
+    }
+    return { bytes: nsec, release: () => this.#clearKey(nsec) };
   }
 
   /**
