@@ -169,6 +169,8 @@ describe('NosskeyManager', () => {
           rpId: 'example.com',
           timeout: 60000,
           userVerification: 'preferred',
+          residentKey: 'required',
+          requireResidentKey: true,
         },
         hexToBytes('6e6f7374722d70776b')
       );
@@ -250,6 +252,8 @@ describe('NosskeyManager', () => {
           rpId: 'example.com',
           timeout: 60000,
           userVerification: 'preferred',
+          residentKey: 'required',
+          requireResidentKey: true,
         },
         hexToBytes('6e6f7374722d70776b')
       );
@@ -313,6 +317,8 @@ describe('NosskeyManager', () => {
           rpId: 'example.com',
           timeout: 60000,
           userVerification: 'preferred',
+          residentKey: 'required',
+          requireResidentKey: true,
         },
         hexToBytes('6e6f7374722d70776b')
       );
