@@ -298,6 +298,15 @@ export class NosskeyManager implements NosskeyManagerLike {
         name: this.#prfOptions.rpId,
       },
       authenticatorSelection: {
+        // residentKey / requireResidentKey を必ず付ける。これが無いと
+        // Android Chrome の Credential Manager は Google パスワード
+        // マネージャーを候補から外し、「この端末」だけが表示される
+        // （passkeys-debugger.io との差分で確認）。prf-handler 側にも
+        // 同名のデフォルトはあるが、ここで authenticatorSelection オブジェクト
+        // を作って渡してしまうとあちらの `||` フォールバックが効かないため、
+        // ラッパ側で揃える必要がある。
+        residentKey: 'required',
+        requireResidentKey: true,
         userVerification: this.#prfOptions.userVerification,
       },
       ...options,
