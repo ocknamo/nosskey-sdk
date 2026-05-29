@@ -18,7 +18,7 @@
 
 ## P1: リリース前に強く推奨
 
-該当項目なし — 旧「サンプルアプリの登録ログイン画面のデザイン UX 改善」は完了済み（`docs/todo.md` のアーカイブ参照）。
+- [ ] **ログアウト後の wrap モード鍵で再ログインできるようにする** — 現状 `app-state.ts:342` のログアウト処理が `NosskeyManager.clearStoredKeyInfo()` を呼んで localStorage 上の NostrKeyInfo を物理削除しており、wrap モード鍵では `wrapped.payload` が失われて再ログイン不能になる（新規登録からやり直しになる）。設計案: 「ログアウト = メモリのみ消去（UI を未認証状態に戻すが localStorage は残す）」「アカウント削除 = 物理削除（明示的なボタン）」の 2 操作に分離。AuthScreen は `hasKeyInfo()` true なら登録/インポートタブの上に「保存済み鍵で再ログイン（UV 1 回）」エントリポイントを表示し、`setCurrentKeyInfo(loadedKeyInfo)` で復元する。再ログインの内部処理は既存 `#getSecretKey` 経路が wrap/直接モード両対応なので追加 SDK API は不要。影響ファイル: `examples/svelte-app/src/store/app-state.ts:342`、`examples/svelte-app/src/components/screens/AuthScreen.svelte:30-44`。
 
 ## P2: 中期で取り組む
 

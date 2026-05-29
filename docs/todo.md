@@ -20,6 +20,7 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 リリース直前で着手しても間に合う、ただし入っていると印象が大きく変わる項目。
 
 - [ ] **nosskey-iframe と他アプリを iframe で組み合わせて1つの Nostr アプリとして構築** — nosskey-iframe を NIP-07 署名プロバイダとして埋め込みつつ、別の Nostr クライアント（タイムライン・DM 等）を同一ページに並置し、単一 Nostr アプリとして動作させる統合パターンの設計と参照実装。導入障壁を下げる効果が大きい。
+- [ ] **iframe 経由フローで Android Chrome の Google Password Manager が候補に出ない** — SDK 単体（svelte-app 直叩き）では PR #93 修正で PWM が候補に上がるようになったが、iframe サンプルアプリ経由で署名（または新規登録）すると候補から外れる。**仮説**: WebAuthn `get` 呼び出しは仕様上 `authenticatorSelection`（residentKey / requireResidentKey）を受け付けず、候補制限は `allowCredentials` 経由でしか効かない。iframe child の partitioned localStorage で NostrKeyInfo が読めず credentialId が undefined → `allowCredentials = []`（全 passkey から選択モード）になると、Android Chrome の Credential Manager が PWM 同期パスキーを候補から外す挙動を引く可能性。**確認手順**: Android Chrome の DevTools で iframe child コンテキストの Application > Local Storage に `nosskey_pwk` キーが存在し credentialId が入っているか / SAA grant 後に `setStorageOptions({ storage: handle.localStorage })` が反映されているかを実機検証。**該当箇所**: `packages/nosskey-iframe/src/host.ts`、`packages/nosskey-sdk/src/prf-handler.ts:147`（allowCredentials 組立）、`packages/nosskey-sdk/src/nosskey.ts:116-131`（setStorageOptions）。
 
 ## P2: 中期で取り組む（堅牢化・新機能）
 
