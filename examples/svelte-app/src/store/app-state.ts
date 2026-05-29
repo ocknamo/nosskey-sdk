@@ -1,3 +1,4 @@
+import type { NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
 import { getNosskeyManager, peekNosskeyManager } from '../services/nosskey-manager.service.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
@@ -337,8 +338,12 @@ export const resetState = () => {
 
 // ログアウト関数
 export const logout = () => {
-  // SDK側のアカウント情報をクリア
   const nosskeyManager = getNosskeyManager();
+  // 平文秘密鍵の派生キャッシュを破棄する。
+  nosskeyManager.clearAllCachedKeys();
+  // current ポインタ（nosskey_pwk）を削除する。アカウント登録簿
+  // （nosskey_accounts）は別キーで残るため、wrap モード鍵も失われず再ログインできる。
+  // 削除後は hasKeyInfo() が false になり AuthScreen が無言で自動ログインしない。
   nosskeyManager.clearStoredKeyInfo();
 
   // 公開鍵情報をクリア
@@ -348,5 +353,19 @@ export const logout = () => {
   isLoggedIn.set(false);
 
   // 画面を認証画面に戻す
+  currentScreen.set('account');
+};
+
+/**
+ * 保存済みアカウント（登録簿のエントリ）を current 鍵に据えて再ログインする。
+ * `setCurrentKeyInfo` がメモリと `nosskey_pwk` を整合させ、`getPublicKey()` は
+ * パスキープロンプトを出さない（UV は次回の署名 / 暗号化時に自然発生する）。
+ */
+export const relogin = async (keyInfo: NostrKeyInfo): Promise<void> => {
+  const nosskeyManager = getNosskeyManager();
+  nosskeyManager.setCurrentKeyInfo(keyInfo);
+  publicKey.set(await nosskeyManager.getPublicKey());
+  isLoggedIn.set(true);
+  markLoggedInBefore();
   currentScreen.set('account');
 };

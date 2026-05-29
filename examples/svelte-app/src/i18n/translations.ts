@@ -55,6 +55,13 @@ export interface TranslationData {
     nsecTip: string;
     importNsec: string;
     invalidNsec: string;
+    accounts: {
+      title: string;
+      relogin: string;
+      delete: string;
+      confirmDelete: string;
+      cancel: string;
+    };
   };
   nostr: {
     publicKey: string;
@@ -309,6 +316,13 @@ export const ja: TranslationData = {
       '既存の Nostr 秘密鍵 (nsec1...) を入力。パスキーで暗号化保存され、署名・暗号化は透過的に動作します。',
     importNsec: 'nsec をインポートしてログイン',
     invalidNsec: '無効な nsec 形式です。"nsec1..." で始まる bech32 文字列を入力してください。',
+    accounts: {
+      title: '保存済みアカウント',
+      relogin: 'このアカウントで再ログイン',
+      delete: '削除',
+      confirmDelete: '削除する',
+      cancel: 'キャンセル',
+    },
   },
   nostr: {
     publicKey: '公開鍵',
@@ -356,7 +370,8 @@ export const ja: TranslationData = {
     },
     logout: {
       title: 'ログアウト',
-      description: 'アプリからログアウトします。すべてのアカウント情報がクリアされます。',
+      description:
+        'アプリからログアウトします。鍵はこの端末に保持され、認証画面の一覧から再ログインできます。',
       button: 'ログアウト',
       success: 'ログアウトが完了しました。',
     },
@@ -578,6 +593,13 @@ export const en: TranslationData = {
       'Enter your existing Nostr private key (nsec1...). It will be encrypted with your passkey and stored locally; signing and encryption operations work transparently via the passkey.',
     importNsec: 'Import nsec and log in',
     invalidNsec: 'Invalid nsec format. Please enter a bech32 string starting with "nsec1...".',
+    accounts: {
+      title: 'Saved accounts',
+      relogin: 'Re-login to this account',
+      delete: 'Remove',
+      confirmDelete: 'Confirm remove',
+      cancel: 'Cancel',
+    },
   },
   nostr: {
     publicKey: 'Public Key',
@@ -625,7 +647,8 @@ export const en: TranslationData = {
     },
     logout: {
       title: 'Logout',
-      description: 'Logout from the application. All account information will be cleared.',
+      description:
+        'Log out of the app. Your keys stay on this device, so you can re-login from the list on the auth screen.',
       button: 'Logout',
       success: 'Logout completed.',
     },

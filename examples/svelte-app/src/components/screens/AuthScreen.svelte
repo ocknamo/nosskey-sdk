@@ -1,10 +1,12 @@
 <script lang="ts">
 import { bytesToHex, hexToBytes } from 'nosskey-sdk';
+import type { NostrKeyInfo } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { accounts, initAccounts, removeAccount, upsertAccount } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
-import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
+import { hexToNpub, isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -24,12 +26,16 @@ let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'regist
 let creationMethod = $state<CreationMethod>('new');
 let nsecInput = $state('');
 let nsecError = $state('');
+// 削除確認中のアカウント pubkey（2 段クリック確認用）。
+let confirmDeletePubkey = $state('');
 
 const keyManager = getNosskeyManager();
 
 async function initialize() {
   isLoading = true;
   try {
+    // 一覧表示前にアカウント登録簿を初期化（既存ユーザーは current 鍵を移行）。
+    initAccounts();
     if (keyManager.hasKeyInfo()) {
       const pubKey = await keyManager.getPublicKey();
       appState.publicKey.set(pubKey);
@@ -104,6 +110,7 @@ async function importExisting() {
       username: username || undefined,
     });
     keyManager.setCurrentKeyInfo(keyInfo);
+    upsertAccount(keyInfo);
 
     // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
     // 入力欄も即座にクリアして DOM 上に nsec を残さない。
@@ -134,6 +141,7 @@ async function login(credentialId?: string) {
       : await keyManager.createNostrKey();
 
     keyManager.setCurrentKeyInfo(keyInfo);
+    upsertAccount(keyInfo);
 
     const pubKey = await keyManager.getPublicKey();
     appState.publicKey.set(pubKey);
@@ -147,6 +155,43 @@ async function login(credentialId?: string) {
   } finally {
     isLoading = false;
   }
+}
+
+function shortNpub(pubkeyHex: string): string {
+  try {
+    const npub = hexToNpub(pubkeyHex);
+    return `${npub.slice(0, 12)}…${npub.slice(-8)}`;
+  } catch {
+    return `${pubkeyHex.slice(0, 8)}…${pubkeyHex.slice(-8)}`;
+  }
+}
+
+function accountLabel(account: NostrKeyInfo): string {
+  return account.username?.trim() || shortNpub(account.pubkey);
+}
+
+async function reloginTo(account: NostrKeyInfo) {
+  isLoading = true;
+  errorMessage = '';
+  try {
+    await appState.relogin(account);
+  } catch (error) {
+    console.error('再ログインエラー:', error);
+    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    isLoading = false;
+  }
+}
+
+function doDelete(account: NostrKeyInfo) {
+  // 削除対象が現在の current 鍵なら、ポインタも消してログイン状態をリセットする。
+  if (keyManager.getCurrentKeyInfo()?.pubkey === account.pubkey) {
+    keyManager.clearStoredKeyInfo();
+    appState.publicKey.set(null);
+    appState.isLoggedIn.set(false);
+  }
+  removeAccount(account.pubkey);
+  confirmDeletePubkey = '';
 }
 
 function selectTab(tab: AuthTab) {
@@ -172,6 +217,57 @@ $effect(() => {
       <p>{$i18n.t.auth.loading}</p>
     </div>
   {:else}
+    {#if $accounts.length > 0}
+      <CardSection title={$i18n.t.auth.accounts.title}>
+        <ul class="account-list">
+          {#each $accounts as account (account.pubkey)}
+            <li class="account-row">
+              <button
+                type="button"
+                class="account-relogin"
+                onclick={() => reloginTo(account)}
+                disabled={isLoading}
+                title={$i18n.t.auth.accounts.relogin}
+              >
+                <span class="account-label">{accountLabel(account)}</span>
+                <span class="account-npub">{shortNpub(account.pubkey)}</span>
+              </button>
+              {#if confirmDeletePubkey === account.pubkey}
+                <div class="account-confirm">
+                  <Button
+                    variant="danger"
+                    size="small"
+                    fullWidth={false}
+                    onclick={() => doDelete(account)}
+                  >
+                    {$i18n.t.auth.accounts.confirmDelete}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    fullWidth={false}
+                    onclick={() => (confirmDeletePubkey = "")}
+                  >
+                    {$i18n.t.auth.accounts.cancel}
+                  </Button>
+                </div>
+              {:else}
+                <Button
+                  variant="secondary"
+                  size="small"
+                  fullWidth={false}
+                  onclick={() => (confirmDeletePubkey = account.pubkey)}
+                  title={$i18n.t.auth.accounts.delete}
+                >
+                  {$i18n.t.auth.accounts.delete}
+                </Button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </CardSection>
+    {/if}
+
     <div class="auth-tabs">
       <TabButton
         active={activeTab === "login"}
@@ -372,6 +468,61 @@ $effect(() => {
     100% {
       transform: rotate(360deg);
     }
+  }
+
+  .account-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .account-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .account-relogin {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .account-relogin:hover:not(:disabled) {
+    border-color: var(--color-button-primary);
+  }
+
+  .account-relogin:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .account-label {
+    font-weight: 600;
+  }
+
+  .account-npub {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .account-confirm {
+    display: flex;
+    gap: 6px;
   }
 
   .auth-tabs {
