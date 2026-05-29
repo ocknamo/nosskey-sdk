@@ -100,11 +100,19 @@ export function listAccounts(): NostrKeyInfo[] {
   return current;
 }
 
-/** `pubkey` を一意キーとして追加または置換する。 */
+/** `pubkey` を一意キーとして追加または更新する。 */
 export function upsertAccount(keyInfo: NostrKeyInfo): void {
   const entry = normalizeEntry(keyInfo);
   const idx = current.findIndex((a) => a.pubkey === entry.pubkey);
-  const next = idx >= 0 ? current.map((a, i) => (i === idx ? entry : a)) : [...current, entry];
+  const next =
+    idx >= 0
+      ? current.map((a, i) =>
+          // 同一 pubkey は新しい値で更新するが、username は新規取得が無いときに
+          // 既存の表示名を残す。パスキーピッカー経由の login() は username を
+          // 伴わないため、これが無いと一覧ラベルが短縮 npub に退行する。
+          i === idx ? { ...a, ...entry, username: entry.username ?? a.username } : a
+        )
+      : [...current, entry];
   set(next);
 }
 

@@ -184,7 +184,8 @@ async function reloginTo(account: NostrKeyInfo) {
 }
 
 function doDelete(account: NostrKeyInfo) {
-  // 削除対象が現在の current 鍵なら、ポインタも消してログイン状態をリセットする。
+  // 一覧はログアウト中（current=null）にのみ描画されるため通常この分岐は通らないが、
+  // 防御的に: 削除対象が current 鍵なら、ポインタも消してログイン状態をリセットする。
   if (keyManager.getCurrentKeyInfo()?.pubkey === account.pubkey) {
     keyManager.clearStoredKeyInfo();
     appState.publicKey.set(null);
@@ -230,7 +231,9 @@ $effect(() => {
                 title={$i18n.t.auth.accounts.relogin}
               >
                 <span class="account-label">{accountLabel(account)}</span>
-                <span class="account-npub">{shortNpub(account.pubkey)}</span>
+                {#if account.username?.trim()}
+                  <span class="account-npub">{shortNpub(account.pubkey)}</span>
+                {/if}
               </button>
               {#if confirmDeletePubkey === account.pubkey}
                 <div class="account-confirm">

@@ -75,6 +75,29 @@ describe('upsertAccount / listAccounts / removeAccount', () => {
     expect(list[0]).toMatchObject({ pubkey: 'pub-1', credentialId: 'cred-2', username: 'renamed' });
   });
 
+  it('keeps an existing username when a later upsert omits it', async () => {
+    const storage = createFakeStorage();
+    const { accounts } = await freshModules(storage);
+
+    accounts.upsertAccount({ ...baseKey, username: 'alice' });
+    // パスキーピッカー経由の login() 相当（username なしの再登録）
+    accounts.upsertAccount({ ...baseKey, credentialId: 'cred-2' });
+
+    const list = accounts.listAccounts();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ credentialId: 'cred-2', username: 'alice' });
+  });
+
+  it('overwrites the username when the later upsert provides a new one', async () => {
+    const storage = createFakeStorage();
+    const { accounts } = await freshModules(storage);
+
+    accounts.upsertAccount({ ...baseKey, username: 'alice' });
+    accounts.upsertAccount({ ...baseKey, username: 'bob' });
+
+    expect(accounts.listAccounts()[0].username).toBe('bob');
+  });
+
   it('keeps distinct pubkeys as separate accounts', async () => {
     const storage = createFakeStorage();
     const { accounts } = await freshModules(storage);
