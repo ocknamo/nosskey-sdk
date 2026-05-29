@@ -57,7 +57,14 @@ Nosskey SDK は現在、WebAuthn パスキーの PRF 拡張出力をそのまま
 - **NF2**: KEK は WebAuthn PRF 由来。salt はドメイン分離のため `"nostr-pwk-wrap"` を使用
 - **NF3**: ローカル保存先は `localStorage`（既存 PRF 直接モードと同じ）
 - **NF4**: ペイロード保存形式は NIP-44 v2 base64（`0x02 || nonce(32) || ciphertext || mac(32)`）
-- **NF5**: メモリゼロ化: KEK / インポート nsec は使用直後に `Uint8Array.fill(0)`
+- **NF5**: メモリゼロ化: KEK / インポート nsec は使用直後に `Uint8Array.fill(0)`。
+  ただし JS の `string` プリミティブは immutable で書き戻し API が存在しないため、
+  `bytesToHex(seckey)` / `nip44Decrypt(...)` の戻り値として一時生成される hex 文字列
+  （`@rx-nostr/crypto` の `seckeySigner(skHex)` や NIP-44 平文経路で必要）は
+  **GC タイミングまでヒープに残存する**。NF5 のゼロ化保証は `Uint8Array` バッファに
+  限定された性質である点を明示しておく。完全な秘密素材ゼロ化は将来 `nip44Encrypt`/
+  `nip44Decrypt` を Uint8Array I/O に拡張し、`seckeySigner` をバイト受けの
+  低レイヤ API に置き換えるリファクタが必要（本タスクではスコープ外）。
 - **NF6**: 暗号化方式のバージョニング: `wrapped.v` / `wrapped.alg` を保持し、将来の方式変更に備える
 
 ### 3.3 スコープ外

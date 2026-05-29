@@ -25,6 +25,7 @@ export interface TranslationData {
       prfCheck: string;
       passkeyCreation: string;
       login: string;
+      importNsec: string;
     };
   };
   appWarning: {
@@ -47,6 +48,13 @@ export interface TranslationData {
     loginTip: string;
     registerTip: string;
     usernameTip: string;
+    methodNew: string;
+    methodImport: string;
+    nsecLabel: string;
+    nsecPlaceholder: string;
+    nsecTip: string;
+    importNsec: string;
+    invalidNsec: string;
   };
   nostr: {
     publicKey: string;
@@ -269,6 +277,7 @@ export const ja: TranslationData = {
       prfCheck: 'PRF対応確認エラー:',
       passkeyCreation: 'パスキー作成エラー:',
       login: 'ログインエラー:',
+      importNsec: 'nsec インポートエラー:',
     },
   },
   appWarning: {
@@ -292,6 +301,14 @@ export const ja: TranslationData = {
     registerTip:
       'パスキーは生体認証や端末のセキュリティ機能を使った安全な認証方法です。お使いの端末が直接対応していなくても、QRコードや通知を使ってスマートフォンなどを認証器として利用できます。',
     usernameTip: 'パスキーの表示名として使われます。任意項目で、未入力でも問題ありません。',
+    methodNew: 'パスキーを新規作成',
+    methodImport: '既存nsecをインポート（ベータ版）',
+    nsecLabel: '既存の nsec',
+    nsecPlaceholder: 'nsec1...',
+    nsecTip:
+      '既存の Nostr 秘密鍵 (nsec1...) を入力。パスキーで暗号化保存され、署名・暗号化は透過的に動作します。',
+    importNsec: 'nsec をインポートしてログイン',
+    invalidNsec: '無効な nsec 形式です。"nsec1..." で始まる bech32 文字列を入力してください。',
   },
   nostr: {
     publicKey: '公開鍵',
@@ -529,6 +546,7 @@ export const en: TranslationData = {
       prfCheck: 'PRF Support Check Error:',
       passkeyCreation: 'Passkey Creation Error:',
       login: 'Login Error:',
+      importNsec: 'nsec Import Error:',
     },
   },
   appWarning: {
@@ -552,6 +570,14 @@ export const en: TranslationData = {
     registerTip:
       "Passkeys are a secure authentication method using biometrics or your device's security features. Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     usernameTip: 'Used as the display name for your passkey. Optional — you can leave it blank.',
+    methodNew: 'Create New Passkey',
+    methodImport: 'Import Existing nsec (Beta)',
+    nsecLabel: 'Existing nsec',
+    nsecPlaceholder: 'nsec1...',
+    nsecTip:
+      'Enter your existing Nostr private key (nsec1...). It will be encrypted with your passkey and stored locally; signing and encryption operations work transparently via the passkey.',
+    importNsec: 'Import nsec and log in',
+    invalidNsec: 'Invalid nsec format. Please enter a bech32 string starting with "nsec1...".',
   },
   nostr: {
     publicKey: 'Public Key',
