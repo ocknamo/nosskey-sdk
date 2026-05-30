@@ -41,7 +41,7 @@ async function exportKeyInfo() {
 
   try {
     // 鍵情報をJSON文字列に変換
-    exportedKeyInfo = JSON.stringify(exportKeyInfo, null, 2);
+    exportedKeyInfo = JSON.stringify(currentKeyInfo, null, 2);
   } catch (error) {
     console.error('KeyInfoエクスポートエラー:', error);
     exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
