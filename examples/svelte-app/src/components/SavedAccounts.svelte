@@ -40,6 +40,8 @@ function accountLabel(account: NostrKeyInfo): string {
 async function reloginTo(account: NostrKeyInfo) {
   // 遅延フィードバック中は再入で relogin が二重キューされ current 鍵が競合しうる。
   if (reloginPressedPubkey !== '') return;
+  // 再試行時に前回のエラーバナーを残さない。
+  onError?.('');
   // 即座にログインすると押下フィードバックが見えないため、少しだけ間を置く。
   reloginPressedPubkey = account.pubkey;
   await new Promise((resolve) => setTimeout(resolve, RELOGIN_FEEDBACK_MS));
