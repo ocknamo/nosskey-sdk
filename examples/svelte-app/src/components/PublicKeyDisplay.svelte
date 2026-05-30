@@ -3,7 +3,7 @@ import CopyIcon from '../assets/copy-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { publicKey } from '../store/app-state.js';
 import { currentProfile } from '../store/profile-store.js';
-import { hexToNpub } from '../utils/bech32-converter.js';
+import { hexToNpub, shortenNpub } from '../utils/bech32-converter.js';
 import ProfileAvatar from './ProfileAvatar.svelte';
 import IconButton from './ui/button/IconButton.svelte';
 
@@ -72,11 +72,7 @@ function copyNpubToClipboard() {
   <div class="npub-section">
     <h3>{$i18n.t.nostr.publicKey}</h3>
     <div class="npub-wrapper">
-      <p class="npub">
-        {npubAddress.length > 20
-          ? `${npubAddress.slice(0, 12)}...${npubAddress.slice(-8)}`
-          : npubAddress}
-      </p>
+      <p class="npub">{shortenNpub(publicKeyHex)}</p>
       <IconButton
         onclick={copyNpubToClipboard}
         title={$i18n.t.nostr.copyToClipboard}
