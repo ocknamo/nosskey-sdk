@@ -24,7 +24,7 @@ function normalizeSalt(salt?: string): string {
 }
 
 /** 保存値が NostrKeyInfo の形をしているかの防御的チェック。 */
-function isNostrKeyInfo(value: unknown): value is NostrKeyInfo {
+export function isNostrKeyInfo(value: unknown): value is NostrKeyInfo {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   if (typeof v.credentialId !== 'string') return false;

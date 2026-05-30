@@ -1,5 +1,6 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
+import { isNostrKeyInfo } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -48,9 +49,11 @@ async function loginWithKeyInfoText() {
 
 async function loginWithKeyInfoData(keyInfoJsonText: string) {
   try {
-    const keyData = JSON.parse(keyInfoJsonText);
+    const keyData: unknown = JSON.parse(keyInfoJsonText);
 
-    if (!keyData.v || !keyData.alg || !keyData.credentialId || !keyData.pubkey) {
+    // 外部入力（ファイル / textarea）を信頼境界で構造検証する。登録簿と共通の
+    // 型ガードを使い、直接モード（wrapped 無し）/ wrap モード両方を正しく受理する。
+    if (!isNostrKeyInfo(keyData)) {
       throw new Error('有効なKeyInfoデータではありません');
     }
 
@@ -59,9 +62,9 @@ async function loginWithKeyInfoData(keyInfoJsonText: string) {
     await appState.loginWith(keyData);
   } catch (error) {
     console.error('KeyInfoログインエラー:', error);
-    throw new Error(
-      `KeyInfoログインエラー: ${error instanceof Error ? error.message : String(error)}`
-    );
+    // 呼び出し元（ファイル / テキスト）が文脈付きのプレフィックスを付けるため、
+    // ここでは再ラップせずそのまま伝播してメッセージの多重ネストを避ける。
+    throw error;
   } finally {
     isLoading = false;
   }
