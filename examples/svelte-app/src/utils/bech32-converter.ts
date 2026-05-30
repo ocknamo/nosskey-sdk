@@ -43,6 +43,21 @@ export function hexToNpub(hexPubkey: string): string {
 }
 
 /**
+ * 64文字hexの公開鍵を「先頭head文字…末尾tail文字」の短縮npub表記にする。
+ * npub変換に失敗した場合（不正なpubkey等）はhexの短縮にフォールバックする。
+ * UI 各所（アカウント一覧 / プロフィール表示 / 同意ダイアログ）で共用する。
+ */
+export function shortenNpub(hexPubkey: string, head = 12, tail = 8): string {
+  try {
+    const npub = hexToNpub(hexPubkey);
+    if (npub.length <= head + tail + 1) return npub;
+    return `${npub.slice(0, head)}…${npub.slice(-tail)}`;
+  } catch {
+    return hexPubkey.length > 16 ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}` : hexPubkey;
+  }
+}
+
+/**
  * 16進数形式の秘密鍵をnsec形式に変換
  */
 export function hexToNsec(hexPrivkey: string): string {

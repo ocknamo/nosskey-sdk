@@ -3,8 +3,10 @@ import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { initAccounts } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
+import SavedAccounts from '../SavedAccounts.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -30,6 +32,8 @@ const keyManager = getNosskeyManager();
 async function initialize() {
   isLoading = true;
   try {
+    // 一覧表示前にアカウント登録簿を初期化（既存ユーザーは current 鍵を移行）。
+    initAccounts();
     if (keyManager.hasKeyInfo()) {
       const pubKey = await keyManager.getPublicKey();
       appState.publicKey.set(pubKey);
@@ -103,18 +107,13 @@ async function importExisting() {
     const keyInfo = await keyManager.importNostrKey(seckey, newCredentialId, {
       username: username || undefined,
     });
-    keyManager.setCurrentKeyInfo(keyInfo);
 
     // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
     // 入力欄も即座にクリアして DOM 上に nsec を残さない。
     seckey.fill(0);
     nsecInput = '';
 
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-    appState.markLoggedInBefore();
-    appState.currentScreen.set('account');
+    await appState.loginWith(keyInfo);
   } catch (error) {
     seckey.fill(0);
     console.error('nsec インポートエラー:', error);
@@ -129,18 +128,15 @@ async function login(credentialId?: string) {
   errorMessage = '';
 
   try {
+    // 新規作成パスキー（credentialId あり）では入力中のユーザー名を keyInfo へ
+    // 反映する。これが無いと一覧ラベルが npub に退行する（import 経路と非対称だった）。
     const keyInfo = credentialId
-      ? await keyManager.createNostrKey(hexToBytes(credentialId))
+      ? await keyManager.createNostrKey(hexToBytes(credentialId), {
+          username: username.trim() || undefined,
+        })
       : await keyManager.createNostrKey();
 
-    keyManager.setCurrentKeyInfo(keyInfo);
-
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-    appState.markLoggedInBefore();
-
-    appState.currentScreen.set('account');
+    await appState.loginWith(keyInfo);
   } catch (error) {
     console.error('ログインエラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
@@ -190,6 +186,7 @@ $effect(() => {
     </div>
 
     {#if activeTab === "login"}
+      <SavedAccounts onError={(message) => (errorMessage = message)} />
       <CardSection title={$i18n.t.auth.tabLogin}>
         {#snippet titleAside()}
           <HelpTip text={$i18n.t.auth.loginTip} placement="end" />

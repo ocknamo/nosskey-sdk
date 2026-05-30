@@ -3,7 +3,7 @@ import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-if
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
 import { buildScreenUrl } from '../utils/app-navigation.js';
-import { hexToNpub } from '../utils/bech32-converter.js';
+import { shortenNpub } from '../utils/bech32-converter.js';
 import { kindLabel } from '../utils/event-kind-labels.js';
 import Button from './ui/button/Button.svelte';
 
@@ -19,17 +19,10 @@ function truncate(value: string, limit = CONTENT_PREVIEW_LIMIT): string {
 /**
  * Render a 64-char hex pubkey as a shortened npub. We prefer npub over hex
  * here because consent dialogs are user-facing and Nostr clients
- * conventionally show npub. Fall back to a hex truncation if conversion
- * fails (malformed pubkey from the parent).
+ * conventionally show npub (`shortenNpub` falls back to hex on malformed input).
  */
 function renderPeerPubkey(hexPubkey: string): string {
-  try {
-    const npub = hexToNpub(hexPubkey);
-    if (npub.length <= NPUB_HEAD + NPUB_TAIL + 1) return npub;
-    return `${npub.slice(0, NPUB_HEAD)}…${npub.slice(-NPUB_TAIL)}`;
-  } catch {
-    return hexPubkey.length > 16 ? `${hexPubkey.slice(0, 8)}…${hexPubkey.slice(-8)}` : hexPubkey;
-  }
+  return shortenNpub(hexPubkey, NPUB_HEAD, NPUB_TAIL);
 }
 
 function methodLabel(method: NosskeyMethod, labels: typeof $i18n.t.consent.methodLabel): string {

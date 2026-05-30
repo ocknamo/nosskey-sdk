@@ -2,7 +2,17 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
-import { consentPolicy, reloadSettings, trustedOrigins } from './app-state.js';
+import { listAccounts } from './accounts.js';
+import {
+  consentPolicy,
+  currentScreen,
+  hasLoggedInBefore,
+  isLoggedIn,
+  loginWith,
+  publicKey,
+  reloadSettings,
+  trustedOrigins,
+} from './app-state.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
 /** Map-backed in-memory Storage stand-in for a first-party storage handle. */
@@ -184,5 +194,32 @@ describe('cross-context sync via storage events', () => {
       'nosskey_consent_policy',
       JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
     );
+  });
+});
+
+describe('loginWith', () => {
+  // 新規作成 / nsec インポート / 保存済みアカウント再ログインが共有する活性化処理。
+  it('登録簿へ追加し、current 鍵・ストア・履歴フラグを更新して account 画面へ遷移する', async () => {
+    const firstParty = grantFirstPartyStorage();
+    const keyInfo = {
+      credentialId: 'cred-login',
+      pubkey: 'pubkey-login-abc',
+      salt: '6e6f7374722d70776b',
+      username: 'carol',
+    };
+
+    await loginWith(keyInfo);
+
+    // current 鍵（nosskey_pwk）へ設定され、公開鍵がストアへ反映される。
+    expect(getNosskeyManager().getCurrentKeyInfo()?.pubkey).toBe('pubkey-login-abc');
+    expect(get(publicKey)).toBe('pubkey-login-abc');
+    expect(get(isLoggedIn)).toBe(true);
+    expect(get(currentScreen)).toBe('account');
+    expect(hasLoggedInBefore()).toBe(true);
+
+    // 登録簿へ upsert され、同一ハンドルへ永続化される。
+    expect(listAccounts().some((a) => a.pubkey === 'pubkey-login-abc')).toBe(true);
+    const persisted = JSON.parse(firstParty.getItem('nosskey_accounts') as string);
+    expect(persisted.some((a: { pubkey: string }) => a.pubkey === 'pubkey-login-abc')).toBe(true);
   });
 });

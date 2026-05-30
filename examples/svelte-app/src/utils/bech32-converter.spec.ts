@@ -6,6 +6,7 @@ import {
   isValidNsec,
   npubToHex,
   nsecToHex,
+  shortenNpub,
 } from './bech32-converter.js';
 
 describe('bech32Converter', () => {
@@ -24,6 +25,23 @@ describe('bech32Converter', () => {
     test('公開鍵の16進数をnpubフォーマットに変換できること', () => {
       const result = hexToNpub(pubkeyHex);
       expect(result).toBe(npubFormat);
+    });
+  });
+
+  describe('shortenNpub', () => {
+    test('hex を 先頭head…末尾tail の短縮 npub にすること', () => {
+      // npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6
+      expect(shortenNpub(pubkeyHex)).toBe('npub180cvv07…wsyjh6w6');
+    });
+
+    test('head / tail を指定できること（同意ダイアログ用の 8/8）', () => {
+      expect(shortenNpub(pubkeyHex, 8, 8)).toBe('npub180c…wsyjh6w6');
+    });
+
+    test('npub 変換に失敗する入力は hex 短縮にフォールバックすること', () => {
+      // 長すぎる入力は bech32 の長さ制限超過で encode が throw する。
+      const bad = 'a'.repeat(200);
+      expect(shortenNpub(bad)).toBe(`${bad.slice(0, 8)}…${bad.slice(-8)}`);
     });
   });
 

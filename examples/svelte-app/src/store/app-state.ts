@@ -1,5 +1,7 @@
+import type { NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
-import { getNosskeyManager, peekNosskeyManager } from '../services/nosskey-manager.service.js';
+import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
+import { upsertAccount } from './accounts.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
@@ -67,19 +69,12 @@ let embeddedThemeOverride = false;
 let applyingExternalUpdate = false;
 
 /**
- * 設定の永続化先 Storage を解決する。SDK マネージャが Storage Access API
- * グラント後のハンドルを保持していれば、それを使う。これはリレー設定が読む
- * `manager.getStorageOptions().storage` と同一参照であり、handle の正本は
- * SDK マネージャ 1 箇所に集約される。未グラント / スタンドアロンでは
- * `window.localStorage`（= ファーストパーティ）。
- *
- * `peekNosskeyManager()`（未構築なら null、新規構築しない）を使うため、
- * モジュール初期化中に呼ばれてもマネージャを構築せず安全。
+ * 設定の永続化先 Storage を解決する。解決ロジックはサービス層の
+ * `resolveStorageHandle()` に一元化しており（リレー設定・アカウント登録簿と
+ * 同一ハンドルへ揃える）、ここではその薄いラッパとして公開名を保つ。
  */
 function resolveSettingsStorage(): Storage | null {
-  const handle = peekNosskeyManager()?.getStorageOptions().storage;
-  if (handle) return handle;
-  return typeof window !== 'undefined' ? window.localStorage : null;
+  return resolveStorageHandle();
 }
 
 // 同意ゲート設定
@@ -337,8 +332,12 @@ export const resetState = () => {
 
 // ログアウト関数
 export const logout = () => {
-  // SDK側のアカウント情報をクリア
   const nosskeyManager = getNosskeyManager();
+  // 平文秘密鍵の派生キャッシュを破棄する。
+  nosskeyManager.clearAllCachedKeys();
+  // current ポインタ（nosskey_pwk）を削除する。アカウント登録簿
+  // （nosskey_accounts）は別キーで残るため、wrap モード鍵も失われず再ログインできる。
+  // 削除後は hasKeyInfo() が false になり AuthScreen が無言で自動ログインしない。
   nosskeyManager.clearStoredKeyInfo();
 
   // 公開鍵情報をクリア
@@ -348,5 +347,23 @@ export const logout = () => {
   isLoggedIn.set(false);
 
   // 画面を認証画面に戻す
+  currentScreen.set('account');
+};
+
+/**
+ * 指定の `NostrKeyInfo` でログイン状態を確立する共通処理。新規作成 / nsec
+ * インポート / 保存済みアカウントからの再ログインのいずれの経路でも使う。
+ * - 登録簿へ upsert（pubkey 一意・username 保持マージ。再ログインでは冪等）
+ * - current 鍵へ設定（メモリと `nosskey_pwk` を整合）
+ * - 公開鍵をストアへ反映しログイン状態へ。`getPublicKey()` はパスキー
+ *   プロンプトを出さない（UV は次回の署名 / 暗号化時に自然発生する）。
+ */
+export const loginWith = async (keyInfo: NostrKeyInfo): Promise<void> => {
+  const nosskeyManager = getNosskeyManager();
+  upsertAccount(keyInfo);
+  nosskeyManager.setCurrentKeyInfo(keyInfo);
+  publicKey.set(await nosskeyManager.getPublicKey());
+  isLoggedIn.set(true);
+  markLoggedInBefore();
   currentScreen.set('account');
 };
