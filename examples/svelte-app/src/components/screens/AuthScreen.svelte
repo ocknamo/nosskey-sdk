@@ -2,8 +2,10 @@
 import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { onDestroy } from 'svelte';
+import { flip } from 'svelte/animate';
 import { slide } from 'svelte/transition';
 import DeleteIcon from '../../assets/delete-icon.svg';
+import LoginIcon from '../../assets/login-icon.svg';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -32,10 +34,14 @@ let nsecInput = $state('');
 let nsecError = $state('');
 // 削除確認中（確認ボタンを展開中）のアカウント pubkey。
 let confirmDeletePubkey = $state('');
-// 「本当に削除する」押下後、5 秒のキャンセル猶予中のアカウント pubkey。
+// 「本当に削除する」押下後、キャンセル猶予中のアカウント pubkey と残り秒数。
 let pendingDeletePubkey = $state('');
-let deleteTimer: ReturnType<typeof setTimeout> | null = null;
-const DELETE_DELAY_MS = 5000;
+let deleteRemaining = $state(0);
+let deleteTimer: ReturnType<typeof setInterval> | null = null;
+const DELETE_DELAY_SEC = 5;
+// 再ログイン押下のタップフィードバックを見せるため、押下中ハイライトする pubkey。
+let reloginPressedPubkey = $state('');
+const RELOGIN_FEEDBACK_MS = 180;
 
 const keyManager = getNosskeyManager();
 
@@ -179,8 +185,11 @@ function accountLabel(account: NostrKeyInfo): string {
 }
 
 async function reloginTo(account: NostrKeyInfo) {
-  isLoading = true;
   errorMessage = '';
+  // 即座にログインすると押下フィードバックが見えないため、少しだけ間を置く。
+  reloginPressedPubkey = account.pubkey;
+  await new Promise((resolve) => setTimeout(resolve, RELOGIN_FEEDBACK_MS));
+  isLoading = true;
   try {
     await appState.relogin(account);
   } catch (error) {
@@ -188,6 +197,7 @@ async function reloginTo(account: NostrKeyInfo) {
     errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
     isLoading = false;
+    reloginPressedPubkey = '';
   }
 }
 
@@ -197,21 +207,26 @@ function startConfirm(account: NostrKeyInfo) {
   confirmDeletePubkey = account.pubkey;
 }
 
-// 「本当に削除する」押下: 5 秒のキャンセル猶予を置いてから実際に削除する。
+// 「本当に削除する」押下: 残り秒数をカウントダウンしながら猶予し、0 で実削除する。
 function startPendingDelete(account: NostrKeyInfo) {
   pendingDeletePubkey = account.pubkey;
-  deleteTimer = setTimeout(() => {
-    deleteTimer = null;
-    pendingDeletePubkey = '';
-    confirmDeletePubkey = '';
-    doDelete(account);
-  }, DELETE_DELAY_MS);
+  deleteRemaining = DELETE_DELAY_SEC;
+  deleteTimer = setInterval(() => {
+    deleteRemaining -= 1;
+    if (deleteRemaining <= 0) {
+      if (deleteTimer) clearInterval(deleteTimer);
+      deleteTimer = null;
+      pendingDeletePubkey = '';
+      confirmDeletePubkey = '';
+      doDelete(account); // 行が消え、{#each} の out:slide で縦に閉じる
+    }
+  }, 1000);
 }
 
 // 確認 / 猶予中のキャンセル: 進行中のタイマーを止めて状態を戻す。
 function cancelDelete() {
   if (deleteTimer) {
-    clearTimeout(deleteTimer);
+    clearInterval(deleteTimer);
     deleteTimer = null;
   }
   pendingDeletePubkey = '';
@@ -231,7 +246,7 @@ function doDelete(account: NostrKeyInfo) {
 
 // アンマウント時に未発火のタイマーを破棄し、画面遷移後の遅延削除を防ぐ。
 onDestroy(() => {
-  if (deleteTimer) clearTimeout(deleteTimer);
+  if (deleteTimer) clearInterval(deleteTimer);
 });
 
 function selectTab(tab: AuthTab) {
@@ -261,19 +276,23 @@ $effect(() => {
       <CardSection title={$i18n.t.auth.accounts.title}>
         <ul class="account-list">
           {#each $accounts as account (account.pubkey)}
-            <li class="account-item">
+            <li class="account-item" animate:flip={{ duration: 200 }} out:slide={{ duration: 200 }}>
               <div class="account-row">
                 <button
                   type="button"
                   class="account-relogin"
+                  class:pressed={reloginPressedPubkey === account.pubkey}
                   onclick={() => reloginTo(account)}
                   disabled={isLoading}
                   title={$i18n.t.auth.accounts.relogin}
                 >
-                  <span class="account-label">{accountLabel(account)}</span>
-                  {#if account.username?.trim()}
-                    <span class="account-npub">{shortNpub(account.pubkey)}</span>
-                  {/if}
+                  <span class="account-text">
+                    <span class="account-label">{accountLabel(account)}</span>
+                    {#if account.username?.trim()}
+                      <span class="account-npub">{shortNpub(account.pubkey)}</span>
+                    {/if}
+                  </span>
+                  <img class="account-login-icon" src={LoginIcon} alt="" aria-hidden="true" />
                 </button>
                 {#if confirmDeletePubkey !== account.pubkey}
                   <IconButton
@@ -296,8 +315,10 @@ $effect(() => {
                   >
                     {#if pendingDeletePubkey === account.pubkey}
                       <span class="btn-spinner" aria-hidden="true"></span>
+                      {$i18n.t.auth.accounts.confirmDelete}（{deleteRemaining}）
+                    {:else}
+                      {$i18n.t.auth.accounts.confirmDelete}
                     {/if}
-                    {$i18n.t.auth.accounts.confirmDelete}
                   </Button>
                   <Button
                     variant="secondary"
@@ -540,10 +561,12 @@ $effect(() => {
 
   .account-relogin {
     flex: 1;
+    min-width: 0;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 10px 12px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -558,13 +581,40 @@ $effect(() => {
     border-color: var(--color-button-primary);
   }
 
+  /* タップ/クリックの押下フィードバック。即ログインで見えなくならないよう
+     reloginTo() が少し遅延を入れ、その間 .pressed を付与して見せる。 */
+  .account-relogin.pressed:not(:disabled),
+  .account-relogin:active:not(:disabled) {
+    border-color: var(--color-button-primary);
+    background-color: var(--color-border-light);
+  }
+
   .account-relogin:disabled {
     opacity: 0.6;
     cursor: default;
   }
 
+  .account-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .account-login-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+  }
+
   .account-label {
     font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .account-npub {
