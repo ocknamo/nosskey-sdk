@@ -22,12 +22,17 @@
 
 ## P2: 中期で取り組む
 
+- [ ] **「鍵情報をエクスポート」が動作しないバグの修正** — 設定画面の鍵情報エクスポートが動作していない。原因は `examples/svelte-app/src/components/settings/ExportKeyInfoComponent.svelte:44` で `JSON.stringify(exportKeyInfo, null, 2)` と **関数 `exportKeyInfo` 自身**を直列化しており、`currentKeyInfo`（32 行目で取得済み）を渡せていないこと。`JSON.stringify(currentKeyInfo, null, 2)` に修正する。修正後はインポート側（`ImportKeyInfo.svelte`）との往復で検証すること。
+- [ ] **新規パスキー作成時にパスキー認証が 2 回要求される問題の調査・修正** — 新規作成タブは `createNew()`（`AuthScreen.svelte` の `createPasskey()` = WebAuthn `create`）でパスキー作成後、成功画面で改めて「ログイン」ボタン → `login(credentialId)`（`createNostrKey()` = WebAuthn `get`/PRF）を押す 2 ステップ。既存 nsec インポート経路（`importExisting()` → `createPasskey()` → `importNostrKey()`）は `createPasskey` 時の PRF が `#pendingPrfByCredId` にキャッシュされ消費されるため UV 1 回・1 ステップで完了する。新規作成側でも create 時の標準 salt PRF を消費して 2 回目の `get` を省けるか（＝ create→createNostrKey を 1 ボタンに統合できるか）を検証する。`createPasskey` が PRF 結果を返さないブラウザがある場合はフォールバックが必要なので、ブラウザ依存の切り分けも行う。
+- [ ] **テーマを 2 種類から 4 種類に増やす** — 現状 `ThemeMode = 'light' | 'dark' | 'auto'`（`app-state.ts:59`。実テーマは light/dark の 2 種、auto は OS 追従）。選択可能なカラーテーマを 4 種類に拡張する。`ThemeMode` 型・`currentTheme` ストア・`loadThemeSetting()`（`app-state.ts:131` の許容値チェック）・テーマ適用ロジック・CSS variables（テーマ別カラーセット）・`theme-settings.svelte` の UI・i18n ラベル・iframe へ渡す `?theme=` クエリパラメータ（`NosskeyIframeClient` / `buildIframeUrl` と受信側 `app-state.ts:222`）の許容値もあわせて更新が必要。
 - [ ] **テストの充実** — Vitest の追加導入は完了済み (`vitest.config.ts` 等)。今後は store / service レイヤと画面遷移のカバレッジ拡充。
 - [ ] **複数アカウント対応（UI 側責務）** — 複数パスキーを切り替えて使える UI と内部状態管理。SDK/iframe 側の `switchKey` API は `docs/todo.md` の Phase 4-A が所有。本項目は API 完成後にそれを呼び出すサンプルアプリ側の画面実装。
 - [ ] **より詳細な攻撃ベクトルの検討とリスク評価** — 同意ポリシー / 信頼済みオリジン / iframe 周りの再評価。
 
 ## P3: 長期・将来
 
+- [ ] **新規登録タブのラベルを簡潔にする** — 「パスキーを新規作成」「既存 nsec をインポート（ベータ版）」が冗長。「新規作成」「インポート（ベータ版）」程度に短縮する（`AuthScreen.svelte` の `methodNew` / `methodImport` タブ、i18n ja/en）。
+- [ ] **削除ボタンをゴミ箱アイコンに統一する** — PR #94 で保存済みアカウント一覧の削除は Material のゴミ箱アイコン（`IconButton` + `delete-icon.svg`）化済み。他の削除系ボタン（設定の信頼済みオリジン削除・リレー削除等のテキストボタン）も同じゴミ箱アイコンに揃える。
 - [ ] **秘密鍵紛失時の回復方法についての説明を追加する**
 - [ ] **Windows（Edge）での動作をテストする**
 - [ ] **Windows についての注意書きを追加する**
