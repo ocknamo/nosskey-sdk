@@ -1,6 +1,6 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
-import { peekNosskeyManager } from '../services/nosskey-manager.service.js';
+import { peekNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
 
 /**
  * 退避用アカウント登録簿のストレージキー。SDK が current 鍵を書く
@@ -21,20 +21,6 @@ const LEGACY_SALT = '6e6f7374722d6b6579';
  */
 function normalizeSalt(salt?: string): string {
   return !salt || salt === LEGACY_SALT ? STANDARD_SALT : salt;
-}
-
-/**
- * 登録簿の永続化先 Storage を解決する。`app-state.ts` の
- * `resolveSettingsStorage()` と同じく、SDK マネージャが Storage Access API
- * グラント後に保持するハンドル（current 鍵 `nosskey_pwk` の保存先と同一参照）を
- * 使う。これにより cookie ミラー込みで埋め込み iframe の整合が取れる。
- * `peekNosskeyManager()` はマネージャ未構築なら null を返し新規構築しないため、
- * モジュール初期化中に呼ばれても安全。
- */
-function resolveStorage(): Storage | null {
-  const handle = peekNosskeyManager()?.getStorageOptions().storage;
-  if (handle) return handle;
-  return typeof window !== 'undefined' ? window.localStorage : null;
 }
 
 /** 保存値が NostrKeyInfo の形をしているかの防御的チェック。 */
@@ -60,7 +46,7 @@ function normalizeEntry(keyInfo: NostrKeyInfo): NostrKeyInfo {
 }
 
 function load(): NostrKeyInfo[] {
-  const raw = resolveStorage()?.getItem(ACCOUNTS_KEY);
+  const raw = resolveStorageHandle()?.getItem(ACCOUNTS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -77,7 +63,7 @@ function load(): NostrKeyInfo[] {
 
 function persist(list: NostrKeyInfo[]): void {
   try {
-    resolveStorage()?.setItem(ACCOUNTS_KEY, JSON.stringify(list));
+    resolveStorageHandle()?.setItem(ACCOUNTS_KEY, JSON.stringify(list));
   } catch (e) {
     console.error('Failed to persist accounts', e);
   }

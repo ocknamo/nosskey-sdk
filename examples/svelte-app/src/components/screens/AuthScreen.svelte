@@ -3,7 +3,7 @@ import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { initAccounts, upsertAccount } from '../../store/accounts.js';
+import { initAccounts } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import SavedAccounts from '../SavedAccounts.svelte';
@@ -107,19 +107,13 @@ async function importExisting() {
     const keyInfo = await keyManager.importNostrKey(seckey, newCredentialId, {
       username: username || undefined,
     });
-    keyManager.setCurrentKeyInfo(keyInfo);
-    upsertAccount(keyInfo);
 
     // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
     // 入力欄も即座にクリアして DOM 上に nsec を残さない。
     seckey.fill(0);
     nsecInput = '';
 
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-    appState.markLoggedInBefore();
-    appState.currentScreen.set('account');
+    await appState.loginWith(keyInfo);
   } catch (error) {
     seckey.fill(0);
     console.error('nsec インポートエラー:', error);
@@ -142,15 +136,7 @@ async function login(credentialId?: string) {
         })
       : await keyManager.createNostrKey();
 
-    keyManager.setCurrentKeyInfo(keyInfo);
-    upsertAccount(keyInfo);
-
-    const pubKey = await keyManager.getPublicKey();
-    appState.publicKey.set(pubKey);
-    appState.isLoggedIn.set(true);
-    appState.markLoggedInBefore();
-
-    appState.currentScreen.set('account');
+    await appState.loginWith(keyInfo);
   } catch (error) {
     console.error('ログインエラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;

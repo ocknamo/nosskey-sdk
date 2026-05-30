@@ -112,6 +112,20 @@ export function peekNosskeyManager(): NosskeyManager | null {
   return instance;
 }
 
+/**
+ * 永続化に使う Storage ハンドルを解決する。マネージャが Storage Access API
+ * グラント後に保持するハンドル（SDK が current 鍵 `nosskey_pwk` を書く先と同一
+ * 参照）を優先し、未グラント / スタンドアロンでは `window.localStorage`
+ * （ファーストパーティ）を使う。設定・リレー・アカウント登録簿が同じハンドルへ
+ * 揃うよう、解決ロジックをここに一元化する。`peekNosskeyManager()` 利用のため
+ * モジュール初期化中に呼ばれてもマネージャを新規構築しない。
+ */
+export function resolveStorageHandle(): Storage | null {
+  const handle = peekNosskeyManager()?.getStorageOptions().storage;
+  if (handle) return handle;
+  return typeof window !== 'undefined' ? window.localStorage : null;
+}
+
 // インスタンスのリセット（主にテスト用）。`getCookieStorage()` のシングルトンも
 // 同時にクリアし、テストで CookieStorage を別 fake document に差し替えたい
 // ケースで前テストの残骸が混入しないようにする。

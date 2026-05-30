@@ -46,7 +46,7 @@ async function reloginTo(account: NostrKeyInfo) {
   reloginPressedPubkey = account.pubkey;
   await new Promise((resolve) => setTimeout(resolve, RELOGIN_FEEDBACK_MS));
   try {
-    await appState.relogin(account);
+    await appState.loginWith(account);
   } catch (error) {
     console.error('再ログインエラー:', error);
     onError?.(
