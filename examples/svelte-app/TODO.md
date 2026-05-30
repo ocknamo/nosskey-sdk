@@ -18,7 +18,7 @@
 
 ## P1: リリース前に強く推奨
 
-- [ ] **ログアウト後の wrap モード鍵で再ログインできるようにする** — 現状 `app-state.ts:342` のログアウト処理が `NosskeyManager.clearStoredKeyInfo()` を呼んで localStorage 上の NostrKeyInfo を物理削除しており、wrap モード鍵では `wrapped.payload` が失われて再ログイン不能になる（新規登録からやり直しになる）。設計案: 「ログアウト = メモリのみ消去（UI を未認証状態に戻すが localStorage は残す）」「アカウント削除 = 物理削除（明示的なボタン）」の 2 操作に分離。AuthScreen は `hasKeyInfo()` true なら登録/インポートタブの上に「保存済み鍵で再ログイン（UV 1 回）」エントリポイントを表示し、`setCurrentKeyInfo(loadedKeyInfo)` で復元する。再ログインの内部処理は既存 `#getSecretKey` 経路が wrap/直接モード両対応なので追加 SDK API は不要。影響ファイル: `examples/svelte-app/src/store/app-state.ts:342`、`examples/svelte-app/src/components/screens/AuthScreen.svelte:30-44`。
+該当項目なし — 「ログアウト後の wrap モード鍵で再ログイン」はアーカイブ参照（PR #94 で対応済み）。
 
 ## P2: 中期で取り組む
 
@@ -36,6 +36,9 @@
 ---
 
 ## アーカイブ
+
+### P1（リリース前推奨）
+- [x] **ログアウト後の wrap モード鍵で再ログインできるようにする** — PR #94 で対応。ログアウトを「current ポインタ（`nosskey_pwk`）＋派生キャッシュのみ消去」に変更し、別キー `nosskey_accounts` のアプリ内マルチアカウント登録簿（`store/accounts.ts`: upsert/remove/list ＋ salt 正規化 ＋ 既存 current 鍵の一度きり移行）は保持するようにした。これにより wrap モード鍵（暗号化 nsec が localStorage にしか無い）も失われず再ログイン可能。`logout()` 後は `hasKeyInfo()` が false になり無言の自動ログインを防止。`loginWith()`（新規作成 / nsec インポート / KeyInfo ファイルインポート / 保存済みアカウント再ログインの共通活性化経路）で復元。`SavedAccounts.svelte` がログインタブ上部に保存済みアカウント一覧（再ログイン＋5秒キャンセル可能な削除）を表示。影響ファイル: `store/accounts.ts`（新規）・`store/app-state.ts`・`components/SavedAccounts.svelte`（新規）・`components/screens/AuthScreen.svelte`・`components/settings/ImportKeyInfo.svelte`。`accounts.spec.ts` 追加。
 
 ### 最高優先度（SDK関連・クリティカルな問題）
 - [x] シークレットキーのキャッシュ問題を修正する。（TTL期間内でも毎回認証が必要になっている問題）
