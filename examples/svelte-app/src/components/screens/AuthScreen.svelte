@@ -1,6 +1,8 @@
 <script lang="ts">
 import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import type { NostrKeyInfo } from 'nosskey-sdk';
+import { onDestroy } from 'svelte';
+import { slide } from 'svelte/transition';
 import DeleteIcon from '../../assets/delete-icon.svg';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
@@ -28,8 +30,12 @@ let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'regist
 let creationMethod = $state<CreationMethod>('new');
 let nsecInput = $state('');
 let nsecError = $state('');
-// 削除確認中のアカウント pubkey（2 段クリック確認用）。
+// 削除確認中（確認ボタンを展開中）のアカウント pubkey。
 let confirmDeletePubkey = $state('');
+// 「本当に削除する」押下後、5 秒のキャンセル猶予中のアカウント pubkey。
+let pendingDeletePubkey = $state('');
+let deleteTimer: ReturnType<typeof setTimeout> | null = null;
+const DELETE_DELAY_MS = 5000;
 
 const keyManager = getNosskeyManager();
 
@@ -185,6 +191,33 @@ async function reloginTo(account: NostrKeyInfo) {
   }
 }
 
+// ゴミ箱アイコン押下: 確認ボタンを展開する。
+function startConfirm(account: NostrKeyInfo) {
+  cancelDelete();
+  confirmDeletePubkey = account.pubkey;
+}
+
+// 「本当に削除する」押下: 5 秒のキャンセル猶予を置いてから実際に削除する。
+function startPendingDelete(account: NostrKeyInfo) {
+  pendingDeletePubkey = account.pubkey;
+  deleteTimer = setTimeout(() => {
+    deleteTimer = null;
+    pendingDeletePubkey = '';
+    confirmDeletePubkey = '';
+    doDelete(account);
+  }, DELETE_DELAY_MS);
+}
+
+// 確認 / 猶予中のキャンセル: 進行中のタイマーを止めて状態を戻す。
+function cancelDelete() {
+  if (deleteTimer) {
+    clearTimeout(deleteTimer);
+    deleteTimer = null;
+  }
+  pendingDeletePubkey = '';
+  confirmDeletePubkey = '';
+}
+
 function doDelete(account: NostrKeyInfo) {
   // 一覧はログアウト中（current=null）にのみ描画されるため通常この分岐は通らないが、
   // 防御的に: 削除対象が current 鍵なら、ポインタも消してログイン状態をリセットする。
@@ -194,8 +227,12 @@ function doDelete(account: NostrKeyInfo) {
     appState.isLoggedIn.set(false);
   }
   removeAccount(account.pubkey);
-  confirmDeletePubkey = '';
 }
+
+// アンマウント時に未発火のタイマーを破棄し、画面遷移後の遅延削除を防ぐ。
+onDestroy(() => {
+  if (deleteTimer) clearTimeout(deleteTimer);
+});
 
 function selectTab(tab: AuthTab) {
   activeTab = tab;
@@ -224,46 +261,53 @@ $effect(() => {
       <CardSection title={$i18n.t.auth.accounts.title}>
         <ul class="account-list">
           {#each $accounts as account (account.pubkey)}
-            <li class="account-row">
-              <button
-                type="button"
-                class="account-relogin"
-                onclick={() => reloginTo(account)}
-                disabled={isLoading}
-                title={$i18n.t.auth.accounts.relogin}
-              >
-                <span class="account-label">{accountLabel(account)}</span>
-                {#if account.username?.trim()}
-                  <span class="account-npub">{shortNpub(account.pubkey)}</span>
+            <li class="account-item">
+              <div class="account-row">
+                <button
+                  type="button"
+                  class="account-relogin"
+                  onclick={() => reloginTo(account)}
+                  disabled={isLoading}
+                  title={$i18n.t.auth.accounts.relogin}
+                >
+                  <span class="account-label">{accountLabel(account)}</span>
+                  {#if account.username?.trim()}
+                    <span class="account-npub">{shortNpub(account.pubkey)}</span>
+                  {/if}
+                </button>
+                {#if confirmDeletePubkey !== account.pubkey}
+                  <IconButton
+                    onclick={() => startConfirm(account)}
+                    title={$i18n.t.auth.accounts.delete}
+                    className="account-delete"
+                  >
+                    <img src={DeleteIcon} alt={$i18n.t.auth.accounts.delete} />
+                  </IconButton>
                 {/if}
-              </button>
+              </div>
               {#if confirmDeletePubkey === account.pubkey}
-                <div class="account-confirm">
+                <div class="account-confirm" transition:slide={{ duration: 200 }}>
                   <Button
                     variant="danger"
                     size="small"
                     fullWidth={false}
-                    onclick={() => doDelete(account)}
+                    disabled={pendingDeletePubkey === account.pubkey}
+                    onclick={() => startPendingDelete(account)}
                   >
+                    {#if pendingDeletePubkey === account.pubkey}
+                      <span class="btn-spinner" aria-hidden="true"></span>
+                    {/if}
                     {$i18n.t.auth.accounts.confirmDelete}
                   </Button>
                   <Button
                     variant="secondary"
                     size="small"
                     fullWidth={false}
-                    onclick={() => (confirmDeletePubkey = "")}
+                    onclick={cancelDelete}
                   >
                     {$i18n.t.auth.accounts.cancel}
                   </Button>
                 </div>
-              {:else}
-                <IconButton
-                  onclick={() => (confirmDeletePubkey = account.pubkey)}
-                  title={$i18n.t.auth.accounts.delete}
-                  className="account-delete"
-                >
-                  <img src={DeleteIcon} alt={$i18n.t.auth.accounts.delete} />
-                </IconButton>
               {/if}
             </li>
           {/each}
@@ -482,6 +526,12 @@ $effect(() => {
     gap: 8px;
   }
 
+  .account-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .account-row {
     display: flex;
     align-items: center;
@@ -525,7 +575,19 @@ $effect(() => {
 
   .account-confirm {
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .btn-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
 
   .auth-tabs {
