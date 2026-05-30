@@ -1,6 +1,7 @@
 <script lang="ts">
 import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import type { NostrKeyInfo } from 'nosskey-sdk';
+import DeleteIcon from '../../assets/delete-icon.svg';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -10,6 +11,7 @@ import { hexToNpub, isValidNsec, nsecToHex } from '../../utils/bech32-converter.
 import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
 import TabButton from '../ui/button/TabButton.svelte';
 
 type AuthTab = 'login' | 'register';
@@ -255,15 +257,13 @@ $effect(() => {
                   </Button>
                 </div>
               {:else}
-                <Button
-                  variant="secondary"
-                  size="small"
-                  fullWidth={false}
+                <IconButton
                   onclick={() => (confirmDeletePubkey = account.pubkey)}
                   title={$i18n.t.auth.accounts.delete}
+                  className="account-delete"
                 >
-                  {$i18n.t.auth.accounts.delete}
-                </Button>
+                  <img src={DeleteIcon} alt={$i18n.t.auth.accounts.delete} />
+                </IconButton>
               {/if}
             </li>
           {/each}
