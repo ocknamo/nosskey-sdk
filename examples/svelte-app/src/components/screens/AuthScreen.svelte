@@ -275,7 +275,8 @@ $effect(() => {
       <p>{$i18n.t.auth.loading}</p>
     </div>
   {:else}
-    {#if $accounts.length > 0}
+    {#snippet savedAccounts()}
+      {#if $accounts.length > 0}
       <CardSection title={$i18n.t.auth.accounts.title}>
         <ul class="account-list">
           {#each $accounts as account (account.pubkey)}
@@ -337,7 +338,8 @@ $effect(() => {
           {/each}
         </ul>
       </CardSection>
-    {/if}
+      {/if}
+    {/snippet}
 
     <div class="auth-tabs">
       <TabButton
@@ -357,6 +359,7 @@ $effect(() => {
     </div>
 
     {#if activeTab === "login"}
+      {@render savedAccounts()}
       <CardSection title={$i18n.t.auth.tabLogin}>
         {#snippet titleAside()}
           <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
