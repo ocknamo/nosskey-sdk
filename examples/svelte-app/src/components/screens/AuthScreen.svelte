@@ -150,8 +150,12 @@ async function login(credentialId?: string) {
   errorMessage = '';
 
   try {
+    // 新規作成パスキー（credentialId あり）では入力中のユーザー名を keyInfo へ
+    // 反映する。これが無いと一覧ラベルが npub に退行する（import 経路と非対称だった）。
     const keyInfo = credentialId
-      ? await keyManager.createNostrKey(hexToBytes(credentialId))
+      ? await keyManager.createNostrKey(hexToBytes(credentialId), {
+          username: username.trim() || undefined,
+        })
       : await keyManager.createNostrKey();
 
     keyManager.setCurrentKeyInfo(keyInfo);
