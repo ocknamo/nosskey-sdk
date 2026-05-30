@@ -185,6 +185,9 @@ function accountLabel(account: NostrKeyInfo): string {
 }
 
 async function reloginTo(account: NostrKeyInfo) {
+  // 遅延フィードバック中はボタンが disabled にならないため、再入で relogin が
+  // 二重キューされ current 鍵が競合しうる。多重押下をここでガードする。
+  if (reloginPressedPubkey !== '' || isLoading) return;
   errorMessage = '';
   // 即座にログインすると押下フィードバックが見えないため、少しだけ間を置く。
   reloginPressedPubkey = account.pubkey;
@@ -315,7 +318,7 @@ $effect(() => {
                   >
                     {#if pendingDeletePubkey === account.pubkey}
                       <span class="btn-spinner" aria-hidden="true"></span>
-                      {$i18n.t.auth.accounts.confirmDelete}（{deleteRemaining}）
+                      {$i18n.t.auth.accounts.confirmDelete} ({deleteRemaining})
                     {:else}
                       {$i18n.t.auth.accounts.confirmDelete}
                     {/if}
