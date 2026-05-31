@@ -40,9 +40,6 @@ export interface TranslationData {
     loading: string;
     username: string;
     usernamePlaceholder: string;
-    firstLogin: string;
-    passkeyCreated: string;
-    proceedWithLogin: string;
     tabLogin: string;
     tabRegister: string;
     usernameTip: string;
@@ -293,9 +290,6 @@ export const ja: TranslationData = {
     subtitle: 'Nostrアカウントをパスキーで',
     createNew: '作成',
     loginWith: 'パスキーでログイン',
-    firstLogin: '初回ログイン',
-    passkeyCreated: 'パスキーが作成されました',
-    proceedWithLogin: 'ログインして続ける',
     loading: 'ロード中...',
     username: 'ユーザー名',
     usernamePlaceholder: 'ユーザー名を入力',
@@ -569,9 +563,6 @@ export const en: TranslationData = {
     loading: 'Loading...',
     username: 'Username (Optional)',
     usernamePlaceholder: 'Enter username',
-    firstLogin: 'First Login',
-    passkeyCreated: 'Passkey Created Successfully',
-    proceedWithLogin: 'Proceed with Login',
     tabLogin: 'Login',
     tabRegister: 'Sign Up',
     usernameTip: 'Used as the display name for your passkey. Optional — you can leave it blank.',

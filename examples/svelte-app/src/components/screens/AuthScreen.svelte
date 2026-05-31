@@ -1,5 +1,5 @@
 <script lang="ts">
-import { bytesToHex, hexToBytes } from 'nosskey-sdk';
+import { hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -18,8 +18,6 @@ let isLoading = $state(false);
 let errorMessage = $state('');
 // biome-ignore lint: svelte
 let username = $state('');
-let createdCredentialId = $state('');
-let isPasskeyCreated = $state(false);
 let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'register');
 let creationMethod = $state<CreationMethod>('new');
 let nsecInput = $state('');
@@ -51,15 +49,22 @@ async function createNew() {
   errorMessage = '';
 
   try {
+    // createPasskey（WebAuthn create）で標準 salt の PRF が #pendingPrfByCredId に
+    // キャッシュされるため、続く createNostrKey はそれを消費して 2 回目の get()（UV）を
+    // 省ける。nsec インポート経路（createPasskey → importNostrKey）と対称に、create と
+    // 鍵生成・ログインを 1 ボタン・1 UV に統合する。create 時に PRF を返さないブラウザでは
+    // createNostrKey 内で getPrfSecret() に自動フォールバックする（その場合のみ追加 UV）。
     const newCredentialId = await keyManager.createPasskey({
       user: {
         name: username || 'user@nosskey',
         displayName: username || 'user@nosskey',
       },
     });
+    const keyInfo = await keyManager.createNostrKey(newCredentialId, {
+      username: username.trim() || undefined,
+    });
 
-    createdCredentialId = bytesToHex(newCredentialId);
-    isPasskeyCreated = true;
+    await appState.loginWith(keyInfo);
   } catch (error) {
     console.error('パスキー作成エラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
@@ -103,7 +108,7 @@ async function importExisting() {
       },
     });
     const keyInfo = await keyManager.importNostrKey(seckey, newCredentialId, {
-      username: username || undefined,
+      username: username.trim() || undefined,
     });
 
     // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
@@ -121,18 +126,14 @@ async function importExisting() {
   }
 }
 
-async function login(credentialId?: string) {
+async function login() {
   isLoading = true;
   errorMessage = '';
 
   try {
-    // 新規作成パスキー（credentialId あり）では入力中のユーザー名を keyInfo へ
-    // 反映する。これが無いと一覧ラベルが npub に退行する（import 経路と非対称だった）。
-    const keyInfo = credentialId
-      ? await keyManager.createNostrKey(hexToBytes(credentialId), {
-          username: username.trim() || undefined,
-        })
-      : await keyManager.createNostrKey();
+    // ログインタブ: credentialId を渡さず、ユーザーに既存パスキーを選択させて get()/PRF で
+    // 鍵を導出する（resident key 前提）。新規作成は createNew() に統合済み。
+    const keyInfo = await keyManager.createNostrKey();
 
     await appState.loginWith(keyInfo);
   } catch (error) {
@@ -208,98 +209,69 @@ $effect(() => {
       </div>
     {:else}
       <div class="tab-panel">
-        {#if !isPasskeyCreated}
-          <div class="username-input">
-            <div class="username-label-row">
-              <label for="username">{$i18n.t.auth.username}</label>
-              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
-            </div>
-            <input
-              id="username"
-              type="text"
-              bind:value={username}
-              placeholder={$i18n.t.auth.usernamePlaceholder}
-              disabled={isLoading}
-            />
+        <div class="username-input">
+          <div class="username-label-row">
+            <label for="username">{$i18n.t.auth.username}</label>
+            <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
           </div>
+          <input
+            id="username"
+            type="text"
+            bind:value={username}
+            placeholder={$i18n.t.auth.usernamePlaceholder}
+            disabled={isLoading}
+          />
+        </div>
 
-          {#if creationMethod === "new"}
-            <Button onclick={createNew} disabled={isLoading} size="large">
-              {$i18n.t.auth.createNew}
-            </Button>
-            <div class="method-link-row">
-              <button
-                type="button"
-                class="method-link"
-                onclick={showImport}
-                disabled={isLoading}
-              >
-                {$i18n.t.auth.methodImport}
-              </button>
-            </div>
-          {:else}
-            <div class="nsec-input">
-              <div class="nsec-label-row">
-                <label for="nsec">{$i18n.t.auth.nsecLabel}</label>
-                <HelpTip text={$i18n.t.auth.nsecTip} placement="start" />
-              </div>
-              <input
-                id="nsec"
-                type="password"
-                autocomplete="off"
-                spellcheck="false"
-                bind:value={nsecInput}
-                placeholder={$i18n.t.auth.nsecPlaceholder}
-                disabled={isLoading}
-              />
-              {#if nsecError}
-                <div class="error-message">{nsecError}</div>
-              {/if}
-            </div>
-            <Button
-              onclick={importExisting}
-              disabled={isLoading || !nsecInput.trim()}
-              size="large"
+        {#if creationMethod === "new"}
+          <Button onclick={createNew} disabled={isLoading} size="large">
+            {$i18n.t.auth.createNew}
+          </Button>
+          <div class="method-link-row">
+            <button
+              type="button"
+              class="method-link"
+              onclick={showImport}
+              disabled={isLoading}
             >
-              {$i18n.t.auth.importNsec}
-            </Button>
-            <div class="method-link-row">
-              <button
-                type="button"
-                class="method-link"
-                onclick={showNew}
-                disabled={isLoading}
-              >
-                {$i18n.t.common.back}
-              </button>
-            </div>
-          {/if}
+              {$i18n.t.auth.methodImport}
+            </button>
+          </div>
         {:else}
-          <div class="username-input">
-            <div class="username-label-row">
-              <label for="username">{$i18n.t.auth.username}</label>
-              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+          <div class="nsec-input">
+            <div class="nsec-label-row">
+              <label for="nsec">{$i18n.t.auth.nsecLabel}</label>
+              <HelpTip text={$i18n.t.auth.nsecTip} placement="start" />
             </div>
             <input
-              id="username"
-              type="text"
-              bind:value={username}
-              placeholder={$i18n.t.auth.usernamePlaceholder}
-              disabled
-            />
-          </div>
-          <div class="success-message">
-            <div class="success-icon">✅</div>
-            <h4>{$i18n.t.auth.passkeyCreated}</h4>
-            <p>{$i18n.t.auth.firstLogin}</p>
-            <Button
-              variant="success"
-              onclick={() => login(createdCredentialId)}
+              id="nsec"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              bind:value={nsecInput}
+              placeholder={$i18n.t.auth.nsecPlaceholder}
               disabled={isLoading}
-              className="success-action-button"
+            />
+            {#if nsecError}
+              <div class="error-message">{nsecError}</div>
+            {/if}
+          </div>
+          <Button
+            onclick={importExisting}
+            disabled={isLoading || !nsecInput.trim()}
+            size="large"
+          >
+            {$i18n.t.auth.importNsec}
+          </Button>
+          <div class="method-link-row">
+            <button
+              type="button"
+              class="method-link"
+              onclick={showNew}
+              disabled={isLoading}
             >
-              {$i18n.t.auth.proceedWithLogin}
-            </Button>
+              {$i18n.t.common.back}
+            </button>
           </div>
         {/if}
       </div>
@@ -481,30 +453,6 @@ $effect(() => {
   .username-input input:focus {
     outline: none;
     border-color: var(--color-button-primary);
-  }
-
-  .success-message {
-    padding: 20px;
-    background-color: var(--color-success-bg);
-    border: 2px solid var(--color-button-success);
-    border-radius: 8px;
-    text-align: center;
-    margin: 16px 0;
-  }
-
-  .success-message h4 {
-    color: var(--color-button-success);
-    margin: 8px 0;
-    font-size: 1.1rem;
-  }
-
-  .success-message p {
-    margin: 8px 0 16px 0;
-    color: var(--color-text-secondary);
-  }
-
-  .success-icon {
-    font-size: 1.2rem;
   }
 
   .error-message {
