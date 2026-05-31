@@ -2,13 +2,13 @@
 import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { serializeKeyInfoForExport } from '../../utils/key-info-export.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
 
 // KeyInfoエクスポート関連の状態変数
 let showExportSection = $state(false);
-let isExporting = $state(false);
 let exportedKeyInfo = $state('');
 let exportError = $state('');
 let showCopiedMessage = $state(false);
@@ -27,27 +27,19 @@ function toggleExportKeySection() {
 }
 
 // 鍵情報をエクスポート
-async function exportKeyInfo() {
+function exportKeyInfo() {
   // 鍵情報が存在するか確認
   const currentKeyInfo = keyManager.getCurrentKeyInfo();
   if (!currentKeyInfo) {
+    exportedKeyInfo = '';
     exportError = $i18n.t.settings.exportKeyInfo.noCurrentKeyInfo;
     return;
   }
 
-  isExporting = true;
-  exportedKeyInfo = '';
+  // NostrKeyInfo は string フィールドのみで構成され JSON 直列化は失敗しないため
+  // try/catch は不要。インポート往復の正当性は key-info-export.spec.ts で担保。
   exportError = '';
-
-  try {
-    // 鍵情報をJSON文字列に変換
-    exportedKeyInfo = JSON.stringify(currentKeyInfo, null, 2);
-  } catch (error) {
-    console.error('KeyInfoエクスポートエラー:', error);
-    exportError = `エクスポートエラー: ${error instanceof Error ? error.message : String(error)}`;
-  } finally {
-    isExporting = false;
-  }
+  exportedKeyInfo = serializeKeyInfoForExport(currentKeyInfo);
 }
 
 // クリップボードにコピー
@@ -101,10 +93,8 @@ function saveKeyInfoToFile() {
         {$i18n.t.settings.exportKeyInfo.restoreWarning}
       </p>
 
-      <Button onclick={exportKeyInfo} disabled={isExporting}>
-        {isExporting
-          ? $i18n.t.common.loading
-          : $i18n.t.settings.exportKeyInfo.exportButton}
+      <Button onclick={exportKeyInfo}>
+        {$i18n.t.settings.exportKeyInfo.exportButton}
       </Button>
 
       {#if exportedKeyInfo}

@@ -308,8 +308,8 @@ export const ja: TranslationData = {
     registerTip:
       'パスキーは生体認証や端末のセキュリティ機能を使った安全な認証方法です。お使いの端末が直接対応していなくても、QRコードや通知を使ってスマートフォンなどを認証器として利用できます。',
     usernameTip: 'パスキーの表示名として使われます。任意項目で、未入力でも問題ありません。',
-    methodNew: 'パスキーを新規作成',
-    methodImport: '既存nsecをインポート（ベータ版）',
+    methodNew: '新規作成',
+    methodImport: 'インポート（ベータ版）',
     nsecLabel: '既存の nsec',
     nsecPlaceholder: 'nsec1...',
     nsecTip:
@@ -585,8 +585,8 @@ export const en: TranslationData = {
     registerTip:
       "Passkeys are a secure authentication method using biometrics or your device's security features. Even if your device doesn't directly support it, you can use your smartphone as an authenticator via QR code or browser notification.",
     usernameTip: 'Used as the display name for your passkey. Optional — you can leave it blank.',
-    methodNew: 'Create New Passkey',
-    methodImport: 'Import Existing nsec (Beta)',
+    methodNew: 'New',
+    methodImport: 'Import (Beta)',
     nsecLabel: 'Existing nsec',
     nsecPlaceholder: 'nsec1...',
     nsecTip:

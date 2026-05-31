@@ -30,8 +30,6 @@
 
 ## P3: 長期・将来
 
-- [ ] **新規登録タブのラベルを簡潔にする** — 「パスキーを新規作成」「既存 nsec をインポート（ベータ版）」が冗長。「新規作成」「インポート（ベータ版）」程度に短縮する（`AuthScreen.svelte` の `methodNew` / `methodImport` タブ、i18n ja/en）。
-- [ ] **削除ボタンをゴミ箱アイコンに統一する** — PR #94 で保存済みアカウント一覧の削除は Material のゴミ箱アイコン（`IconButton` + `delete-icon.svg`）化済み。他の削除系ボタン（設定の信頼済みオリジン削除・リレー削除等のテキストボタン）も同じゴミ箱アイコンに揃える。
 - [ ] **秘密鍵紛失時の回復方法についての説明を追加する**
 - [ ] **Windows（Edge）での動作をテストする**
 - [ ] **Windows についての注意書きを追加する**
@@ -42,7 +40,11 @@
 ## アーカイブ
 
 ### P2（中期）
-- [x] **「鍵情報をエクスポート」が動作しないバグの修正** — `ExportKeyInfoComponent.svelte:44` で `JSON.stringify(exportKeyInfo, ...)` と **関数 `exportKeyInfo` 自身**を直列化していたのを、32 行目で取得済みの `currentKeyInfo`（`NostrKeyInfo`）を直列化するよう修正。インポート側（`ImportKeyInfo.svelte`）は `JSON.parse` → `isNostrKeyInfo` 検証 → `loginWith` 経路のため往復成立。
+- [x] **「鍵情報をエクスポート」が動作しないバグの修正** — `ExportKeyInfoComponent.svelte:44` で `JSON.stringify(exportKeyInfo, ...)` と **関数 `exportKeyInfo` 自身**を直列化していたのを、32 行目で取得済みの `currentKeyInfo`（`NostrKeyInfo`）を直列化するよう修正。直列化ロジックを純粋関数 `utils/key-info-export.ts`（`serializeKeyInfoForExport`）へ切り出し、`isNostrKeyInfo` との往復検証 spec を追加して回帰防止。インポート側（`ImportKeyInfo.svelte`）は `JSON.parse` → `isNostrKeyInfo` 検証 → `loginWith` 経路のため往復成立。
+
+### P3（長期・将来）
+- [x] **新規登録タブのラベルを簡潔にする** — `methodNew`「パスキーを新規作成」→「新規作成」、`methodImport`「既存nsecをインポート（ベータ版）」→「インポート（ベータ版）」に短縮（ja/en）。
+- [x] **削除ボタンをゴミ箱アイコンに統一する** — 設定のリレー削除（`RelaySettings.svelte`）・信頼済みオリジン削除（`TrustedOriginsSettings.svelte` の origin 全削除／メソッド別削除）のテキストボタンを、`SavedAccounts.svelte` と同じ `IconButton` + `delete-icon.svg` に統一。
 
 ### P1（リリース前推奨）
 - [x] **ログアウト後の wrap モード鍵で再ログインできるようにする** — PR #94 で対応。ログアウトを「current ポインタ（`nosskey_pwk`）＋派生キャッシュのみ消去」に変更し、別キー `nosskey_accounts` のアプリ内マルチアカウント登録簿（`store/accounts.ts`: upsert/remove/list ＋ salt 正規化 ＋ 既存 current 鍵の一度きり移行）は保持するようにした。これにより wrap モード鍵（暗号化 nsec が localStorage にしか無い）も失われず再ログイン可能。`logout()` 後は `hasKeyInfo()` が false になり無言の自動ログインを防止。`loginWith()`（新規作成 / nsec インポート / KeyInfo ファイルインポート / 保存済みアカウント再ログインの共通活性化経路）で復元。`SavedAccounts.svelte` がログインタブ上部に保存済みアカウント一覧（再ログイン＋5秒キャンセル可能な削除）を表示。影響ファイル: `store/accounts.ts`（新規）・`store/app-state.ts`・`components/SavedAccounts.svelte`（新規）・`components/screens/AuthScreen.svelte`・`components/settings/ImportKeyInfo.svelte`。`accounts.spec.ts` 追加。
