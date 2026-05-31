@@ -68,7 +68,7 @@ npm run dev
 
 ## TODO
 
-詳細なTODOリストは[TODO.md](TODO.md)を参照してください。
+詳細なTODOリストはリポジトリ全体で一元管理している[docs/todo.md](../../docs/todo.md)を参照してください（サンプルアプリ固有の項目も「サンプルアプリ（svelte-app）」小見出しに統合済み）。
 
 
 ## ログイン状態の定義
