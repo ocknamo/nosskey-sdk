@@ -7,7 +7,6 @@ import { initAccounts } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import SavedAccounts from '../SavedAccounts.svelte';
-import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
 import TabButton from '../ui/button/TabButton.svelte';
@@ -22,7 +21,6 @@ let username = $state('');
 let createdCredentialId = $state('');
 let isPasskeyCreated = $state(false);
 let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'register');
-// biome-ignore lint: svelte
 let creationMethod = $state<CreationMethod>('new');
 let nsecInput = $state('');
 let nsecError = $state('');
@@ -148,6 +146,22 @@ async function login(credentialId?: string) {
 function selectTab(tab: AuthTab) {
   activeTab = tab;
   errorMessage = '';
+  // タブ切替でも入力途中の nsec を state/DOM に残さない（「戻る」経路と同じ破棄方針）。
+  showNew();
+}
+
+function showImport() {
+  creationMethod = 'import';
+  errorMessage = '';
+}
+
+function showNew() {
+  // 新規作成モードへ戻す共通処理（「戻る」リンク・タブ切替の双方から呼ぶ）。
+  // 入力途中の nsec を state/DOM から確実に消し、秘密鍵を残さない。
+  creationMethod = 'new';
+  nsecInput = '';
+  nsecError = '';
+  errorMessage = '';
 }
 
 $effect(() => {
@@ -187,115 +201,108 @@ $effect(() => {
 
     {#if activeTab === "login"}
       <SavedAccounts onError={(message) => (errorMessage = message)} />
-      <CardSection title={$i18n.t.auth.tabLogin}>
-        {#snippet titleAside()}
-          <HelpTip text={$i18n.t.auth.loginTip} placement="end" />
-        {/snippet}
-        <div class="tab-panel">
-          <Button onclick={() => login()} disabled={isLoading} size="large">
-            {$i18n.t.auth.loginWith}
-          </Button>
-        </div>
-      </CardSection>
+      <div class="tab-panel">
+        <Button onclick={() => login()} disabled={isLoading} size="large">
+          {$i18n.t.auth.loginWith}
+        </Button>
+      </div>
     {:else}
-      <CardSection title={$i18n.t.auth.tabRegister}>
-        {#snippet titleAside()}
-          <HelpTip text={$i18n.t.auth.registerTip} placement="end" />
-        {/snippet}
-        <div class="tab-panel">
-          {#if !isPasskeyCreated}
-            <div class="creation-method-selector">
-              <TabButton
-                active={creationMethod === "new"}
-                onclick={() => (creationMethod = "new")}
-                className="creation-method-tab"
-              >
-                {$i18n.t.auth.methodNew}
-              </TabButton>
-              <TabButton
-                active={creationMethod === "import"}
-                onclick={() => (creationMethod = "import")}
-                className="creation-method-tab"
+      <div class="tab-panel">
+        {#if !isPasskeyCreated}
+          <div class="username-input">
+            <div class="username-label-row">
+              <label for="username">{$i18n.t.auth.username}</label>
+              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+            </div>
+            <input
+              id="username"
+              type="text"
+              bind:value={username}
+              placeholder={$i18n.t.auth.usernamePlaceholder}
+              disabled={isLoading}
+            />
+          </div>
+
+          {#if creationMethod === "new"}
+            <Button onclick={createNew} disabled={isLoading} size="large">
+              {$i18n.t.auth.createNew}
+            </Button>
+            <div class="method-link-row">
+              <button
+                type="button"
+                class="method-link"
+                onclick={showImport}
+                disabled={isLoading}
               >
                 {$i18n.t.auth.methodImport}
-              </TabButton>
+              </button>
             </div>
-
-            <div class="username-input">
-              <div class="username-label-row">
-                <label for="username">{$i18n.t.auth.username}</label>
-                <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
-              </div>
-              <input
-                id="username"
-                type="text"
-                bind:value={username}
-                placeholder={$i18n.t.auth.usernamePlaceholder}
-                disabled={isLoading}
-              />
-            </div>
-
-            {#if creationMethod === "new"}
-              <Button onclick={createNew} disabled={isLoading} size="large">
-                {$i18n.t.auth.createNew}
-              </Button>
-            {:else}
-              <div class="nsec-input">
-                <div class="nsec-label-row">
-                  <label for="nsec">{$i18n.t.auth.nsecLabel}</label>
-                  <HelpTip text={$i18n.t.auth.nsecTip} placement="start" />
-                </div>
-                <input
-                  id="nsec"
-                  type="password"
-                  autocomplete="off"
-                  spellcheck="false"
-                  bind:value={nsecInput}
-                  placeholder={$i18n.t.auth.nsecPlaceholder}
-                  disabled={isLoading}
-                />
-                {#if nsecError}
-                  <div class="error-message">{nsecError}</div>
-                {/if}
-              </div>
-              <Button
-                onclick={importExisting}
-                disabled={isLoading || !nsecInput.trim()}
-                size="large"
-              >
-                {$i18n.t.auth.importNsec}
-              </Button>
-            {/if}
           {:else}
-            <div class="username-input">
-              <div class="username-label-row">
-                <label for="username">{$i18n.t.auth.username}</label>
-                <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+            <div class="nsec-input">
+              <div class="nsec-label-row">
+                <label for="nsec">{$i18n.t.auth.nsecLabel}</label>
+                <HelpTip text={$i18n.t.auth.nsecTip} placement="start" />
               </div>
               <input
-                id="username"
-                type="text"
-                bind:value={username}
-                placeholder={$i18n.t.auth.usernamePlaceholder}
-                disabled
-              />
-            </div>
-            <div class="success-message">
-              <div class="success-icon">✅</div>
-              <h4>{$i18n.t.auth.passkeyCreated}</h4>
-              <p>{$i18n.t.auth.firstLogin}</p>
-              <Button
-                variant="success"
-                onclick={() => login(createdCredentialId)}
+                id="nsec"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                bind:value={nsecInput}
+                placeholder={$i18n.t.auth.nsecPlaceholder}
                 disabled={isLoading}
-                className="success-action-button"
+              />
+              {#if nsecError}
+                <div class="error-message">{nsecError}</div>
+              {/if}
+            </div>
+            <Button
+              onclick={importExisting}
+              disabled={isLoading || !nsecInput.trim()}
+              size="large"
+            >
+              {$i18n.t.auth.importNsec}
+            </Button>
+            <div class="method-link-row">
+              <button
+                type="button"
+                class="method-link"
+                onclick={showNew}
+                disabled={isLoading}
               >
-                {$i18n.t.auth.proceedWithLogin}
-              </Button>
+                {$i18n.t.common.back}
+              </button>
             </div>
           {/if}
-        </div>
-      </CardSection>
+        {:else}
+          <div class="username-input">
+            <div class="username-label-row">
+              <label for="username">{$i18n.t.auth.username}</label>
+              <HelpTip text={$i18n.t.auth.usernameTip} placement="start" />
+            </div>
+            <input
+              id="username"
+              type="text"
+              bind:value={username}
+              placeholder={$i18n.t.auth.usernamePlaceholder}
+              disabled
+            />
+          </div>
+          <div class="success-message">
+            <div class="success-icon">✅</div>
+            <h4>{$i18n.t.auth.passkeyCreated}</h4>
+            <p>{$i18n.t.auth.firstLogin}</p>
+            <Button
+              variant="success"
+              onclick={() => login(createdCredentialId)}
+              disabled={isLoading}
+              className="success-action-button"
+            >
+              {$i18n.t.auth.proceedWithLogin}
+            </Button>
+          </div>
+        {/if}
+      </div>
     {/if}
   {/if}
 
@@ -385,22 +392,32 @@ $effect(() => {
     flex: 1;
   }
 
-  .creation-method-selector {
-    display: flex;
-    gap: 4px;
-    padding: 4px;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    margin: 0 0 20px 0;
-  }
-
-  .creation-method-selector :global(.creation-method-tab) {
-    flex: 1;
-  }
-
   .tab-panel {
     text-align: center;
+  }
+
+  .method-link-row {
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .method-link {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .method-link:hover:not(:disabled) {
+    color: var(--color-text-primary);
+  }
+
+  .method-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .nsec-input {
