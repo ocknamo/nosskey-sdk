@@ -1,9 +1,11 @@
 <script lang="ts">
 import type { RelayMap } from 'nosskey-iframe';
+import DeleteIcon from '../../assets/delete-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { loadRelays, saveRelays } from '../../services/relays-store.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
 
 let relays = $state<RelayMap>(loadRelays());
 let newRelayUrl = $state('');
@@ -86,14 +88,13 @@ function relayEntries(map: RelayMap): Array<[string, { read: boolean; write: boo
             />
             {$i18n.t.settings.relays.writeLabel}
           </label>
-          <Button
-            variant="danger"
-            size="small"
-            fullWidth={false}
+          <IconButton
             onclick={() => removeRelay(url)}
+            title={$i18n.t.settings.relays.removeButton}
+            className="delete-icon-btn"
           >
-            {$i18n.t.settings.relays.removeButton}
-          </Button>
+            <img src={DeleteIcon} alt={$i18n.t.settings.relays.removeButton} />
+          </IconButton>
         </li>
       {/each}
     </ul>

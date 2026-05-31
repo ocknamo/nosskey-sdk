@@ -1,8 +1,9 @@
 <script lang="ts">
+import DeleteIcon from '../../assets/delete-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { type PolicyKey, trustedOrigins } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
-import Button from '../ui/button/Button.svelte';
+import IconButton from '../ui/button/IconButton.svelte';
 
 function removeMethod(origin: string, method: PolicyKey) {
   if (!confirm($i18n.t.settings.trustedOrigins.confirmRemove)) return;
@@ -39,27 +40,31 @@ function methodLabel(method: PolicyKey): string {
         <li class="origin-item">
           <div class="origin-header">
             <code class="origin-url" title={entry.origin}>{entry.origin}</code>
-            <Button
-              variant="danger"
-              size="small"
-              fullWidth={false}
+            <IconButton
               onclick={() => removeAll(entry.origin)}
+              title={$i18n.t.settings.trustedOrigins.removeAllButton}
+              className="delete-icon-btn"
             >
-              {$i18n.t.settings.trustedOrigins.removeAllButton}
-            </Button>
+              <img
+                src={DeleteIcon}
+                alt={$i18n.t.settings.trustedOrigins.removeAllButton}
+              />
+            </IconButton>
           </div>
           <ul class="method-list">
             {#each entry.methods as method (method)}
               <li class="method-item">
                 <span class="method-label">{methodLabel(method)}</span>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  fullWidth={false}
+                <IconButton
                   onclick={() => removeMethod(entry.origin, method)}
+                  title={$i18n.t.settings.trustedOrigins.removeButton}
+                  className="delete-icon-btn"
                 >
-                  {$i18n.t.settings.trustedOrigins.removeButton}
-                </Button>
+                  <img
+                    src={DeleteIcon}
+                    alt={$i18n.t.settings.trustedOrigins.removeButton}
+                  />
+                </IconButton>
               </li>
             {/each}
           </ul>
