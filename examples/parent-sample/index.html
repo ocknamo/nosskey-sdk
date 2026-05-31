@@ -63,7 +63,9 @@
         <h2>4. Sign &amp; publish kind:1 note</h2>
         <label for="note">Note content</label>
         <textarea id="note">Hello from Nosskey iframe parent sample!</textarea>
-        <label for="relay-url" style="margin-top:12px;">Relay URL</label>
+        <label for="relay-url" style="margin-top:12px;"
+          >Relay URL (fallback — used only when getRelays() returns no write relay)</label
+        >
         <input id="relay-url" type="url" value="wss://relay.damus.io" />
         <div class="row">
           <button id="sign-publish" disabled>Sign &amp; publish</button>
@@ -121,7 +123,8 @@
           <strong>Send DM</strong> below encrypts the plaintext to the peer
           pubkey, builds a kind:4 event with a <code>p</code> tag, signs it
           through the iframe (consent dialog appears twice — once for encrypt,
-          once for sign), and publishes to the Relay URL from section 4.
+          once for sign), and publishes to the write relays from getRelays()
+          (falling back to the Relay URL in section 4).
         </p>
         <div class="row">
           <button id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
@@ -136,7 +139,8 @@
           throwaway ephemeral key. Compatible clients (Amethyst, 0xchat,
           Coracle, Damus chat) listen for kind:1059 and decrypt automatically.
           Two consent dialogs appear (NIP-44 encrypt for the seal, then sign
-          kind:13). The Relay URL is shared with section 4.
+          kind:13). Published to the write relays from getRelays(), falling
+          back to the Relay URL in section 4.
         </p>
         <label for="nip17-peer">Peer public key (hex or npub)</label>
         <div class="row">

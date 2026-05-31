@@ -11,7 +11,7 @@ import {
   nip44Encrypt,
   signAndPublishNote,
 } from './nips.js';
-import { publishEvent } from './relay.js';
+import { publishToRelays, resolvePublishRelays } from './relay.js';
 import { createToaster } from './toast.js';
 import {
   type LangChoice,
@@ -48,8 +48,35 @@ installModalVisibilityListener(modal);
 
 let client: NosskeyIframeClient | null = null;
 
-function publish(relayUrl: string, event: NostrEvent): Promise<void> {
-  return publishEvent(relayUrl, event, { log });
+/**
+ * Resolve the publish targets — the write relays advertised by the iframe via
+ * `getRelays()`, with the manually entered relay URL as a fallback — and
+ * publish the signed event to all of them. Rejects only when no relay is
+ * available or every relay rejected, so the calling action surfaces a failure.
+ */
+async function publish(
+  nostr: NostrProvider,
+  fallbackRelayUrl: string | null,
+  event: NostrEvent
+): Promise<void> {
+  const relays = await resolvePublishRelays({
+    getRelays: () => nostr.getRelays(),
+    fallbackRelayUrl,
+    log,
+  });
+  if (relays.length === 0) {
+    throw new Error(
+      'No relay to publish to: getRelays() returned none and the relay URL field is empty.'
+    );
+  }
+  const { succeeded, failed } = await publishToRelays(relays, event, { log });
+  for (const f of failed) {
+    log(`Publish to ${f.url} failed: ${f.error}`);
+  }
+  if (succeeded.length === 0) {
+    throw new Error(`Publish failed: all ${relays.length} relay(s) rejected or errored.`);
+  }
+  log(`Published to ${succeeded.length}/${relays.length} relay(s): ${succeeded.join(', ')}.`);
 }
 
 async function connect(): Promise<void> {
@@ -177,22 +204,18 @@ async function getRelays(): Promise<void> {
 
 async function signAndPublish(): Promise<void> {
   if (!window.nostr) return;
+  const nostr = window.nostr;
   const relay = parseRelayUrl(ui.relayUrl.value);
-  if (!relay.ok) {
-    log(`Sign aborted: ${relay.reason}.`);
-    toaster.show(`Sign aborted: ${relay.reason}`, 'error');
-    return;
-  }
+  const fallbackRelayUrl = relay.ok ? relay.value : null;
   const progress = toaster.show('Signing & publishing…', 'progress');
   const result = await signAndPublishNote({
-    nostr: window.nostr,
+    nostr,
     content: ui.note.value,
-    relayUrl: relay.value,
     log,
-    publish: (event) => publish(relay.value, event),
+    publish: (event) => publish(nostr, fallbackRelayUrl, event),
   });
   if (result.ok) {
-    progress.settle(`Note published to ${relay.value}.`, 'success');
+    progress.settle('Note published.', 'success');
   } else {
     progress.settle(`Sign & publish failed: ${result.error}`, 'error');
   }
@@ -308,6 +331,7 @@ async function runNip04Decrypt(): Promise<void> {
 
 async function runNip04SendDm(): Promise<void> {
   if (!window.nostr) return;
+  const nostr = window.nostr;
   const peer = parsePeerPubkey(ui.nip04Peer.value);
   if (!peer.ok) {
     log(`NIP-04 DM aborted: ${peer.reason}.`);
@@ -315,24 +339,20 @@ async function runNip04SendDm(): Promise<void> {
     return;
   }
   const relay = parseRelayUrl(ui.relayUrl.value);
-  if (!relay.ok) {
-    log('NIP-04 DM aborted: relay URL (section 4) is empty.');
-    toaster.show('NIP-04 DM aborted: relay URL (section 4) is empty.', 'error');
-    return;
-  }
+  const fallbackRelayUrl = relay.ok ? relay.value : null;
   const progress = toaster.show('NIP-04 DM: encrypting, signing & publishing…', 'progress');
   const result = await nip04SendDm({
-    nostr: window.nostr,
+    nostr,
     peer: peer.value,
     plaintext: ui.nip04Plaintext.value,
     log,
-    publish: (event) => publish(relay.value, event),
+    publish: (event) => publish(nostr, fallbackRelayUrl, event),
     onCiphertext: (ciphertext) => {
       ui.nip04Ciphertext.value = ciphertext;
     },
   });
   if (result.ok) {
-    progress.settle(`NIP-04 DM published to ${relay.value}.`, 'success');
+    progress.settle('NIP-04 DM published.', 'success');
   } else {
     progress.settle(`NIP-04 DM failed: ${result.error}`, 'error');
   }
@@ -348,11 +368,7 @@ async function runNip17SendDm(): Promise<void> {
     return;
   }
   const relay = parseRelayUrl(ui.relayUrl.value);
-  if (!relay.ok) {
-    log('NIP-17 DM aborted: relay URL (section 4) is empty.');
-    toaster.show('NIP-17 DM aborted: relay URL (section 4) is empty.', 'error');
-    return;
-  }
+  const fallbackRelayUrl = relay.ok ? relay.value : null;
 
   const progress = toaster.show('NIP-17 DM: sealing & publishing…', 'progress');
   log('NIP-17 DM: resolving sender pubkey…');
@@ -374,11 +390,11 @@ async function runNip17SendDm(): Promise<void> {
       plaintext: ui.nip17Plaintext.value,
       sealEncrypt: (p, plain) => nostr.nip44.encrypt(p, plain),
       signSeal: (draft) => nostr.signEvent(draft),
-      publish: (event) => publish(relay.value, event),
+      publish: (event) => publish(nostr, fallbackRelayUrl, event),
     });
     log(`NIP-17 DM: gift wrap id ${result.giftWrap.id ?? '(missing id)'}`);
     log(`NIP-17 DM: ephemeral pubkey ${result.ephemeralPubkey}`);
-    progress.settle(`NIP-17 DM published to ${relay.value}.`, 'success');
+    progress.settle('NIP-17 DM published.', 'success');
   } catch (err) {
     const error = formatError(err);
     log(`NIP-17 DM failed: ${error}`);

@@ -24,8 +24,9 @@ A live build of this sample is hosted at
    `window.nostr = { getPublicKey, signEvent, getRelays, nip44, nip04 }`.
 4. Call `getPublicKey()` and `getRelays()`.
 5. Build a kind:1 event, sign it through the iframe (consent dialog is shown
-   inside the iframe/host page), and publish it via raw WebSocket to a public
-   relay (default `wss://relay.damus.io`).
+   inside the iframe/host page), and publish it via raw WebSocket to the
+   write-enabled relays advertised by `getRelays()`. The Relay URL field is a
+   fallback, used only when `getRelays()` fails or returns no write relay.
 6. **NIP-44 encrypt / decrypt** (modern, recommended): self-encrypt with the
    "Use my pubkey" helper to verify the round trip without a second account.
    Encrypt and decrypt each prompt the consent dialog independently.
@@ -33,8 +34,8 @@ A live build of this sample is hosted at
    deprecation warning. Useful for verifying interop with older clients.
 8. **NIP-17 sealed DM** (gift-wrapped kind:1059): builds a kind:14 rumor,
    NIP-44 seals it as kind:13, NIP-44 wraps that as kind:1059 signed by an
-   ephemeral key, and publishes to a relay. Compatible clients (Amethyst,
-   0xchat, Coracle, Damus chat) decrypt it automatically.
+   ephemeral key, and publishes to the resolved relays. Compatible clients
+   (Amethyst, 0xchat, Coracle, Damus chat) decrypt it automatically.
 9. Surface `NosskeyIframeError.code` values such as `NO_KEY`,
    `USER_REJECTED`, `NOT_AUTHORIZED` in the log.
 
@@ -86,8 +87,10 @@ button that combines the steps above into one flow:
 
 1. Paste the recipient's hex pubkey into the section-6 peer field.
 2. Type the plaintext.
-3. Make sure the Relay URL in section 4 points to a relay both you and
-   the recipient use (default `wss://relay.damus.io`).
+3. The DM is published to the write relays from `getRelays()`. The Relay URL
+   in section 4 is only used as a fallback when `getRelays()` has none; for a
+   real DM, make sure the resolved relays (or that fallback) include one both
+   you and the recipient use.
 4. Click **Send DM**. The host page pops two consent dialogs in order —
    one for encryption, one for the kind:4 event signature. Approve both.
 5. The relay's `OK` / `NOTICE` ack appears in the log.
@@ -104,8 +107,9 @@ as a private message. Steps:
 1. Click **Use my pubkey** to self-encrypt for one-account verification, or
    paste any recipient hex pubkey.
 2. Type the message.
-3. Confirm the Relay URL in section 4 points at a relay both ends use
-   (default `wss://relay.damus.io`).
+3. The gift wrap is published to the write relays from `getRelays()`, falling
+   back to the Relay URL in section 4 when `getRelays()` returns none. Confirm
+   the resolved relays include one both ends use.
 4. Click **Send NIP-17 DM**. Two consent dialogs appear:
    - NIP-44 encrypt for the kind:13 seal (shows the rumor JSON preview).
    - signEvent for the kind:13 seal.
@@ -166,3 +170,11 @@ the parent iframe will still need storage access to read that key.
   header. The bundled svelte-app dev server is only used for local testing.
 - The WebSocket publish path is deliberately minimal (no `nostr-tools`): it
   sends `["EVENT", signedEvent]` and logs the first `OK` / `NOTICE` frame.
+- Publish targets are resolved from `window.nostr.getRelays()` (write relays
+  only) and the event is sent to all of them in parallel; the publish is
+  treated as successful when the send to at least one relay completes without a
+  connection error. Note the minimal WebSocket path is lenient — it counts an
+  `OK`/`NOTICE` frame, a clean close, *or* an ack timeout as non-failure, so it
+  does not guarantee the relay actually persisted the event. The manually
+  entered Relay URL is only a fallback for when `getRelays()` fails or returns
+  no write relay.

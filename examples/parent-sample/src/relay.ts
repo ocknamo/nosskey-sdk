@@ -7,9 +7,13 @@
  * helper has no DOM coupling.
  */
 import type { NostrEvent } from 'nosskey-sdk';
+import { formatError } from './nips.js';
 import type { Logger } from './ui.js';
 
 export const DEFAULT_PUBLISH_ACK_TIMEOUT_MS = 8000;
+
+/** NIP-07 `getRelays()` return shape: relay URL → read/write flags. */
+export type RelayMap = Record<string, { read: boolean; write: boolean }>;
 
 export interface PublishOptions {
   log: Logger;
@@ -77,4 +81,77 @@ export function publishEvent(
       resolve();
     });
   });
+}
+
+export interface ResolvePublishRelaysOptions {
+  /** The iframe-backed `window.nostr.getRelays()`. */
+  getRelays: () => Promise<RelayMap>;
+  /** Manually entered relay URL used as a fallback (null when the field is empty). */
+  fallbackRelayUrl: string | null;
+  log: Logger;
+}
+
+/**
+ * Picks the relays to publish to. Prefers the write-enabled relays advertised
+ * by the iframe via `getRelays()`; falls back to the manually entered relay URL
+ * when `getRelays()` fails or advertises no write relay. Returns an empty array
+ * only when neither source yields a relay — the caller treats that as an error.
+ */
+export async function resolvePublishRelays(opts: ResolvePublishRelaysOptions): Promise<string[]> {
+  const { getRelays, fallbackRelayUrl, log } = opts;
+  const fallback = fallbackRelayUrl ? [fallbackRelayUrl] : [];
+  try {
+    const relays = await getRelays();
+    const writeRelays = Object.entries(relays)
+      .filter(([, flags]) => flags?.write)
+      .map(([url]) => url);
+    if (writeRelays.length > 0) {
+      log(
+        `Publish targets from getRelays(): ${writeRelays.length} write relay(s) — ${writeRelays.join(', ')}.`
+      );
+      return writeRelays;
+    }
+    if (fallback.length > 0) {
+      log('getRelays() advertised no write relay; falling back to the manual relay URL.');
+      return fallback;
+    }
+    log('getRelays() advertised no write relay and no manual relay URL was provided.');
+    return [];
+  } catch (err) {
+    if (fallback.length > 0) {
+      log(`getRelays() failed (${formatError(err)}); falling back to the manual relay URL.`);
+      return fallback;
+    }
+    log(`getRelays() failed (${formatError(err)}) and no manual relay URL was provided.`);
+    return [];
+  }
+}
+
+export interface PublishToRelaysResult {
+  succeeded: string[];
+  failed: { url: string; error: string }[];
+}
+
+/**
+ * Publishes a signed event to several relays in parallel. Resolves with a
+ * per-relay summary and never rejects — callers inspect `succeeded` / `failed`
+ * to decide whether the publish as a whole was a success.
+ */
+export async function publishToRelays(
+  relayUrls: string[],
+  event: NostrEvent,
+  opts: PublishOptions
+): Promise<PublishToRelaysResult> {
+  const outcomes = await Promise.allSettled(relayUrls.map((url) => publishEvent(url, event, opts)));
+  const succeeded: string[] = [];
+  const failed: { url: string; error: string }[] = [];
+  outcomes.forEach((outcome, i) => {
+    const url = relayUrls[i];
+    if (outcome.status === 'fulfilled') {
+      succeeded.push(url);
+    } else {
+      failed.push({ url, error: formatError(outcome.reason) });
+    }
+  });
+  return { succeeded, failed };
 }

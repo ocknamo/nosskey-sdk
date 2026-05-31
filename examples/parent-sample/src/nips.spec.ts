@@ -140,7 +140,6 @@ describe('signAndPublishNote', () => {
     const result = await signAndPublishNote({
       nostr,
       content: 'hi',
-      relayUrl: 'wss://example',
       log,
       publish,
     });
@@ -158,7 +157,6 @@ describe('signAndPublishNote', () => {
     const result = await signAndPublishNote({
       nostr,
       content: 'hi',
-      relayUrl: 'wss://example',
       log: vi.fn(),
       publish,
     });
@@ -183,7 +181,6 @@ describe('signAndPublishNote', () => {
     const result = await signAndPublishNote({
       nostr,
       content: 'hi',
-      relayUrl: 'wss://example',
       log,
       publish,
     });
