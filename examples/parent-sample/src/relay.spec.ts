@@ -1,6 +1,12 @@
 import type { NostrEvent } from 'nosskey-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_PUBLISH_ACK_TIMEOUT_MS, publishEvent } from './relay.js';
+import {
+  DEFAULT_PUBLISH_ACK_TIMEOUT_MS,
+  type RelayMap,
+  publishEvent,
+  publishToRelays,
+  resolvePublishRelays,
+} from './relay.js';
 
 class FakeWebSocket extends EventTarget {
   static instances: FakeWebSocket[] = [];
@@ -215,5 +221,103 @@ describe('publishEvent', () => {
         webSocketImpl: fakeWebSocket,
       })
     ).rejects.toThrow('bad url');
+  });
+});
+
+describe('resolvePublishRelays', () => {
+  const relayMap = (entries: RelayMap): (() => Promise<RelayMap>) => {
+    return () => Promise.resolve(entries);
+  };
+
+  it('returns the write-enabled relays advertised by getRelays()', async () => {
+    const log = vi.fn();
+    const relays = await resolvePublishRelays({
+      getRelays: relayMap({
+        'wss://write-a': { read: true, write: true },
+        'wss://read-only': { read: true, write: false },
+        'wss://write-b': { read: false, write: true },
+      }),
+      fallbackRelayUrl: 'wss://fallback',
+      log,
+    });
+    expect(relays).toEqual(['wss://write-a', 'wss://write-b']);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('2 write relay(s)'));
+  });
+
+  it('falls back to the manual relay URL when no relay is write-enabled', async () => {
+    const log = vi.fn();
+    const relays = await resolvePublishRelays({
+      getRelays: relayMap({ 'wss://read-only': { read: true, write: false } }),
+      fallbackRelayUrl: 'wss://fallback',
+      log,
+    });
+    expect(relays).toEqual(['wss://fallback']);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining('falling back to the manual relay URL')
+    );
+  });
+
+  it('falls back to the manual relay URL when getRelays() rejects', async () => {
+    const log = vi.fn();
+    const relays = await resolvePublishRelays({
+      getRelays: () => Promise.reject(new Error('iframe gone')),
+      fallbackRelayUrl: 'wss://fallback',
+      log,
+    });
+    expect(relays).toEqual(['wss://fallback']);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('iframe gone'));
+  });
+
+  it('returns an empty array when getRelays() yields nothing and there is no fallback', async () => {
+    const log = vi.fn();
+    const relays = await resolvePublishRelays({
+      getRelays: relayMap({}),
+      fallbackRelayUrl: null,
+      log,
+    });
+    expect(relays).toEqual([]);
+  });
+
+  it('returns an empty array when getRelays() rejects and there is no fallback', async () => {
+    const log = vi.fn();
+    const relays = await resolvePublishRelays({
+      getRelays: () => Promise.reject(new Error('iframe gone')),
+      fallbackRelayUrl: null,
+      log,
+    });
+    expect(relays).toEqual([]);
+  });
+});
+
+describe('publishToRelays', () => {
+  it('publishes to every relay in parallel and reports per-relay outcomes', async () => {
+    const log = vi.fn();
+    const promise = publishToRelays(['wss://a', 'wss://b'], SIGNED_EVENT, {
+      log,
+      webSocketImpl: fakeWebSocket,
+    });
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    // First relay acks OK; second errors out.
+    FakeWebSocket.instances[0].triggerMessage(JSON.stringify(['OK', SIGNED_EVENT.id, true, '']));
+    FakeWebSocket.instances[1].triggerError();
+    const result = await promise;
+    expect(result.succeeded).toEqual(['wss://a']);
+    expect(result.failed).toEqual([
+      { url: 'wss://b', error: expect.stringContaining('WebSocket error for wss://b') },
+    ]);
+  });
+
+  it('reports all relays as succeeded when each acks', async () => {
+    const log = vi.fn();
+    const promise = publishToRelays(['wss://a', 'wss://b'], SIGNED_EVENT, {
+      log,
+      webSocketImpl: fakeWebSocket,
+    });
+    for (const ws of FakeWebSocket.instances) {
+      ws.triggerMessage(JSON.stringify(['OK', SIGNED_EVENT.id, true, '']));
+    }
+    const result = await promise;
+    expect(result.succeeded).toEqual(['wss://a', 'wss://b']);
+    expect(result.failed).toEqual([]);
   });
 });

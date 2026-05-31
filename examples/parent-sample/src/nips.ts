@@ -8,12 +8,13 @@
  */
 import { NosskeyIframeError } from 'nosskey-iframe';
 import type { NostrEvent } from 'nosskey-sdk';
+import type { RelayMap } from './relay.js';
 import type { Logger } from './ui.js';
 
 export interface NostrProvider {
   getPublicKey(): Promise<string>;
   signEvent(event: NostrEvent): Promise<NostrEvent>;
-  getRelays(): Promise<Record<string, { read: boolean; write: boolean }>>;
+  getRelays(): Promise<RelayMap>;
   nip44: {
     encrypt(peerPubkey: string, plaintext: string): Promise<string>;
     decrypt(peerPubkey: string, ciphertext: string): Promise<string>;
@@ -110,7 +111,6 @@ export async function nip04Decrypt(inputs: DecryptInputs): Promise<DecryptResult
 export interface SignAndPublishInputs {
   nostr: NostrProvider;
   content: string;
-  relayUrl: string;
   log: Logger;
   publish: (event: NostrEvent) => Promise<void>;
 }
