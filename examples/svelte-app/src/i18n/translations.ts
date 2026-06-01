@@ -368,7 +368,7 @@ export const ja: TranslationData = {
       version: 'バージョン:',
       buildDate: 'ビルド日時:',
       commitHash: 'コミットハッシュ:',
-      repository: 'リポジトリ:',
+      repository: 'GitHub:',
     },
     language: {
       title: '言語設定',
@@ -639,7 +639,7 @@ export const en: TranslationData = {
       version: 'Version:',
       buildDate: 'Build Date:',
       commitHash: 'Commit Hash:',
-      repository: 'Repository:',
+      repository: 'GitHub:',
     },
     language: {
       title: 'Language Settings',

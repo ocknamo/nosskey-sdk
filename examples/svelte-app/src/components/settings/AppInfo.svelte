@@ -26,7 +26,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
         target="_blank"
         rel="noopener noreferrer"
       >
-        github.com/ocknamo/nosskey-sdk
+        ocknamo/nosskey-sdk
       </a>
     </div>
   </div>
@@ -44,7 +44,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
   }
 
   .label {
-    flex: 0 0 140px;
+    flex: 0 0 120px;
     font-weight: bold;
     color: var(--color-text-primary);
   }
@@ -56,7 +56,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
   .value a {
     color: var(--color-primary);
     text-decoration: none;
-    word-break: break-all;
+    white-space: nowrap;
   }
 
   .value a:hover {
