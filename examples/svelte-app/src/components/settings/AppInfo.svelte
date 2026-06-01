@@ -18,6 +18,18 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
     <div class="label">{$i18n.t.settings.appInfo.commitHash}</div>
     <div class="value">{commitHash}</div>
   </div>
+  <div class="info-item">
+    <div class="label">{$i18n.t.settings.appInfo.repository}</div>
+    <div class="value">
+      <a
+        href="https://github.com/ocknamo/nosskey-sdk"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        github.com/ocknamo/nosskey-sdk
+      </a>
+    </div>
+  </div>
 </CardSection>
 
 <style>
@@ -39,5 +51,15 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
 
   .value {
     flex: 1;
+  }
+
+  .value a {
+    color: var(--color-primary);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .value a:hover {
+    text-decoration: underline;
   }
 </style>
