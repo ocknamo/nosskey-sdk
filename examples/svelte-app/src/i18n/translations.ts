@@ -367,7 +367,7 @@ export const ja: TranslationData = {
       title: 'アプリケーション情報',
       version: 'バージョン:',
       buildDate: 'ビルド日時:',
-      commitHash: 'コミットハッシュ:',
+      commitHash: 'ハッシュ:',
       repository: 'GitHub:',
     },
     language: {
@@ -638,7 +638,7 @@ export const en: TranslationData = {
       title: 'Application Info',
       version: 'Version:',
       buildDate: 'Build Date:',
-      commitHash: 'Commit Hash:',
+      commitHash: 'Hash:',
       repository: 'GitHub:',
     },
     language: {
