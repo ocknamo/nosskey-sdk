@@ -19,7 +19,7 @@
     "@tsconfig/svelte": "^5.0.4",
     "@vitest/coverage-v8": "^4.1.8",
     "happy-dom": "^20.9.0",
-    "svelte": "^5.55.3",
+    "svelte": "^5.56.1",
     "svelte-check": "^4.1.5",
     "typescript": "~5.7.2",
     "vite": "^6.4.2",
