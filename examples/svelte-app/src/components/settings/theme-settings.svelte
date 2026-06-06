@@ -4,7 +4,7 @@ import { type ThemeMode, currentTheme } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
 
-let selectedTheme: ThemeMode = 'auto';
+let selectedTheme = $state<ThemeMode>('auto');
 let themeMessage = $state('');
 
 // 現在の設定を読み込み
@@ -33,7 +33,7 @@ const handleThemeChange = (event: Event) => {
     <select
       id="theme-select"
       bind:value={selectedTheme}
-      on:change={handleThemeChange}
+      onchange={handleThemeChange}
       class="theme-select"
     >
       <option value="auto">{$i18n.t.settings.theme.auto}</option>
