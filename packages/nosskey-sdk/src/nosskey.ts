@@ -552,7 +552,8 @@ export class NosskeyManager implements NosskeyManagerLike {
       ? { ...keyInfo, credentialId: bytesToHex(credentialId) }
       : keyInfo;
 
-    const sk = await this.#getSecretKey(effectiveKeyInfo);
+    // export は平文 nsec を外部に露出するため、キャッシュ TTL 内でも必ず UV を要求する
+    const sk = await this.#getSecretKey(effectiveKeyInfo, { bypassCache: true });
     try {
       return bytesToHex(sk.bytes);
     } finally {
@@ -619,6 +620,8 @@ export class NosskeyManager implements NosskeyManagerLike {
    * NostrKeyInfo から秘密鍵を解決する。
    *
    * @param keyInfoOverride 明示的に使う鍵情報。省略時は `getCurrentKeyInfo()` を使う。
+   * @param opts.bypassCache true のとき、キャッシュを読み書きせず必ず WebAuthn UV を
+   *   要求する。平文 nsec を外部に露出する `exportNostrKey` はこのフラグを立てること。
    *
    * 戻り値の `bytes` の所有権:
    * - **読み取り専用**として扱うこと。キャッシュ有効時は `bytes` がキャッシュ
@@ -632,13 +635,14 @@ export class NosskeyManager implements NosskeyManagerLike {
    * - キャッシュが無効な場合は呼び出し側で `release()` 時に消去される一時バッファを返す
    */
   async #getSecretKey(
-    keyInfoOverride?: NostrKeyInfo
+    keyInfoOverride?: NostrKeyInfo,
+    opts?: { bypassCache?: boolean }
   ): Promise<{ bytes: Uint8Array; release: () => void }> {
     const keyInfo = keyInfoOverride ?? this.getCurrentKeyInfo();
     if (!keyInfo) {
       throw new Error('No current NostrKeyInfo set');
     }
-    const shouldUseCache = this.#keyCache.isEnabled();
+    const shouldUseCache = this.#keyCache.isEnabled() && !opts?.bypassCache;
 
     // 1) キャッシュヒット → 平文 nsec をそのまま返す（wrap/直接モード共通）
     if (shouldUseCache) {
