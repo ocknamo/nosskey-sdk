@@ -562,6 +562,64 @@ describe('NosskeyManager', () => {
       expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
     });
 
+    it('キャッシュ有効時の直接モードでも exportNostrKey は毎回 UV を要求する', async () => {
+      const nosskey = new NosskeyManager({
+        cacheOptions: { enabled: true },
+        storageOptions: { enabled: false },
+      });
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d70776b',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId })
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId });
+
+      try {
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(1);
+
+        // キャッシュ TTL 内でも2回目の export は UV を要求する
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        getPrfSecretSpy.mockRestore();
+      }
+    });
+
+    it('exportNostrKey はキャッシュを汚染しない（export 後の sign は UV を要求する）', async () => {
+      const nosskey = new NosskeyManager({
+        cacheOptions: { enabled: true },
+        storageOptions: { enabled: false },
+      });
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d70776b',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId })
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId });
+
+      try {
+        // export はキャッシュに書き込まない（bypassCache=true は read/write 両方をスキップ）
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(1);
+
+        // export 後にキャッシュが空のため、sign は UV を要求する
+        const mockEvent = { kind: 1, content: 'x', tags: [], created_at: 0, pubkey: 'test-pubkey' };
+        await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        getPrfSecretSpy.mockRestore();
+      }
+    });
+
     it('exportNostrKey は旧salt値を標準値へ正規化して getPrfSecret に渡す', async () => {
       const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
       const legacyKeyInfo: NostrKeyInfo = {
