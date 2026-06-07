@@ -775,6 +775,174 @@ describe('NosskeyManager', () => {
     });
   });
 
+  describe('マルチアカウント登録簿（wrap 鍵喪失ガード）', () => {
+    let mockLocalStorage: { [key: string]: string };
+
+    const wrapKeyInfo = (pubkey: string, credentialId: string, payload: string): NostrKeyInfo => ({
+      credentialId,
+      pubkey,
+      salt: '6e6f7374722d70776b2d77726170',
+      wrapped: { v: 1, alg: 'nip44-v2', payload },
+    });
+
+    beforeEach(() => {
+      mockLocalStorage = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          setItem: vi.fn((key, value) => {
+            mockLocalStorage[key] = value;
+          }),
+          getItem: vi.fn((key) => (key in mockLocalStorage ? mockLocalStorage[key] : null)),
+          removeItem: vi.fn((key) => {
+            delete mockLocalStorage[key];
+          }),
+        },
+        configurable: true,
+      });
+    });
+
+    it('2 件目を current に設定しても 1 件目の wrap 暗号文が登録簿に残る', () => {
+      const nosskey = new NosskeyManager();
+      const a = wrapKeyInfo('pk-a', 'cred-a', 'payload-a');
+      const b = wrapKeyInfo('pk-b', 'cred-b', 'payload-b');
+
+      nosskey.setCurrentKeyInfo(a);
+      nosskey.setCurrentKeyInfo(b);
+
+      const list = nosskey.listKeyInfos();
+      expect(list.map((k) => k.pubkey).sort()).toEqual(['pk-a', 'pk-b']);
+      expect(list.find((k) => k.pubkey === 'pk-a')?.wrapped?.payload).toBe('payload-a');
+      // 別キーに保存されている
+      expect(mockLocalStorage.nosskey_accounts).toBeDefined();
+    });
+
+    it('同一 pubkey でも credentialId が異なれば両方の wrapped を保持する', () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('same', 'cred-1', 'p1'));
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('same', 'cred-2', 'p2'));
+
+      const list = nosskey.listKeyInfos();
+      expect(list).toHaveLength(2);
+      expect(list.map((k) => k.wrapped?.payload).sort()).toEqual(['p1', 'p2']);
+    });
+
+    it('clearCurrentKeyInfo（logout）は current を消すが登録簿は残す', () => {
+      const nosskey = new NosskeyManager();
+      const a = wrapKeyInfo('pk-a', 'cred-a', 'payload-a');
+      nosskey.setCurrentKeyInfo(a);
+
+      nosskey.clearCurrentKeyInfo();
+
+      expect(nosskey.getCurrentKeyInfo()).toBeNull();
+      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_keyinfo');
+      // 登録簿は保持され再ログイン可能
+      expect(nosskey.listKeyInfos().map((k) => k.pubkey)).toEqual(['pk-a']);
+      expect(mockLocalStorage.nosskey_accounts).toBeDefined();
+    });
+
+    it('clearStoredKeyInfo（完全ワイプ）は current も登録簿も消す', () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('pk-a', 'cred-a', 'payload-a'));
+
+      nosskey.clearStoredKeyInfo();
+
+      expect(nosskey.getCurrentKeyInfo()).toBeNull();
+      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_keyinfo');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('nosskey_accounts');
+      expect(nosskey.listKeyInfos()).toEqual([]);
+    });
+
+    it('removeKeyInfo は pubkey + credentialId 一致のみ削除する', () => {
+      const nosskey = new NosskeyManager();
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('same', 'cred-1', 'p1'));
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('same', 'cred-2', 'p2'));
+
+      nosskey.removeKeyInfo('same', 'cred-1');
+
+      const list = nosskey.listKeyInfos();
+      expect(list).toHaveLength(1);
+      expect(list[0].credentialId).toBe('cred-2');
+    });
+
+    it('backupKeyInfo は wrapped を含むディープコピーを返し、改変しても内部に影響しない', () => {
+      const nosskey = new NosskeyManager();
+      const a = wrapKeyInfo('pk-a', 'cred-a', 'payload-a');
+      nosskey.setCurrentKeyInfo(a);
+
+      // 引数なし: current のバックアップ
+      const backup = nosskey.backupKeyInfo();
+      expect(backup?.wrapped?.payload).toBe('payload-a');
+
+      // 返り値を改変しても登録簿/current は不変
+      if (backup?.wrapped) backup.wrapped.payload = 'tampered';
+      expect(nosskey.backupKeyInfo()?.wrapped?.payload).toBe('payload-a');
+      expect(nosskey.listKeyInfos()[0].wrapped?.payload).toBe('payload-a');
+
+      // pubkey 指定でも取得できる / 該当なしは null
+      expect(nosskey.backupKeyInfo('pk-a', 'cred-a')?.wrapped?.payload).toBe('payload-a');
+      expect(nosskey.backupKeyInfo('nope')).toBeNull();
+    });
+
+    it('単一スロットの既存ユーザーは登録簿キー不在時に一度だけ移行される', () => {
+      // 旧ユーザー: current スロットのみ存在、登録簿キーは無い
+      mockLocalStorage.nosskey_keyinfo = JSON.stringify(wrapKeyInfo('pk-old', 'cred-old', 'p-old'));
+
+      const nosskey = new NosskeyManager();
+      const list = nosskey.listKeyInfos();
+
+      expect(list.map((k) => k.pubkey)).toEqual(['pk-old']);
+      // 登録簿として永続化されている
+      expect(mockLocalStorage.nosskey_accounts).toBeDefined();
+      expect(JSON.parse(mockLocalStorage.nosskey_accounts)).toHaveLength(1);
+    });
+
+    it('登録簿が空配列（削除済み）なら current が残っていても蘇生しない', () => {
+      mockLocalStorage.nosskey_keyinfo = JSON.stringify(wrapKeyInfo('pk-old', 'cred-old', 'p-old'));
+      mockLocalStorage.nosskey_accounts = JSON.stringify([]); // 全削除済みの状態
+
+      const nosskey = new NosskeyManager();
+      expect(nosskey.listKeyInfos()).toEqual([]);
+    });
+
+    it('registryEnabled=false では登録簿を読み書きしない（旧単一スロット挙動）', () => {
+      const nosskey = new NosskeyManager({ storageOptions: { registryEnabled: false } });
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('pk-a', 'cred-a', 'payload-a'));
+
+      expect(mockLocalStorage.nosskey_accounts).toBeUndefined();
+      expect(nosskey.listKeyInfos()).toEqual([]);
+    });
+
+    it('storage 差し替え時に登録簿の in-memory キャッシュが破棄され読み直される', () => {
+      const makeStore = (initial: { [k: string]: string } = {}): Storage => {
+        const m: { [k: string]: string } = { ...initial };
+        return {
+          getItem: (k: string) => (k in m ? m[k] : null),
+          setItem: (k: string, v: string) => {
+            m[k] = v;
+          },
+          removeItem: (k: string) => {
+            delete m[k];
+          },
+          clear: () => undefined,
+          key: () => null,
+          length: 0,
+        } as Storage;
+      };
+
+      const storeA = makeStore();
+      const nosskey = new NosskeyManager({ storageOptions: { storage: storeA } });
+      nosskey.setCurrentKeyInfo(wrapKeyInfo('pk-a', 'cred-a', 'payload-a'));
+      expect(nosskey.listKeyInfos().map((k) => k.pubkey)).toEqual(['pk-a']);
+
+      // 別 storage（別パーティション）へ差し替え → 登録簿キャッシュは破棄される
+      const storeB = makeStore({
+        nosskey_accounts: JSON.stringify([wrapKeyInfo('pk-b', 'cred-b', 'payload-b')]),
+      });
+      nosskey.setStorageOptions({ storage: storeB });
+      expect(nosskey.listKeyInfos().map((k) => k.pubkey)).toEqual(['pk-b']);
+    });
+  });
+
   describe('NIP-07互換メソッド', () => {
     it('getPublicKey で現在のNostrKeyInfoから公開鍵を取得できる', async () => {
       const nosskey = new NosskeyManager();

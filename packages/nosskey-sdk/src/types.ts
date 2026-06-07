@@ -102,8 +102,18 @@ export interface NostrKeyStorageOptions {
   enabled: boolean;
   /** 使用するストレージ（デフォルト: localStorage） */
   storage?: Storage;
-  /** 保存に使用するキー名（デフォルト: "nosskey_keyinfo"） */
+  /** current 鍵（単一スロット）の保存に使用するキー名（デフォルト: "nosskey_keyinfo"） */
   storageKey?: string;
+  /**
+   * マルチアカウント登録簿を有効にするか（デフォルト: true）。
+   * 有効な場合、`setCurrentKeyInfo()` は current スロットへの書き込みに加えて
+   * `registryStorageKey` の登録簿へエントリを upsert する。これにより current 上書きや
+   * logout（`clearCurrentKeyInfo()`）後も、復元不能な wrap モードの暗号化 nsec が
+   * 失われず再ログインできる。`false` にすると登録簿を一切読み書きしない旧挙動になる。
+   */
+  registryEnabled?: boolean;
+  /** 登録簿の保存に使用するキー名（デフォルト: "nosskey_accounts"）。`storageKey` とは別キー。 */
+  registryStorageKey?: string;
 }
 
 /**
@@ -145,7 +155,8 @@ export interface NosskeyManagerLike {
 
   /**
    * 現在のNostrKeyInfoを設定
-   * ストレージが有効な場合は保存も行う
+   * ストレージが有効な場合は current スロットへ保存する。
+   * 登録簿が有効な場合は、あわせてエントリを upsert する（pubkey + credentialId 一意）。
    * @param keyInfo 設定するNostrKeyInfo
    */
   setCurrentKeyInfo(keyInfo: NostrKeyInfo): void;
@@ -175,9 +186,46 @@ export interface NosskeyManagerLike {
   getStorageOptions(): NostrKeyStorageOptions;
 
   /**
-   * ストレージに保存されたNostrKeyInfoをクリア
+   * 保存された鍵情報を**完全に消去**する（current スロット＋登録簿＋メモリ＋派生キャッシュ）。
+   *
+   * 秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作。
+   * wrap モードの鍵は復元不能になるため、共有端末からの完全サインアウトなど
+   * 「すべて消す」意図のときに使う。
+   *
+   * ログアウト（一時的に current を外すが再ログインは残す）には
+   * `clearCurrentKeyInfo()` を使うこと。
    */
   clearStoredKeyInfo(): void;
+
+  /**
+   * ログアウト用: current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去する。
+   * 登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から
+   * 再ログインできる。
+   */
+  clearCurrentKeyInfo(): void;
+
+  /**
+   * 登録簿に保存されている全 NostrKeyInfo の一覧を返す（ディープコピー）。
+   * 登録簿が無効な場合は空配列を返す。
+   */
+  listKeyInfos(): NostrKeyInfo[];
+
+  /**
+   * 登録簿から指定アカウント（pubkey + credentialId 一致）を削除する。
+   * wrap モードのエントリを削除するとその暗号化 nsec は復元不能になる。
+   * @param pubkey 公開鍵（hex）
+   * @param credentialId クレデンシャルID（hex）
+   */
+  removeKeyInfo(pubkey: string, credentialId: string): void;
+
+  /**
+   * バックアップ用に NostrKeyInfo を**ディープコピーして返す**（`wrapped.payload` を含む）。
+   * 引数省略時は current 鍵を、指定時は登録簿の該当エントリを返す。該当が無ければ null。
+   * 返り値を改変しても内部状態には影響しない。
+   * @param pubkey 対象の公開鍵（hex）。省略時は current 鍵。
+   * @param credentialId 同一 pubkey で複数エントリがある場合に特定するためのクレデンシャルID（hex）。
+   */
+  backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null;
 
   /**
    * PRF拡張機能がサポートされているかチェック

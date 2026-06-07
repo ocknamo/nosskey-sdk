@@ -114,11 +114,19 @@ async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
 ### NostrKeyInfo Management Methods
 
 #### setCurrentKeyInfo()
-Sets the current NostrKeyInfo. Also saves to storage if storage is enabled.
+Sets the current NostrKeyInfo. When storage is enabled it is saved to the current
+slot, and (when the registry is enabled) the entry is also upserted into the
+multi-account registry, keyed by `pubkey + credentialId`. As a result, setting a
+second account no longer destroys the first account's `wrapped.payload`.
 
 ```typescript
 setCurrentKeyInfo(keyInfo: NostrKeyInfo): void
 ```
+
+> ⚠️ **Wrap mode is asymmetric.** A wrapped key's `wrapped.payload` is the only copy of
+> the imported nsec and cannot be re-derived from the passkey (unlike PRF direct mode).
+> The registry protects it from being overwritten, but if the registry is disabled it is
+> lost on overwrite. Keep a backup of the original nsec.
 
 #### getCurrentKeyInfo()
 Gets the current NostrKeyInfo. Attempts to load from storage if not set.
@@ -135,10 +143,52 @@ hasKeyInfo(): boolean
 ```
 
 #### clearStoredKeyInfo()
-Clears NostrKeyInfo stored in storage.
+**Completely wipes** the stored key material: the current slot, the multi-account
+registry, the in-memory state, and the derived-key cache. This is a destructive
+operation that deletes all secrets (including wrap-mode encrypted nsec). Use it for a
+full sign-out on a shared device. For logout (keeping the ability to log back in), use
+`clearCurrentKeyInfo()` instead.
 
 ```typescript
 clearStoredKeyInfo(): void
+```
+
+> ⚠️ Wrap-mode keys are **unrecoverable** after this call. Back up the original nsec
+> beforehand if you may need it.
+
+#### clearCurrentKeyInfo()
+Logout helper: clears only the current pointer (single slot), the in-memory state, and
+the derived-key cache. The registry is preserved, so saved accounts — especially
+unrecoverable wrap-mode keys — remain available for re-login.
+
+```typescript
+clearCurrentKeyInfo(): void
+```
+
+#### listKeyInfos()
+Returns a deep copy of every NostrKeyInfo stored in the registry. Returns an empty
+array when the registry is disabled.
+
+```typescript
+listKeyInfos(): NostrKeyInfo[]
+```
+
+#### removeKeyInfo()
+Removes the matching account (`pubkey + credentialId`) from the registry. Removing a
+wrap-mode entry makes its encrypted nsec unrecoverable.
+
+```typescript
+removeKeyInfo(pubkey: string, credentialId: string): void
+```
+
+#### backupKeyInfo()
+Returns a **deep copy** of a NostrKeyInfo (including `wrapped.payload`) for backup.
+With no arguments it returns the current key; with a `pubkey` (and optionally a
+`credentialId`) it returns the matching registry entry, or `null` if none. Mutating the
+returned value does not affect internal state.
+
+```typescript
+backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null
 ```
 
 ### Passkey Related Methods
@@ -186,6 +236,7 @@ Validation rules:
 Security notes:
 - The input `seckey` buffer (`Uint8Array`) is zeroed (`.fill(0)`) inside the SDK on completion. Callers are still encouraged to zero their own buffers before and after.
 - Once you call `setCurrentKeyInfo()` with the returned `NostrKeyInfo`, subsequent `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` operate transparently in wrap mode (API is identical to PRF direct mode).
+- **Wrap keys are unrecoverable / asymmetric vs. PRF direct mode**: the returned `wrapped.payload` is the only copy of the imported nsec and cannot be re-derived from the passkey. With the registry enabled (default), `setCurrentKeyInfo()` preserves it across current-slot overwrites, and logout via `clearCurrentKeyInfo()` keeps it. However it is **permanently lost** via `clearStoredKeyInfo()` (full wipe), `removeKeyInfo()`, or when `registryEnabled` is `false`. Keep a backup of the original nsec, and use `backupKeyInfo()` to export the `NostrKeyInfo` (including `wrapped.payload`).
 - **Memory zeroing limitation**: The SDK internally hex-encodes the private key (`string`) when handing it to `seckeySigner` or routing it through the NIP-44 plaintext path. JavaScript `string` primitives are immutable and lack any write-back API, so an equivalent of `Uint8Array.fill(0)` is not possible — those hex strings **remain on the heap until garbage collection**. This applies to `importNostrKey`, `exportNostrKey`, and post-decrypt `signEvent` paths. If your threat model includes attackers with direct browser-heap access, take this caveat into account.
 
 ### Signing Methods
@@ -276,9 +327,16 @@ export interface KeyCacheOptions {
 export interface NostrKeyStorageOptions {
   enabled: boolean; // Whether to enable NostrKeyInfo storage (default: true)
   storage?: Storage; // Storage to use (default: localStorage)
-  storageKey?: string; // Key name for storage (default: "nosskey_keyinfo")
+  storageKey?: string; // Key name for the current slot (default: "nosskey_keyinfo")
+  registryEnabled?: boolean; // Whether to enable the multi-account registry (default: true)
+  registryStorageKey?: string; // Key name for the registry (default: "nosskey_accounts")
 }
 ```
+
+When `registryEnabled` is true (the default), `setCurrentKeyInfo()` also upserts the
+entry into the registry stored under `registryStorageKey` (a key separate from
+`storageKey`). This prevents wrap-mode keys from being lost on overwrite or logout. Set
+it to `false` to fully opt out of the registry (legacy single-slot behavior).
 
 ### GetPrfSecretOptions
 

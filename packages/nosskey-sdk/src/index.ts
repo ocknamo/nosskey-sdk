@@ -9,6 +9,11 @@ export * from './types.js';
 // クラスとユーティリティのエクスポート
 export { NosskeyManager } from './nosskey.js';
 
+// 登録簿（マルチアカウント）関連の公開ヘルパー。
+// isNostrKeyInfo は保存値が NostrKeyInfo の形をしているかの防御的チェックで、
+// ファイル/ストレージからのインポート時の検証に使える。
+export { isNostrKeyInfo, DEFAULT_REGISTRY_STORAGE_KEY } from './key-registry.js';
+
 // ユーティリティのエクスポート
 export { bytesToHex, hexToBytes } from './utils.js';
 
