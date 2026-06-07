@@ -562,6 +562,64 @@ describe('NosskeyManager', () => {
       expect(getPrfSecretSpy.mock.calls[0][2]).toEqual(hexToBytes('6e6f7374722d70776b'));
     });
 
+    it('キャッシュ有効時の直接モードでも exportNostrKey は毎回 UV を要求する', async () => {
+      const nosskey = new NosskeyManager({
+        cacheOptions: { enabled: true },
+        storageOptions: { enabled: false },
+      });
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d70776b',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId })
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId });
+
+      try {
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(1);
+
+        // キャッシュ TTL 内でも2回目の export は UV を要求する
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        getPrfSecretSpy.mockRestore();
+      }
+    });
+
+    it('exportNostrKey はキャッシュを汚染しない（export 後の sign は UV を要求する）', async () => {
+      const nosskey = new NosskeyManager({
+        cacheOptions: { enabled: true },
+        storageOptions: { enabled: false },
+      });
+      const mockKeyInfo: NostrKeyInfo = {
+        credentialId: bytesToHex(mockCredentialId),
+        pubkey: 'test-pubkey',
+        salt: '6e6f7374722d70776b',
+      };
+
+      const getPrfSecretSpy = vi.spyOn(await import('./prf-handler.js'), 'getPrfSecret');
+      getPrfSecretSpy
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId })
+        .mockResolvedValueOnce({ secret: new Uint8Array(32).fill(42), id: mockCredentialId });
+
+      try {
+        // export はキャッシュに書き込まない（bypassCache=true は read/write 両方をスキップ）
+        await nosskey.exportNostrKey(mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(1);
+
+        // export 後にキャッシュが空のため、sign は UV を要求する
+        const mockEvent = { kind: 1, content: 'x', tags: [], created_at: 0, pubkey: 'test-pubkey' };
+        await nosskey.signEventWithKeyInfo(mockEvent, mockKeyInfo);
+        expect(getPrfSecretSpy).toHaveBeenCalledTimes(2);
+      } finally {
+        getPrfSecretSpy.mockRestore();
+      }
+    });
+
     it('exportNostrKey は旧salt値を標準値へ正規化して getPrfSecret に渡す', async () => {
       const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
       const legacyKeyInfo: NostrKeyInfo = {
@@ -1768,7 +1826,7 @@ describe('NosskeyManager', () => {
     });
 
     describe('wrap モードと KeyCache の相互作用', () => {
-      it('キャッシュ有効時、2回目の操作で getPrfSecret が呼ばれない', async () => {
+      it('キャッシュ有効時でも exportNostrKey は毎回 getPrfSecret（UV）を呼ぶ', async () => {
         const nosskey = new NosskeyManager({
           cacheOptions: { enabled: true },
           storageOptions: { enabled: false },
@@ -1781,7 +1839,6 @@ describe('NosskeyManager', () => {
           wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
         };
         const prfHandler = await import('./prf-handler.js');
-        // 各呼び出しで新規バッファを返す（fill(0) によるバッファ破壊回避）
         const spy = vi.spyOn(prfHandler, 'getPrfSecret').mockImplementation(async () => ({
           secret: hexToBytes(TV_KEK_HEX),
           id: credId,
@@ -1791,9 +1848,43 @@ describe('NosskeyManager', () => {
         expect(r1).toBe(TV_SECKEY_HEX);
         expect(spy).toHaveBeenCalledTimes(1);
 
+        // キャッシュ TTL 内でも export は必ず UV を要求する（キャッシュバイパス）
         const r2 = await nosskey.exportNostrKey(keyInfo);
         expect(r2).toBe(TV_SECKEY_HEX);
-        expect(spy).toHaveBeenCalledTimes(1); // 2回目はキャッシュヒット
+        expect(spy).toHaveBeenCalledTimes(2);
+      });
+
+      it('キャッシュ有効時、signEvent は2回目でキャッシュを利用して UV をスキップする', async () => {
+        const nosskey = new NosskeyManager({
+          cacheOptions: { enabled: true },
+          storageOptions: { enabled: false },
+        });
+        const credId = new Uint8Array(16).fill(7);
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(credId),
+          pubkey: TV_IMPORTED_PUBKEY,
+          salt: WRAP_SALT_HEX,
+          wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
+        };
+        const prfHandler = await import('./prf-handler.js');
+        const spy = vi.spyOn(prfHandler, 'getPrfSecret').mockImplementation(async () => ({
+          secret: hexToBytes(TV_KEK_HEX),
+          id: credId,
+        }));
+        const mockEvent = {
+          kind: 1,
+          content: 'test',
+          tags: [],
+          created_at: 0,
+          pubkey: TV_IMPORTED_PUBKEY,
+        };
+
+        await nosskey.signEventWithKeyInfo(mockEvent, keyInfo);
+        expect(spy).toHaveBeenCalledTimes(1);
+
+        // sign の2回目はキャッシュヒット（UV なし）
+        await nosskey.signEventWithKeyInfo(mockEvent, keyInfo);
+        expect(spy).toHaveBeenCalledTimes(1);
       });
 
       it('clearCachedKey 後は再度 getPrfSecret + NIP-44 復号が走る', async () => {
@@ -1809,7 +1900,6 @@ describe('NosskeyManager', () => {
           wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
         };
         const prfHandler = await import('./prf-handler.js');
-        // 各呼び出しで新規バッファを返す
         const spy = vi.spyOn(prfHandler, 'getPrfSecret').mockImplementation(async () => ({
           secret: hexToBytes(TV_KEK_HEX),
           id: credId,
