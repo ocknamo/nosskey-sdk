@@ -666,8 +666,22 @@ export class NosskeyManager implements NosskeyManagerLike {
         const kekPubkey = await seckeySigner(bytesToHex(prf)).getPublicKey();
         const nsecHex = nip44Decrypt(keyInfo.wrapped.payload, prf, kekPubkey);
         nsec = hexToBytes(nsecHex);
+
+        // 多層防御: 復号した nsec から導出した pubkey が、保存済み keyInfo.pubkey と
+        // 一致するか検証する。pubkey は localStorage に平文・非認証で保存されるため、
+        // 改ざんされると getPublicKey() が嘘の npub を返す（署名自体は seckey から
+        // 再導出されるので正しく、表示 ID と署名鍵が食い違う）。別パスキー / 別 keyInfo
+        // の取り違え検知にもなる。コストは pubkey 導出 1 回のみ。
+        const derivedPubkey = await seckeySigner(nsecHex).getPublicKey();
+        if (derivedPubkey !== keyInfo.pubkey) {
+          nsec.fill(0);
+          throw new Error(
+            'Decrypted key does not match stored pubkey (NostrKeyInfo may be tampered)'
+          );
+        }
       } finally {
-        // KEK は復号成否に関わらずゼロ化（nsec は別バッファなので破壊しない）
+        // KEK は復号成否に関わらずゼロ化する。nsec は別バッファなので破壊しない
+        // （pubkey 不一致で throw する経路では直前に nsec を個別ゼロ化済み）。
         prf.fill(0);
       }
     } else {
