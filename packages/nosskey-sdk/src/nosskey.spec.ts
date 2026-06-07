@@ -1681,6 +1681,75 @@ describe('NosskeyManager', () => {
           'Unsupported wrap algorithm: nip44-v3'
         );
       });
+
+      it('keyInfo.pubkey が改竄されている → 復号後の pubkey 照合で例外', async () => {
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const credId = new Uint8Array(4);
+        // payload / KEK は正規だが、保存済み pubkey だけが別物に書き換えられている状況。
+        // 改ざんされた pubkey は別 seckey から導出した有効な x-only pubkey にする。
+        const { schnorr } = await import('@noble/curves/secp256k1.js');
+        const tamperedPubkey = bytesToHex(schnorr.getPublicKey(new Uint8Array(32).fill(0x09)));
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(credId),
+          pubkey: tamperedPubkey,
+          salt: WRAP_SALT_HEX,
+          wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
+        };
+        const prfHandler = await import('./prf-handler.js');
+        vi.spyOn(prfHandler, 'getPrfSecret').mockResolvedValueOnce({
+          secret: hexToBytes(TV_KEK_HEX),
+          id: credId,
+        });
+
+        await expect(nosskey.exportNostrKey(keyInfo)).rejects.toThrow(
+          'Decrypted key does not match stored pubkey'
+        );
+      });
+
+      it('別アカウントの pubkey と wrapped payload を取り違えた keyInfo → pubkey 照合で例外', async () => {
+        // 改竄ではなく「別パスキー / 別 keyInfo の取り違え」シナリオ。
+        // wrapped payload は TV_SECKEY で暗号化されているが、pubkey フィールドには
+        // 別アカウント（別 seckey）の正規 pubkey が入っている。復号自体は成功するが
+        // 導出 pubkey と保存 pubkey が食い違うため照合で弾かれることを固定する。
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const credId = new Uint8Array(4);
+        const { schnorr } = await import('@noble/curves/secp256k1.js');
+        const otherAccountSeckey = new Uint8Array(32).fill(0x03);
+        const otherAccountPubkey = bytesToHex(schnorr.getPublicKey(otherAccountSeckey));
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(credId),
+          pubkey: otherAccountPubkey,
+          salt: WRAP_SALT_HEX,
+          wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
+        };
+        const prfHandler = await import('./prf-handler.js');
+        vi.spyOn(prfHandler, 'getPrfSecret').mockResolvedValueOnce({
+          secret: hexToBytes(TV_KEK_HEX),
+          id: credId,
+        });
+
+        await expect(nosskey.exportNostrKey(keyInfo)).rejects.toThrow(
+          'Decrypted key does not match stored pubkey'
+        );
+      });
+
+      it('keyInfo.pubkey が正規なら pubkey 照合を通過する（回帰）', async () => {
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const credId = new Uint8Array(4);
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(credId),
+          pubkey: TV_IMPORTED_PUBKEY,
+          salt: WRAP_SALT_HEX,
+          wrapped: { v: 1, alg: 'nip44-v2', payload: TV_PAYLOAD_B64 },
+        };
+        const prfHandler = await import('./prf-handler.js');
+        vi.spyOn(prfHandler, 'getPrfSecret').mockResolvedValueOnce({
+          secret: hexToBytes(TV_KEK_HEX),
+          id: credId,
+        });
+
+        await expect(nosskey.exportNostrKey(keyInfo)).resolves.toBe(TV_SECKEY_HEX);
+      });
     });
 
     describe('PRF 直接モード回帰', () => {
