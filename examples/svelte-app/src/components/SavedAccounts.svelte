@@ -93,7 +93,10 @@ function doDelete(account: NostrKeyInfo) {
   // 一覧はログアウト中（current=null）にのみ描画されるため通常この分岐は通らないが、
   // 防御的に: 削除対象が current 鍵なら、current ポインタのみ消してログイン状態を
   // リセットする（clearStoredKeyInfo だと登録簿ごと全消去してしまうため使わない）。
-  if (keyManager.getCurrentKeyInfo()?.pubkey === account.pubkey) {
+  // 登録簿の一意キーは pubkey + credentialId なので、判定も両方一致で行う
+  // （同一 pubkey・別 credentialId のエントリ削除で current を巻き込まないため）。
+  const current = keyManager.getCurrentKeyInfo();
+  if (current?.pubkey === account.pubkey && current?.credentialId === account.credentialId) {
     keyManager.clearCurrentKeyInfo();
     appState.publicKey.set(null);
     appState.isLoggedIn.set(false);

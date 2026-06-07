@@ -1,5 +1,6 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
+import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { currentScreen, logout } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -10,13 +11,19 @@ let clearResult = $state('');
 // ローカルストレージをクリアする関数
 function clearLocalStorage() {
   try {
-    // ローカルストレージのすべてのキーを削除
+    // SDK 管理の鍵情報（current スロット・登録簿・派生キャッシュ・in-memory 状態）を
+    // SDK の実ストレージハンドル経由で完全に消す。SAA grant 後やスタンドアロンの
+    // CookieStorage/MultiStorage 経路では SDK ハンドルが window.localStorage と別参照に
+    // なりうるため、window.localStorage.clear() だけでは登録簿やキャッシュを取りこぼす。
+    getNosskeyManager().clearStoredKeyInfo();
+
+    // アプリ設定（リレー・信頼済みオリジン・テーマ等）を window.localStorage から削除。
     localStorage.clear();
 
     // メッセージを表示
     clearResult = $i18n.t.settings.localStorage.cleared;
 
-    // アプリケーションの状態をリセット（SDK内のキー情報もクリアしてログアウト）
+    // アプリケーションの状態（公開鍵・ログイン状態・画面）をリセットする。
     logout();
 
     // 3秒後にメッセージをクリア
