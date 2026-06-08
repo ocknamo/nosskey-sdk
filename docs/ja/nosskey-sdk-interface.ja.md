@@ -114,11 +114,17 @@ async nip04Decrypt(peerPubkey: string, ciphertext: string): Promise<string>
 ### NostrKeyInfo管理メソッド
 
 #### setCurrentKeyInfo()
-現在のNostrKeyInfoを設定します。ストレージが有効な場合は保存も行います。
+現在のNostrKeyInfoを設定します。ストレージが有効な場合は current スロットへ保存し、
+登録簿が有効な場合は `pubkey + credentialId` をキーにエントリを upsert します。これにより
+2 つ目のアカウントを設定しても 1 つ目の `wrapped.payload` が失われません。
 
 ```typescript
 setCurrentKeyInfo(keyInfo: NostrKeyInfo): void
 ```
+
+> ⚠️ **wrap モードは非対称**です。wrap 鍵の `wrapped.payload` はインポートした nsec の
+> 唯一のコピーで、PRF 直接モードと違いパスキーから再導出できません。登録簿が上書きから
+> 守りますが、登録簿を無効にすると上書きで失われます。元 nsec のバックアップ保持を推奨します。
 
 #### getCurrentKeyInfo()
 現在のNostrKeyInfoを取得します。未設定の場合はストレージからの読み込みを試みます。
@@ -135,10 +141,50 @@ hasKeyInfo(): boolean
 ```
 
 #### clearStoredKeyInfo()
-ストレージに保存されたNostrKeyInfoをクリアします。
+保存された鍵情報を**完全に消去**します（current スロット＋登録簿＋メモリ＋派生キャッシュ）。
+秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作です。共有端末からの
+完全サインアウト等に使います。ログアウト（再ログインを残したい）には `clearCurrentKeyInfo()`
+を使ってください。
 
 ```typescript
 clearStoredKeyInfo(): void
+```
+
+> ⚠️ wrap モードの鍵はこの呼び出し後**復元不能**になります。必要なら事前に元 nsec を
+> バックアップしてください。
+
+#### clearCurrentKeyInfo()
+ログアウト用。current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去します。
+登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から再ログイン
+できます。
+
+```typescript
+clearCurrentKeyInfo(): void
+```
+
+#### listKeyInfos()
+登録簿に保存されている全 NostrKeyInfo の一覧をディープコピーで返します。登録簿が無効な
+場合は空配列を返します。
+
+```typescript
+listKeyInfos(): NostrKeyInfo[]
+```
+
+#### removeKeyInfo()
+登録簿から指定アカウント（`pubkey + credentialId` 一致）を削除します。wrap モードの
+エントリを削除するとその暗号化 nsec は復元不能になります。
+
+```typescript
+removeKeyInfo(pubkey: string, credentialId: string): void
+```
+
+#### backupKeyInfo()
+バックアップ用に NostrKeyInfo を**ディープコピーして返します**（`wrapped.payload` を含む）。
+引数省略時は current 鍵を、`pubkey`（必要なら `credentialId` も）指定時は登録簿の該当エントリを
+返します。該当が無ければ `null`。返り値を改変しても内部状態には影響しません。
+
+```typescript
+backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null
 ```
 
 ### パスキー関連メソッド
@@ -186,6 +232,7 @@ async importNostrKey(
 セキュリティメモ:
 - 入力された `seckey` バッファ（`Uint8Array`）は関数完了時に SDK 内部で `.fill(0)` されます。呼び出し側でも前後でゼロ化することを推奨します。
 - 戻り値の `NostrKeyInfo` を `setCurrentKeyInfo()` でセットすれば、以降の `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` が wrap モードで透過的に動作します（API は PRF 直接モードと完全に同一）。
+- **wrap 鍵は復元不能・PRF 直接モードとの非対称性**: 戻り値の `wrapped.payload` はインポートした nsec の唯一のコピーであり、パスキーから再導出できません。登録簿が有効（既定）なら `setCurrentKeyInfo()` は current 上書きを跨いで保持し、`clearCurrentKeyInfo()` によるログアウトでも残ります。ただし `clearStoredKeyInfo()`（完全ワイプ）・`removeKeyInfo()`・`registryEnabled=false` では**永久に失われます**。元 nsec のバックアップ保持を推奨し、`NostrKeyInfo`（`wrapped.payload` 含む）のエクスポートには `backupKeyInfo()` を使ってください。
 - **メモリゼロ化の制約**: SDK 内部で秘密鍵を `seckeySigner` 渡しや NIP-44 平文経路に通すため、一時的に hex 文字列（`string`）化されます。JS の `string` は immutable で書き戻し API が無いため、`Uint8Array.fill(0)` 相当のゼロ化は不可能で、**GC タイミングまでヒープに残存します**。`importNostrKey` / `exportNostrKey` / 復号後の `signEvent` などで発生します。ブラウザヒープに直接アクセスできる攻撃者を想定する場合は、この制約を理解した上で利用してください。
 
 ### 署名メソッド
@@ -276,9 +323,16 @@ export interface KeyCacheOptions {
 export interface NostrKeyStorageOptions {
   enabled: boolean; // NostrKeyInfoの保存を有効にするか（デフォルト: true）
   storage?: Storage; // 使用するストレージ（デフォルト: localStorage）
-  storageKey?: string; // 保存に使用するキー名（デフォルト: "nosskey_keyinfo"）
+  storageKey?: string; // current スロットのキー名（デフォルト: "nosskey_keyinfo"）
+  registryEnabled?: boolean; // マルチアカウント登録簿を有効にするか（デフォルト: true）
+  registryStorageKey?: string; // 登録簿のキー名（デフォルト: "nosskey_accounts"）
 }
 ```
+
+`registryEnabled` が true（既定）の場合、`setCurrentKeyInfo()` は `registryStorageKey`
+（`storageKey` とは別キー）の登録簿へエントリを upsert します。これにより wrap モード鍵が
+上書きやログアウトで失われるのを防ぎます。`false` にすると登録簿を一切使わない旧来の単一
+スロット挙動になります。
 
 ### GetPrfSecretOptions
 

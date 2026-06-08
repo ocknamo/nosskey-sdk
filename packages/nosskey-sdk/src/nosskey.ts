@@ -1,8 +1,23 @@
 import { seckeySigner } from '@rx-nostr/crypto';
 import { KeyCache } from './key-cache.js';
+import {
+  DEFAULT_REGISTRY_STORAGE_KEY,
+  loadRegistry,
+  normalizeEntry,
+  persistRegistry,
+  removeEntry,
+  upsertEntry,
+} from './key-registry.js';
 import { nip04Decrypt, nip04Encrypt } from './nip04.js';
 import { nip44Decrypt, nip44Encrypt } from './nip44.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
+import {
+  STANDARD_SALT,
+  STANDARD_SALT_BYTES,
+  WRAP_SALT,
+  WRAP_SALT_BYTES,
+  normalizeSalt,
+} from './salt.js';
 import type {
   GetPrfSecretOptions,
   KeyCacheOptions,
@@ -21,30 +36,6 @@ import type {
  */
 import { bytesToHex, hexToBytes } from './utils.js';
 
-// 標準salt値（"nostr-pwk"のUTF-8バイトのhex）。実際のPRF評価入力と一致する。
-const STANDARD_SALT = '6e6f7374722d70776b';
-
-// 旧誤値（"nostr-key"のhex）。過去に保存された NostrKeyInfo に残っている可能性があるが、
-// 実際の導出は常に "nostr-pwk" で行われていたため、標準値へ正規化して扱う。
-const LEGACY_SALT = '6e6f7374722d6b6579';
-
-// wrap モード用 salt 値（"nostr-pwk-wrap"のUTF-8バイトのhex）。PRF 直接モードと
-// ドメイン分離するため、wrap モードでは異なる salt から KEK を導出する。
-const WRAP_SALT = '6e6f7374722d70776b2d77726170';
-
-// PRF eval に渡す salt のバイト表現。createPasskey 時に first/second 両方を eval して
-// 「直接モード用 PRF」と「wrap モード用 KEK」を 1 回の UV で同時取得するため。
-const STANDARD_SALT_BYTES = hexToBytes(STANDARD_SALT);
-const WRAP_SALT_BYTES = hexToBytes(WRAP_SALT);
-
-/**
- * NostrKeyInfo.salt をPRF評価入力として使える値に正規化する。
- * 未設定・旧誤値は標準salt値に置き換える（既存鍵の保護）。
- */
-function normalizeSalt(salt?: string): string {
-  return !salt || salt === LEGACY_SALT ? STANDARD_SALT : salt;
-}
-
 /**
  * Nosskey - Passkey-Derived Nostr Keys
  */
@@ -59,7 +50,13 @@ export class NosskeyManager implements NosskeyManagerLike {
   #storageOptions: NostrKeyStorageOptions = {
     enabled: true,
     storageKey: 'nosskey_keyinfo',
+    registryEnabled: true,
+    registryStorageKey: DEFAULT_REGISTRY_STORAGE_KEY,
   };
+
+  // マルチアカウント登録簿の in-memory キャッシュ。null は未ロード。
+  // #currentKeyInfo と同様、storage 参照差し替え時に破棄して読み直す。
+  #registryCache: NostrKeyInfo[] | null = null;
 
   // PRF取得時のオプション
   #prfOptions: GetPrfSecretOptions = {};
@@ -121,10 +118,15 @@ export class NosskeyManager implements NosskeyManagerLike {
     const storageChanged = 'storage' in options && options.storage !== this.#storageOptions.storage;
     this.#storageOptions = { ...this.#storageOptions, ...options };
     if (storageChanged) {
+      // current だけでなく登録簿の in-memory キャッシュも破棄する。iframe で SAA grant 後に
+      // partitioned 由来の登録簿を握り続けるのを防ぐ（ユーザー決定 #5）。
       this.#currentKeyInfo = null;
+      this.#registryCache = null;
     }
 
-    // ストレージが無効化された場合はストレージからNostrKeyInfoを削除
+    // ストレージが無効化された場合は保存済みの鍵情報を完全に削除する。
+    // clearStoredKeyInfo は current スロットだけでなく登録簿も消すため、
+    // 「ストレージ無効化＝全消去」の意図と整合する。
     if (options.enabled === false) {
       this.clearStoredKeyInfo();
     }
@@ -139,15 +141,23 @@ export class NosskeyManager implements NosskeyManagerLike {
 
   /**
    * 現在のNostrKeyInfoを設定
-   * ストレージが有効な場合は保存も行う
+   * ストレージが有効な場合は current スロットへ保存する。
+   * 登録簿が有効な場合は、あわせてエントリを upsert する（pubkey + credentialId 一意）。
+   * これにより 2 つ目のアカウントを設定しても 1 つ目の wrap 暗号文が失われない。
    * @param keyInfo 設定するNostrKeyInfo
    */
   setCurrentKeyInfo(keyInfo: NostrKeyInfo): void {
     this.#currentKeyInfo = keyInfo;
 
-    // ストレージが有効な場合は保存
+    // ストレージが有効な場合は current スロットへ保存
     if (this.#storageOptions.enabled) {
       void this.#saveKeyInfoToStorage(keyInfo);
+    }
+
+    // 登録簿が有効な場合は upsert（current 上書きによる wrap 鍵喪失を防ぐ）
+    if (this.#registryActive()) {
+      const next = upsertEntry(this.#loadRegistry(), keyInfo);
+      this.#persistRegistry(next);
     }
   }
 
@@ -188,14 +198,76 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * 使用するストレージ（明示指定 > localStorage）を解決する。利用不可なら null。
+   */
+  #resolveStorage(): Storage | null {
+    return (
+      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null)
+    );
+  }
+
+  /**
+   * 登録簿のストレージキー。current スロット（storageKey）とは別キー。
+   */
+  #registryKey(): string {
+    return this.#storageOptions.registryStorageKey || DEFAULT_REGISTRY_STORAGE_KEY;
+  }
+
+  /**
+   * 登録簿が現在有効か（ストレージ有効かつ registryEnabled が false でない）。
+   */
+  #registryActive(): boolean {
+    return this.#storageOptions.enabled && this.#storageOptions.registryEnabled !== false;
+  }
+
+  /**
+   * 登録簿を読み込む（in-memory キャッシュ優先）。
+   *
+   * 登録簿キーがストレージに**存在しない**場合は未移行とみなし、current スロットに
+   * 鍵があればそれを 1 件シードして移行する（一度きり）。空配列が保存されている場合は
+   * 「移行済み・全削除済み」とみなしてシードしない（削除済みエントリを蘇生させない）。
+   */
+  #loadRegistry(): NostrKeyInfo[] {
+    if (!this.#registryActive()) return [];
+    if (this.#registryCache) return this.#registryCache;
+
+    const storage = this.#resolveStorage();
+    if (!storage) return [];
+
+    const key = this.#registryKey();
+    let list: NostrKeyInfo[];
+    if (storage.getItem(key) === null) {
+      // 未移行: current スロットの既存鍵をシードする。
+      const current = this.getCurrentKeyInfo();
+      list = current ? [normalizeEntry(current)] : [];
+      if (list.length > 0) {
+        persistRegistry(storage, key, list);
+      }
+    } else {
+      list = loadRegistry(storage, key);
+    }
+    this.#registryCache = list;
+    return list;
+  }
+
+  /**
+   * 登録簿を in-memory キャッシュとストレージの両方へ反映する。
+   */
+  #persistRegistry(list: NostrKeyInfo[]): void {
+    this.#registryCache = list;
+    if (!this.#registryActive()) return;
+    const storage = this.#resolveStorage();
+    if (storage) persistRegistry(storage, this.#registryKey(), list);
+  }
+
+  /**
    * NostrKeyInfoをストレージに保存
    * @param keyInfo 保存するNostrKeyInfo
    */
   async #saveKeyInfoToStorage(keyInfo: NostrKeyInfo): Promise<void> {
     if (!this.#storageOptions.enabled) return;
 
-    const storage =
-      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    const storage = this.#resolveStorage();
 
     if (!storage) return;
 
@@ -215,8 +287,7 @@ export class NosskeyManager implements NosskeyManagerLike {
   #loadKeyInfoFromStorage(): NostrKeyInfo | null {
     if (!this.#storageOptions.enabled) return null;
 
-    const storage =
-      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    const storage = this.#resolveStorage();
 
     if (!storage) return null;
 
@@ -241,19 +312,80 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * ストレージに保存されたNostrKeyInfoをクリア
+   * 保存された鍵情報を**完全に消去**する（current スロット＋登録簿＋メモリ＋派生キャッシュ）。
+   *
+   * 秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作。wrap モードの
+   * 鍵は復元不能になるため、共有端末からの完全サインアウトなど「すべて消す」意図のときに使う。
+   * ログアウト（再ログインを残したい）には {@link clearCurrentKeyInfo} を使うこと。
    */
   clearStoredKeyInfo(): void {
-    const storage =
-      this.#storageOptions.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+    const storage = this.#resolveStorage();
+    if (storage) {
+      storage.removeItem(this.#storageOptions.storageKey || 'nosskey_keyinfo');
+      // 登録簿（秘密情報の本体）も消去する。
+      storage.removeItem(this.#registryKey());
+    }
 
-    if (!storage) return;
-
-    const key = this.#storageOptions.storageKey || 'nosskey_keyinfo';
-    storage.removeItem(key);
-
-    // 現在のNostrKeyInfoも消去
+    // メモリ・登録簿キャッシュ・派生鍵キャッシュもすべて消去する。
     this.#currentKeyInfo = null;
+    this.#registryCache = null;
+    this.#keyCache.clearAllCachedKeys();
+  }
+
+  /**
+   * ログアウト用: current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去する。
+   * 登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から
+   * 再ログインできる。
+   */
+  clearCurrentKeyInfo(): void {
+    const storage = this.#resolveStorage();
+    if (storage) {
+      storage.removeItem(this.#storageOptions.storageKey || 'nosskey_keyinfo');
+    }
+    this.#currentKeyInfo = null;
+    // 平文秘密鍵の派生キャッシュは破棄する（登録簿の暗号文は保持）。
+    this.#keyCache.clearAllCachedKeys();
+  }
+
+  /**
+   * 登録簿に保存されている全 NostrKeyInfo の一覧を返す（ディープコピー）。
+   * 登録簿が無効な場合は空配列を返す。
+   */
+  listKeyInfos(): NostrKeyInfo[] {
+    return this.#loadRegistry().map((k) => structuredClone(k));
+  }
+
+  /**
+   * 登録簿から指定アカウント（pubkey + credentialId 一致）を削除する。
+   * wrap モードのエントリを削除するとその暗号化 nsec は復元不能になる。
+   * @param pubkey 公開鍵（hex）
+   * @param credentialId クレデンシャルID（hex）
+   */
+  removeKeyInfo(pubkey: string, credentialId: string): void {
+    if (!this.#registryActive()) return;
+    const next = removeEntry(this.#loadRegistry(), pubkey, credentialId);
+    this.#persistRegistry(next);
+  }
+
+  /**
+   * バックアップ用に NostrKeyInfo を**ディープコピーして返す**（`wrapped.payload` を含む）。
+   * 引数省略時は current 鍵を、指定時は登録簿の該当エントリを返す。該当が無ければ null。
+   * 返り値を改変しても内部状態には影響しない。
+   * @param pubkey 対象の公開鍵（hex）。省略時は current 鍵。
+   * @param credentialId 同一 pubkey で複数エントリがある場合に特定するためのクレデンシャルID（hex）。
+   */
+  backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null {
+    let target: NostrKeyInfo | null;
+    if (pubkey === undefined) {
+      target = this.getCurrentKeyInfo();
+    } else {
+      target =
+        this.#loadRegistry().find(
+          (k) =>
+            k.pubkey === pubkey && (credentialId === undefined || k.credentialId === credentialId)
+        ) ?? null;
+    }
+    return target ? structuredClone(target) : null;
   }
 
   /**

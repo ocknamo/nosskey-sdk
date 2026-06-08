@@ -1,7 +1,7 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
 import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
-import { upsertAccount } from './accounts.js';
+import { refreshAccounts } from './accounts.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
@@ -333,12 +333,11 @@ export const resetState = () => {
 // ログアウト関数
 export const logout = () => {
   const nosskeyManager = getNosskeyManager();
-  // 平文秘密鍵の派生キャッシュを破棄する。
-  nosskeyManager.clearAllCachedKeys();
-  // current ポインタ（nosskey_pwk）を削除する。アカウント登録簿
+  // current ポインタ（nosskey_pwk）と派生キャッシュのみ消去する。アカウント登録簿
   // （nosskey_accounts）は別キーで残るため、wrap モード鍵も失われず再ログインできる。
   // 削除後は hasKeyInfo() が false になり AuthScreen が無言で自動ログインしない。
-  nosskeyManager.clearStoredKeyInfo();
+  // 秘密情報を完全に消す（登録簿ごと削除）には clearStoredKeyInfo() を使う。
+  nosskeyManager.clearCurrentKeyInfo();
 
   // 公開鍵情報をクリア
   publicKey.set(null);
@@ -353,15 +352,16 @@ export const logout = () => {
 /**
  * 指定の `NostrKeyInfo` でログイン状態を確立する共通処理。新規作成 / nsec
  * インポート / 保存済みアカウントからの再ログインのいずれの経路でも使う。
- * - 登録簿へ upsert（pubkey 一意・username 保持マージ。再ログインでは冪等）
- * - current 鍵へ設定（メモリと `nosskey_pwk` を整合）
+ * - current 鍵へ設定（メモリと `nosskey_pwk` を整合）。`setCurrentKeyInfo` は
+ *   あわせて SDK 登録簿へ upsert する（pubkey + credentialId 一意・username 保持マージ）。
+ * - svelte 側のアカウント一覧ストアを SDK 登録簿から再同期する。
  * - 公開鍵をストアへ反映しログイン状態へ。`getPublicKey()` はパスキー
  *   プロンプトを出さない（UV は次回の署名 / 暗号化時に自然発生する）。
  */
 export const loginWith = async (keyInfo: NostrKeyInfo): Promise<void> => {
   const nosskeyManager = getNosskeyManager();
-  upsertAccount(keyInfo);
   nosskeyManager.setCurrentKeyInfo(keyInfo);
+  refreshAccounts();
   publicKey.set(await nosskeyManager.getPublicKey());
   isLoggedIn.set(true);
   markLoggedInBefore();

@@ -91,13 +91,18 @@ function cancelDelete() {
 
 function doDelete(account: NostrKeyInfo) {
   // 一覧はログアウト中（current=null）にのみ描画されるため通常この分岐は通らないが、
-  // 防御的に: 削除対象が current 鍵なら、ポインタも消してログイン状態をリセットする。
-  if (keyManager.getCurrentKeyInfo()?.pubkey === account.pubkey) {
-    keyManager.clearStoredKeyInfo();
+  // 防御的に: 削除対象が current 鍵なら、current ポインタのみ消してログイン状態を
+  // リセットする（clearStoredKeyInfo だと登録簿ごと全消去してしまうため使わない）。
+  // 登録簿の一意キーは pubkey + credentialId なので、判定も両方一致で行う
+  // （同一 pubkey・別 credentialId のエントリ削除で current を巻き込まないため）。
+  const current = keyManager.getCurrentKeyInfo();
+  if (current?.pubkey === account.pubkey && current?.credentialId === account.credentialId) {
+    keyManager.clearCurrentKeyInfo();
     appState.publicKey.set(null);
     appState.isLoggedIn.set(false);
   }
-  removeAccount(account.pubkey);
+  // 該当アカウントのみ登録簿から削除する（pubkey + credentialId で特定）。
+  removeAccount(account.pubkey, account.credentialId);
 }
 
 // アンマウント時に未発火のタイマーを破棄し、画面遷移後の遅延削除を防ぐ。
