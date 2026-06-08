@@ -78,7 +78,6 @@ function handleClick() {
   }
 
   .btn.active :global(.icon img) {
-    filter: brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%)
-      hue-rotate(225deg) brightness(94%) contrast(89%);
+    filter: var(--icon-filter-primary);
   }
 </style>

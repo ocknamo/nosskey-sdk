@@ -132,8 +132,10 @@ export interface TranslationData {
     theme: {
       title: string;
       description: string;
-      light: string;
-      dark: string;
+      purpleDark: string;
+      purpleLight: string;
+      neutralDark: string;
+      neutralLight: string;
       auto: string;
       changed: string;
     };
@@ -380,8 +382,10 @@ export const ja: TranslationData = {
     theme: {
       title: 'テーマ設定',
       description: 'アプリケーションの外観を変更できます。',
-      light: 'ライト',
-      dark: 'ダーク',
+      purpleDark: 'ダークパープル',
+      purpleLight: 'ライトパープル',
+      neutralDark: 'ニュートラルダーク',
+      neutralLight: 'ニュートラルライト',
       auto: '自動',
       changed: 'テーマを変更しました',
     },
@@ -651,8 +655,10 @@ export const en: TranslationData = {
     theme: {
       title: 'Theme Settings',
       description: 'Change the appearance of the application.',
-      light: 'Light',
-      dark: 'Dark',
+      purpleDark: 'Dark Purple',
+      purpleLight: 'Light Purple',
+      neutralDark: 'Dark Neutral',
+      neutralLight: 'Light Neutral',
       auto: 'Auto',
       changed: 'Theme changed',
     },

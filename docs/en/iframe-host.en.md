@@ -256,7 +256,7 @@ The `nosskey:visibility` postMessage is part of the protocol; the parent-side
 A parent app can pass display preferences via URL query parameters that
 `NosskeyIframeClient` appends through its `buildIframeUrl()` helper:
 
-- `?theme=light|dark|auto` — applied by `app-state.ts`
+- `?theme=purple-dark|purple-light|neutral-dark|neutral-light|auto` — applied by `app-state.ts` (legacy `light`/`dark` still accepted)
 - `?lang=ja|en|auto` — applied by `i18n-store.ts`
 - `?embedded=1` — automatically added whenever `theme` or `lang` is set
 

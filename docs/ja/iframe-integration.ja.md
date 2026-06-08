@@ -114,7 +114,7 @@ window.nostr = {
 | `iframeUrl` | `string` | (必須) | Nosskey iframe の絶対 URL。例: `https://nosskey.app/#/iframe` |
 | `container` | `HTMLElement` | `document.body` | iframe 要素を追加する親要素 |
 | `timeout` | `number` | `60000` | リクエストのタイムアウト (ミリ秒) |
-| `theme` | `'light' \| 'dark' \| 'auto'` | (未指定) | iframe に渡すテーマ。`auto` は iframe 内で `prefers-color-scheme` により解決される |
+| `theme` | `'purple-dark' \| 'purple-light' \| 'neutral-dark' \| 'neutral-light' \| 'auto'` | (未指定) | iframe に渡すテーマ。`auto` は iframe 内で `prefers-color-scheme` により解決される。旧値 `'light'` / `'dark'` も後方互換で受理され、パープル系に解決される |
 | `lang` | `'ja' \| 'en' \| 'auto'` | (未指定) | iframe に渡す言語。`auto` は iframe 内で `navigator.language` により解決される |
 
 - `theme` / `lang` を指定すると、iframe URL に `?embedded=1&theme=...&lang=...` が自動付与されます。

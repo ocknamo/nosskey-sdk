@@ -36,9 +36,11 @@ const handleThemeChange = (event: Event) => {
       onchange={handleThemeChange}
       class="theme-select"
     >
+      <option value="purple-dark">{$i18n.t.settings.theme.purpleDark}</option>
+      <option value="purple-light">{$i18n.t.settings.theme.purpleLight}</option>
+      <option value="neutral-dark">{$i18n.t.settings.theme.neutralDark}</option>
+      <option value="neutral-light">{$i18n.t.settings.theme.neutralLight}</option>
       <option value="auto">{$i18n.t.settings.theme.auto}</option>
-      <option value="light">{$i18n.t.settings.theme.light}</option>
-      <option value="dark">{$i18n.t.settings.theme.dark}</option>
     </select>
   </div>
 
