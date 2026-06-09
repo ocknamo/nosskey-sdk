@@ -322,6 +322,7 @@ $effect(() => {
     color: var(--color-text-secondary);
     margin-bottom: 0;
     line-height: 1.5;
+    text-align: center;
   }
 
   .loading-section {
