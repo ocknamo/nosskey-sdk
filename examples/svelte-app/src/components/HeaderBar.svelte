@@ -47,7 +47,7 @@ function getPageTitle(screenName: string): string {
     background-color: var(--color-card);
     box-shadow: 0 2px 10px var(--color-shadow);
     z-index: 100;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-width, 1px) solid var(--color-border);
     transition:
       background-color 0.3s ease,
       border-color 0.3s ease;

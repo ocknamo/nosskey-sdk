@@ -355,7 +355,7 @@ $effect(() => {
     gap: 4px;
     padding: 4px;
     background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: var(--border-width, 1px) solid var(--color-border);
     border-radius: 10px;
     margin: 0 auto 20px;
   }

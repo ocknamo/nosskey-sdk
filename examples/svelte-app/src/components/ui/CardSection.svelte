@@ -27,7 +27,7 @@ const { title, compact = false, children, titleAside }: Props = $props();
     background-color: var(--color-card);
     padding: 12px 60px;
     border-radius: 12px;
-    border: 1px solid var(--color-border);
+    border: var(--border-width, 1px) solid var(--color-border);
     box-shadow: 0 2px 4px var(--color-shadow);
     margin-bottom: 20px;
     transition:

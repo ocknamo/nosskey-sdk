@@ -96,6 +96,9 @@ const PURPLE_DARK: Record<string, string> = {
   '--icon-filter-primary':
     'brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%) hue-rotate(225deg) brightness(94%) contrast(89%)',
 
+  // ボーダー幅（ダーク）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
+  '--border-width': '1px',
+
   // バナーオーバーレイ（ダーク）
   '--banner-overlay-gradient':
     'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.3) 100%)',
@@ -185,6 +188,9 @@ const PURPLE_LIGHT: Record<string, string> = {
   '--icon-filter-primary':
     'brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%) hue-rotate(225deg) brightness(94%) contrast(89%)',
 
+  // ボーダー幅（ライト）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
+  '--border-width': '1px',
+
   // バナーオーバーレイ（ライト）
   '--banner-overlay-gradient':
     'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%)',
@@ -201,6 +207,11 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-primary-alpha-08': 'rgba(160, 160, 168, 0.08)',
   // 黒 SVG を明るいグレー (#A0A0A8 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(70%)',
+  // 差別化: 太いボーダー + 影なし。太線が見えるようカード枠の border 色も強める。
+  '--color-border': '#4A4A4E',
+  '--border-width': '2px',
+  '--color-shadow': 'transparent',
+  '--color-shadow-strong': 'transparent',
 };
 
 // ニュートラルライト。パープルライトをベースに primary 系アクセントをグレー無彩色へ置換。
@@ -213,6 +224,11 @@ const NEUTRAL_LIGHT: Record<string, string> = {
   '--color-primary-alpha-08': 'rgba(90, 90, 102, 0.08)',
   // 黒 SVG を濃いグレー (#5A5A66 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(38%)',
+  // 差別化: 太いボーダー + 影なし。太線が見えるようカード枠の border 色も強める。
+  '--color-border': '#C2C2CC',
+  '--border-width': '2px',
+  '--color-shadow': 'transparent',
+  '--color-shadow-strong': 'transparent',
 };
 
 export const THEME_PALETTES: Record<ResolvedTheme, Record<string, string>> = {

@@ -51,7 +51,7 @@ h1 {
 .card {
   padding: 2em;
   background-color: var(--color-card);
-  border: 1px solid var(--color-border);
+  border: var(--border-width, 1px) solid var(--color-border);
   border-radius: 12px;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
