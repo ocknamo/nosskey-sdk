@@ -102,6 +102,27 @@ $effect(() => {
 // ストアの監視
 currentScreen.subscribe(updateHash);
 
+// ニュートラルテーマで使う丸ゴシック (M PLUS Rounded 1c) を遅延ロードする。
+// パープル系のみの利用者には不要なフォント取得を発生させないため、初回に
+// ニュートラルテーマが適用されたタイミングで一度だけ <link> を注入する。
+let roundedFontRequested = false;
+function ensureRoundedFontLoaded() {
+  if (roundedFontRequested || typeof document === 'undefined') return;
+  roundedFontRequested = true;
+
+  const preconnectGstatic = document.createElement('link');
+  preconnectGstatic.rel = 'preconnect';
+  preconnectGstatic.href = 'https://fonts.gstatic.com';
+  preconnectGstatic.crossOrigin = 'anonymous';
+
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href =
+    'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap';
+
+  document.head.append(preconnectGstatic, stylesheet);
+}
+
 // テーマの適用
 function applyTheme(theme: ThemeMode) {
   if (typeof window === 'undefined') return;
@@ -110,8 +131,12 @@ function applyTheme(theme: ThemeMode) {
 
   // `auto` は OS の prefers-color-scheme でパープル系 dark/light に解決する。
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const palette = THEME_PALETTES[resolveTheme(theme, prefersDark)];
+  const resolved = resolveTheme(theme, prefersDark);
+  if (resolved === 'neutral-dark' || resolved === 'neutral-light') {
+    ensureRoundedFontLoaded();
+  }
 
+  const palette = THEME_PALETTES[resolved];
   for (const [key, value] of Object.entries(palette)) {
     root.style.setProperty(key, value);
   }
@@ -177,8 +202,7 @@ onMount(() => {
   }
 
   :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    font-family: var(--font-family);
     line-height: 1.5;
     color: var(--color-text);
     background-color: var(--color-background);

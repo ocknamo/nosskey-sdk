@@ -12,6 +12,12 @@ export type ThemeMode = 'purple-dark' | 'purple-light' | 'neutral-dark' | 'neutr
 
 export type ResolvedTheme = 'purple-dark' | 'purple-light' | 'neutral-dark' | 'neutral-light';
 
+// フォントスタック。パープル系は従来のシステムフォント、ニュートラル系は丸ゴシック
+// （M PLUS Rounded 1c を Google Fonts から読み込み、未ロード時はシステムへフォールバック）。
+const SYSTEM_FONT_STACK =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif';
+const ROUNDED_FONT_STACK = `"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", ${SYSTEM_FONT_STACK}`;
+
 // パープルダーク（旧 'dark'）。現行ダークテーマの値をそのまま移植（見た目不変）。
 const PURPLE_DARK: Record<string, string> = {
   '--color-text': '#FFFFFF',
@@ -98,6 +104,9 @@ const PURPLE_DARK: Record<string, string> = {
 
   // ボーダー幅（ダーク）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
   '--border-width': '1px',
+
+  // フォント（ダーク）。ニュートラル系で丸ゴシックへ差し替える。
+  '--font-family': SYSTEM_FONT_STACK,
 
   // バナーオーバーレイ（ダーク）
   '--banner-overlay-gradient':
@@ -191,6 +200,9 @@ const PURPLE_LIGHT: Record<string, string> = {
   // ボーダー幅（ライト）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
   '--border-width': '1px',
 
+  // フォント（ライト）。ニュートラル系で丸ゴシックへ差し替える。
+  '--font-family': SYSTEM_FONT_STACK,
+
   // バナーオーバーレイ（ライト）
   '--banner-overlay-gradient':
     'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%)',
@@ -207,11 +219,12 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-primary-alpha-08': 'rgba(160, 160, 168, 0.08)',
   // 黒 SVG を明るいグレー (#A0A0A8 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(70%)',
-  // 差別化: 太いボーダー + 影なし。太線が見えるようカード枠の border 色も強める。
+  // 差別化: 太いボーダー + 影なし + 丸ゴシック。太線が見えるようカード枠の border 色も強める。
   '--color-border': '#4A4A4E',
-  '--border-width': '2px',
+  '--border-width': '3px',
   '--color-shadow': 'transparent',
   '--color-shadow-strong': 'transparent',
+  '--font-family': ROUNDED_FONT_STACK,
 };
 
 // ニュートラルライト。パープルライトをベースに primary 系アクセントをグレー無彩色へ置換。
@@ -224,11 +237,12 @@ const NEUTRAL_LIGHT: Record<string, string> = {
   '--color-primary-alpha-08': 'rgba(90, 90, 102, 0.08)',
   // 黒 SVG を濃いグレー (#5A5A66 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(38%)',
-  // 差別化: 太いボーダー + 影なし。太線が見えるようカード枠の border 色も強める。
+  // 差別化: 太いボーダー + 影なし + 丸ゴシック。太線が見えるようカード枠の border 色も強める。
   '--color-border': '#C2C2CC',
-  '--border-width': '2px',
+  '--border-width': '3px',
   '--color-shadow': 'transparent',
   '--color-shadow-strong': 'transparent',
+  '--font-family': ROUNDED_FONT_STACK,
 };
 
 export const THEME_PALETTES: Record<ResolvedTheme, Record<string, string>> = {

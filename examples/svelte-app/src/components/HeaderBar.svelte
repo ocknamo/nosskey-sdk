@@ -83,8 +83,8 @@ function getPageTitle(screenName: string): string {
   .page-title {
     font-size: 1.1rem;
     font-weight: 700;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-      "Helvetica Neue", Arial, sans-serif;
+    /* テーマのフォント（neutral では丸ゴシック）に追従させる。 */
+    font-family: var(--font-family);
     color: var(--color-titles);
     letter-spacing: -0.02em;
     transition: color 0.3s ease;

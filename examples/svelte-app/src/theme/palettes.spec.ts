@@ -77,4 +77,27 @@ describe('THEME_PALETTES', () => {
       THEME_PALETTES['purple-light']['--color-primary']
     );
   });
+
+  it('neutral themes use thicker borders than purple themes', () => {
+    expect(THEME_PALETTES['purple-dark']['--border-width']).toBe('1px');
+    expect(THEME_PALETTES['purple-light']['--border-width']).toBe('1px');
+    expect(THEME_PALETTES['neutral-dark']['--border-width']).toBe('3px');
+    expect(THEME_PALETTES['neutral-light']['--border-width']).toBe('3px');
+  });
+
+  it('neutral themes drop shadows while purple themes keep them', () => {
+    expect(THEME_PALETTES['neutral-dark']['--color-shadow']).toBe('transparent');
+    expect(THEME_PALETTES['neutral-light']['--color-shadow']).toBe('transparent');
+    expect(THEME_PALETTES['purple-dark']['--color-shadow']).not.toBe('transparent');
+    expect(THEME_PALETTES['purple-light']['--color-shadow']).not.toBe('transparent');
+  });
+
+  it('only neutral themes use the rounded font', () => {
+    for (const theme of ['neutral-dark', 'neutral-light'] as const) {
+      expect(THEME_PALETTES[theme]['--font-family']).toContain('M PLUS Rounded 1c');
+    }
+    for (const theme of ['purple-dark', 'purple-light'] as const) {
+      expect(THEME_PALETTES[theme]['--font-family']).not.toContain('M PLUS Rounded 1c');
+    }
+  });
 });
