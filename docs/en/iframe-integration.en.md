@@ -116,7 +116,7 @@ The `NosskeyIframeClient` constructor takes `NosskeyIframeClientOptions`.
 | `iframeUrl` | `string` | (required) | Absolute URL of the Nosskey iframe. e.g. `https://nosskey.app/#/iframe` |
 | `container` | `HTMLElement` | `document.body` | Parent element the iframe is appended to |
 | `timeout` | `number` | `60000` | Request timeout in milliseconds |
-| `theme` | `'light' \| 'dark' \| 'auto'` | (unset) | Theme passed to the iframe. `auto` is resolved inside the iframe via `prefers-color-scheme` |
+| `theme` | `'purple-dark' \| 'purple-light' \| 'neutral-dark' \| 'neutral-light' \| 'auto'` | (unset) | Theme passed to the iframe. `auto` is resolved inside the iframe via `prefers-color-scheme`. Legacy `'light'` / `'dark'` are still accepted and resolve to the purple variants |
 | `lang` | `'ja' \| 'en' \| 'auto'` | (unset) | Language passed to the iframe. `auto` is resolved inside the iframe via `navigator.language` |
 
 - When `theme` / `lang` is set, `?embedded=1&theme=...&lang=...` is automatically appended to the iframe URL.

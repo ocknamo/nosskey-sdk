@@ -1,6 +1,7 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
 import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
+import { type ThemeMode, normalizeThemeMode } from '../theme/palettes.js';
 import { refreshAccounts } from './accounts.js';
 import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
 
@@ -55,9 +56,9 @@ export const isLoggedIn = writable(false);
 // Nostrキー情報
 export const publicKey = writable<string | null>(null);
 
-// テーマ設定
-export type ThemeMode = 'light' | 'dark' | 'auto';
-export const currentTheme = writable<ThemeMode>('dark');
+// テーマ設定（ThemeMode は palettes.ts で定義、ここで再 export して既存 import を維持）
+export type { ThemeMode };
+export const currentTheme = writable<ThemeMode>('purple-dark');
 
 // 親オリジンから `?embedded=1&theme=...` でテーマを上書きされた場合、
 // localStorage には書き戻さない（次回スタンドアロン起動時にユーザー設定を保つため）。
@@ -127,16 +128,14 @@ function loadCacheTimeoutSetting(): number {
   return Number.isFinite(parsed) ? parsed : 300;
 }
 
-// テーマ設定を読み込む
+// テーマ設定を読み込む。旧値 ('light'/'dark') は normalizeThemeMode がパープル系へ移行する。
 function loadThemeSetting(): ThemeMode {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('nosskey_theme');
-    // デフォルトは'dark'（ダークモード）
-    if (saved === 'light' || saved === 'dark' || saved === 'auto') {
-      return saved;
-    }
+    const normalized = normalizeThemeMode(localStorage.getItem('nosskey_theme'));
+    if (normalized) return normalized;
   }
-  return 'dark';
+  // デフォルトは現行ダークの見た目を維持するパープルダーク。
+  return 'purple-dark';
 }
 
 function markCorruption(field: 'trustedOrigins' | 'consentPolicy', reason: string): void {
@@ -213,14 +212,14 @@ try {
   cacheSecrets.set(loadCacheSecretsSetting());
   cacheTimeout.set(loadCacheTimeoutSetting());
 
-  // 埋め込みモード (`?embedded=1&theme=light|dark|auto`) では親の指定を優先し、
-  // localStorage への書き戻しを抑止する。判定は `iframe-mode.ts` を import せず
-  // ここで直接行う（双方向 import を避けるため）。
+  // 埋め込みモード (`?embedded=1&theme=...`) では親の指定を優先し、localStorage への
+  // 書き戻しを抑止する。旧値 ('light'/'dark') は normalizeThemeMode がパープル系へ移行する。
+  // 判定は `iframe-mode.ts` を import せずここで直接行う（双方向 import を避けるため）。
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
     if (params.get('embedded') === '1') {
-      const t = params.get('theme');
-      if (t === 'light' || t === 'dark' || t === 'auto') {
+      const t = normalizeThemeMode(params.get('theme'));
+      if (t) {
         embeddedThemeOverride = true;
         currentTheme.set(t);
       }

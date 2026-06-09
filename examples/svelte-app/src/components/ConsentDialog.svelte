@@ -169,7 +169,7 @@ function openConsentSettings(): void {
   .consent-card {
     background: var(--color-card);
     color: var(--color-text);
-    border: 1px solid var(--color-border);
+    border: var(--border-width, 1px) solid var(--color-border);
     border-radius: 12px;
     box-shadow: 0 8px 24px var(--color-shadow-strong);
     padding: 24px;

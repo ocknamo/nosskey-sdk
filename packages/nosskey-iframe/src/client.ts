@@ -30,8 +30,19 @@ export interface NosskeyIframeClientOptions {
    * the iframe (via `prefers-color-scheme`). The host app applies the theme
    * on load only; runtime switching requires destroying and re-creating the
    * client with a new value.
+   *
+   * The reference app exposes four color themes plus `'auto'`. The legacy
+   * `'light'` / `'dark'` values remain accepted as aliases for
+   * `'purple-light'` / `'purple-dark'`.
    */
-  theme?: 'light' | 'dark' | 'auto';
+  theme?:
+    | 'purple-dark'
+    | 'purple-light'
+    | 'neutral-dark'
+    | 'neutral-light'
+    | 'light'
+    | 'dark'
+    | 'auto';
   /**
    * Language to pass to the iframe via the `?lang=...` URL parameter. When
    * set, `embedded=1` is also appended automatically. `'auto'` is resolved
