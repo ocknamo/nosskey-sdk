@@ -327,6 +327,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    *
    * 秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作。wrap モードの
    * 鍵は復元不能になるため、共有端末からの完全サインアウトなど「すべて消す」意図のときに使う。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（{@link clearPendingPrf}）。
    * ログアウト（再ログインを残したい）には {@link clearCurrentKeyInfo} を使うこと。
    */
   clearStoredKeyInfo(): void {
@@ -347,6 +348,7 @@ export class NosskeyManager implements NosskeyManagerLike {
 
   /**
    * ログアウト用: current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去する。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（{@link clearPendingPrf}）。
    * 登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から
    * 再ログインできる。
    */

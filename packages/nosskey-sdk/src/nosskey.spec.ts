@@ -339,6 +339,41 @@ describe('NosskeyManager', () => {
       expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
     });
 
+    it('clearPendingPrf() は未消費の PRF バッファ自体を fill(0) でゼロ化する', async () => {
+      // prf-handler は extension results の ArrayBuffer を new Uint8Array(buf) で
+      // ビュー化する（コピーしない）ため、テスト側で同じ ArrayBuffer への参照を
+      // 保持すれば SDK 内部のゼロ化が実効しているかを直接観測できる。
+      const firstBuf = new Uint8Array(32).fill(mockPrfResultValue).buffer;
+      const secondBuf = new Uint8Array(32).fill(mockPrfResultValue + 1).buffer;
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: { results: { first: firstBuf, second: secondBuf } },
+            })),
+          })),
+          get: vi.fn(async () => {
+            throw new Error('navigator.credentials.get should not be called');
+          }),
+        },
+        configurable: true,
+      });
+
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      // クリア前は秘密値が残っている（前提確認）
+      expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(false);
+      expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(false);
+
+      nosskey.clearPendingPrf(credentialId);
+
+      // Map からの削除だけでなく、バッファ自体がゼロ化されている
+      expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(true);
+      expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(true);
+    });
+
     it('clearCurrentKeyInfo()（ログアウト）は未消費 PRF キャッシュも破棄する', async () => {
       const nosskey = new NosskeyManager();
       const credentialId = await nosskey.createPasskey();
