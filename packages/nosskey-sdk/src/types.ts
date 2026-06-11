@@ -299,6 +299,15 @@ export interface NosskeyManagerLike {
   clearAllCachedKeys(): void;
 
   /**
+   * createPasskey で退避した未消費 PRF キャッシュをゼロ化して破棄する。
+   * 未消費エントリは TTL 経過で自動ゼロ化されるが、createPasskey 後に
+   * createNostrKey / importNostrKey を呼ばないことが確定した時点で
+   * アプリ側から即時クリアするための明示 API。
+   * @param credentialId 対象のクレデンシャルID（Uint8Array または hex 文字列）。省略時は全エントリを破棄。
+   */
+  clearPendingPrf(credentialId?: Uint8Array | string): void;
+
+  /**
    * 秘密鍵をエクスポート
    * @param keyInfo NostrKeyInfo
    * @param credentialId 使用するクレデンシャルID（省略時はNostrKeyInfoのcredentialIdから取得、またはユーザーが選択したパスキーが使用される）

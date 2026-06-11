@@ -290,6 +290,18 @@ clearCachedKey(credentialId: Uint8Array | string): void
 clearAllCachedKeys(): void
 ```
 
+#### clearPendingPrf()
+`createPasskey()` で退避した未消費の PRF キャッシュ（直接モードの実秘密鍵 / wrap モードの KEK）をゼロ化して破棄します。
+
+```typescript
+clearPendingPrf(credentialId?: Uint8Array | string): void
+```
+
+- `createPasskey()` は標準 salt と wrap salt の PRF を 1 回の UV で同時取得し、直後の `createNostrKey()` / `importNostrKey()` が消費するまで内部キャッシュに保持します。
+- 未消費エントリは TTL（`PENDING_PRF_TTL_MS` = 60 秒）経過で自動ゼロ化されますが、`createPasskey()` 後にフローをキャンセル・エラー離脱するなど消費しないことが確定した時点で、本メソッドで即時クリアできます。
+- `credentialId` 省略時は全エントリを破棄します。`clearCurrentKeyInfo()`（ログアウト）と `clearStoredKeyInfo()`（完全ワイプ）からも自動的に呼ばれます。
+- 破棄後に鍵導出が必要になった場合は、通常どおり `getPrfSecret()` 経由で UV（パスキー認証）が要求されます。
+
 ### ストレージ管理メソッド
 
 #### setStorageOptions()

@@ -4,7 +4,7 @@ import { seckeySigner } from '@rx-nostr/crypto';
  * @packageDocumentation
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NosskeyManager } from './nosskey.js';
+import { NosskeyManager, PENDING_PRF_TTL_MS } from './nosskey.js';
 import type { NostrEvent, NostrKeyInfo } from './types.js';
 import { bytesToHex, hexToBytes } from './utils.js';
 
@@ -263,6 +263,88 @@ describe('NosskeyManager', () => {
       await nosskey.createNostrKey(credentialId);
 
       // 2 回目に備えて get を本来の挙動に戻す。標準 salt 由来 PRF を返す。
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await nosskey.createNostrKey(credentialId);
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('未消費のまま TTL が経過したキャッシュはゼロ化され get() フォールバックに切り替わる', async () => {
+      vi.useFakeTimers();
+      try {
+        const nosskey = new NosskeyManager();
+        const credentialId = await nosskey.createPasskey();
+
+        // TTL 経過で自動掃除されるはず
+        vi.advanceTimersByTime(PENDING_PRF_TTL_MS);
+
+        // get を本来の挙動に戻す（キャッシュが残っていれば呼ばれないので検出できる）
+        Object.defineProperty(globalThis.navigator, 'credentials', {
+          value: {
+            create: navigator.credentials.create,
+            get: vi.fn(async () => ({
+              rawId: credentialId.buffer,
+              getClientExtensionResults: vi.fn(() => ({
+                prf: {
+                  results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+                },
+              })),
+            })),
+          },
+          configurable: true,
+        });
+
+        await nosskey.createNostrKey(credentialId);
+        expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('clearPendingPrf() で未消費キャッシュを明示破棄でき get() フォールバックに切り替わる', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      nosskey.clearPendingPrf(credentialId);
+
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await nosskey.createNostrKey(credentialId);
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('clearCurrentKeyInfo()（ログアウト）は未消費 PRF キャッシュも破棄する', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      nosskey.clearCurrentKeyInfo();
+
       Object.defineProperty(globalThis.navigator, 'credentials', {
         value: {
           create: navigator.credentials.create,

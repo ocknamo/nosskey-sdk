@@ -66,6 +66,9 @@ async function createNew() {
 
     await appState.loginWith(keyInfo);
   } catch (error) {
+    // createPasskey 成功後に createNostrKey / loginWith で失敗した場合、
+    // 未消費の PRF（秘密値）が SDK 内部キャッシュに残るため即時ゼロ化する。
+    keyManager.clearPendingPrf();
     console.error('パスキー作成エラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
@@ -119,6 +122,9 @@ async function importExisting() {
     await appState.loginWith(keyInfo);
   } catch (error) {
     seckey.fill(0);
+    // createPasskey 成功後に importNostrKey / loginWith で失敗した場合、
+    // 未消費の PRF（秘密値）が SDK 内部キャッシュに残るため即時ゼロ化する。
+    keyManager.clearPendingPrf();
     console.error('nsec インポートエラー:', error);
     errorMessage = `${$i18n.t.common.errorMessages.importNsec} ${error instanceof Error ? error.message : String(error)}`;
   } finally {
