@@ -327,7 +327,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    *
    * 秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作。wrap モードの
    * 鍵は復元不能になるため、共有端末からの完全サインアウトなど「すべて消す」意図のときに使う。
-   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（{@link clearPendingPrf}）。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する。
    * ログアウト（再ログインを残したい）には {@link clearCurrentKeyInfo} を使うこと。
    */
   clearStoredKeyInfo(): void {
@@ -343,12 +343,12 @@ export class NosskeyManager implements NosskeyManagerLike {
     this.#registryCache = null;
     this.#keyCache.clearAllCachedKeys();
     // createPasskey 由来の未消費 PRF（秘密値）も heap に残さない。
-    this.clearPendingPrf();
+    this.#clearAllPendingPrf();
   }
 
   /**
    * ログアウト用: current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去する。
-   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（{@link clearPendingPrf}）。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する。
    * 登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から
    * 再ログインできる。
    */
@@ -361,7 +361,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     // 平文秘密鍵の派生キャッシュは破棄する（登録簿の暗号文は保持）。
     this.#keyCache.clearAllCachedKeys();
     // createPasskey 由来の未消費 PRF（秘密値）も heap に残さない。
-    this.clearPendingPrf();
+    this.#clearAllPendingPrf();
   }
 
   /**
@@ -549,7 +549,7 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * #pendingPrfByCredId の単一エントリをゼロ化して破棄する（TTL 満了・上書き・明示クリア共通）。
+   * #pendingPrfByCredId の単一エントリをゼロ化して破棄する（TTL 満了・上書き・全消去共通）。
    */
   #clearPendingPrfEntry(key: string): void {
     const entry = this.#pendingPrfByCredId.get(key);
@@ -561,26 +561,14 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * createPasskey で退避した未消費 PRF キャッシュをゼロ化して破棄する。
-   *
-   * 未消費エントリは TTL（{@link PENDING_PRF_TTL_MS}）経過で自動ゼロ化されるが、
-   * createPasskey 後に createNostrKey / importNostrKey を呼ばないことが確定した時点
-   * （フローのキャンセル・エラー離脱など）でアプリ側から即時クリアするための明示 API。
-   * 破棄後に鍵導出が必要になった場合は通常どおり getPrfSecret() 経由で UV が要求される。
-   *
-   * @param credentialId 対象のクレデンシャルID（Uint8Array または hex 文字列）。省略時は全エントリを破棄。
+   * createPasskey で退避した未消費 PRF キャッシュをすべてゼロ化して破棄する。
+   * 未消費エントリは TTL（{@link PENDING_PRF_TTL_MS}）経過でも自動ゼロ化されるが、
+   * ログアウト・完全ワイプ時は待たずに即時掃除する。
    */
-  clearPendingPrf(credentialId?: Uint8Array | string): void {
-    if (credentialId === undefined) {
-      for (const key of [...this.#pendingPrfByCredId.keys()]) {
-        this.#clearPendingPrfEntry(key);
-      }
-      return;
+  #clearAllPendingPrf(): void {
+    for (const key of [...this.#pendingPrfByCredId.keys()]) {
+      this.#clearPendingPrfEntry(key);
     }
-    // Map のキーは bytesToHex 出力（小文字 hex）なので、文字列指定も小文字に正規化して照合する
-    const key =
-      typeof credentialId === 'string' ? credentialId.toLowerCase() : bytesToHex(credentialId);
-    this.#clearPendingPrfEntry(key);
   }
 
   /**

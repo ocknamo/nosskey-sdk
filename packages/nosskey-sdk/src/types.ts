@@ -191,7 +191,7 @@ export interface NosskeyManagerLike {
    * 秘密情報（wrap モードの暗号化 nsec を含む）をすべて削除する破壊的操作。
    * wrap モードの鍵は復元不能になるため、共有端末からの完全サインアウトなど
    * 「すべて消す」意図のときに使う。
-   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（`clearPendingPrf()`）。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する。
    *
    * ログアウト（一時的に current を外すが再ログインは残す）には
    * `clearCurrentKeyInfo()` を使うこと。
@@ -200,7 +200,7 @@ export interface NosskeyManagerLike {
 
   /**
    * ログアウト用: current ポインタ（単一スロット）とメモリ・派生キャッシュのみ消去する。
-   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する（`clearPendingPrf()`）。
+   * createPasskey 由来の未消費 PRF キャッシュもあわせてゼロ化する。
    * 登録簿は保持されるため、保存済みアカウント（特に復元不能な wrap モード鍵）から
    * 再ログインできる。
    */
@@ -299,15 +299,6 @@ export interface NosskeyManagerLike {
    * 全てのキャッシュをクリア
    */
   clearAllCachedKeys(): void;
-
-  /**
-   * createPasskey で退避した未消費 PRF キャッシュをゼロ化して破棄する。
-   * 未消費エントリは TTL 経過で自動ゼロ化されるが、createPasskey 後に
-   * createNostrKey / importNostrKey を呼ばないことが確定した時点で
-   * アプリ側から即時クリアするための明示 API。
-   * @param credentialId 対象のクレデンシャルID（Uint8Array または hex 文字列）。省略時は全エントリを破棄。
-   */
-  clearPendingPrf(credentialId?: Uint8Array | string): void;
 
   /**
    * 秘密鍵をエクスポート

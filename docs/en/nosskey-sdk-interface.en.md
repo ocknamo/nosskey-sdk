@@ -207,6 +207,8 @@ Creates a passkey (also requests PRF extension).
 async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 ```
 
+During creation it evaluates the standard-salt and wrap-salt PRFs with a single UV and caches them inside the SDK until the subsequent `createNostrKey()` / `importNostrKey()` consumes them. A cache left unconsumed is automatically zeroized after a TTL (60 seconds), and is also discarded immediately by `clearCurrentKeyInfo()` (logout) / `clearStoredKeyInfo()` (full wipe) — no application-side management is required.
+
 #### createNostrKey()
 Creates NostrKeyInfo using PRF value directly as Nostr secret key (PRF direct mode).
 
@@ -293,18 +295,6 @@ Clears all caches.
 ```typescript
 clearAllCachedKeys(): void
 ```
-
-#### clearPendingPrf()
-Zeroizes and discards the unconsumed PRF cache stashed by `createPasskey()` (the direct-mode secret key / wrap-mode KEK).
-
-```typescript
-clearPendingPrf(credentialId?: Uint8Array | string): void
-```
-
-- `createPasskey()` evaluates the standard-salt and wrap-salt PRFs with a single UV and keeps them in an internal cache until the subsequent `createNostrKey()` / `importNostrKey()` consumes them.
-- Unconsumed entries are automatically zeroized after a TTL (`PENDING_PRF_TTL_MS` = 60 seconds), but if your flow is cancelled or bails out with an error after `createPasskey()` — i.e. you know the cache will never be consumed — you can clear it immediately with this method.
-- Omitting `credentialId` discards all entries. It is also called automatically from `clearCurrentKeyInfo()` (logout) and `clearStoredKeyInfo()` (full wipe).
-- If key derivation is needed after discarding, UV (passkey authentication) is requested via `getPrfSecret()` as usual.
 
 ### Storage Management Methods
 

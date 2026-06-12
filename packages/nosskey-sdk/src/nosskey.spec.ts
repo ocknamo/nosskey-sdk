@@ -314,32 +314,7 @@ describe('NosskeyManager', () => {
       }
     });
 
-    it('clearPendingPrf() で未消費キャッシュを明示破棄でき get() フォールバックに切り替わる', async () => {
-      const nosskey = new NosskeyManager();
-      const credentialId = await nosskey.createPasskey();
-
-      nosskey.clearPendingPrf(credentialId);
-
-      Object.defineProperty(globalThis.navigator, 'credentials', {
-        value: {
-          create: navigator.credentials.create,
-          get: vi.fn(async () => ({
-            rawId: credentialId.buffer,
-            getClientExtensionResults: vi.fn(() => ({
-              prf: {
-                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
-              },
-            })),
-          })),
-        },
-        configurable: true,
-      });
-
-      await nosskey.createNostrKey(credentialId);
-      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
-    });
-
-    it('clearPendingPrf() は未消費の PRF バッファ自体を fill(0) でゼロ化する', async () => {
+    it('TTL 満了時は未消費の PRF バッファ自体が fill(0) でゼロ化される', async () => {
       // prf-handler は extension results の ArrayBuffer を new Uint8Array(buf) で
       // ビュー化する（コピーしない）ため、テスト側で同じ ArrayBuffer への参照を
       // 保持すれば SDK 内部のゼロ化が実効しているかを直接観測できる。
@@ -360,18 +335,23 @@ describe('NosskeyManager', () => {
         configurable: true,
       });
 
-      const nosskey = new NosskeyManager();
-      const credentialId = await nosskey.createPasskey();
+      vi.useFakeTimers();
+      try {
+        const nosskey = new NosskeyManager();
+        await nosskey.createPasskey();
 
-      // クリア前は秘密値が残っている（前提確認）
-      expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(false);
-      expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(false);
+        // TTL 満了前は秘密値が残っている（前提確認）
+        expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(false);
+        expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(false);
 
-      nosskey.clearPendingPrf(credentialId);
+        vi.advanceTimersByTime(PENDING_PRF_TTL_MS);
 
-      // Map からの削除だけでなく、バッファ自体がゼロ化されている
-      expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(true);
-      expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(true);
+        // Map からの削除だけでなく、バッファ自体がゼロ化されている
+        expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(true);
+        expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('clearCurrentKeyInfo()（ログアウト）は未消費 PRF キャッシュも破棄する', async () => {

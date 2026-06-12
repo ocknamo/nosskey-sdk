@@ -7,7 +7,7 @@
 export * from './types.js';
 
 // クラスとユーティリティのエクスポート
-export { NosskeyManager, PENDING_PRF_TTL_MS } from './nosskey.js';
+export { NosskeyManager } from './nosskey.js';
 
 // 登録簿（マルチアカウント）関連の公開ヘルパー。
 // isNostrKeyInfo は保存値が NostrKeyInfo の形をしているかの防御的チェックで、
