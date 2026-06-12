@@ -163,6 +163,7 @@ export interface TranslationData {
       title: string;
       description: string;
       methodLabel: {
+        connect: string;
         signEvent: string;
         nip44: string;
         nip04: string;
@@ -202,8 +203,10 @@ export interface TranslationData {
   };
   consent: {
     title: string;
+    titleConnect: string;
     titleEncrypt: string;
     titleDecrypt: string;
+    connectDescription: string;
     origin: string;
     eventKind: string;
     eventContent: string;
@@ -215,6 +218,8 @@ export interface TranslationData {
     reject: string;
     method: string;
     methodLabel: {
+      getPublicKey: string;
+      getRelays: string;
       signEvent: string;
       nip44Encrypt: string;
       nip44Decrypt: string;
@@ -416,6 +421,7 @@ export const ja: TranslationData = {
       description:
         'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はサイトを問わずスキップ、「拒否」はダイアログを出さずに即拒否します。',
       methodLabel: {
+        connect: 'サイト接続（公開鍵・リレー設定の読み取り）',
         signEvent: 'イベント署名 (signEvent)',
         nip44: 'NIP-44 暗号化 / 復号',
         nip04: 'NIP-04 暗号化 / 復号（レガシー）',
@@ -472,8 +478,11 @@ export const ja: TranslationData = {
   },
   consent: {
     title: '署名リクエストの確認',
+    titleConnect: '接続リクエストの確認',
     titleEncrypt: '暗号化リクエストの確認',
     titleDecrypt: '復号リクエストの確認',
+    connectDescription:
+      'このサイトはあなたの公開鍵（npub）とリレー設定を読み取れるようになります。',
     origin: 'リクエスト元:',
     eventKind: 'イベント種別',
     eventContent: '本文',
@@ -485,6 +494,8 @@ export const ja: TranslationData = {
     reject: '拒否',
     method: 'リクエスト種別',
     methodLabel: {
+      getPublicKey: '公開鍵の取得',
+      getRelays: 'リレー設定の取得',
       signEvent: 'イベント署名',
       nip44Encrypt: 'NIP-44 暗号化',
       nip44Decrypt: 'NIP-44 復号',
@@ -689,6 +700,7 @@ export const en: TranslationData = {
       description:
         'Set the default behavior for each request type. "Always allow" skips the dialog regardless of site, "Deny" rejects without prompting.',
       methodLabel: {
+        connect: 'Site connection (read public key & relay list)',
         signEvent: 'Sign event (signEvent)',
         nip44: 'NIP-44 encrypt / decrypt',
         nip04: 'NIP-04 encrypt / decrypt (legacy)',
@@ -745,8 +757,10 @@ export const en: TranslationData = {
   },
   consent: {
     title: 'Signing request',
+    titleConnect: 'Connection request',
     titleEncrypt: 'Encryption request',
     titleDecrypt: 'Decryption request',
+    connectDescription: 'This site will be able to read your public key (npub) and relay settings.',
     origin: 'Requesting origin:',
     eventKind: 'Event kind',
     eventContent: 'Content',
@@ -758,6 +772,8 @@ export const en: TranslationData = {
     reject: 'Reject',
     method: 'Request type',
     methodLabel: {
+      getPublicKey: 'Read public key',
+      getRelays: 'Read relay list',
       signEvent: 'Sign event',
       nip44Encrypt: 'NIP-44 encrypt',
       nip44Decrypt: 'NIP-44 decrypt',

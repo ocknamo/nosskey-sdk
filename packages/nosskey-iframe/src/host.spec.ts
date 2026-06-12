@@ -121,14 +121,16 @@ describe('NosskeyIframeHost', () => {
     expect(warnSpy).toHaveBeenCalledOnce();
   });
 
-  it('routes getPublicKey and returns the manager result', async () => {
+  it('routes getPublicKey after onConsent resolves true', async () => {
     const win = createFakeWindow() as DispatchableWindow;
+    const onConsent = vi.fn(async () => true);
     const manager = makeManager({
       getPublicKey: vi.fn(async () => 'deadbeef'),
     });
     const host = new NosskeyIframeHost({
       manager,
       allowedOrigins: ['https://parent.example'],
+      onConsent,
       window: win as unknown as Window,
     });
     host.start();
@@ -138,6 +140,10 @@ describe('NosskeyIframeHost', () => {
       'https://parent.example'
     );
 
+    expect(onConsent).toHaveBeenCalledWith({
+      origin: 'https://parent.example',
+      method: 'getPublicKey',
+    });
     expect(manager.getPublicKey).toHaveBeenCalledOnce();
     expect(win.sent).toHaveLength(1);
     const msg = win.sent[0];
@@ -147,16 +153,139 @@ describe('NosskeyIframeHost', () => {
     host.stop();
   });
 
-  it('routes getRelays via the onGetRelays callback', async () => {
+  it('returns USER_REJECTED for getPublicKey when consent is denied', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const manager = makeManager({
+      getPublicKey: vi.fn(async () => {
+        throw new Error('should not be called');
+      }),
+    });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => false,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'r1d', method: 'getPublicKey' },
+      'https://parent.example'
+    );
+
+    expect(manager.getPublicKey).not.toHaveBeenCalled();
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('USER_REJECTED');
+    host.stop();
+  });
+
+  it('returns INTERNAL for getPublicKey when onConsent is missing (fail-closed default)', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const manager = makeManager({ getPublicKey: vi.fn(async () => 'deadbeef') });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      // onConsent intentionally omitted while requireUserConsent defaults to true
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'r1i', method: 'getPublicKey' },
+      'https://parent.example'
+    );
+
+    expect(manager.getPublicKey).not.toHaveBeenCalled();
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('INTERNAL');
+    host.stop();
+  });
+
+  it('serves getPublicKey silently when requireUserConsent is false (explicit opt-out)', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const manager = makeManager({ getPublicKey: vi.fn(async () => 'deadbeef') });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      requireUserConsent: false,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'r1s', method: 'getPublicKey' },
+      'https://parent.example'
+    );
+
+    expect((win.sent[0].data as { result: unknown }).result).toBe('deadbeef');
+    host.stop();
+  });
+
+  it('posts visibility true/false around a consented getPublicKey', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const manager = makeManager({ getPublicKey: vi.fn(async () => 'deadbeef') });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'r1v', method: 'getPublicKey' },
+      'https://parent.example'
+    );
+
+    const visibilityMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls
+      .map((c) => c[0])
+      .filter(isNosskeyVisibility);
+    expect(visibilityMessages.map((m) => m.visible)).toEqual([true, false]);
+    host.stop();
+  });
+
+  it('does not post visibility when getPublicKey fails with NO_KEY', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const parent = { postMessage: vi.fn() } as unknown as Window;
+    Object.defineProperty(win, 'parent', { value: parent, configurable: true });
+    const manager = makeManager({ hasKeyInfo: () => false });
+    const host = new NosskeyIframeHost({
+      manager,
+      allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'r1n', method: 'getPublicKey' },
+      'https://parent.example'
+    );
+
+    const visibilityMessages = (
+      parent.postMessage as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls
+      .map((c) => c[0])
+      .filter(isNosskeyVisibility);
+    expect(visibilityMessages).toHaveLength(0);
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('NO_KEY');
+    host.stop();
+  });
+
+  it('routes getRelays via onGetRelays after onConsent resolves true', async () => {
     const win = createFakeWindow() as DispatchableWindow;
     const relays = {
       'wss://relay.example': { read: true, write: true },
       'wss://relay.read.example': { read: true, write: false },
     };
     const onGetRelays = vi.fn(async () => relays);
+    const onConsent = vi.fn(async () => true);
     const host = new NosskeyIframeHost({
       manager: makeManager(),
       allowedOrigins: ['https://parent.example'],
+      onConsent,
       onGetRelays,
       window: win as unknown as Window,
     });
@@ -167,6 +296,10 @@ describe('NosskeyIframeHost', () => {
       'https://parent.example'
     );
 
+    expect(onConsent).toHaveBeenCalledWith({
+      origin: 'https://parent.example',
+      method: 'getRelays',
+    });
     expect(onGetRelays).toHaveBeenCalledOnce();
     expect(win.sent).toHaveLength(1);
     const msg = win.sent[0];
@@ -176,11 +309,35 @@ describe('NosskeyIframeHost', () => {
     host.stop();
   });
 
-  it('returns an empty map for getRelays when onGetRelays is not provided', async () => {
+  it('returns USER_REJECTED for getRelays when consent is denied', async () => {
     const win = createFakeWindow() as DispatchableWindow;
+    const onGetRelays = vi.fn(async () => ({}));
     const host = new NosskeyIframeHost({
       manager: makeManager(),
       allowedOrigins: ['https://parent.example'],
+      onConsent: async () => false,
+      onGetRelays,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'rg1d', method: 'getRelays' },
+      'https://parent.example'
+    );
+
+    expect(onGetRelays).not.toHaveBeenCalled();
+    expect((win.sent[0].data as { error: { code: string } }).error.code).toBe('USER_REJECTED');
+    host.stop();
+  });
+
+  it('returns an empty map for getRelays without consent when onGetRelays is not provided', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const onConsent = vi.fn(async () => true);
+    const host = new NosskeyIframeHost({
+      manager: makeManager(),
+      allowedOrigins: ['https://parent.example'],
+      onConsent,
       window: win as unknown as Window,
     });
     host.start();
@@ -190,7 +347,34 @@ describe('NosskeyIframeHost', () => {
       'https://parent.example'
     );
 
+    expect(onConsent).not.toHaveBeenCalled();
     expect(win.sent).toHaveLength(1);
+    expect((win.sent[0].data as { result: unknown }).result).toEqual({});
+    host.stop();
+  });
+
+  it('returns an empty map for getRelays without consent when no key is configured', async () => {
+    const win = createFakeWindow() as DispatchableWindow;
+    const onConsent = vi.fn(async () => true);
+    const onGetRelays = vi.fn(async () => ({
+      'wss://relay.example': { read: true, write: true },
+    }));
+    const host = new NosskeyIframeHost({
+      manager: makeManager({ hasKeyInfo: () => false }),
+      allowedOrigins: ['https://parent.example'],
+      onConsent,
+      onGetRelays,
+      window: win as unknown as Window,
+    });
+    host.start();
+
+    await win.dispatchMessage(
+      { type: 'nosskey:request', id: 'rg3', method: 'getRelays' },
+      'https://parent.example'
+    );
+
+    expect(onConsent).not.toHaveBeenCalled();
+    expect(onGetRelays).not.toHaveBeenCalled();
     expect((win.sent[0].data as { result: unknown }).result).toEqual({});
     host.stop();
   });
@@ -335,6 +519,7 @@ describe('NosskeyIframeHost', () => {
     const host = new NosskeyIframeHost({
       manager,
       allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
       window: win as unknown as Window,
     });
     host.start();
@@ -562,6 +747,7 @@ describe('NosskeyIframeHost', () => {
     const host = new NosskeyIframeHost({
       manager,
       allowedOrigins: ['https://parent.example'],
+      onConsent: async () => true,
       window: win as unknown as Window,
     });
     host.start();

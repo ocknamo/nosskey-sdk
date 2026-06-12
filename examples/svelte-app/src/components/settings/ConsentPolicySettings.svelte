@@ -74,7 +74,7 @@ function optionLabel(option: ConsentDecision): string {
     {/each}
   </div>
 
-  {#if $denyCounts.signEvent > 0 || $denyCounts.nip44 > 0 || $denyCounts.nip04 > 0}
+  {#if POLICY_KEYS.some((key) => $denyCounts[key] > 0)}
     <div class="deny-actions">
       <Button variant="secondary" size="small" onclick={resetDenyCounts}>
         {$i18n.t.settings.consentPolicy.resetDenyCounts}

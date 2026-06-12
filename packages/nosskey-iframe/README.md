@@ -112,7 +112,9 @@ host.start();
 // host.stop();
 ```
 
-Methods that touch secret material (`signEvent`, `nip44_*`, `nip04_*`) are gated by `onConsent`. `getPublicKey` and `getRelays` are not.
+All seven NIP-07 methods are gated by `onConsent`. For `getPublicKey` / `getRelays` the consent acts as a per-origin connection approval (pairing) — the same model NIP-07 browser extensions use — so an arbitrary embedding site cannot silently read the logged-in user's npub or relay list. Remember approved origins in your consent UI (the reference app stores them as trusted origins) to keep login flows friction-free.
+
+> **Breaking change (security fix):** earlier versions served `getPublicKey` / `getRelays` without consent. Hosts that keep the default `requireUserConsent: true` must provide `onConsent`, or these methods now fail with `INTERNAL`. To restore the old silent behavior, opt out explicitly with `requireUserConsent: false`. `getRelays` still returns `{}` without prompting when `onGetRelays` is not configured or no key is set.
 
 For the full architecture (consent UI patterns, Storage Access API, the seven NIP-07 methods, embedded theme/lang propagation) see
 [`docs/en/iframe-host.en.md`](../../docs/en/iframe-host.en.md).

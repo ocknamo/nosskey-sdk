@@ -8,7 +8,9 @@ export type { NosskeyIframeClientOptions } from './client.js';
 export { NosskeyIframeHost } from './host.js';
 export type { ConsentRequest, NosskeyIframeHostOptions } from './host.js';
 export {
+  CONSENT_REQUIRED_METHODS,
   NOSSKEY_ERROR_CODES,
+  isConnectMethod,
   isDecryptMethod,
   isEncryptMethod,
   isNosskeyReady,

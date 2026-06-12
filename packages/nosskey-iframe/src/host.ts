@@ -20,7 +20,7 @@ import type { NosskeyManagerLike, NostrEvent } from './types.js';
 export interface ConsentRequest {
   origin: string;
   method: NosskeyMethod;
-  /** Set for `signEvent`. */
+  /** Set for `signEvent`. Always undefined for `getPublicKey` / `getRelays`. */
   event?: NostrEvent;
   /** Counterparty public key for nip44 / nip04 methods (32-byte hex). */
   pubkey?: string;
@@ -42,15 +42,21 @@ export interface NosskeyIframeHostOptions {
    */
   allowedOrigins?: string[] | '*';
   /**
-   * When true, signEvent requests require {@link onConsent} to resolve truthy.
+   * When true, all consent-required methods (`getPublicKey`, `getRelays`,
+   * `signEvent`, nip44/nip04 encrypt/decrypt) require {@link onConsent} to
+   * resolve truthy. For `getPublicKey` / `getRelays` this acts as a
+   * per-origin connection approval that blocks silent user identification
+   * by arbitrary embedding origins.
    * @default true
    */
   requireUserConsent?: boolean;
   /** Called to obtain user consent. Required when `requireUserConsent` is true. */
   onConsent?: (request: ConsentRequest) => Promise<boolean>;
   /**
-   * Resolves the relay map returned by NIP-07 `getRelays()`. Read-only and
-   * never prompts the user. Omit to return an empty map.
+   * Resolves the relay map returned by NIP-07 `getRelays()`. Subject to the
+   * same consent gate as `getPublicKey` when a key is configured (the relay
+   * set identifies the logged-in user). Omit to return an empty map without
+   * prompting.
    */
   onGetRelays?: () => Promise<RelayMap>;
   /** Override the window used to install the message listener. Defaults to globalThis.window. */
@@ -179,15 +185,18 @@ export class NosskeyIframeHost {
 
     switch (request.method) {
       case 'getPublicKey': {
-        if (!manager.hasKeyInfo()) {
-          throw new HostError('NO_KEY', 'No key is configured in the iframe.');
-        }
-        return manager.getPublicKey();
+        return this.#withVisibilityAndConsent({ origin, method: 'getPublicKey' }, () =>
+          manager.getPublicKey()
+        );
       }
       case 'getRelays': {
         const { onGetRelays } = this.#options;
+        // An empty map carries no user-identifying information, so the two
+        // cases below stay consent-free: no relay resolver configured, or no
+        // key (= nobody logged in to identify).
         if (!onGetRelays) return {} satisfies RelayMap;
-        return onGetRelays();
+        if (!manager.hasKeyInfo()) return {} satisfies RelayMap;
+        return this.#withVisibilityAndConsent({ origin, method: 'getRelays' }, () => onGetRelays());
       }
       case 'signEvent': {
         const event = request.params?.event;
@@ -265,7 +274,8 @@ export class NosskeyIframeHost {
 
   /**
    * Show the iframe, request user consent, run the operation, and hide the iframe.
-   * Shared by signEvent and the nip44/nip04 encrypt/decrypt methods.
+   * Shared by getPublicKey, getRelays, signEvent, and the nip44/nip04
+   * encrypt/decrypt methods.
    */
   async #withVisibilityAndConsent<T>(consent: ConsentRequest, run: () => Promise<T>): Promise<T> {
     const { manager, requireUserConsent, onConsent } = this.#options;

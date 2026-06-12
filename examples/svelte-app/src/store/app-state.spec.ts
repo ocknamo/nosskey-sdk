@@ -48,7 +48,7 @@ function grantFirstPartyStorage(seed: Record<string, string> = {}): Storage {
 beforeEach(() => {
   resetNosskeyManager();
   trustedOrigins.set([]);
-  consentPolicy.set({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+  consentPolicy.set({ connect: 'ask', signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
   cacheSecrets.set(true);
   cacheTimeout.set(300);
 });
@@ -62,7 +62,13 @@ describe('reloadSettings', () => {
       ]),
     });
     reloadSettings();
-    expect(get(consentPolicy)).toEqual({ signEvent: 'always', nip44: 'deny', nip04: 'ask' });
+    // 旧形式（connect キー無し）の保存値は connect: 'ask' に倒れる。
+    expect(get(consentPolicy)).toEqual({
+      connect: 'ask',
+      signEvent: 'always',
+      nip44: 'deny',
+      nip04: 'ask',
+    });
     expect(get(trustedOrigins)).toEqual([
       { origin: 'https://parent.example', methods: ['signEvent'] },
     ]);
@@ -78,7 +84,12 @@ describe('reloadSettings', () => {
   it('falls back to defaults when the granted storage is empty', () => {
     grantFirstPartyStorage();
     reloadSettings();
-    expect(get(consentPolicy)).toEqual({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+    expect(get(consentPolicy)).toEqual({
+      connect: 'ask',
+      signEvent: 'ask',
+      nip44: 'ask',
+      nip04: 'ask',
+    });
     expect(get(trustedOrigins)).toEqual([]);
     expect(get(cacheSecrets)).toBe(true);
     expect(get(cacheTimeout)).toBe(300);
@@ -112,12 +123,13 @@ describe('settings persistence after a storage grant', () => {
     const firstParty = grantFirstPartyStorage();
     reloadSettings();
 
-    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    consentPolicy.set({ connect: 'ask', signEvent: 'always', nip44: 'ask', nip04: 'ask' });
 
     // The settings handle and the relay handle are one and the same:
     // manager.getStorageOptions().storage. No second copy is kept.
     expect(getNosskeyManager().getStorageOptions().storage).toBe(firstParty);
     expect(JSON.parse(firstParty.getItem('nosskey_consent_policy') as string)).toEqual({
+      connect: 'ask',
       signEvent: 'always',
       nip44: 'ask',
       nip04: 'ask',
@@ -141,7 +153,12 @@ describe('cross-context sync via storage events', () => {
     // storage イベントは発火しないが、テストでは経路検証のため明示的に dispatch する。
     window.dispatchEvent(new StorageEvent('storage', { key: 'nosskey_consent_policy' }));
 
-    expect(get(consentPolicy)).toEqual({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    expect(get(consentPolicy)).toEqual({
+      connect: 'ask',
+      signEvent: 'deny',
+      nip44: 'ask',
+      nip04: 'ask',
+    });
     expect(get(trustedOrigins)).toEqual([
       { origin: 'https://parent.example', methods: ['signEvent'] },
     ]);
@@ -157,13 +174,18 @@ describe('cross-context sync via storage events', () => {
     firstParty.clear();
     window.dispatchEvent(new StorageEvent('storage', { key: null }));
 
-    expect(get(consentPolicy)).toEqual({ signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
+    expect(get(consentPolicy)).toEqual({
+      connect: 'ask',
+      signEvent: 'ask',
+      nip44: 'ask',
+      nip04: 'ask',
+    });
   });
 
   it('ignores storage events for keys it does not own', () => {
     const firstParty = grantFirstPartyStorage();
     reloadSettings();
-    consentPolicy.set({ signEvent: 'always', nip44: 'ask', nip04: 'ask' });
+    consentPolicy.set({ connect: 'ask', signEvent: 'always', nip44: 'ask', nip04: 'ask' });
     // ストレージ側だけ deny に差し替える（in-memory は always のまま）。
     firstParty.setItem(
       'nosskey_consent_policy',
@@ -189,10 +211,10 @@ describe('cross-context sync via storage events', () => {
     expect(setItemSpy).not.toHaveBeenCalled();
 
     // ガードは reloadSettings の外では解除され、通常の変更は永続化される。
-    consentPolicy.set({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
+    consentPolicy.set({ connect: 'ask', signEvent: 'deny', nip44: 'ask', nip04: 'ask' });
     expect(setItemSpy).toHaveBeenCalledWith(
       'nosskey_consent_policy',
-      JSON.stringify({ signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
+      JSON.stringify({ connect: 'ask', signEvent: 'deny', nip44: 'ask', nip04: 'ask' })
     );
   });
 });

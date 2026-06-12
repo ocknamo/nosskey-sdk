@@ -14,18 +14,19 @@ export type ConsentEvaluation =
 
 /**
  * メソッド名を `ConsentPolicy` のキーへマップする。
- * `nip44_encrypt` / `nip44_decrypt` は `nip44` に集約され、
- * `nip04_*` も同様。`signEvent` のみ単独。
+ * `getPublicKey` / `getRelays` はオリジン単位の接続承認（ペアリング）として
+ * `connect` に集約され、`nip44_encrypt` / `nip44_decrypt` は `nip44` に、
+ * `nip04_*` も同様に集約される。`signEvent` のみ単独。
  *
  * 全分岐を網羅。`NosskeyMethod` の union に新値が追加されたら
  * `default` の `never` 代入で TS コンパイルエラーになる。
  * これにより新メソッド追加時のサイレントなフォールスルーを防ぐ。
- *
- * 非 consent メソッド (`getPublicKey` / `getRelays`) はそもそも
- * `onConsent` に到達しないが、防御的に throw する。
  */
 export function policyKeyFor(method: ConsentRequest['method']): PolicyKey {
   switch (method) {
+    case 'getPublicKey':
+    case 'getRelays':
+      return 'connect';
     case 'signEvent':
       return 'signEvent';
     case 'nip44_encrypt':
@@ -34,9 +35,6 @@ export function policyKeyFor(method: ConsentRequest['method']): PolicyKey {
     case 'nip04_encrypt':
     case 'nip04_decrypt':
       return 'nip04';
-    case 'getPublicKey':
-    case 'getRelays':
-      throw new Error(`policyKeyFor called with non-consent method: ${method}`);
     default: {
       const exhaustive: never = method;
       throw new Error(`Unhandled NosskeyMethod in policyKeyFor: ${String(exhaustive)}`);

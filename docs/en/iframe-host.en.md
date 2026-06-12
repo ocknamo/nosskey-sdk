@@ -20,13 +20,13 @@ Nostr app**.
 
 ## Supported methods
 
-The iframe host is a **full NIP-07 provider**. It handles seven methods; five
-of them touch secret material and therefore go through the consent flow.
+The iframe host is a **full NIP-07 provider**. It handles seven methods, all
+of which go through the consent flow.
 
 | Method (protocol) | SDK method | Consent | Purpose |
 |-------------------|------------|---------|---------|
-| `getPublicKey`  | `getPublicKey()`  | — (none)   | Return the current public key |
-| `getRelays`     | (host callback)   | — (none)   | Return the relay configuration |
+| `getPublicKey`  | `getPublicKey()`  | required (connection approval) | Return the current public key |
+| `getRelays`     | (host callback)   | required (connection approval) | Return the relay configuration |
 | `signEvent`     | `signEvent()`     | required   | Sign a Nostr event |
 | `nip44_encrypt` | `nip44Encrypt()`  | required   | NIP-44 v2 encryption |
 | `nip44_decrypt` | `nip44Decrypt()`  | required   | NIP-44 v2 decryption |
@@ -36,8 +36,13 @@ of them touch secret material and therefore go through the consent flow.
 The protocol method names (underscore form) and the
 `CONSENT_REQUIRED_METHODS` list are defined in
 [`packages/nosskey-iframe/src/protocol.ts`](../../packages/nosskey-iframe/src/protocol.ts).
-`getPublicKey` and `getRelays` only expose non-secret data, so they never
-trigger a dialog.
+The consent for `getPublicKey` / `getRelays` acts as a **per-origin
+connection approval (pairing)**: the npub and relay set identify the
+logged-in user, so gating them blocks silent de-anonymization by arbitrary
+embedding sites. Choosing "always allow" in the dialog records the origin in
+the trusted-origins list under the `connect` bucket, after which responses
+are served without a dialog — the same model NIP-07 browser extensions use
+for first-time site access.
 
 ## Components
 
@@ -143,9 +148,10 @@ Two pieces of persisted state drive this (both in
 [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
 
 - **`ConsentPolicy`** — per-method decision (`ask` / `always` / `deny`) keyed
-  by `signEvent` / `nip44` / `nip04`. `nip44_encrypt` and `nip44_decrypt`
-  collapse into the `nip44` bucket (same for `nip04`). Stored under
-  `localStorage` key `nosskey_consent_policy`.
+  by `connect` / `signEvent` / `nip44` / `nip04`. `getPublicKey` and
+  `getRelays` collapse into the `connect` bucket (connection approval), and
+  `nip44_encrypt` / `nip44_decrypt` collapse into the `nip44` bucket (same
+  for `nip04`). Stored under `localStorage` key `nosskey_consent_policy`.
 - **`TrustedOriginEntry[]`** — "always allow this site" records, scoped by
   `origin × method` rather than blanket-allowing an origin. Stored under
   `localStorage` key `nosskey_trusted_origins_v2`.
@@ -217,11 +223,17 @@ The encryption methods follow the same consent path. The host calls the
 matching SDK method (`manager.nip44Encrypt(pubkey, plaintext)` etc.) and
 returns the ciphertext (or plaintext, for decrypt) to the parent.
 
-### `getPublicKey` / `getRelays` (no consent)
+### `getPublicKey` / `getRelays` (connection approval)
 
-These resolve immediately — `getPublicKey` from the current `NostrKeyInfo`,
-`getRelays` from the `onGetRelays` callback — without touching the consent
-flow.
+These follow the same consent path. Both methods collapse into the shared
+`connect` policy bucket, so an origin that chose "always allow" on its first
+`getPublicKey` is also auto-approved for `getRelays` (one pairing covers
+both). `getPublicKey` resolves from the current `NostrKeyInfo`, `getRelays`
+from the `onGetRelays` callback.
+
+As an exception, `getRelays` returns an empty map `{}` without consent when
+`onGetRelays` is not configured or no key is set (not logged in) — an empty
+map carries no user-identifying information.
 
 ## Storage partitioning & Storage Access API
 

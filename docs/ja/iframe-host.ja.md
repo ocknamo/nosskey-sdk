@@ -12,19 +12,19 @@
 
 ## 対応メソッド
 
-iframe ホストは **NIP-07 の完全なプロバイダ**です。7 つのメソッドを処理し、そのうち 5 つは秘密情報を扱うため consent フローを経由します。
+iframe ホストは **NIP-07 の完全なプロバイダ**です。7 つのメソッドすべてが consent フローを経由します。
 
 | メソッド (プロトコル) | SDK メソッド | consent | 用途 |
 |----------------------|--------------|---------|------|
-| `getPublicKey`  | `getPublicKey()`  | — (不要)   | 現在の公開鍵を返す |
-| `getRelays`     | (host コールバック) | — (不要)   | リレー設定を返す |
+| `getPublicKey`  | `getPublicKey()`  | 必要 (接続承認) | 現在の公開鍵を返す |
+| `getRelays`     | (host コールバック) | 必要 (接続承認) | リレー設定を返す |
 | `signEvent`     | `signEvent()`     | 必要       | Nostr イベントに署名 |
 | `nip44_encrypt` | `nip44Encrypt()`  | 必要       | NIP-44 v2 暗号化 |
 | `nip44_decrypt` | `nip44Decrypt()`  | 必要       | NIP-44 v2 復号 |
 | `nip04_encrypt` | `nip04Encrypt()`  | 必要       | NIP-04 (レガシー) 暗号化 |
 | `nip04_decrypt` | `nip04Decrypt()`  | 必要       | NIP-04 (レガシー) 復号 |
 
-プロトコル上のメソッド名 (アンダースコア形式) と `CONSENT_REQUIRED_METHODS` リストは [`packages/nosskey-iframe/src/protocol.ts`](../../packages/nosskey-iframe/src/protocol.ts) で定義されています。`getPublicKey` と `getRelays` は非機密データのみを返すため、ダイアログは出ません。
+プロトコル上のメソッド名 (アンダースコア形式) と `CONSENT_REQUIRED_METHODS` リストは [`packages/nosskey-iframe/src/protocol.ts`](../../packages/nosskey-iframe/src/protocol.ts) で定義されています。`getPublicKey` / `getRelays` への同意は **オリジン単位の接続承認 (ペアリング)** として機能します。npub とリレー設定はユーザーを特定できる情報のため、任意の埋め込みサイトによるサイレント取得 (デアノニマイズ) を防ぎます。同意ダイアログで「常に許可」を選ぶと `connect` バケットとして信頼済みオリジンに記憶され、以後はダイアログなしで応答します (NIP-07 ブラウザ拡張の初回接続承認と同型)。
 
 ## 構成要素
 
@@ -110,7 +110,7 @@ export function startIframeHost(overrides = {}) {
 
 この判定を駆動する 2 つの永続状態 (いずれも [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
 
-- **`ConsentPolicy`** — メソッド別の判定 (`ask` / `always` / `deny`)。キーは `signEvent` / `nip44` / `nip04`。`nip44_encrypt` と `nip44_decrypt` は `nip44` バケットに集約される (`nip04` も同様)。`localStorage` キー `nosskey_consent_policy` に保存。
+- **`ConsentPolicy`** — メソッド別の判定 (`ask` / `always` / `deny`)。キーは `connect` / `signEvent` / `nip44` / `nip04`。`getPublicKey` と `getRelays` は `connect` バケット (接続承認) に、`nip44_encrypt` と `nip44_decrypt` は `nip44` バケットに集約される (`nip04` も同様)。`localStorage` キー `nosskey_consent_policy` に保存。
 - **`TrustedOriginEntry[]`** — 「このサイトを常に許可」の記録。origin をまるごと許可するのではなく `origin × method` 単位でスコープする。`localStorage` キー `nosskey_trusted_origins_v2` に保存。
 
 自動拒否されたリクエストはメソッド別の `denyCounts` store を加算します。これにより、悪意ある親が (例: 任意 pubkey に対する `nip04_decrypt` を繰り返すなど) ユーザーに気づかれずプローブし続けることを防ぎます。
@@ -168,9 +168,11 @@ client.signEvent Promise 解決
 
 暗号化系メソッドも同じ consent 経路をたどります。Host は対応する SDK メソッド (`manager.nip44Encrypt(pubkey, plaintext)` 等) を呼び、暗号文 (decrypt の場合は平文) を親に返します。
 
-### `getPublicKey` / `getRelays` (consent 不要)
+### `getPublicKey` / `getRelays` (接続承認)
 
-これらは即座に解決します。`getPublicKey` は現在の `NostrKeyInfo` から、`getRelays` は `onGetRelays` コールバックから取得し、consent フローを経由しません。
+これらも同じ consent 経路をたどります。ポリシーキーは両メソッド共通の `connect` バケットに集約されるため、初回の `getPublicKey` で「常に許可」を選んだオリジンは `getRelays` も自動承認されます (1 回のペアリングで両方をカバー)。`getPublicKey` は現在の `NostrKeyInfo` から、`getRelays` は `onGetRelays` コールバックから取得します。
+
+例外として `getRelays` は、`onGetRelays` 未設定または鍵未設定 (未ログイン) の場合に限り、ユーザーを特定できる情報を含まない空マップ `{}` を consent なしで即返します。
 
 ## Storage Partitioning と Storage Access API
 

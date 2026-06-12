@@ -111,7 +111,9 @@ host.start();
 // host.stop();
 ```
 
-機密素材に触れるメソッド (`signEvent`, `nip44_*`, `nip04_*`) は `onConsent` で gate されます。`getPublicKey` と `getRelays` は対象外です。
+全 7 つの NIP-07 メソッドが `onConsent` で gate されます。`getPublicKey` / `getRelays` に対する同意は、NIP-07 ブラウザ拡張と同じ「オリジン単位の接続承認（ペアリング）」として機能します。これにより、任意の埋め込みサイトがログイン中ユーザーの npub やリレー設定をサイレントに読み取ることを防ぎます。承認済みオリジンは同意 UI 側で記憶してください（参照実装では信頼済みオリジンとして保存）。これでログインフローの摩擦は初回のみになります。
+
+> **破壊的変更（セキュリティ修正）:** 以前のバージョンは `getPublicKey` / `getRelays` を同意なしで返していました。デフォルトの `requireUserConsent: true` のままのホストは `onConsent` を必ず提供してください。未提供の場合、これらのメソッドは `INTERNAL` エラーになります。従来のサイレント動作に戻すには `requireUserConsent: false` を明示してください。なお `onGetRelays` 未設定または鍵未設定のときの `getRelays` は従来どおり同意なしで `{}` を返します。
 
 詳細アーキテクチャ (同意 UI パターン、Storage Access API、7 メソッドの NIP-07 実装、embedded テーマ/言語伝搬) は
 [`docs/ja/iframe-host.ja.md`](../../docs/ja/iframe-host.ja.md) を参照。

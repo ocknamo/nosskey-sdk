@@ -1,5 +1,10 @@
 <script lang="ts">
-import { type NosskeyMethod, isDecryptMethod, isEncryptMethod } from 'nosskey-iframe';
+import {
+  type NosskeyMethod,
+  isConnectMethod,
+  isDecryptMethod,
+  isEncryptMethod,
+} from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';
 import { buildScreenUrl } from '../utils/app-navigation.js';
@@ -27,6 +32,10 @@ function renderPeerPubkey(hexPubkey: string): string {
 
 function methodLabel(method: NosskeyMethod, labels: typeof $i18n.t.consent.methodLabel): string {
   switch (method) {
+    case 'getPublicKey':
+      return labels.getPublicKey;
+    case 'getRelays':
+      return labels.getRelays;
     case 'signEvent':
       return labels.signEvent;
     case 'nip44_encrypt':
@@ -43,6 +52,7 @@ function methodLabel(method: NosskeyMethod, labels: typeof $i18n.t.consent.metho
 }
 
 function dialogTitle(method: NosskeyMethod, t: typeof $i18n.t.consent): string {
+  if (isConnectMethod(method)) return t.titleConnect;
   if (method === 'signEvent') return t.title;
   if (isDecryptMethod(method)) return t.titleDecrypt;
   return t.titleEncrypt;
@@ -72,6 +82,7 @@ function openConsentSettings(): void {
 
 {#if $pendingConsent}
   {@const c = $pendingConsent}
+  {@const isConnect = isConnectMethod(c.method)}
   {@const isEncrypt = isEncryptMethod(c.method)}
   {@const isDecrypt = isDecryptMethod(c.method)}
   <div class="consent-backdrop" role="dialog" aria-modal="true" aria-labelledby="consent-title">
@@ -81,6 +92,10 @@ function openConsentSettings(): void {
         <span class="label">{$i18n.t.consent.origin}</span>
         <code>{c.origin}</code>
       </p>
+
+      {#if isConnect}
+        <p class="consent-connect-description">{$i18n.t.consent.connectDescription}</p>
+      {/if}
 
       <dl class="consent-event">
         <dt>{$i18n.t.consent.method}</dt>
@@ -187,6 +202,12 @@ function openConsentSettings(): void {
   .consent-origin .label {
     font-weight: 600;
     margin-right: 8px;
+  }
+
+  .consent-connect-description {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
   }
 
   code,
