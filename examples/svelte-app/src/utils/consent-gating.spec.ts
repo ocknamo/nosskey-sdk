@@ -3,6 +3,7 @@ import type { ConsentPolicy, TrustedOriginEntry } from '../store/app-state.js';
 import { evaluateConsent, policyKeyFor } from './consent-gating.js';
 
 const askPolicy: ConsentPolicy = {
+  connect: 'ask',
   signEvent: 'ask',
   nip44: 'ask',
   nip04: 'ask',
@@ -10,6 +11,8 @@ const askPolicy: ConsentPolicy = {
 
 describe('policyKeyFor', () => {
   it.each([
+    ['getPublicKey', 'connect'],
+    ['getRelays', 'connect'],
     ['signEvent', 'signEvent'],
     ['nip44_encrypt', 'nip44'],
     ['nip44_decrypt', 'nip44'],
@@ -85,5 +88,32 @@ describe('evaluateConsent', () => {
         reason: 'policy-deny',
       });
     }
+  });
+
+  it('treats getPublicKey and getRelays as the same connect bucket (one pairing covers both)', () => {
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['connect'] }];
+    for (const method of ['getPublicKey', 'getRelays'] as const) {
+      expect(
+        evaluateConsent({ origin, method }, { trustedOrigins: trusted, policy: askPolicy })
+      ).toEqual({ decision: 'approve', reason: 'trusted-origin' });
+    }
+  });
+
+  it('asks for connect when origin is trusted only for signEvent (no implicit pairing)', () => {
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['signEvent'] }];
+    expect(
+      evaluateConsent(
+        { origin, method: 'getPublicKey' },
+        { trustedOrigins: trusted, policy: askPolicy }
+      )
+    ).toEqual({ decision: 'ask' });
+  });
+
+  it('rejects connect requests when the connect policy is deny', () => {
+    const policy: ConsentPolicy = { ...askPolicy, connect: 'deny' };
+    const trusted: TrustedOriginEntry[] = [{ origin, methods: ['connect'] }];
+    expect(
+      evaluateConsent({ origin, method: 'getPublicKey' }, { trustedOrigins: trusted, policy })
+    ).toEqual({ decision: 'reject', reason: 'policy-deny' });
   });
 });

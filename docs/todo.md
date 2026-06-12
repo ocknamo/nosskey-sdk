@@ -39,6 +39,15 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 - [ ] **`switchKey(credentialId)` メソッド（Phase 4-A）** — iframe 経由でのキー切り替え。マルチキーユーザー向け。
 - [ ] **秘密鍵 hex 文字列のメモリ残存リスクの対応可否検討** — SDK 内部で秘密鍵を `seckeySigner` 渡しや NIP-44 平文経路に通す際に hex 文字列（`string`）化される。JS の `string` は immutable で `Uint8Array.fill(0)` 相当のゼロ化 API が存在しないため、**GC タイミングまでヒープに残存**し、設計書 §11 NF5 の Uint8Array ゼロ化保証がカバーできない。影響箇所は `importNostrKey` / `exportNostrKey` / wrap モード復号後の `signEvent` / `nip44Encrypt` 平文経路など。**まず対応可否の判断から開始**: 脅威モデル上のリスク評価（ブラウザヒープに直接アクセスできる攻撃者は他経路でも危殆化済みか？） → 対応する場合は (a) `@rx-nostr/crypto` を捨てて `@noble/secp256k1` のバイト I/O へ置換、(b) `nip44Encrypt`/`nip44Decrypt` の plaintext シグネチャを `string | Uint8Array` 受けに拡張、の両方が必要。docs/{ja,en}/nosskey-sdk-interface（`importNostrKey` セキュリティメモ）・設計書 §11 (NF5) に制約として既に注記済み。
 
+### セキュリティ診断 2026-06-10 対応
+`docs/ja/security-audit-2026-06-10.ja.md` の指摘事項。High は対応済み、Middle (M-1〜M-5) は本診断書の「優先対応の提案」の順で消化する。
+
+- [x] **H-1: `getPublicKey` / `getRelays` のオリジン単位接続承認（ペアリング）導入** — 任意サイトが不可視 iframe で npub・リレー設定をサイレント取得できる問題への対応。`CONSENT_REQUIRED_METHODS` に両メソッドを追加し、host の dispatch を既存の同意フロー（`#withVisibilityAndConsent`）に統合（`packages/nosskey-iframe/src/protocol.ts` / `host.ts`、`isConnectMethod` ヘルパー追加）。svelte-app 側はポリシーキー `connect` を新設して両メソッドを単一バケットに集約し（`policyKeyFor`）、同意ダイアログの「常に許可」で `origin × connect` を信頼済みオリジンへ記憶 → 以後サイレント（nos2x / Alby の初回接続承認と同型）。例外: `onGetRelays` 未設定または鍵未設定時の `getRelays` は空マップを同意なしで返す（ユーザー識別情報なし）。`requireUserConsent: true` + `onConsent` 未設定ホストはフェイルクローズ（`INTERNAL`）になる破壊的変更で、パッケージ README（ja/en）と iframe-host 文書に明記。旧 localStorage（connect キー無し）は `ask` に倒れ、既存の信頼済みオリジンも connect は未承認のため初回に再承認が必要（意図どおり）。
+- [ ] **M-1/M-4**: decrypt 系の「常に許可」抑制とレート制限
+- [ ] **M-2**: wrap モードインポート時のバックアップ必須化
+- [ ] **M-3**: デプロイ環境への CSP 追加と TTL バリデーション
+- [ ] **M-5**: SDK の `allowedOrigins` デフォルト廃止（未指定 throw・`'*'` は明示オプトイン）
+
 ### wrap モードのセキュリティ堅牢化
 2026-06 の wrap モード（`importNostrKey` / `#getSecretKey`）セキュリティレビューで発見。暗号方式自体（NIP-44 v2 自己宛 DM・機密性は PRF と等価・完全性は HMAC・salt ドメイン分離）は健全で、以下は多層防御・鍵ライフサイクルの堅牢化項目。
 

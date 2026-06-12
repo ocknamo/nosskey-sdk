@@ -9,9 +9,18 @@ export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
 export type ConsentDecision = 'ask' | 'always' | 'deny';
 
-/** ポリシーキーは `signEvent` / `nip44` / `nip04` の 3 種で、暗号化と復号は同一バケットに集約される。 */
-export type PolicyKey = 'signEvent' | 'nip44' | 'nip04';
-export const POLICY_KEYS: readonly PolicyKey[] = ['signEvent', 'nip44', 'nip04'] as const;
+/**
+ * ポリシーキーは `connect` / `signEvent` / `nip44` / `nip04` の 4 種。
+ * `connect` は `getPublicKey` / `getRelays`（オリジン単位の接続承認）を、
+ * `nip44` / `nip04` は暗号化と復号を同一バケットに集約する。
+ */
+export type PolicyKey = 'connect' | 'signEvent' | 'nip44' | 'nip04';
+export const POLICY_KEYS: readonly PolicyKey[] = [
+  'connect',
+  'signEvent',
+  'nip44',
+  'nip04',
+] as const;
 
 export type ConsentPolicy = Record<PolicyKey, ConsentDecision>;
 
@@ -25,6 +34,7 @@ export interface TrustedOriginEntry {
 }
 
 const DEFAULT_CONSENT_POLICY: ConsentPolicy = {
+  connect: 'ask',
   signEvent: 'ask',
   nip44: 'ask',
   nip04: 'ask',
@@ -40,7 +50,7 @@ function isConsentDecision(value: unknown): value is ConsentDecision {
 }
 
 function isPolicyKey(value: unknown): value is PolicyKey {
-  return value === 'signEvent' || value === 'nip44' || value === 'nip04';
+  return value === 'connect' || value === 'signEvent' || value === 'nip44' || value === 'nip04';
 }
 
 export function isScreenName(hash: string): hash is ScreenName {
@@ -88,6 +98,7 @@ export const consentPolicy = writable<ConsentPolicy>({ ...DEFAULT_CONSENT_POLICY
  * メソッドキー単位で集計し、永続化はしない（プロセス内のみ）。
  */
 export const denyCounts = writable<Record<PolicyKey, number>>({
+  connect: 0,
   signEvent: 0,
   nip44: 0,
   nip04: 0,
@@ -98,7 +109,7 @@ export function incrementDenyCount(key: PolicyKey): void {
 }
 
 export function resetDenyCounts(): void {
-  denyCounts.set({ signEvent: 0, nip44: 0, nip04: 0 });
+  denyCounts.set({ connect: 0, signEvent: 0, nip44: 0, nip04: 0 });
 }
 
 /**
@@ -188,6 +199,7 @@ function loadConsentPolicy(): ConsentPolicy {
   try {
     const parsed = JSON.parse(raw) as Partial<Record<keyof ConsentPolicy, unknown>>;
     const result: ConsentPolicy = {
+      connect: isConsentDecision(parsed.connect) ? parsed.connect : 'ask',
       signEvent: isConsentDecision(parsed.signEvent) ? parsed.signEvent : 'ask',
       nip44: isConsentDecision(parsed.nip44) ? parsed.nip44 : 'ask',
       nip04: isConsentDecision(parsed.nip04) ? parsed.nip04 : 'ask',

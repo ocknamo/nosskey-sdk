@@ -27,6 +27,7 @@
 - **前提**: Nosskey の iframe は「任意の Nostr クライアントから埋め込める汎用署名プロバイダ」として提供する設計意図がある（クロスプラットフォーム利用）。したがってオリジン許可リストによる閉鎖は製品意図と衝突し、解にならない。本指摘はオープン埋め込みモデルを前提に残存リスクを評価したもの。
 - **内容**: `getPublicKey` / `getRelays` は同意ダイアログの対象外のため、**任意の悪意あるサイトが不可視 iframe を埋め込むだけで、ログイン中ユーザーの npub とリレー設定をサイレントに取得**できる。閲覧者の Nostr アカウント特定（デアノニマイズ・トラッキング）がウェブ全体でノーインタラクションで成立する。署名・暗号化・復号は同意ダイアログで守られるが、任意オリジンがダイアログを出し放題のため、同意疲れや紛らわしい文面による誤承認（さらに「常に許可」チェック → 恒久化）も誘発できる。
 - **推奨**: 同じ「どのサイトからでも使える」モデルの NIP-07 ブラウザ拡張（nos2x / Alby 等）が採用している方式に揃える。すなわち `getPublicKey` に**オリジン単位の初回接続承認**（ペアリング）を導入し、承認済みオリジンを既存の trusted origins 機構で記憶する。これによりクロスプラットフォームの利用性を損なわずにサイレント取得だけを塞げる。
+- **対応状況**: ✅ **対応済み（2026-06-12）**。推奨どおり nos2x / Alby 同等のオリジン単位接続承認を導入した。`CONSENT_REQUIRED_METHODS` に `getPublicKey` / `getRelays` を追加し、host の dispatch で両メソッドを既存の同意フロー（`#withVisibilityAndConsent`）に通すよう変更（`packages/nosskey-iframe/src/protocol.ts` / `host.ts`）。アプリ側はポリシーキー `connect` を新設して両メソッドを単一の接続承認バケットに集約し、「常に許可」で `origin × connect` を信頼済みオリジンに記憶（`examples/svelte-app` の `consent-gating.ts` / `app-state.ts` / `ConsentDialog.svelte`）。例外として、`onGetRelays` 未設定または鍵未設定（未ログイン）時の `getRelays` はユーザー識別情報を含まない空マップを同意なしで返す。`requireUserConsent: true`（デフォルト）+ `onConsent` 未設定のホストはフェイルクローズ（`INTERNAL`）になる破壊的変更であり、パッケージ README に明記した。
 
 ---
 

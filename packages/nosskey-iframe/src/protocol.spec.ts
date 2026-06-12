@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONSENT_REQUIRED_METHODS,
   NOSSKEY_ERROR_CODES,
   type NosskeyErrorCode,
+  type NosskeyMethod,
+  isConnectMethod,
   isDecryptMethod,
   isEncryptMethod,
   isNosskeyReady,
@@ -189,6 +192,42 @@ describe('protocol: isNosskeyVisibility', () => {
 
   it.each([null, undefined, 'nosskey:visibility', 0, []])('rejects %s', (value) => {
     expect(isNosskeyVisibility(value)).toBe(false);
+  });
+});
+
+describe('protocol: CONSENT_REQUIRED_METHODS', () => {
+  it('covers every supported method (no silent reads for arbitrary origins)', () => {
+    const expected: NosskeyMethod[] = [
+      'getPublicKey',
+      'getRelays',
+      'signEvent',
+      'nip44_encrypt',
+      'nip44_decrypt',
+      'nip04_encrypt',
+      'nip04_decrypt',
+    ];
+    expect(CONSENT_REQUIRED_METHODS).toEqual(expected);
+  });
+
+  it('includes getPublicKey and getRelays (per-origin pairing approval)', () => {
+    expect(CONSENT_REQUIRED_METHODS).toContain('getPublicKey');
+    expect(CONSENT_REQUIRED_METHODS).toContain('getRelays');
+  });
+});
+
+describe('protocol: isConnectMethod', () => {
+  it.each(['getPublicKey', 'getRelays'] as const)('returns true for %s', (method) => {
+    expect(isConnectMethod(method)).toBe(true);
+  });
+
+  it.each([
+    'signEvent',
+    'nip44_encrypt',
+    'nip44_decrypt',
+    'nip04_encrypt',
+    'nip04_decrypt',
+  ] as const)('returns false for %s', (method) => {
+    expect(isConnectMethod(method)).toBe(false);
   });
 });
 

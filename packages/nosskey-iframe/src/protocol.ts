@@ -18,14 +18,34 @@ export type NosskeyMethod =
   | 'nip04_encrypt'
   | 'nip04_decrypt';
 
-/** Methods that mutate or expose secret material and therefore require user consent. */
+/**
+ * Methods that mutate secret material or expose user-identifying information
+ * and therefore require user consent. `getPublicKey` / `getRelays` are
+ * included because they let an arbitrary embedding origin silently identify
+ * the logged-in user (npub + relay set) — the consent here acts as a
+ * per-origin pairing approval, mirroring NIP-07 browser extensions.
+ *
+ * Exception: `getRelays` skips consent and returns an empty map when no
+ * `onGetRelays` resolver is configured or no key is set (an empty map
+ * carries no user-identifying information).
+ *
+ * The actual enforcement lives in the host's dispatch (`host.ts`); keep
+ * this list in sync when adding a new method there.
+ */
 export const CONSENT_REQUIRED_METHODS: readonly NosskeyMethod[] = [
+  'getPublicKey',
+  'getRelays',
   'signEvent',
   'nip44_encrypt',
   'nip44_decrypt',
   'nip04_encrypt',
   'nip04_decrypt',
 ] as const;
+
+/** True for `getPublicKey` / `getRelays` (per-origin connection approval). */
+export function isConnectMethod(method: NosskeyMethod): boolean {
+  return method === 'getPublicKey' || method === 'getRelays';
+}
 
 /** True for `nip44_encrypt` / `nip04_encrypt`. */
 export function isEncryptMethod(method: NosskeyMethod): boolean {
