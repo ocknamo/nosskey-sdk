@@ -207,6 +207,8 @@ Creates a passkey (also requests PRF extension).
 async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 ```
 
+During creation it evaluates the standard-salt and wrap-salt PRFs with a single UV and caches them inside the SDK until the subsequent `createNostrKey()` / `importNostrKey()` consumes them. A cache left unconsumed is automatically zeroized after a TTL (60 seconds), and is also discarded immediately by `clearCurrentKeyInfo()` (logout) / `clearStoredKeyInfo()` (full wipe) — no application-side management is required.
+
 #### createNostrKey()
 Creates NostrKeyInfo using PRF value directly as Nostr secret key (PRF direct mode).
 

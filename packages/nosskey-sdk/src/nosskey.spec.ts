@@ -4,7 +4,7 @@ import { seckeySigner } from '@rx-nostr/crypto';
  * @packageDocumentation
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NosskeyManager } from './nosskey.js';
+import { NosskeyManager, PENDING_PRF_TTL_MS } from './nosskey.js';
 import type { NostrEvent, NostrKeyInfo } from './types.js';
 import { bytesToHex, hexToBytes } from './utils.js';
 
@@ -263,6 +263,103 @@ describe('NosskeyManager', () => {
       await nosskey.createNostrKey(credentialId);
 
       // 2 回目に備えて get を本来の挙動に戻す。標準 salt 由来 PRF を返す。
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: navigator.credentials.create,
+          get: vi.fn(async () => ({
+            rawId: credentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+
+      await nosskey.createNostrKey(credentialId);
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('未消費のまま TTL が経過したキャッシュはゼロ化され get() フォールバックに切り替わる', async () => {
+      vi.useFakeTimers();
+      try {
+        const nosskey = new NosskeyManager();
+        const credentialId = await nosskey.createPasskey();
+
+        // TTL 経過で自動掃除されるはず
+        vi.advanceTimersByTime(PENDING_PRF_TTL_MS);
+
+        // get を本来の挙動に戻す（キャッシュが残っていれば呼ばれないので検出できる）
+        Object.defineProperty(globalThis.navigator, 'credentials', {
+          value: {
+            create: navigator.credentials.create,
+            get: vi.fn(async () => ({
+              rawId: credentialId.buffer,
+              getClientExtensionResults: vi.fn(() => ({
+                prf: {
+                  results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+                },
+              })),
+            })),
+          },
+          configurable: true,
+        });
+
+        await nosskey.createNostrKey(credentialId);
+        expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('TTL 満了時は未消費の PRF バッファ自体が fill(0) でゼロ化される', async () => {
+      // prf-handler は extension results の ArrayBuffer を new Uint8Array(buf) で
+      // ビュー化する（コピーしない）ため、テスト側で同じ ArrayBuffer への参照を
+      // 保持すれば SDK 内部のゼロ化が実効しているかを直接観測できる。
+      const firstBuf = new Uint8Array(32).fill(mockPrfResultValue).buffer;
+      const secondBuf = new Uint8Array(32).fill(mockPrfResultValue + 1).buffer;
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: { results: { first: firstBuf, second: secondBuf } },
+            })),
+          })),
+          get: vi.fn(async () => {
+            throw new Error('navigator.credentials.get should not be called');
+          }),
+        },
+        configurable: true,
+      });
+
+      vi.useFakeTimers();
+      try {
+        const nosskey = new NosskeyManager();
+        await nosskey.createPasskey();
+
+        // TTL 満了前は秘密値が残っている（前提確認）
+        expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(false);
+        expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(false);
+
+        vi.advanceTimersByTime(PENDING_PRF_TTL_MS);
+
+        // Map からの削除だけでなく、バッファ自体がゼロ化されている
+        expect(new Uint8Array(firstBuf).every((b) => b === 0)).toBe(true);
+        expect(new Uint8Array(secondBuf).every((b) => b === 0)).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('clearCurrentKeyInfo()（ログアウト）は未消費 PRF キャッシュも破棄する', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      nosskey.clearCurrentKeyInfo();
+
       Object.defineProperty(globalThis.navigator, 'credentials', {
         value: {
           create: navigator.credentials.create,

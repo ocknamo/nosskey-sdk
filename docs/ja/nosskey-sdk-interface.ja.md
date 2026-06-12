@@ -203,6 +203,8 @@ async isPrfSupported(): Promise<boolean>
 async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 ```
 
+作成時に標準 salt と wrap salt の PRF を 1 回の UV で同時取得し、直後の `createNostrKey()` / `importNostrKey()` が消費するまで SDK 内部にキャッシュします。未消費のまま放置されたキャッシュは TTL（60 秒）経過で自動ゼロ化されるほか、`clearCurrentKeyInfo()`（ログアウト）/ `clearStoredKeyInfo()`（完全ワイプ）でも即時破棄されます（アプリ側での管理は不要）。
+
 #### createNostrKey()
 PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを作成します（PRF 直接モード）。
 
