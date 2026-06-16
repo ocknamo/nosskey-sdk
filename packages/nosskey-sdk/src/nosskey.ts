@@ -34,7 +34,7 @@ import type {
  * Nosskey class for Passkey-Derived Nostr Identity
  * @packageDocumentation
  */
-import { bytesToHex, hexToBytes } from './utils.js';
+import { bytesToHex, hexToBytesStrict } from './utils.js';
 
 /**
  * createPasskey で退避した未消費 PRF（直接モードの実秘密鍵 / wrap モードの KEK）の
@@ -834,10 +834,13 @@ export class NosskeyManager implements NosskeyManagerLike {
     }
 
     // 2) PRF を取得（直接モード: PRF出力がそのまま nsec / wrap モード: PRF出力が KEK）
+    // credentialId / salt は localStorage に平文保存され改ざんされ得るため、
+    // 寛容な hexToBytes（不正文字スキップ・長さ非検証）ではなく厳格版でパースする。
+    // credentialId は WebAuthn 仕様上バイト長が可変なので長さは強制しない。
     const { secret: prf } = await getPrfSecret(
-      hexToBytes(keyInfo.credentialId),
+      hexToBytesStrict(keyInfo.credentialId),
       this.#prfOptions,
-      hexToBytes(normalizeSalt(keyInfo.salt))
+      hexToBytesStrict(normalizeSalt(keyInfo.salt))
     );
 
     // 3) wrap モード分岐: NIP-44 v2 復号で平文 nsec を取り出す
@@ -850,7 +853,10 @@ export class NosskeyManager implements NosskeyManagerLike {
       try {
         const kekPubkey = await seckeySigner(bytesToHex(prf)).getPublicKey();
         const nsecHex = nip44Decrypt(keyInfo.wrapped.payload, prf, kekPubkey);
-        nsec = hexToBytes(nsecHex);
+        // 復号結果は 32 バイト秘密鍵の hex であることを強制する。MAC 検証は
+        // nip44Decrypt が通っているが、多層防御として長さ・hex 妥当性も確認し、
+        // 不正なら不正鍵を生成せず即 throw する（直後の pubkey 照合の前段）。
+        nsec = hexToBytesStrict(nsecHex, 32);
 
         // 多層防御: 復号した nsec から導出した pubkey が、保存済み keyInfo.pubkey と
         // 一致するか検証する。pubkey は localStorage に平文・非認証で保存されるため、

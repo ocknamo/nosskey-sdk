@@ -75,3 +75,43 @@ export function hexToBytes(hex: string): Uint8Array {
 
   return new Uint8Array(bytes);
 }
+
+/** 16進数のみ（大文字小文字許容）にマッチする。空文字列も許容する。 */
+const HEX_ONLY = /^[0-9a-f]*$/i;
+
+/**
+ * 16進数文字列を**厳格に**バイト配列へ変換する。
+ *
+ * {@link hexToBytes} は不正文字を黙ってスキップし長さも検証しないため、
+ * 改ざんされ得る保存値（`credentialId` / `salt` / 復号済み nsec など）の
+ * パースには使わないこと。本関数は以下のいずれかに違反する入力で `Error`
+ * を投げる:
+ * - 16進数以外の文字を含む
+ * - 長さが奇数（バイト境界に揃っていない）
+ * - `expectedBytes` 指定時、結果のバイト長が一致しない
+ *
+ * エラーメッセージには長さ情報のみを含め、入力値（秘匿データになり得る）は
+ * 載せない。
+ *
+ * @param hex 16進数文字列（`0x` プレフィックス不可）
+ * @param expectedBytes 期待するバイト長。省略時は長さを強制しない
+ * @returns デコードしたバイト配列
+ * @throws 上記いずれかに違反した場合
+ */
+export function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new Error(`hexToBytesStrict: odd-length hex string (length ${hex.length}).`);
+  }
+  if (!HEX_ONLY.test(hex)) {
+    throw new Error('hexToBytesStrict: input contains non-hex characters.');
+  }
+  const byteLength = hex.length / 2;
+  if (expectedBytes !== undefined && byteLength !== expectedBytes) {
+    throw new Error(`hexToBytesStrict: expected ${expectedBytes} byte(s) but got ${byteLength}.`);
+  }
+  const bytes = new Uint8Array(byteLength);
+  for (let i = 0; i < byteLength; i++) {
+    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}

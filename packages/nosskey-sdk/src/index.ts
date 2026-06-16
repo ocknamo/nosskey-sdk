@@ -15,7 +15,7 @@ export { NosskeyManager } from './nosskey.js';
 export { isNostrKeyInfo, DEFAULT_REGISTRY_STORAGE_KEY } from './key-registry.js';
 
 // ユーティリティのエクスポート
-export { bytesToHex, hexToBytes } from './utils.js';
+export { bytesToHex, hexToBytes, hexToBytesStrict } from './utils.js';
 
 // NIP-44 低レベル関数のエクスポート。
 // nip44Encrypt/Decrypt は ephemeral 秘密鍵での暗号化 (NIP-17 gift-wrap など、
