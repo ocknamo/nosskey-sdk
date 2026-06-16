@@ -2075,6 +2075,39 @@ describe('NosskeyManager', () => {
       });
     });
 
+    describe('保存値の厳格パース（#getSecretKey）', () => {
+      // credentialId / salt は localStorage に平文保存され改ざんされ得るため、
+      // 非hex文字を含む場合は黙ってスキップせず throw すること（hexToBytesStrict）。
+      it('credentialId に非hex文字が含まれる → getPrfSecret 到達前に throw', async () => {
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const prfHandler = await import('./prf-handler.js');
+        const spy = vi.spyOn(prfHandler, 'getPrfSecret');
+        const keyInfo: NostrKeyInfo = {
+          credentialId: 'zz', // 偶数長だが非hex
+          pubkey: TV_IMPORTED_PUBKEY,
+          salt: WRAP_SALT_HEX,
+        };
+
+        await expect(nosskey.exportNostrKey(keyInfo)).rejects.toThrow(/non-hex/);
+        // 厳格パースは getPrfSecret の引数評価時点で弾くため UV へ到達しない
+        expect(spy).not.toHaveBeenCalled();
+      });
+
+      it('salt に非hex文字が含まれる → getPrfSecret 到達前に throw', async () => {
+        const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
+        const prfHandler = await import('./prf-handler.js');
+        const spy = vi.spyOn(prfHandler, 'getPrfSecret');
+        const keyInfo: NostrKeyInfo = {
+          credentialId: bytesToHex(new Uint8Array(4)),
+          pubkey: TV_IMPORTED_PUBKEY,
+          salt: 'zzzz', // 非hex（normalizeSalt は LEGACY/未設定以外を素通しするため throw に至る）
+        };
+
+        await expect(nosskey.exportNostrKey(keyInfo)).rejects.toThrow(/non-hex/);
+        expect(spy).not.toHaveBeenCalled();
+      });
+    });
+
     describe('PRF 直接モード回帰', () => {
       it('createNostrKey は wrapped を生成しない', async () => {
         const nosskey = new NosskeyManager({ storageOptions: { enabled: false } });
