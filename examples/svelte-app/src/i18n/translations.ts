@@ -289,7 +289,7 @@ export const ja: TranslationData = {
       login: 'ログインエラー:',
       importNsec: 'nsec インポートエラー:',
       prfUnsupported:
-        'このパスキー（認証器）は PRF 拡張に対応していないため利用できません。Bitwarden など一部の認証器は未対応です。別のパスキー（端末内蔵のパスキーやセキュリティキーなど）でお試しください。',
+        'このパスキーは利用できません。Bitwarden など一部の認証器は未対応なため、PRF 拡張に対応した別のパスキー（プラットフォームのパスキーなど）でお試しください。',
     },
   },
   appWarning: {
@@ -570,7 +570,7 @@ export const en: TranslationData = {
       login: 'Login Error:',
       importNsec: 'nsec Import Error:',
       prfUnsupported:
-        "This passkey (authenticator) can't be used because it doesn't support the PRF extension. Some authenticators such as Bitwarden are not yet supported. Please try a different passkey, such as your device's built-in passkey or a security key.",
+        "This passkey can't be used. Some authenticators such as Bitwarden are not supported, so please try a different passkey that supports the PRF extension (such as a platform passkey).",
     },
   },
   appWarning: {
