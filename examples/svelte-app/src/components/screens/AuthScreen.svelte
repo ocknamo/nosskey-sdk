@@ -5,6 +5,7 @@ import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { initAccounts } from '../../store/accounts.js';
 import * as appState from '../../store/app-state.js';
+import { formatAuthError } from '../../utils/auth-error.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import SavedAccounts from '../SavedAccounts.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
@@ -67,7 +68,11 @@ async function createNew() {
     await appState.loginWith(keyInfo);
   } catch (error) {
     console.error('パスキー作成エラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.passkeyCreation} ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = formatAuthError(
+      $i18n.t.common.errorMessages.passkeyCreation,
+      $i18n.t.common.errorMessages.prfUnsupported,
+      error
+    );
   } finally {
     isLoading = false;
   }
@@ -120,7 +125,11 @@ async function importExisting() {
   } catch (error) {
     seckey.fill(0);
     console.error('nsec インポートエラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.importNsec} ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = formatAuthError(
+      $i18n.t.common.errorMessages.importNsec,
+      $i18n.t.common.errorMessages.prfUnsupported,
+      error
+    );
   } finally {
     isLoading = false;
   }
@@ -138,7 +147,11 @@ async function login() {
     await appState.loginWith(keyInfo);
   } catch (error) {
     console.error('ログインエラー:', error);
-    errorMessage = `${$i18n.t.common.errorMessages.login} ${error instanceof Error ? error.message : String(error)}`;
+    errorMessage = formatAuthError(
+      $i18n.t.common.errorMessages.login,
+      $i18n.t.common.errorMessages.prfUnsupported,
+      error
+    );
   } finally {
     isLoading = false;
   }
