@@ -26,6 +26,7 @@ export interface TranslationData {
       passkeyCreation: string;
       login: string;
       importNsec: string;
+      prfUnsupported: string;
     };
   };
   appWarning: {
@@ -287,6 +288,8 @@ export const ja: TranslationData = {
       passkeyCreation: 'パスキー作成エラー:',
       login: 'ログインエラー:',
       importNsec: 'nsec インポートエラー:',
+      prfUnsupported:
+        'このパスキーは利用できません。Bitwarden など一部の認証器は未対応なため、PRF 拡張に対応した別のパスキー（プラットフォームのパスキーなど）でお試しください。',
     },
   },
   appWarning: {
@@ -566,6 +569,8 @@ export const en: TranslationData = {
       passkeyCreation: 'Passkey Creation Error:',
       login: 'Login Error:',
       importNsec: 'nsec Import Error:',
+      prfUnsupported:
+        "This passkey can't be used. Some authenticators such as Bitwarden are not supported, so please try a different passkey that supports the PRF extension (such as a platform passkey).",
     },
   },
   appWarning: {
