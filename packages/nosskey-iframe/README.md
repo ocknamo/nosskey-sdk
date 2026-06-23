@@ -93,7 +93,8 @@ const manager = new NosskeyManager(/* storage / PRF options */);
 
 const host = new NosskeyIframeHost({
   manager,
-  // Restrict to the parent origins you trust. '*' is debug-only.
+  // Required (no default). List the parent origins you trust, or pass '*' to
+  // deliberately opt in to open embedding (any origin; emits a console warning).
   allowedOrigins: ['https://your-parent-app.example'],
   requireUserConsent: true,
   onConsent: async (req: ConsentRequest) => {
@@ -115,6 +116,8 @@ host.start();
 All seven NIP-07 methods are gated by `onConsent`. For `getPublicKey` / `getRelays` the consent acts as a per-origin connection approval (pairing) — the same model NIP-07 browser extensions use — so an arbitrary embedding site cannot silently read the logged-in user's npub or relay list. Remember approved origins in your consent UI (the reference app stores them as trusted origins) to keep login flows friction-free.
 
 > **Breaking change (security fix):** earlier versions served `getPublicKey` / `getRelays` without consent. Hosts that keep the default `requireUserConsent: true` must provide `onConsent`, or these methods now fail with `INTERNAL`. To restore the old silent behavior, opt out explicitly with `requireUserConsent: false`. `getRelays` still returns `{}` without prompting when `onGetRelays` is not configured or no key is set.
+
+> **Breaking change (secure-by-default):** `allowedOrigins` is now **required** — it no longer defaults to `'*'`. Omitting it throws at construction. Pass an explicit allowlist (recommended when the parent origin is known, e.g. self-hosted integrations), or the literal `'*'` to deliberately opt in to open embedding. This keeps the open-embedding model available for hosts that want it while preventing "accept every origin" from being a silent default.
 
 For the full architecture (consent UI patterns, Storage Access API, the seven NIP-07 methods, embedded theme/lang propagation) see
 [`docs/en/iframe-host.en.md`](../../docs/en/iframe-host.en.md).

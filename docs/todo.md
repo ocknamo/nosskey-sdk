@@ -46,7 +46,7 @@ iframe 機能拡充の Phase 番号は `docs/iframe-expansion-plan.md` の体系
 - [ ] **M-1/M-4**: decrypt 系の「常に許可」抑制とレート制限
 - [ ] **M-2**: wrap モードインポート時のバックアップ必須化
 - [ ] **M-3**: デプロイ環境への CSP 追加と TTL バリデーション
-- [ ] **M-5**: SDK の `allowedOrigins` デフォルト廃止（未指定 throw・`'*'` は明示オプトイン）
+- [x] **M-5**: SDK の `allowedOrigins` デフォルト廃止（未指定 throw・`'*'` は明示オプトイン）— `NosskeyIframeHostOptions.allowedOrigins` を必須化（型・ランタイム両方）。未指定でコンストラクタ throw、`'*'` は明示オプトイン（オープン埋め込み・起動時 console.warn は維持）。nosskey.app 自身（`examples/svelte-app/src/iframe-mode.ts`）は既に `'*'` を明示済みのため無退行。`host.ts`（`resolveOptions` の throw・JSDoc）、`host.spec.ts`（省略時 throw テスト追加・既存2テストに明示付与）、`packages/nosskey-iframe/README{,.ja}.md`・`docs/{ja,en}/iframe-host` に secure-by-default の破壊的変更注記を追加。
 
 ### wrap モードのセキュリティ堅牢化
 2026-06 の wrap モード（`importNostrKey` / `#getSecretKey`）セキュリティレビューで発見。暗号方式自体（NIP-44 v2 自己宛 DM・機密性は PRF と等価・完全性は HMAC・salt ドメイン分離）は健全で、以下は多層防御・鍵ライフサイクルの堅牢化項目。

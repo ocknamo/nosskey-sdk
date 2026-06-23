@@ -35,12 +35,14 @@ export interface NosskeyIframeHostOptions {
   /** Manager that fulfils the NIP-07 requests (normally a NosskeyManager instance). */
   manager: NosskeyManagerLike;
   /**
-   * Origins allowed to communicate with this host. `'*'` disables the check
-   * (useful during development — a console warning is emitted on start).
-   *
-   * @default '*'
+   * Origins allowed to communicate with this host. This is **required** — there
+   * is no default. Pass an explicit allowlist (recommended whenever the parent
+   * origin is known, e.g. self-hosted integrations) or the literal `'*'` to
+   * opt in to open embedding (any origin may send requests; a console warning
+   * is emitted on start). Omitting it throws so that "accept every origin" is
+   * always a deliberate choice rather than a silent default (secure-by-default).
    */
-  allowedOrigins?: string[] | '*';
+  allowedOrigins: string[] | '*';
   /**
    * When true, all consent-required methods (`getPublicKey`, `getRelays`,
    * `signEvent`, nip44/nip04 encrypt/decrypt) require {@link onConsent} to
@@ -77,9 +79,15 @@ function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
   if (!win) {
     throw new Error('NosskeyIframeHost requires a Window (provide options.window).');
   }
+  if (options.allowedOrigins !== '*' && !Array.isArray(options.allowedOrigins)) {
+    throw new Error(
+      'NosskeyIframeHost requires options.allowedOrigins: pass an explicit list of ' +
+        "parent origins, or '*' to deliberately opt in to open embedding."
+    );
+  }
   return {
     manager: options.manager,
-    allowedOrigins: options.allowedOrigins ?? '*',
+    allowedOrigins: options.allowedOrigins,
     requireUserConsent: options.requireUserConsent ?? true,
     onConsent: options.onConsent,
     onGetRelays: options.onGetRelays,

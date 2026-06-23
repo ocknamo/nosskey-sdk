@@ -129,9 +129,13 @@ Key points:
   is pressed
 - **`getRelays` callback**: `onGetRelays` reads the relay map through the SDK's
   storage handle so it hits first-party storage after a Storage Access grant
-- `allowedOrigins: '*'` only opens the postMessage entry point for the demo.
-  It is **not** an origin filter — production hosts must restrict it to a
-  specific allowlist
+- `allowedOrigins` is **required** (no default); omitting it throws at
+  construction. Hosts like nosskey.app, whose design intent is open embedding by
+  arbitrary sites, must **explicitly** pass `'*'` to opt in (a console warning is
+  emitted on start). Self-hosted integrations with a known parent origin should
+  restrict it to a specific allowlist instead. `'*'` only opens the postMessage
+  entry point and is **not** itself an origin filter — arbitrary-site access is
+  still guarded by the H-1 per-origin consent gate
 
 ### 4. Consent gating — `consent-gating.ts` + `app-state.ts`
 
