@@ -178,7 +178,7 @@ export interface TranslationData {
       resetDenyCounts: string;
       saved: string;
       corruptionWarning: string;
-      decryptNote: string;
+      decryptTip: string;
     };
     developer: {
       title: string;
@@ -424,7 +424,7 @@ export const ja: TranslationData = {
     consentPolicy: {
       title: 'メソッド別の同意ポリシー',
       description:
-        'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はサイトを問わずスキップ（復号を除く。下記参照）、「拒否」はダイアログを出さずに即拒否します。',
+        'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はダイアログをスキップ、「拒否」は即拒否します。',
       methodLabel: {
         connect: 'サイト接続（公開鍵・リレー設定の読み取り）',
         signEvent: 'イベント署名 (signEvent)',
@@ -441,8 +441,8 @@ export const ja: TranslationData = {
       saved: '保存しました。',
       corruptionWarning:
         '保存された同意設定の一部が不正な形式だったため、デフォルト値に戻しました。意図しない設定変更がないか確認してください。',
-      decryptNote:
-        '安全のため、復号（NIP-44 / NIP-04 の decrypt）は「常に許可」にしても毎回確認します。ここの「常に許可」は暗号化など復号以外の操作にのみ適用されます。',
+      decryptTip:
+        '安全のため、復号（NIP-44 / NIP-04 decrypt）は「常に許可」にしても毎回確認します。「常に許可」は暗号化など復号以外にのみ適用されます。',
     },
     exportKeyInfo: {
       title: '鍵情報のエクスポート',
@@ -709,7 +709,7 @@ export const en: TranslationData = {
     consentPolicy: {
       title: 'Per-method consent policy',
       description:
-        'Set the default behavior for each request type. "Always allow" skips the dialog regardless of site (except decryption — see below), "Deny" rejects without prompting.',
+        'Set the default behavior for each request type. "Always allow" skips the dialog, "Deny" rejects without prompting.',
       methodLabel: {
         connect: 'Site connection (read public key & relay list)',
         signEvent: 'Sign event (signEvent)',
@@ -726,8 +726,8 @@ export const en: TranslationData = {
       saved: 'Saved.',
       corruptionWarning:
         'Some stored consent settings were invalid and have been reset to defaults. Please verify your settings have not been altered unexpectedly.',
-      decryptNote:
-        'For safety, decryption (NIP-44 / NIP-04 decrypt) always prompts even when set to "Always allow". The "Always allow" option here applies only to non-decrypt operations such as encryption.',
+      decryptTip:
+        'For safety, decryption (NIP-44 / NIP-04 decrypt) always prompts even when set to "Always allow". "Always allow" applies only to non-decrypt operations such as encryption.',
     },
     exportKeyInfo: {
       title: 'Export KeyInfo',

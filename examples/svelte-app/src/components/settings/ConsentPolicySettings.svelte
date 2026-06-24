@@ -11,6 +11,7 @@ import {
   storageCorruption,
 } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import HelpTip from '../ui/HelpTip.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -36,15 +37,16 @@ function optionLabel(option: ConsentDecision): string {
 </script>
 
 <CardSection title={$i18n.t.settings.consentPolicy.title}>
-  <p class="description">{$i18n.t.settings.consentPolicy.description}</p>
+  <p class="description">
+    {$i18n.t.settings.consentPolicy.description}
+    <HelpTip text={$i18n.t.settings.consentPolicy.decryptTip} placement="end" />
+  </p>
 
   {#if $storageCorruption.consentPolicy || $storageCorruption.trustedOrigins}
     <p class="corruption-warning" role="alert">
       {$i18n.t.settings.consentPolicy.corruptionWarning}
     </p>
   {/if}
-
-  <p class="decrypt-note">{$i18n.t.settings.consentPolicy.decryptNote}</p>
 
   <div class="policy-grid">
     {#each POLICY_KEYS as method (method)}
@@ -92,16 +94,6 @@ function optionLabel(option: ConsentDecision): string {
     margin-bottom: 15px;
     color: var(--color-text-secondary);
     transition: color 0.3s ease;
-  }
-
-  .decrypt-note {
-    margin: 0 0 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background-color: var(--color-info-bg, var(--color-card));
-    border: 1px solid var(--color-border);
-    color: var(--color-text-secondary);
-    font-size: 0.85rem;
   }
 
   .corruption-warning {
