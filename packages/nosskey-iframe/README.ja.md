@@ -92,7 +92,8 @@ const manager = new NosskeyManager(/* storage / PRF オプション */);
 
 const host = new NosskeyIframeHost({
   manager,
-  // 信頼する親オリジンに絞ります。'*' はデバッグ用途のみ。
+  // 必須（デフォルトなし）。信頼する親オリジンを列挙するか、オープン埋め込みを
+  // 意図的に有効化する場合のみ '*' を渡します（全オリジン許可・起動時に警告ログ）。
   allowedOrigins: ['https://your-parent-app.example'],
   requireUserConsent: true,
   onConsent: async (req: ConsentRequest) => {
@@ -114,6 +115,8 @@ host.start();
 全 7 つの NIP-07 メソッドが `onConsent` で gate されます。`getPublicKey` / `getRelays` に対する同意は、NIP-07 ブラウザ拡張と同じ「オリジン単位の接続承認（ペアリング）」として機能します。これにより、任意の埋め込みサイトがログイン中ユーザーの npub やリレー設定をサイレントに読み取ることを防ぎます。承認済みオリジンは同意 UI 側で記憶してください（参照実装では信頼済みオリジンとして保存）。これでログインフローの摩擦は初回のみになります。
 
 > **破壊的変更（セキュリティ修正）:** 以前のバージョンは `getPublicKey` / `getRelays` を同意なしで返していました。デフォルトの `requireUserConsent: true` のままのホストは `onConsent` を必ず提供してください。未提供の場合、これらのメソッドは `INTERNAL` エラーになります。従来のサイレント動作に戻すには `requireUserConsent: false` を明示してください。なお `onGetRelays` 未設定または鍵未設定のときの `getRelays` は従来どおり同意なしで `{}` を返します。
+
+> **破壊的変更（secure-by-default）:** `allowedOrigins` は **必須** になりました（`'*'` のデフォルトは廃止）。省略するとコンストラクタで throw します。親オリジンが分かる場合（セルフホスト統合等）は明示的な許可リストを、オープン埋め込みを意図的に有効化する場合は `'*'` を渡してください。オープン埋め込みモデル自体は引き続き利用できますが、「全オリジン許可」がサイレントなデフォルトにならないようにする変更です。
 
 詳細アーキテクチャ (同意 UI パターン、Storage Access API、7 メソッドの NIP-07 実装、embedded テーマ/言語伝搬) は
 [`docs/ja/iframe-host.ja.md`](../../docs/ja/iframe-host.ja.md) を参照。

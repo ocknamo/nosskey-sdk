@@ -97,7 +97,7 @@ export function startIframeHost(overrides = {}) {
 - **consent は単なる確認ではなくゲート**: `onConsent` は副作用のない純粋関数 `evaluateConsent()` に委譲する。保存済みポリシー / 信頼済みオリジンに応じて自動承認・自動拒否・ダイアログ表示のいずれかに分岐する
 - **Promise ブリッジ**: `ask` 経路では Promise を返し、その `resolve` を `pendingConsent` store に退避。UI のボタンが押されるまで Host は待機
 - **`getRelays` コールバック**: `onGetRelays` は SDK のストレージハンドル経由でリレーマップを読むため、Storage Access グラント後はファーストパーティのストレージを参照する
-- `allowedOrigins: '*'` はデモ用に postMessage の入口を全許可する設定であり、オリジンフィルタ**ではない**。本番ホストでは特定 origin の許可リストに絞ること
+- `allowedOrigins` は **必須** (デフォルト廃止)。省略するとコンストラクタで throw する。nosskey.app のように任意サイトからの埋め込みを設計意図とするホストは `'*'` を**明示**してオープン埋め込みにオプトインする (起動時に警告ログ)。一方、親オリジンが固定できるセルフホスト統合では特定 origin の許可リストに絞ること。`'*'` は postMessage の入口を全許可する設定であり、それ自体はオリジンフィルタ**ではない** (任意サイトからの接続は H-1 の同意ゲートで守られる)
 
 ### 4. Consent ゲーティング — `consent-gating.ts` + `app-state.ts`
 

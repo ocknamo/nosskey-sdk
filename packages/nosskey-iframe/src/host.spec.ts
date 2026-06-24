@@ -103,6 +103,7 @@ describe('NosskeyIframeHost', () => {
     Object.defineProperty(win, 'parent', { value: parent, configurable: true });
     const host = new NosskeyIframeHost({
       manager: makeManager(),
+      allowedOrigins: ['https://parent.example'],
       window: win as unknown as Window,
     });
     host.start();
@@ -116,9 +117,21 @@ describe('NosskeyIframeHost', () => {
     const win = createFakeWindow();
     new NosskeyIframeHost({
       manager: makeManager(),
+      allowedOrigins: '*',
       window: win as unknown as Window,
     }).start();
     expect(warnSpy).toHaveBeenCalledOnce();
+  });
+
+  it('throws when allowedOrigins is omitted (no silent open default)', () => {
+    const win = createFakeWindow();
+    expect(
+      () =>
+        new NosskeyIframeHost({
+          manager: makeManager(),
+          window: win as unknown as Window,
+        } as unknown as ConstructorParameters<typeof NosskeyIframeHost>[0])
+    ).toThrow(/allowedOrigins/);
   });
 
   it('routes getPublicKey after onConsent resolves true', async () => {
@@ -735,7 +748,12 @@ describe('NosskeyIframeHost', () => {
   it('throws when no Window is available', () => {
     vi.stubGlobal('window', undefined);
     try {
-      expect(() => new NosskeyIframeHost({ manager: makeManager() })).toThrow(/requires a Window/);
+      expect(
+        () =>
+          new NosskeyIframeHost({
+            manager: makeManager(),
+          } as unknown as ConstructorParameters<typeof NosskeyIframeHost>[0])
+      ).toThrow(/requires a Window/);
     } finally {
       vi.unstubAllGlobals();
     }
