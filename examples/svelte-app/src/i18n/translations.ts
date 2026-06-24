@@ -178,6 +178,7 @@ export interface TranslationData {
       resetDenyCounts: string;
       saved: string;
       corruptionWarning: string;
+      decryptNote: string;
     };
     developer: {
       title: string;
@@ -230,6 +231,7 @@ export interface TranslationData {
     peerPubkey: string;
     plaintext: string;
     decryptNoPreview: string;
+    decryptAlwaysAsk: string;
     alwaysAllowSite: string;
     showRaw: string;
     kindLabel: {
@@ -439,6 +441,8 @@ export const ja: TranslationData = {
       saved: '保存しました。',
       corruptionWarning:
         '保存された同意設定の一部が不正な形式だったため、デフォルト値に戻しました。意図しない設定変更がないか確認してください。',
+      decryptNote:
+        '安全のため、復号（NIP-44 / NIP-04 の decrypt）は「常に許可」にしても毎回確認します。ここの「常に許可」は暗号化など復号以外の操作にのみ適用されます。',
     },
     exportKeyInfo: {
       title: '鍵情報のエクスポート',
@@ -508,6 +512,8 @@ export const ja: TranslationData = {
     peerPubkey: '相手の公開鍵',
     plaintext: '平文',
     decryptNoPreview: '暗号文の内容は復号後にしか確認できません。',
+    decryptAlwaysAsk:
+      '安全のため、復号は「常に許可」にできません。リクエストのたびにこの確認が表示されます。',
     alwaysAllowSite: 'このサイトを常に許可（同意ダイアログをスキップ）',
     showRaw: '生のイベント JSON を表示',
     kindLabel: {
@@ -720,6 +726,8 @@ export const en: TranslationData = {
       saved: 'Saved.',
       corruptionWarning:
         'Some stored consent settings were invalid and have been reset to defaults. Please verify your settings have not been altered unexpectedly.',
+      decryptNote:
+        'For safety, decryption (NIP-44 / NIP-04 decrypt) always prompts even when set to "Always allow". The "Always allow" option here applies only to non-decrypt operations such as encryption.',
     },
     exportKeyInfo: {
       title: 'Export KeyInfo',
@@ -788,6 +796,8 @@ export const en: TranslationData = {
     peerPubkey: 'Peer public key',
     plaintext: 'Plaintext',
     decryptNoPreview: 'Ciphertext contents are only visible after decryption.',
+    decryptAlwaysAsk:
+      'For safety, decryption cannot be set to "always allow". This prompt appears on every request.',
     alwaysAllowSite: 'Always allow this site (skip the consent dialog)',
     showRaw: 'Show raw event JSON',
     kindLabel: {

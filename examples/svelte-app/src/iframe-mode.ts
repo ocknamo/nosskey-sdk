@@ -1,5 +1,5 @@
 import type { ConsentRequest, NosskeyIframeHostOptions } from 'nosskey-iframe';
-import { NosskeyIframeHost } from 'nosskey-iframe';
+import { NosskeyIframeHost, isDecryptMethod } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';
@@ -25,12 +25,18 @@ export const pendingConsent = writable<PendingConsent | null>(null);
 /**
  * `trustOrigin` が ON のとき、リクエストの origin × method 単位で信頼リストに追加する。
  * すべてのメソッドを許可するのではなく、現在のリクエスト method（policyKey 単位）のみを許可する点に注意。
+ *
+ * 復号系メソッドは「常に許可」の対象外（security audit M-1）。ダイアログ側でも
+ * 「常に許可」を提示しないため通常 `trustOrigin` は立たないが、多層防御として
+ * ここでも記憶をスキップする（復号を信頼リストに載せても `evaluateConsent` が
+ * サイレント承認しないため無意味かつ誤解を招くエントリになる）。
  */
 function rememberOriginIfRequested(
   request: ConsentRequest,
   options: ApproveOptions | undefined
 ): void {
   if (!options?.trustOrigin) return;
+  if (isDecryptMethod(request.method)) return;
   const key = policyKeyFor(request.method);
   trustedOrigins.update((list) => {
     const existing = list.find((entry) => entry.origin === request.origin);

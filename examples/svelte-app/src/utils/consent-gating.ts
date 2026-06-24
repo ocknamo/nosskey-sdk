@@ -1,4 +1,4 @@
-import type { ConsentRequest } from 'nosskey-iframe';
+import { type ConsentRequest, isDecryptMethod } from 'nosskey-iframe';
 import type {
   ConsentDecision,
   ConsentPolicy,
@@ -51,9 +51,17 @@ interface EvaluateContext {
  * 同意を求めるかどうかを副作用なく決定する。
  * 評価順は安全側優先:
  *   1. メソッドポリシーが `deny` → 即拒否（信頼済みオリジンより優先）
- *   2. メソッドポリシーが `always` → 即承認
- *   3. 信頼済みオリジン (該当メソッドが scope に含まれる) → 即承認
- *   4. それ以外 → ダイアログ表示
+ *   2. 復号系メソッド (`nip44_decrypt` / `nip04_decrypt`) → 常にダイアログ表示
+ *      （`always` ポリシー・信頼済みオリジンでもスキップしない。security audit M-1）
+ *   3. メソッドポリシーが `always` → 即承認
+ *   4. 信頼済みオリジン (該当メソッドが scope に含まれる) → 即承認
+ *   5. それ以外 → ダイアログ表示
+ *
+ * 復号系を「常に確認」に固定する理由: 復号は任意の暗号文を平文化できる
+ * オラクルであり、一度サイレント許可を与えると信頼済みサイトの XSS 一つで
+ * 全 DM 履歴を無確認で持ち出せる。暗号化（送信内容はダイアログに表示される）
+ * とは非対称な不可逆リスクのため、復号だけはバケット (`nip44` / `nip04`) の
+ * `always`・信頼済みオリジンの対象外とし、`deny` のみ短絡を許す。
  */
 export function evaluateConsent(
   request: Pick<ConsentRequest, 'origin' | 'method'>,
@@ -62,6 +70,10 @@ export function evaluateConsent(
   const key = policyKeyFor(request.method);
   const decision: ConsentDecision = context.policy[key] ?? 'ask';
   if (decision === 'deny') return { decision: 'reject', reason: 'policy-deny' };
+
+  // 復号系は `always` / 信頼済みオリジンによるサイレント承認を許さない（M-1）。
+  if (isDecryptMethod(request.method)) return { decision: 'ask' };
+
   if (decision === 'always') return { decision: 'approve', reason: 'policy-always' };
 
   const trusted = context.trustedOrigins.find(

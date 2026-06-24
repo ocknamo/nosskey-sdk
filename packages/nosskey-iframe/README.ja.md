@@ -105,6 +105,8 @@ const host = new NosskeyIframeHost({
   onGetRelays: async () => ({
     'wss://relay.example': { read: true, write: true },
   }),
+  // 任意: オリジン単位のレート制限（既定値を明示）。無効化は `false`。
+  rateLimit: { maxConsecutiveRejections: 5, blockMs: 60_000 },
 });
 
 host.start();
@@ -113,6 +115,8 @@ host.start();
 ```
 
 全 7 つの NIP-07 メソッドが `onConsent` で gate されます。`getPublicKey` / `getRelays` に対する同意は、NIP-07 ブラウザ拡張と同じ「オリジン単位の接続承認（ペアリング）」として機能します。これにより、任意の埋め込みサイトがログイン中ユーザーの npub やリレー設定をサイレントに読み取ることを防ぎます。承認済みオリジンは同意 UI 側で記憶してください（参照実装では信頼済みオリジンとして保存）。これでログインフローの摩擦は初回のみになります。
+
+**オリジン単位のレート制限（デフォルトで有効）:** 同一オリジンから `maxConsecutiveRejections`（既定 5）回連続で拒否されると、Host はそれ以降の同意要求をダイアログを出さず `RATE_LIMITED` エラーで短絡します（`blockMs`、既定 60 秒）。1 回でも承認されればカウンタはリセット。consent fatigue や復号オラクルのプローブをプロトコル層で抑止し、`onConsent` の実装に依存しません。`rateLimit` で調整、`rateLimit: false` で無効化できます。
 
 > **破壊的変更（セキュリティ修正）:** 以前のバージョンは `getPublicKey` / `getRelays` を同意なしで返していました。デフォルトの `requireUserConsent: true` のままのホストは `onConsent` を必ず提供してください。未提供の場合、これらのメソッドは `INTERNAL` エラーになります。従来のサイレント動作に戻すには `requireUserConsent: false` を明示してください。なお `onGetRelays` 未設定または鍵未設定のときの `getRelays` は従来どおり同意なしで `{}` を返します。
 

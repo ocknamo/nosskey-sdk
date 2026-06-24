@@ -61,8 +61,50 @@ export interface NosskeyIframeHostOptions {
    * prompting.
    */
   onGetRelays?: () => Promise<RelayMap>;
+  /**
+   * Per-origin guard against consent-fatigue / probing attacks: a parent that
+   * keeps firing consent-required requests can otherwise spam the dialog
+   * indefinitely. After {@link RateLimitOptions.maxConsecutiveRejections}
+   * consecutive rejections from the same origin, further consent-required
+   * requests are short-circuited with a `RATE_LIMITED` error (no dialog
+   * shown, the iframe stays hidden) until {@link RateLimitOptions.blockMs}
+   * elapses. A single approval resets the counter. Applies only when
+   * `requireUserConsent` is true. Pass `false` to disable entirely.
+   * @default enabled with maxConsecutiveRejections=5, blockMs=60000
+   */
+  rateLimit?: RateLimitOptions | false;
   /** Override the window used to install the message listener. Defaults to globalThis.window. */
   window?: Window;
+}
+
+/** Tuning for the per-origin consent rate limiter. See {@link NosskeyIframeHostOptions.rateLimit}. */
+export interface RateLimitOptions {
+  /**
+   * Number of consecutive rejections from one origin that trips the temporary
+   * block. Must be a positive integer.
+   * @default 5
+   */
+  maxConsecutiveRejections?: number;
+  /**
+   * How long (ms) an origin stays blocked after tripping the threshold.
+   * @default 60000
+   */
+  blockMs?: number;
+}
+
+const DEFAULT_MAX_CONSECUTIVE_REJECTIONS = 5;
+const DEFAULT_BLOCK_MS = 60_000;
+
+interface ResolvedRateLimit {
+  maxConsecutiveRejections: number;
+  blockMs: number;
+}
+
+/** Mutable per-origin rate-limit bookkeeping. */
+interface OriginRateState {
+  consecutiveRejections: number;
+  /** Epoch ms until which the origin is blocked; 0 when not blocked. */
+  blockedUntil: number;
 }
 
 interface ResolvedOptions {
@@ -71,7 +113,26 @@ interface ResolvedOptions {
   requireUserConsent: boolean;
   onConsent?: (request: ConsentRequest) => Promise<boolean>;
   onGetRelays?: () => Promise<RelayMap>;
+  rateLimit: ResolvedRateLimit | null;
   window: Window;
+}
+
+function resolveRateLimit(
+  rateLimit: RateLimitOptions | false | undefined
+): ResolvedRateLimit | null {
+  if (rateLimit === false) return null;
+  const opts = rateLimit ?? {};
+  const max = opts.maxConsecutiveRejections ?? DEFAULT_MAX_CONSECUTIVE_REJECTIONS;
+  const blockMs = opts.blockMs ?? DEFAULT_BLOCK_MS;
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error(
+      'NosskeyIframeHost rateLimit.maxConsecutiveRejections must be a positive integer.'
+    );
+  }
+  if (!Number.isFinite(blockMs) || blockMs < 0) {
+    throw new Error('NosskeyIframeHost rateLimit.blockMs must be a non-negative finite number.');
+  }
+  return { maxConsecutiveRejections: max, blockMs };
 }
 
 function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
@@ -91,6 +152,7 @@ function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
     requireUserConsent: options.requireUserConsent ?? true,
     onConsent: options.onConsent,
     onGetRelays: options.onGetRelays,
+    rateLimit: resolveRateLimit(options.rateLimit),
     window: win,
   };
 }
@@ -112,6 +174,8 @@ export class NosskeyIframeHost {
   readonly #options: ResolvedOptions;
   #started = false;
   #listener: ((event: MessageEvent) => Promise<void>) | null = null;
+  /** Per-origin consent rate-limit state. Lazily populated. */
+  readonly #rateState = new Map<string, OriginRateState>();
 
   constructor(options: NosskeyIframeHostOptions) {
     this.#options = resolveOptions(options);
@@ -290,19 +354,25 @@ export class NosskeyIframeHost {
     if (!manager.hasKeyInfo()) {
       throw new HostError('NO_KEY', 'No key is configured in the iframe.');
     }
+    if (requireUserConsent) {
+      if (!onConsent) {
+        throw new HostError(
+          'INTERNAL',
+          'onConsent must be provided when requireUserConsent is true.'
+        );
+      }
+      // Block flooding origins *before* revealing the iframe: a blocked origin
+      // gets no dialog and no visibility flicker.
+      this.#assertNotRateLimited(consent.origin);
+    }
     // Show the iframe so the consent dialog is interactable and so any
     // cross-origin WebAuthn prompt fired inside the manager call has a
     // visible frame to attach to.
     this.#postVisibility(true);
     try {
-      if (requireUserConsent) {
-        if (!onConsent) {
-          throw new HostError(
-            'INTERNAL',
-            'onConsent must be provided when requireUserConsent is true.'
-          );
-        }
+      if (requireUserConsent && onConsent) {
         const approved = await onConsent(consent);
+        this.#recordConsentOutcome(consent.origin, approved);
         if (!approved) {
           throw new HostError('USER_REJECTED', `User rejected the ${consent.method} request.`);
         }
@@ -311,6 +381,46 @@ export class NosskeyIframeHost {
     } finally {
       this.#postVisibility(false);
     }
+  }
+
+  /**
+   * Throw `RATE_LIMITED` if `origin` is currently inside a block window.
+   * Expired blocks are cleared so the origin gets a fresh start.
+   */
+  #assertNotRateLimited(origin: string): void {
+    const limit = this.#options.rateLimit;
+    if (!limit) return;
+    const state = this.#rateState.get(origin);
+    if (!state || state.blockedUntil === 0) return;
+    if (Date.now() < state.blockedUntil) {
+      throw new HostError(
+        'RATE_LIMITED',
+        'Too many consecutive rejected requests from this origin; try again later.'
+      );
+    }
+    // Block expired: reset so the origin is treated as fresh.
+    state.blockedUntil = 0;
+    state.consecutiveRejections = 0;
+  }
+
+  /**
+   * Update per-origin rejection bookkeeping after a consent decision. An
+   * approval clears the counter; the Nth consecutive rejection arms the block.
+   */
+  #recordConsentOutcome(origin: string, approved: boolean): void {
+    const limit = this.#options.rateLimit;
+    if (!limit) return;
+    if (approved) {
+      this.#rateState.delete(origin);
+      return;
+    }
+    const state = this.#rateState.get(origin) ?? { consecutiveRejections: 0, blockedUntil: 0 };
+    state.consecutiveRejections += 1;
+    if (state.consecutiveRejections >= limit.maxConsecutiveRejections) {
+      state.blockedUntil = Date.now() + limit.blockMs;
+      state.consecutiveRejections = 0;
+    }
+    this.#rateState.set(origin, state);
   }
 
   #postVisibility(visible: boolean): void {

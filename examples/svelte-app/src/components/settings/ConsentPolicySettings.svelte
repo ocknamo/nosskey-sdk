@@ -44,6 +44,8 @@ function optionLabel(option: ConsentDecision): string {
     </p>
   {/if}
 
+  <p class="decrypt-note">{$i18n.t.settings.consentPolicy.decryptNote}</p>
+
   <div class="policy-grid">
     {#each POLICY_KEYS as method (method)}
       <fieldset class="policy-row">
@@ -90,6 +92,16 @@ function optionLabel(option: ConsentDecision): string {
     margin-bottom: 15px;
     color: var(--color-text-secondary);
     transition: color 0.3s ease;
+  }
+
+  .decrypt-note {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: var(--color-info-bg, var(--color-card));
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
   }
 
   .corruption-warning {
