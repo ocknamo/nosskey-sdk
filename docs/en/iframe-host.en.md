@@ -165,6 +165,15 @@ decrypt the user's entire DM history. Encryption, whose payload is shown in
 the dialog, has no such asymmetry, so the `always` / trusted-origin shortcuts
 still apply to it.
 
+> **Note for custom hosts:** this "decrypt always prompts" rule (M-1) lives in
+> the reference app's `onConsent` (`evaluateConsent`), **not** in the
+> `nosskey-iframe` SDK. The host treats every consent-required method
+> uniformly and simply calls your `onConsent`. If you implement your own
+> `onConsent` — or set `requireUserConsent: false` — preserve this rule
+> yourself, or you reintroduce the decryption oracle. The SDK's `rateLimit`
+> (M-4) still applies regardless and blunts oracle probing at the protocol
+> layer.
+
 Two pieces of persisted state drive this (both in
 [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
 

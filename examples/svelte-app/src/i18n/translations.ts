@@ -424,7 +424,7 @@ export const ja: TranslationData = {
     consentPolicy: {
       title: 'メソッド別の同意ポリシー',
       description:
-        'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はサイトを問わずスキップ、「拒否」はダイアログを出さずに即拒否します。',
+        'リクエスト種別ごとに既定の挙動を設定できます。「常に許可」はサイトを問わずスキップ（復号を除く。下記参照）、「拒否」はダイアログを出さずに即拒否します。',
       methodLabel: {
         connect: 'サイト接続（公開鍵・リレー設定の読み取り）',
         signEvent: 'イベント署名 (signEvent)',
@@ -709,7 +709,7 @@ export const en: TranslationData = {
     consentPolicy: {
       title: 'Per-method consent policy',
       description:
-        'Set the default behavior for each request type. "Always allow" skips the dialog regardless of site, "Deny" rejects without prompting.',
+        'Set the default behavior for each request type. "Always allow" skips the dialog regardless of site (except decryption — see below), "Deny" rejects without prompting.',
       methodLabel: {
         connect: 'Site connection (read public key & relay list)',
         signEvent: 'Sign event (signEvent)',

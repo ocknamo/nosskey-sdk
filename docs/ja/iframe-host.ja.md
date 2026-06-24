@@ -112,6 +112,8 @@ export function startIframeHost(overrides = {}) {
 
 復号は不可逆な情報開示オラクルとして扱う: 一度サイレントな「常に許可」を与えると、信頼済みサイトの XSS 一つでユーザーの全 DM 履歴を静かに復号できてしまう。送信内容がダイアログに表示される暗号化にはこの非対称性がないため、`always`・信頼済みオリジンの短絡は暗号化には引き続き適用される。
 
+> **自前ホスト向け注記:** この「復号は毎回確認」ルール (M-1) はリファレンス実装の `onConsent` (`evaluateConsent`) に存在し、`nosskey-iframe` SDK 側には**ない**。Host は同意必須メソッドを一律に扱い `onConsent` を呼ぶだけである。`onConsent` を自前実装する場合（または `requireUserConsent: false` にする場合）は、このルールを自分で維持しないと復号オラクルを再導入してしまう。なお SDK の `rateLimit` (M-4) は実装に依らず常に作用し、プロトコル層でオラクルのプローブを抑止する。
+
 この判定を駆動する 2 つの永続状態 (いずれも [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
 
 - **`ConsentPolicy`** — メソッド別の判定 (`ask` / `always` / `deny`)。キーは `connect` / `signEvent` / `nip44` / `nip04`。`getPublicKey` と `getRelays` は `connect` バケット (接続承認) に、`nip44_encrypt` と `nip44_decrypt` は `nip44` バケットに集約される (`nip04` も同様)。`localStorage` キー `nosskey_consent_policy` に保存。
