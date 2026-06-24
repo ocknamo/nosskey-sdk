@@ -98,15 +98,21 @@ export function startIframeHost(overrides = {}) {
 - **Promise ブリッジ**: `ask` 経路では Promise を返し、その `resolve` を `pendingConsent` store に退避。UI のボタンが押されるまで Host は待機
 - **`getRelays` コールバック**: `onGetRelays` は SDK のストレージハンドル経由でリレーマップを読むため、Storage Access グラント後はファーストパーティのストレージを参照する
 - `allowedOrigins` は **必須** (デフォルト廃止)。省略するとコンストラクタで throw する。nosskey.app のように任意サイトからの埋め込みを設計意図とするホストは `'*'` を**明示**してオープン埋め込みにオプトインする (起動時に警告ログ)。一方、親オリジンが固定できるセルフホスト統合では特定 origin の許可リストに絞ること。`'*'` は postMessage の入口を全許可する設定であり、それ自体はオリジンフィルタ**ではない** (任意サイトからの接続は H-1 の同意ゲートで守られる)
+- **オリジン単位のレート制限** (セキュリティ診断 **M-4**): Host 自身が consent fatigue / プローブ攻撃をブロックする。同一オリジンから `maxConsecutiveRejections` (既定 **5**) 回連続で拒否されると、`blockMs` (既定 **60 秒**) の間それ以降の同意要求をダイアログを出さず (iframe も非表示のまま) `RATE_LIMITED` エラーで短絡する。1 回でも承認されればカウンタはリセット。`rateLimit` オプションで調整、`rateLimit: false` で無効化可能。SDK パッケージ側の防御なので `onConsent` 実装に関係なく統合者全員に効く。
 
 ### 4. Consent ゲーティング — `consent-gating.ts` + `app-state.ts`
 
 ダイアログを出す前に、`evaluateConsent()` ([`utils/consent-gating.ts`](../../examples/svelte-app/src/utils/consent-gating.ts)) が副作用なく結果を決定します。評価順 (安全側優先):
 
 1. メソッドポリシーが `deny` → 即**拒否** (信頼済みオリジンより優先)
-2. メソッドポリシーが `always` → 即**承認**
-3. 要求元 origin が**このメソッドについて**信頼済み → **承認**
-4. それ以外 → **ask** (ダイアログ表示)
+2. **復号系** (`nip44_decrypt` / `nip04_decrypt`) → **ask** (ダイアログ表示) — 復号は `always`・信頼済みオリジンによるサイレント承認の対象外 (セキュリティ診断 **M-1**。短絡できるのは上の `deny` のみ)
+3. メソッドポリシーが `always` → 即**承認**
+4. 要求元 origin が**このメソッドについて**信頼済み → **承認**
+5. それ以外 → **ask** (ダイアログ表示)
+
+復号は不可逆な情報開示オラクルとして扱う: 一度サイレントな「常に許可」を与えると、信頼済みサイトの XSS 一つでユーザーの全 DM 履歴を静かに復号できてしまう。送信内容がダイアログに表示される暗号化にはこの非対称性がないため、`always`・信頼済みオリジンの短絡は暗号化には引き続き適用される。
+
+> **自前ホスト向け注記:** この「復号は毎回確認」ルール (M-1) はリファレンス実装の `onConsent` (`evaluateConsent`) に存在し、`nosskey-iframe` SDK 側には**ない**。Host は同意必須メソッドを一律に扱い `onConsent` を呼ぶだけである。`onConsent` を自前実装する場合（または `requireUserConsent: false` にする場合）は、このルールを自分で維持しないと復号オラクルを再導入してしまう。なお SDK の `rateLimit` (M-4) は実装に依らず常に作用し、プロトコル層でオラクルのプローブを抑止する。
 
 この判定を駆動する 2 つの永続状態 (いずれも [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
 
@@ -125,9 +131,9 @@ export function startIframeHost(overrides = {}) {
 - **method**: 人間可読なラベル (`signEvent` / NIP-44・NIP-04 の encrypt・decrypt)
 - **`signEvent` の場合**: `event.kind` を可読ラベル化 (`kindLabel()`)、`content` は **100 文字**で truncate、タグ一覧、raw event JSON 全体を `<details>` で折りたたみ表示
 - **nip44/nip04 の場合**: 相手 pubkey を短縮 `npub` 表示 (`renderPeerPubkey()`)。encrypt 要求では平文も 100 文字プレビュー、decrypt 要求では平文プレビューなし
-- **3 ボタン**:
+- **ボタン**:
   - **拒否** → `rejectConsent()`
-  - **常に許可** → `approveConsent({ trustOrigin: true })` — 承認し、`origin × method` を信頼リストへ追加
+  - **常に許可** → `approveConsent({ trustOrigin: true })` — 承認し、`origin × method` を信頼リストへ追加。**復号要求では非表示** (M-1): 復号は毎回確認されるため「常に許可」を出すと誤解を招く。代わりにその旨の注記をダイアログに表示する
   - **一度だけ許可** → `approveConsent({ trustOrigin: false })`
 
 ## 通信フロー

@@ -11,6 +11,7 @@ import {
   storageCorruption,
 } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
+import HelpTip from '../ui/HelpTip.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -36,7 +37,10 @@ function optionLabel(option: ConsentDecision): string {
 </script>
 
 <CardSection title={$i18n.t.settings.consentPolicy.title}>
-  <p class="description">{$i18n.t.settings.consentPolicy.description}</p>
+  <p class="description">
+    {$i18n.t.settings.consentPolicy.description}
+    <HelpTip text={$i18n.t.settings.consentPolicy.decryptTip} placement="end" />
+  </p>
 
   {#if $storageCorruption.consentPolicy || $storageCorruption.trustedOrigins}
     <p class="corruption-warning" role="alert">

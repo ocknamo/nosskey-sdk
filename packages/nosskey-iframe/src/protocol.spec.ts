@@ -263,6 +263,7 @@ describe('protocol: NOSSKEY_ERROR_CODES', () => {
       'NOT_AUTHORIZED',
       'NO_KEY',
       'USER_REJECTED',
+      'RATE_LIMITED',
       'UNKNOWN_METHOD',
       'INVALID_REQUEST',
       'INTERNAL',

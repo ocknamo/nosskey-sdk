@@ -33,6 +33,13 @@ const nip04Request: ConsentRequest = {
   pubkey: 'a'.repeat(64),
 };
 
+const nip04EncryptRequest: ConsentRequest = {
+  origin,
+  method: 'nip04_encrypt',
+  pubkey: 'a'.repeat(64),
+  plaintext: 'hi',
+};
+
 const getPublicKeyRequest: ConsentRequest = {
   origin,
   method: 'getPublicKey',
@@ -76,15 +83,40 @@ describe('onConsent', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
-  it('resolves true immediately when origin is trusted for the method', async () => {
+  it('resolves true immediately when origin is trusted for the method (encrypt)', async () => {
     trustedOrigins.set([{ origin, methods: ['nip04'] }]);
-    const result = await onConsent(nip04Request);
+    const result = await onConsent(nip04EncryptRequest);
     expect(result).toBe(true);
+  });
+
+  it('always shows the dialog for decrypt even when the origin is trusted (M-1)', async () => {
+    // 復号はオラクルになり得るため「常に許可」の対象外。信頼済みでもダイアログを出す。
+    trustedOrigins.set([{ origin, methods: ['nip04'] }]);
+    const promise = onConsent(nip04Request);
+    expect(get(pendingConsent)).not.toBeNull();
+    rejectConsent();
+    expect(await promise).toBe(false);
+  });
+
+  it('always shows the dialog for decrypt even when the bucket policy is always (M-1)', async () => {
+    consentPolicy.set({ connect: 'ask', signEvent: 'ask', nip44: 'ask', nip04: 'always' });
+    const promise = onConsent(nip04Request);
+    expect(get(pendingConsent)).not.toBeNull();
+    rejectConsent();
+    expect(await promise).toBe(false);
+  });
+
+  it('does not remember a decrypt method even if trustOrigin is set (M-1 defense-in-depth)', async () => {
+    const promise = onConsent(nip04Request);
+    approveConsent({ trustOrigin: true });
+    expect(await promise).toBe(true);
+    // 復号は信頼リストに載せない（載せても evaluateConsent がサイレント承認しない）。
+    expect(get(trustedOrigins)).toEqual([]);
   });
 
   it('falls through to ask when origin is trusted for a different method', async () => {
     trustedOrigins.set([{ origin, methods: ['signEvent'] }]);
-    const promise = onConsent(nip04Request);
+    const promise = onConsent(nip04EncryptRequest);
     expect(get(pendingConsent)).not.toBeNull();
     rejectConsent();
     expect(await promise).toBe(false);
@@ -107,7 +139,7 @@ describe('onConsent', () => {
 
   it('approveConsent with trustOrigin appends a new method to an existing entry', async () => {
     trustedOrigins.set([{ origin, methods: ['signEvent'] }]);
-    const promise = onConsent(nip04Request);
+    const promise = onConsent(nip04EncryptRequest);
     approveConsent({ trustOrigin: true });
     expect(await promise).toBe(true);
     expect(get(trustedOrigins)).toEqual([{ origin, methods: ['signEvent', 'nip04'] }]);
@@ -119,7 +151,7 @@ describe('onConsent', () => {
     // ダイアログ経路に流して同 method を再度許可した時に重複しないことを確認する。
     consentPolicy.set({ connect: 'ask', signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
     trustedOrigins.set([{ origin, methods: [] }]); // この origin はリストに居るが method 空
-    const promise = onConsent(nip04Request);
+    const promise = onConsent(nip04EncryptRequest);
     approveConsent({ trustOrigin: true });
     await promise;
     expect(get(trustedOrigins)).toEqual([{ origin, methods: ['nip04'] }]);

@@ -67,6 +67,7 @@ export type NosskeyErrorCode =
   | 'NOT_AUTHORIZED'
   | 'NO_KEY'
   | 'USER_REJECTED'
+  | 'RATE_LIMITED'
   | 'UNKNOWN_METHOD'
   | 'INVALID_REQUEST'
   | 'INTERNAL';
@@ -76,6 +77,7 @@ export const NOSSKEY_ERROR_CODES: readonly NosskeyErrorCode[] = [
   'NOT_AUTHORIZED',
   'NO_KEY',
   'USER_REJECTED',
+  'RATE_LIMITED',
   'UNKNOWN_METHOD',
   'INVALID_REQUEST',
   'INTERNAL',

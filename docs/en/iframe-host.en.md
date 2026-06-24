@@ -136,6 +136,14 @@ Key points:
   restrict it to a specific allowlist instead. `'*'` only opens the postMessage
   entry point and is **not** itself an origin filter — arbitrary-site access is
   still guarded by the H-1 per-origin consent gate
+- **Per-origin rate limiting** (security audit **M-4**): the host blocks
+  consent-fatigue / probing attacks itself. After `maxConsecutiveRejections`
+  (default **5**) consecutive rejections from the same origin, further
+  consent-required requests are short-circuited with a `RATE_LIMITED` error —
+  no dialog shown, the iframe stays hidden — for `blockMs` (default **60 s**).
+  A single approval resets the counter. Configure via the `rateLimit` option,
+  or pass `rateLimit: false` to disable. This lives in the SDK package, so it
+  protects every integrator regardless of their `onConsent` implementation.
 
 ### 4. Consent gating — `consent-gating.ts` + `app-state.ts`
 
@@ -144,9 +152,27 @@ Before any dialog is shown, `evaluateConsent()`
 decides the outcome with no side effects. Evaluation order (safest first):
 
 1. Method policy is `deny` → **reject** immediately (overrides trusted origins)
-2. Method policy is `always` → **approve** immediately
-3. The requesting origin is trusted **for this method** → **approve**
-4. Otherwise → **ask** (show the dialog)
+2. The method is a **decrypt** (`nip44_decrypt` / `nip04_decrypt`) → **ask**
+   (show the dialog) — decryption is never silenced by `always` or a trusted
+   origin (security audit **M-1**; only `deny` above short-circuits it)
+3. Method policy is `always` → **approve** immediately
+4. The requesting origin is trusted **for this method** → **approve**
+5. Otherwise → **ask** (show the dialog)
+
+Decryption is treated as an irreversible disclosure oracle: granting it a
+silent "always" once would let a single XSS on a trusted site quietly
+decrypt the user's entire DM history. Encryption, whose payload is shown in
+the dialog, has no such asymmetry, so the `always` / trusted-origin shortcuts
+still apply to it.
+
+> **Note for custom hosts:** this "decrypt always prompts" rule (M-1) lives in
+> the reference app's `onConsent` (`evaluateConsent`), **not** in the
+> `nosskey-iframe` SDK. The host treats every consent-required method
+> uniformly and simply calls your `onConsent`. If you implement your own
+> `onConsent` — or set `requireUserConsent: false` — preserve this rule
+> yourself, or you reintroduce the decryption oracle. The SDK's `rateLimit`
+> (M-4) still applies regardless and blunts oracle probing at the protocol
+> layer.
 
 Two pieces of persisted state drive this (both in
 [`store/app-state.ts`](../../examples/svelte-app/src/store/app-state.ts)):
@@ -181,10 +207,12 @@ requested method:
 - **For nip44/nip04**: the counterparty pubkey rendered as a shortened `npub`
   (`renderPeerPubkey()`); encrypt requests also preview the plaintext
   (100-char truncation), while decrypt requests show no plaintext preview
-- **Three buttons**:
+- **Buttons**:
   - **Reject** → `rejectConsent()`
   - **Always allow** → `approveConsent({ trustOrigin: true })` — approves and
-    adds `origin × method` to the trusted list
+    adds `origin × method` to the trusted list. **Hidden for decrypt
+    requests** (M-1): decryption always prompts, so offering "always" would be
+    misleading. A short note explains this in the dialog instead.
   - **Approve once** → `approveConsent({ trustOrigin: false })`
 
 ## Communication flow

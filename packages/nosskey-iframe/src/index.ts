@@ -6,7 +6,7 @@
 export { NosskeyIframeClient, NosskeyIframeError } from './client.js';
 export type { NosskeyIframeClientOptions } from './client.js';
 export { NosskeyIframeHost } from './host.js';
-export type { ConsentRequest, NosskeyIframeHostOptions } from './host.js';
+export type { ConsentRequest, NosskeyIframeHostOptions, RateLimitOptions } from './host.js';
 export {
   CONSENT_REQUIRED_METHODS,
   NOSSKEY_ERROR_CODES,

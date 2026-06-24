@@ -185,6 +185,7 @@ try {
 |------------|---------|
 | `NO_KEY` | No passkey is configured in the iframe, or the key is hidden by storage partitioning |
 | `USER_REJECTED` | The user denied the request in the consent dialog |
+| `RATE_LIMITED` | Too many consecutive rejections from this origin; the host is temporarily refusing requests. Back off and retry later |
 | `NOT_AUTHORIZED` | The requesting origin is not allowed |
 | `UNKNOWN_METHOD` | An unsupported method was called |
 | `INVALID_REQUEST` | The parameters are invalid |

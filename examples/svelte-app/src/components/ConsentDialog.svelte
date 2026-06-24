@@ -141,6 +141,10 @@ function openConsentSettings(): void {
         {/if}
       </dl>
 
+      {#if isDecrypt}
+        <p class="consent-decrypt-note">{$i18n.t.consent.decryptAlwaysAsk}</p>
+      {/if}
+
       {#if c.event}
         <details class="consent-raw">
           <summary>{$i18n.t.consent.showRaw}</summary>
@@ -152,9 +156,13 @@ function openConsentSettings(): void {
         <Button variant="danger" size="small" onclick={handleReject}>
           {$i18n.t.consent.reject}
         </Button>
-        <Button variant="primary" size="small" onclick={handleApproveAlways}>
-          {$i18n.t.consent.alwaysAllow}
-        </Button>
+        <!-- Decrypt is an irreversible disclosure oracle: never offer "always
+             allow" for it so it can't be silenced for future requests (M-1). -->
+        {#if !isDecrypt}
+          <Button variant="primary" size="small" onclick={handleApproveAlways}>
+            {$i18n.t.consent.alwaysAllow}
+          </Button>
+        {/if}
         <Button variant="secondary" size="small" onclick={handleApproveOnce}>
           {$i18n.t.consent.approveOnce}
         </Button>
@@ -208,6 +216,12 @@ function openConsentSettings(): void {
     margin: 4px 0 0;
     color: var(--color-text-secondary);
     font-size: 0.9rem;
+  }
+
+  .consent-decrypt-note {
+    margin: 0 0 12px;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
   }
 
   code,

@@ -106,6 +106,8 @@ const host = new NosskeyIframeHost({
   onGetRelays: async () => ({
     'wss://relay.example': { read: true, write: true },
   }),
+  // Optional: per-origin rate limit (defaults shown). Pass `false` to disable.
+  rateLimit: { maxConsecutiveRejections: 5, blockMs: 60_000 },
 });
 
 host.start();
@@ -114,6 +116,8 @@ host.start();
 ```
 
 All seven NIP-07 methods are gated by `onConsent`. For `getPublicKey` / `getRelays` the consent acts as a per-origin connection approval (pairing) — the same model NIP-07 browser extensions use — so an arbitrary embedding site cannot silently read the logged-in user's npub or relay list. Remember approved origins in your consent UI (the reference app stores them as trusted origins) to keep login flows friction-free.
+
+**Per-origin rate limiting (enabled by default):** after `maxConsecutiveRejections` (default 5) consecutive rejections from one origin, the host short-circuits further consent-required requests with a `RATE_LIMITED` error — no dialog shown — for `blockMs` (default 60 s). A single approval resets the counter. This blunts consent-fatigue and decryption-oracle probing at the protocol layer, independent of your `onConsent` UI. Tune it via `rateLimit`, or set `rateLimit: false` to opt out.
 
 > **Breaking change (security fix):** earlier versions served `getPublicKey` / `getRelays` without consent. Hosts that keep the default `requireUserConsent: true` must provide `onConsent`, or these methods now fail with `INTERNAL`. To restore the old silent behavior, opt out explicitly with `requireUserConsent: false`. `getRelays` still returns `{}` without prompting when `onGetRelays` is not configured or no key is set.
 
