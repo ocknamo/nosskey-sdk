@@ -29,6 +29,13 @@ describe('CONTENT_SECURITY_POLICY', () => {
     // vitest は svelte-app をカレントに実行されるため cwd 起点で解決する
     // （happy-dom 環境では import.meta.url が file スキームにならないため）。
     const headers = readFileSync(resolve(process.cwd(), 'public/_headers'), 'utf8');
-    expect(headers).toContain(`Content-Security-Policy: ${CONTENT_SECURITY_POLICY}`);
+    const cspLine = headers
+      .split('\n')
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('Content-Security-Policy:'));
+    expect(cspLine).toBeDefined();
+    // 部分一致ではなく値を厳密一致させ、_headers 側への行末追記による乖離も検出する。
+    const value = cspLine?.slice('Content-Security-Policy:'.length).trim();
+    expect(value).toBe(CONTENT_SECURITY_POLICY);
   });
 });

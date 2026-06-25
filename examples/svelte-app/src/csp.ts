@@ -11,8 +11,11 @@
  *   `'unsafe-inline'` を **付けない**ことが防御の本体。
  * - `style-src ... 'unsafe-inline' ...googleapis`: Svelte はスタイルをインライン
  *   注入するため style に限り inline を許可。Google Fonts の CSS も通す。
- * - `connect-src ... wss:`: ユーザーが設定する任意の Nostr リレーへの WebSocket。
- *   個別ドメインを列挙できないため scheme 単位で許可する。
+ * - `connect-src ... wss: ws:`: ユーザーが設定する任意の Nostr リレーへの
+ *   WebSocket。個別ドメインを列挙できないため scheme 単位で許可する。アプリの
+ *   リレー入力は `wss://` / `ws://` 双方を受理する（`isValidRelayUrl`）ため両方を
+ *   許可し挙動を一致させる。なお本番（https 配信）では `ws://`（平文）はブラウザの
+ *   mixed-content 規制で遮断されるため、実害はローカル開発の `ws://` 利用に限られる。
  * - `frame-ancestors *`: nosskey は「任意サイトが署名 iframe を埋め込む」オープン
  *   埋め込みモデルが設計意図のため全許可。ここを閉じると iframe モードが壊れる。
  */
@@ -22,7 +25,7 @@ const CSP_DIRECTIVES: string[] = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  "connect-src 'self' wss: https:",
+  "connect-src 'self' wss: ws: https:",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
