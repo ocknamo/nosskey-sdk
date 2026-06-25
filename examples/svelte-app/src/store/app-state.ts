@@ -3,7 +3,12 @@ import { writable } from 'svelte/store';
 import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
 import { type ThemeMode, normalizeThemeMode } from '../theme/palettes.js';
 import { refreshAccounts } from './accounts.js';
-import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
+import {
+  DEFAULT_CACHE_TTL_SECONDS,
+  cacheSecrets,
+  cacheTimeout,
+  clampCacheTimeout,
+} from './secret-cache-settings.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
 
@@ -132,11 +137,12 @@ function loadCacheSecretsSetting(): boolean {
 // キャッシュタイムアウト設定を読み込む
 function loadCacheTimeoutSetting(): number {
   const saved = resolveSettingsStorage()?.getItem('nosskey_cache_timeout') ?? null;
-  if (saved === null) return 300; // デフォルトは300秒（5分）
-  // 破損値（NaN 等）はデフォルトに倒す。reloadSettings 経由で first-party の
-  // 壊れた値を取り込んだ場合に NaN が SDK の timeoutMs まで伝播するのを防ぐ。
-  const parsed = Number.parseInt(saved, 10);
-  return Number.isFinite(parsed) ? parsed : 300;
+  if (saved === null) return DEFAULT_CACHE_TTL_SECONDS;
+  // 破損値（NaN・負値・巨大値）は clampCacheTimeout が許容範囲（既定 / 上下限）へ
+  // 倒す。reloadSettings 経由で first-party の壊れた値を取り込んでも、SDK の
+  // timeoutMs まで範囲外の値が伝播しないようにする。cacheTimeout ストア側でも
+  // set 時にクランプするが、読み込み時にも明示してサニタイズ意図を示す。
+  return clampCacheTimeout(Number.parseInt(saved, 10));
 }
 
 // テーマ設定を読み込む。旧値 ('light'/'dark') は normalizeThemeMode がパープル系へ移行する。

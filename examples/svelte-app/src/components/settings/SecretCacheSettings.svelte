@@ -1,7 +1,13 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { clearSecretCache, getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { cacheSecrets, cacheTimeout } from '../../store/secret-cache-settings.js';
+import {
+  MAX_CACHE_TTL_SECONDS,
+  MIN_CACHE_TTL_SECONDS,
+  cacheSecrets,
+  cacheTimeout,
+  clampCacheTimeout,
+} from '../../store/secret-cache-settings.js';
 import CardSection from '../ui/CardSection.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -39,18 +45,18 @@ function updateCacheSetting(value: boolean) {
 // タイムアウト設定を更新
 function updateTimeoutSetting(event: Event) {
   const input = event.target as HTMLInputElement;
-  const value = Number.parseInt(input.value, 10);
+  // 範囲外・非数値（空欄含む）はすべて clampCacheTimeout に委ねて端 / 既定値へ
+  // 丸め、入力欄にも丸めた値を反映する（NaN→既定値）。cacheTimeout ストアも
+  // set 時にクランプするため二重防御。
+  const value = clampCacheTimeout(Number.parseInt(input.value, 10));
+  timeoutSeconds = value;
+  cacheTimeout.set(value); // keyManager.serviceがサブスクライブして自動的に反映
 
-  if (!Number.isNaN(value) && value > 0) {
-    timeoutSeconds = value;
-    cacheTimeout.set(value); // keyManager.serviceがサブスクライブして自動的に反映
-
-    cacheMessageType = 'success';
-    cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
-    setTimeout(() => {
-      cacheSettingMessage = '';
-    }, 3000);
-  }
+  cacheMessageType = 'success';
+  cacheSettingMessage = $i18n.t.settings.cacheSettings.saved;
+  setTimeout(() => {
+    cacheSettingMessage = '';
+  }, 3000);
 }
 
 // キャッシュをクリアする関数
@@ -109,8 +115,8 @@ function clearCache() {
         <input
           id="timeout-seconds"
           type="number"
-          min="10"
-          max="86400"
+          min={MIN_CACHE_TTL_SECONDS}
+          max={MAX_CACHE_TTL_SECONDS}
           value={timeoutSeconds}
           onchange={updateTimeoutSetting}
         />
