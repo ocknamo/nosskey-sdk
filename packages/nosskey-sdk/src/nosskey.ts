@@ -10,6 +10,7 @@ import {
 } from './key-registry.js';
 import { nip04Decrypt, nip04Encrypt } from './nip04.js';
 import { nip44Decrypt, nip44Encrypt } from './nip44.js';
+import { PendingPrfCache } from './pending-prf-cache.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import {
   STANDARD_SALT,
@@ -36,12 +37,9 @@ import type {
  */
 import { bytesToHex, hexToBytesStrict } from './utils.js';
 
-/**
- * createPasskey で退避した未消費 PRF（直接モードの実秘密鍵 / wrap モードの KEK）の
- * 最大滞留時間。通常フローでは createNostrKey / importNostrKey が直後（ミリ秒〜数秒）に
- * 消費するため、TTL 経過は「消費されないまま放置された」異常経路とみなしてゼロ化する。
- */
-export const PENDING_PRF_TTL_MS = 60_000;
+// createPasskey で退避した未消費 PRF の TTL は PendingPrfCache 側で定義する。
+// 既存の import 互換のため、ここから再エクスポートする。
+export { PENDING_PRF_TTL_MS } from './pending-prf-cache.js';
 
 /**
  * Nosskey - Passkey-Derived Nostr Keys
@@ -69,17 +67,8 @@ export class NosskeyManager implements NosskeyManagerLike {
   #prfOptions: GetPrfSecretOptions = {};
 
   // createPasskey 時に二重 salt eval して得た PRF を、直後の createNostrKey /
-  // importNostrKey が一度だけ消費する用の内部キャッシュ。
-  // - key: credentialId (hex)
-  // - standard: STANDARD_SALT 由来 PRF（直接モード鍵 / createNostrKey が使う）
-  // - wrap: WRAP_SALT 由来 PRF（wrap モード KEK / importNostrKey が使う）
-  // - timer: 未消費のまま放置された場合（例外・画面離脱）に自動ゼロ化するタイマー
-  // 消費時は即ゼロ化 + Map から削除する（同じパスキーでもう一度 derive したい場合は
-  // 通常通り getPrfSecret() 経由で UV を要求する）。
-  #pendingPrfByCredId = new Map<
-    string,
-    { standard?: Uint8Array; wrap?: Uint8Array; timer?: ReturnType<typeof setTimeout> }
-  >();
+  // importNostrKey が一度だけ消費する用の内部キャッシュ（実装は PendingPrfCache）。
+  #pendingPrf = new PendingPrfCache();
 
   /**
    * NosskeyManager コンストラクタ
@@ -343,7 +332,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     this.#registryCache = null;
     this.#keyCache.clearAllCachedKeys();
     // createPasskey 由来の未消費 PRF（秘密値）も heap に残さない。
-    this.#clearAllPendingPrf();
+    this.#pendingPrf.clearAll();
   }
 
   /**
@@ -361,7 +350,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     // 平文秘密鍵の派生キャッシュは破棄する（登録簿の暗号文は保持）。
     this.#keyCache.clearAllCachedKeys();
     // createPasskey 由来の未消費 PRF（秘密値）も heap に残さない。
-    this.#clearAllPendingPrf();
+    this.#pendingPrf.clearAll();
   }
 
   /**
@@ -465,7 +454,7 @@ export class NosskeyManager implements NosskeyManagerLike {
    *
    * 内部実装としては create 時に `extensions.prf.eval.first/second` で
    * 標準 salt と wrap salt の両方を同時に eval し、得られた PRF を
-   * #pendingPrfByCredId に保存する。直後の `createNostrKey()` / `importNostrKey()`
+   * PendingPrfCache に保存する。直後の `createNostrKey()` / `importNostrKey()`
    * はこのキャッシュを優先的に消費するので、通常フローでは UV が 1 回で済む。
    * 特に Android Chrome では create 直後の get() が `NotReadableError` で
    * 落ちる既知挙動があり、その回避が主目的。
@@ -496,79 +485,9 @@ export class NosskeyManager implements NosskeyManagerLike {
 
     // create 時に PRF が返ってきていればキャッシュに退避（消費は createNostrKey /
     // importNostrKey 側で行う）。返ってこない環境では従来どおり get() フォールバック。
-    if (result.prfFirst || result.prfSecond) {
-      const key = bytesToHex(result.id);
-      // 同一 credentialId の古いエントリが残っている場合（リトライ・連続 create）は
-      // バッファをゼロ化してから上書きする。これがないと前回 PRF が GC まで heap に残る。
-      this.#clearPendingPrfEntry(key);
-      // create 後に createNostrKey / importNostrKey のどちらも呼ばれない経路
-      // （例外・画面離脱）で 32 byte 秘密値が heap に滞留し続けないよう、
-      // TTL 経過で自動ゼロ化するタイマーを仕掛ける。
-      const timer = setTimeout(() => this.#clearPendingPrfEntry(key), PENDING_PRF_TTL_MS);
-      // Node 環境ではタイマーがプロセス終了を妨げないようにする（ブラウザでは no-op）
-      (timer as unknown as { unref?: () => void }).unref?.();
-      this.#pendingPrfByCredId.set(key, {
-        ...(result.prfFirst && { standard: result.prfFirst }),
-        ...(result.prfSecond && { wrap: result.prfSecond }),
-        timer,
-      });
-    }
+    this.#pendingPrf.store(result.id, { standard: result.prfFirst, wrap: result.prfSecond });
 
     return result.id;
-  }
-
-  /**
-   * #pendingPrfByCredId から指定 credentialId / kind の PRF を取り出して返す。
-   *
-   * 正常運用では create 直後に createNostrKey か importNostrKey の **どちらか一方** しか
-   * 呼ばれないため、片方を消費したタイミングで「相方」のバッファも即時ゼロ化して
-   * Map エントリごと削除する（未消費の秘匿バイトを heap に放置しない）。
-   * credentialId が undefined（= ユーザー選択待ち）の場合はキャッシュ照合できないので undefined を返す。
-   *
-   * 注意: 本メソッドは**同期のまま**保つこと。Map 取得からタイマー解除・削除までが
-   * 同期で完結しているため「hit 直後・使用前に TTL タイマーが発火して値がゼロ化される」
-   * 競合は起こりえない。途中に await を入れるとこの保証が壊れる。
-   */
-  #consumePendingPrf(
-    credentialId: Uint8Array | undefined,
-    kind: 'standard' | 'wrap'
-  ): Uint8Array | undefined {
-    if (!credentialId) return undefined;
-    const key = bytesToHex(credentialId);
-    const entry = this.#pendingPrfByCredId.get(key);
-    if (!entry) return undefined;
-    const value = entry[kind];
-    if (!value) return undefined;
-    // 消費したので TTL タイマーは不要になる
-    if (entry.timer !== undefined) clearTimeout(entry.timer);
-    // 相方は今後使われない前提でゼロ化して破棄
-    const other = kind === 'standard' ? 'wrap' : 'standard';
-    entry[other]?.fill(0);
-    this.#pendingPrfByCredId.delete(key);
-    return value;
-  }
-
-  /**
-   * #pendingPrfByCredId の単一エントリをゼロ化して破棄する（TTL 満了・上書き・全消去共通）。
-   */
-  #clearPendingPrfEntry(key: string): void {
-    const entry = this.#pendingPrfByCredId.get(key);
-    if (!entry) return;
-    if (entry.timer !== undefined) clearTimeout(entry.timer);
-    entry.standard?.fill(0);
-    entry.wrap?.fill(0);
-    this.#pendingPrfByCredId.delete(key);
-  }
-
-  /**
-   * createPasskey で退避した未消費 PRF キャッシュをすべてゼロ化して破棄する。
-   * 未消費エントリは TTL（{@link PENDING_PRF_TTL_MS}）経過でも自動ゼロ化されるが、
-   * ログアウト・完全ワイプ時は待たずに即時掃除する。
-   */
-  #clearAllPendingPrf(): void {
-    for (const key of [...this.#pendingPrfByCredId.keys()]) {
-      this.#clearPendingPrfEntry(key);
-    }
   }
 
   /**
@@ -581,7 +500,7 @@ export class NosskeyManager implements NosskeyManagerLike {
     // キャッシュされていればそれを消費する。無ければ getPrfSecret() に
     // フォールバック（= 既存パスキーで再導出するケース、または create 時に
     // PRF が返らない環境）。
-    const cached = this.#consumePendingPrf(credentialId, 'standard');
+    const cached = this.#pendingPrf.consume(credentialId, 'standard');
     let sk: Uint8Array;
     let responseId: Uint8Array;
     if (cached) {
@@ -651,7 +570,7 @@ export class NosskeyManager implements NosskeyManagerLike {
       // キャッシュされていればそれを KEK として消費する。無ければ getPrfSecret()
       // にフォールバック（= 既存パスキーで wrap し直すケース、または create 時に
       // PRF が返らない環境）。
-      const cachedKek = this.#consumePendingPrf(credentialId, 'wrap');
+      const cachedKek = this.#pendingPrf.consume(credentialId, 'wrap');
       let kek: Uint8Array;
       let responseId: Uint8Array;
       if (cachedKek) {
