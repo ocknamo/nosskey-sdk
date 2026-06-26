@@ -13,7 +13,12 @@ import {
   reloadSettings,
   trustedOrigins,
 } from './app-state.js';
-import { cacheSecrets, cacheTimeout } from './secret-cache-settings.js';
+import {
+  MAX_CACHE_TTL_SECONDS,
+  MIN_CACHE_TTL_SECONDS,
+  cacheSecrets,
+  cacheTimeout,
+} from './secret-cache-settings.js';
 
 /** Map-backed in-memory Storage stand-in for a first-party storage handle. */
 function createFakeStorage(seed: Record<string, string> = {}): Storage {
@@ -99,6 +104,19 @@ describe('reloadSettings', () => {
     grantFirstPartyStorage({ nosskey_cache_timeout: 'not-a-number' });
     reloadSettings();
     expect(get(cacheTimeout)).toBe(300);
+  });
+
+  it('clamps a tampered oversized cache timeout to the maximum', () => {
+    // localStorage は改ざん可能。巨大値が SDK の timeoutMs まで伝播しないこと。
+    grantFirstPartyStorage({ nosskey_cache_timeout: '999999999' });
+    reloadSettings();
+    expect(get(cacheTimeout)).toBe(MAX_CACHE_TTL_SECONDS);
+  });
+
+  it('clamps a tampered negative cache timeout to the minimum', () => {
+    grantFirstPartyStorage({ nosskey_cache_timeout: '-100' });
+    reloadSettings();
+    expect(get(cacheTimeout)).toBe(MIN_CACHE_TTL_SECONDS);
   });
 });
 
