@@ -6,7 +6,13 @@ import AccountScreen from './components/screens/AccountScreen.svelte';
 import IframeHostScreen from './components/screens/IframeHostScreen.svelte';
 import KeyManagementScreen from './components/screens/KeyManagement.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
-import { type ThemeMode, currentScreen, currentTheme, isScreenName } from './store/app-state.js';
+import {
+  type ThemeMode,
+  currentScreen,
+  currentTheme,
+  isScreenName,
+  restoreLoginState,
+} from './store/app-state.js';
 import { THEME_PALETTES, resolveTheme } from './theme/palettes.js';
 
 let screen = $state('account');
@@ -148,6 +154,14 @@ onMount(() => {
   // ブラウザの自動スクロール復元は無効化する。
   if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
     window.history.scrollRestoration = 'manual';
+  }
+
+  // 保存済み鍵情報からログイン状態を復元する。account 画面だけでなく key /
+  // settings へ直接リロードした場合もログイン状態を反映するため、画面非依存で
+  // ここで一度だけ実行する。iframe モードは IframeHostScreen が独自に
+  // Storage Access ゲートを伴う初期化を行うため対象外。
+  if (screen !== 'iframe') {
+    void restoreLoginState();
   }
 
   // 初期テーマの適用

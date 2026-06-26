@@ -190,6 +190,8 @@ window.nostr = {
 
 参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
 
+動作する親アプリのサンプルは [`examples/parent-sample`](examples/parent-sample) にあります。ライブ版が [https://ocknamo.github.io/nosskey-sdk/](https://ocknamo.github.io/nosskey-sdk/) でホスティングされており、ブラウザ上で実際の埋め込み動作を試せます。
+
 #### Storage Partitioning への対応
 
 Chrome 115+ や Firefox の Total Cookie Protection では、**サードパーティ iframe の

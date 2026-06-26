@@ -1,5 +1,5 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
 import { type ThemeMode, normalizeThemeMode } from '../theme/palettes.js';
 import { refreshAccounts } from './accounts.js';
@@ -364,6 +364,30 @@ export const logout = () => {
 
   // 画面を認証画面に戻す
   currentScreen.set('account');
+};
+
+/**
+ * 保存済みの鍵情報からログイン状態を復元する。アプリ起動時に画面（account /
+ * key / settings）に依存せず一度だけ実行する。これを AccountScreen の onMount
+ * だけに置くと、`#/key` などへ直接リロードした場合に AccountScreen がマウント
+ * されず、鍵情報があるのに未ログイン表示（ImportKeyInfo）になってしまう。
+ * `getPublicKey()` はパスキープロンプトを出さないため起動時に呼んでも安全。
+ */
+export const restoreLoginState = async (): Promise<void> => {
+  const nosskeyManager = getNosskeyManager();
+
+  if (nosskeyManager.hasKeyInfo()) {
+    if (get(isLoggedIn)) return;
+    try {
+      publicKey.set(await nosskeyManager.getPublicKey());
+      isLoggedIn.set(true);
+    } catch (error) {
+      console.error('公開鍵の取得に失敗しました:', error);
+    }
+  } else {
+    isLoggedIn.set(false);
+    publicKey.set(null);
+  }
 };
 
 /**

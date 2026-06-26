@@ -190,6 +190,8 @@ For a complete step-by-step guide to embedding the iframe into your own app, see
 
 See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation. The host architecture is documented in detail at [docs/en/iframe-host.en.md](docs/en/iframe-host.en.md).
 
+For a working parent-app sample, see [`examples/parent-sample`](examples/parent-sample). A live build is hosted at [https://ocknamo.github.io/nosskey-sdk/](https://ocknamo.github.io/nosskey-sdk/), where you can try the embedding flow in the browser.
+
 #### Storage partitioning
 
 Chrome 115+ and Firefox's Total Cookie Protection **partition third-party
