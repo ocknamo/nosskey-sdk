@@ -1,30 +1,17 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { i18n } from '../../i18n/i18n-store.js';
-import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import { isLoggedIn, publicKey } from '../../store/app-state.js';
+import { isLoggedIn, restoreLoginState } from '../../store/app-state.js';
 import PublicKeyDisplay from '../PublicKeyDisplay.svelte';
 import AuthScreen from './AuthScreen.svelte';
 
 const login = $derived($isLoggedIn);
 
-onMount(async () => {
-  const keyManager = getNosskeyManager();
-
-  if (keyManager.hasKeyInfo()) {
-    if (!$isLoggedIn) {
-      try {
-        const pubKey = await keyManager.getPublicKey();
-        publicKey.set(pubKey);
-        isLoggedIn.set(true);
-      } catch (error) {
-        console.error('公開鍵の取得に失敗しました:', error);
-      }
-    }
-  } else if ($isLoggedIn) {
-    isLoggedIn.set(false);
-    publicKey.set(null);
-  }
+// 通常はアプリ起動時に App.svelte でログイン状態を復元済みだが、
+// account 画面へ初めて遷移したときにも念のため整合させる（鍵が無いのに
+// ログイン状態が残っている場合のリセットも兼ねる）。
+onMount(() => {
+  void restoreLoginState();
 });
 </script>
 

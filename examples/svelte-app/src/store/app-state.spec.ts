@@ -11,6 +11,7 @@ import {
   loginWith,
   publicKey,
   reloadSettings,
+  restoreLoginState,
   trustedOrigins,
 } from './app-state.js';
 import {
@@ -261,5 +262,54 @@ describe('loginWith', () => {
     expect(listAccounts().some((a) => a.pubkey === 'pubkey-login-abc')).toBe(true);
     const persisted = JSON.parse(firstParty.getItem('nosskey_accounts') as string);
     expect(persisted.some((a: { pubkey: string }) => a.pubkey === 'pubkey-login-abc')).toBe(true);
+  });
+});
+
+describe('restoreLoginState', () => {
+  // 画面非依存のログイン状態復元。`#/key` などへ直接リロードした場合でも
+  // AccountScreen のマウントを待たずにログイン状態を反映できることを保証する。
+  it('鍵情報があり未ログインなら公開鍵を復元してログイン状態にする', async () => {
+    grantFirstPartyStorage();
+    await loginWith({
+      credentialId: 'cred-restore',
+      pubkey: 'pubkey-restore-abc',
+      salt: '6e6f7374722d70776b',
+    });
+    // リロード相当: SDK manager は鍵を保持したまま、ストアだけ初期状態へ戻す。
+    isLoggedIn.set(false);
+    publicKey.set(null);
+
+    await restoreLoginState();
+
+    expect(get(isLoggedIn)).toBe(true);
+    expect(get(publicKey)).toBe('pubkey-restore-abc');
+  });
+
+  it('すでにログイン済みなら何もしない（早期 return）', async () => {
+    grantFirstPartyStorage();
+    await loginWith({
+      credentialId: 'cred-restore',
+      pubkey: 'pubkey-restore-abc',
+      salt: '6e6f7374722d70776b',
+    });
+    // 既ログイン状態。公開鍵ストアの値は上書きされず保持される。
+    publicKey.set('sentinel-unchanged');
+
+    await restoreLoginState();
+
+    expect(get(isLoggedIn)).toBe(true);
+    expect(get(publicKey)).toBe('sentinel-unchanged');
+  });
+
+  it('鍵情報が無ければログイン状態をリセットする', async () => {
+    grantFirstPartyStorage();
+    // 鍵が無いのにログイン状態が残っているケース（ログアウト跨ぎ等）。
+    isLoggedIn.set(true);
+    publicKey.set('stale-pubkey');
+
+    await restoreLoginState();
+
+    expect(get(isLoggedIn)).toBe(false);
+    expect(get(publicKey)).toBe(null);
   });
 });
