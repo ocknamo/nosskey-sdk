@@ -55,7 +55,7 @@ export const en: TranslationData = {
       cancel: 'Cancel',
     },
     wrapBackup: {
-      title: 'Save a backup of your key',
+      title: 'Backup',
       description:
         'Your imported private key is encrypted with your passkey and stored only in this browser. Saving a backup file lets you restore access even if browser data is cleared or you switch devices.',
       warning:

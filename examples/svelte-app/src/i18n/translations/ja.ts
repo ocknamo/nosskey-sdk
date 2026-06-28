@@ -55,7 +55,7 @@ export const ja: TranslationData = {
       cancel: 'キャンセル',
     },
     wrapBackup: {
-      title: '鍵のバックアップを保存',
+      title: 'バックアップ',
       description:
         'インポートした秘密鍵はパスキーで暗号化され、このブラウザにのみ保存されます。バックアップファイルを保存しておくと、ブラウザのデータ消去や機種変更後でも復元できます。',
       warning:
