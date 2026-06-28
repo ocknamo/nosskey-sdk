@@ -2,6 +2,7 @@
 import { onMount, tick } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
+import WrapKeyBackupPrompt from './components/WrapKeyBackupPrompt.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
 import IframeHostScreen from './components/screens/IframeHostScreen.svelte';
 import KeyManagementScreen from './components/screens/KeyManagement.svelte';
@@ -12,6 +13,7 @@ import {
   currentTheme,
   isScreenName,
   restoreLoginState,
+  wrapBackupPrompt,
 } from './store/app-state.js';
 import { THEME_PALETTES, resolveTheme } from './theme/palettes.js';
 
@@ -205,6 +207,14 @@ onMount(() => {
     <!-- フッターメニュー -->
     <FooterMenu />
   </div>
+
+  <!-- wrap モード鍵インポート直後のバックアップ推奨モーダル（iframe モード以外） -->
+  {#if $wrapBackupPrompt}
+    <WrapKeyBackupPrompt
+      keyInfo={$wrapBackupPrompt}
+      onClose={() => wrapBackupPrompt.set(null)}
+    />
+  {/if}
 {/if}
 
 <style>
