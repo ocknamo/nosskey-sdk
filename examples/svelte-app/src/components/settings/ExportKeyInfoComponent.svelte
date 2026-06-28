@@ -3,7 +3,10 @@ import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { downloadTextFile } from '../../utils/download-file.js';
-import { serializeKeyInfoForExport } from '../../utils/key-info-export.js';
+import {
+  buildKeyInfoBackupFilename,
+  serializeKeyInfoForExport,
+} from '../../utils/key-info-export.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
@@ -11,6 +14,7 @@ import IconButton from '../ui/button/IconButton.svelte';
 // KeyInfoエクスポート関連の状態変数
 let showExportSection = $state(false);
 let exportedKeyInfo = $state('');
+let exportedFilename = $state('nosskey-key-info-backup.json');
 let exportError = $state('');
 let showCopiedMessage = $state(false);
 
@@ -41,6 +45,7 @@ function exportKeyInfo() {
   // try/catch は不要。インポート往復の正当性は key-info-export.spec.ts で担保。
   exportError = '';
   exportedKeyInfo = serializeKeyInfoForExport(currentKeyInfo);
+  exportedFilename = buildKeyInfoBackupFilename(currentKeyInfo);
 }
 
 // クリップボードにコピー
@@ -61,7 +66,7 @@ function copyToClipboard(text: string) {
 // KeyInfoをファイルとして保存
 function saveKeyInfoToFile() {
   if (!exportedKeyInfo) return;
-  downloadTextFile(exportedKeyInfo, 'nosskey-key-info-backup.json');
+  downloadTextFile(exportedKeyInfo, exportedFilename);
 }
 </script>
 

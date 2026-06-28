@@ -1,7 +1,7 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { describe, expect, it } from 'vitest';
 import { isNostrKeyInfo } from '../store/accounts.js';
-import { serializeKeyInfoForExport } from './key-info-export.js';
+import { buildKeyInfoBackupFilename, serializeKeyInfoForExport } from './key-info-export.js';
 
 describe('serializeKeyInfoForExport', () => {
   const directModeKeyInfo: NostrKeyInfo = {
@@ -38,5 +38,46 @@ describe('serializeKeyInfoForExport', () => {
   it('pretty-print（2 スペースインデント）で出力する', () => {
     const json = serializeKeyInfoForExport(directModeKeyInfo);
     expect(json).toContain('\n  "credentialId"');
+  });
+});
+
+describe('buildKeyInfoBackupFilename', () => {
+  const date = new Date(2026, 5, 28); // 2026-06-28（月は 0 始まり）
+  const base: NostrKeyInfo = {
+    credentialId: 'aabbcc',
+    pubkey: '0011223344556677889900112233445566778899001122334455667788990011',
+    salt: '6e6f7374722d70776b',
+  };
+
+  it('ユーザー名と日付を付与する', () => {
+    const name = buildKeyInfoBackupFilename({ ...base, username: 'alice' }, date);
+    expect(name).toBe('nosskey-key-info-backup-alice-2026-06-28.json');
+  });
+
+  it('ユーザー名の空白を除去する', () => {
+    const name = buildKeyInfoBackupFilename({ ...base, username: 'Alice Smith' }, date);
+    expect(name).toBe('nosskey-key-info-backup-AliceSmith-2026-06-28.json');
+  });
+
+  it('ファイル名を壊す予約文字を除去しつつ数字は保持する', () => {
+    const name = buildKeyInfoBackupFilename({ ...base, username: 'a/b:c*123' }, date);
+    expect(name).toBe('nosskey-key-info-backup-abc123-2026-06-28.json');
+  });
+
+  it('ユーザー名が無ければ日付のみで構成する', () => {
+    expect(buildKeyInfoBackupFilename(base, date)).toBe('nosskey-key-info-backup-2026-06-28.json');
+  });
+
+  it('空白だけのユーザー名は除去後に空となり日付のみになる', () => {
+    const name = buildKeyInfoBackupFilename({ ...base, username: '   ' }, date);
+    expect(name).toBe('nosskey-key-info-backup-2026-06-28.json');
+  });
+
+  it('月日を 2 桁ゼロ埋めする', () => {
+    const name = buildKeyInfoBackupFilename(
+      { ...base, username: 'bob' },
+      new Date(2026, 0, 3) // 2026-01-03
+    );
+    expect(name).toBe('nosskey-key-info-backup-bob-2026-01-03.json');
   });
 });

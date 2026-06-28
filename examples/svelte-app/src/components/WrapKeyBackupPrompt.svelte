@@ -2,7 +2,7 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { i18n } from '../i18n/i18n-store.js';
 import { downloadTextFile } from '../utils/download-file.js';
-import { serializeKeyInfoForExport } from '../utils/key-info-export.js';
+import { buildKeyInfoBackupFilename, serializeKeyInfoForExport } from '../utils/key-info-export.js';
 import Button from './ui/button/Button.svelte';
 
 const { keyInfo, onClose }: { keyInfo: NostrKeyInfo; onClose: () => void } = $props();
@@ -10,7 +10,7 @@ const { keyInfo, onClose }: { keyInfo: NostrKeyInfo; onClose: () => void } = $pr
 let downloaded = $state(false);
 
 function saveBackup() {
-  downloadTextFile(serializeKeyInfoForExport(keyInfo), 'nosskey-key-info-backup.json');
+  downloadTextFile(serializeKeyInfoForExport(keyInfo), buildKeyInfoBackupFilename(keyInfo));
   downloaded = true;
 }
 </script>
