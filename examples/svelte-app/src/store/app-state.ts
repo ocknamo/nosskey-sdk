@@ -71,6 +71,18 @@ export const isLoggedIn = writable(false);
 // Nostrキー情報
 export const publicKey = writable<string | null>(null);
 
+/**
+ * wrap モード鍵のインポート直後にバックアップを促すモーダル用の状態。
+ * 値が非 null の間だけ `WrapKeyBackupPrompt` を表示する。
+ *
+ * wrap モードでは暗号化済み nsec（`wrapped.payload`）が localStorage に
+ * しか存在せず、サイトデータ消去で復元不能になる（直接モードはパスキーから
+ * 再導出可能なので対象外）。そのためインポート完了＝鍵が永続化された直後に
+ * バックアップ保存を強く推奨する。必須ではなく「後でやる」導線も残す
+ * （設定画面からいつでもエクスポートできる）。
+ */
+export const wrapBackupPrompt = writable<NostrKeyInfo | null>(null);
+
 // テーマ設定（ThemeMode は palettes.ts で定義、ここで再 export して既存 import を維持）
 export type { ThemeMode };
 export const currentTheme = writable<ThemeMode>('purple-dark');
@@ -361,6 +373,9 @@ export const logout = () => {
 
   // ログイン状態を更新
   isLoggedIn.set(false);
+
+  // バックアップ推奨モーダルが表示途中だった場合に AuthScreen 上へ残らないよう閉じる。
+  wrapBackupPrompt.set(null);
 
   // 画面を認証画面に戻す
   currentScreen.set('account');

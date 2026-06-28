@@ -2,6 +2,7 @@
 import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
+import { downloadTextFile } from '../../utils/download-file.js';
 import { serializeKeyInfoForExport } from '../../utils/key-info-export.js';
 import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -60,16 +61,7 @@ function copyToClipboard(text: string) {
 // KeyInfoをファイルとして保存
 function saveKeyInfoToFile() {
   if (!exportedKeyInfo) return;
-
-  const blob = new Blob([exportedKeyInfo], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-
-  a.href = url;
-  a.download = 'nosskey-key-info-backup.json';
-  a.click();
-
-  URL.revokeObjectURL(url);
+  downloadTextFile(exportedKeyInfo, 'nosskey-key-info-backup.json');
 }
 </script>
 

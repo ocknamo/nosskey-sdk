@@ -9,10 +9,12 @@ import {
   hasLoggedInBefore,
   isLoggedIn,
   loginWith,
+  logout,
   publicKey,
   reloadSettings,
   restoreLoginState,
   trustedOrigins,
+  wrapBackupPrompt,
 } from './app-state.js';
 import {
   MAX_CACHE_TTL_SECONDS,
@@ -57,6 +59,7 @@ beforeEach(() => {
   consentPolicy.set({ connect: 'ask', signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
   cacheSecrets.set(true);
   cacheTimeout.set(300);
+  wrapBackupPrompt.set(null);
 });
 
 describe('reloadSettings', () => {
@@ -311,5 +314,36 @@ describe('restoreLoginState', () => {
 
     expect(get(isLoggedIn)).toBe(false);
     expect(get(publicKey)).toBe(null);
+  });
+});
+
+describe('wrapBackupPrompt', () => {
+  // wrap モード鍵インポート直後のバックアップ推奨モーダルを制御するストア。
+  it('初期値は null（モーダル非表示）', () => {
+    expect(get(wrapBackupPrompt)).toBe(null);
+  });
+
+  it('logout 時に表示途中のモーダル状態をクリアする', async () => {
+    grantFirstPartyStorage();
+    await loginWith({
+      credentialId: 'cred-wrap',
+      pubkey: 'pubkey-wrap-abc',
+      salt: '6e6f7374722d70776b2d77726170',
+      wrapped: { v: 1, alg: 'nip44-v2', payload: 'AjJ4cGF5bG9hZA==' },
+    });
+    // インポート直後にモーダルが立っている状態を再現。
+    wrapBackupPrompt.set({
+      credentialId: 'cred-wrap',
+      pubkey: 'pubkey-wrap-abc',
+      salt: '6e6f7374722d70776b2d77726170',
+      wrapped: { v: 1, alg: 'nip44-v2', payload: 'AjJ4cGF5bG9hZA==' },
+    });
+
+    logout();
+
+    // ログアウトでモーダルが AuthScreen 上に残らないこと。
+    expect(get(wrapBackupPrompt)).toBe(null);
+    expect(get(isLoggedIn)).toBe(false);
+    expect(get(currentScreen)).toBe('account');
   });
 });
