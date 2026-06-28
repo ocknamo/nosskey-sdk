@@ -64,7 +64,7 @@ export const en: TranslationData = {
       saveAgain: 'Save again',
       saved: 'Backup file saved. Keep it somewhere safe.',
       continue: 'Continue',
-      later: 'Do it later (you can export anytime from Settings)',
+      later: 'Not now (you can export anytime from Settings)',
     },
   },
   nostr: {

@@ -64,7 +64,7 @@ export const ja: TranslationData = {
       saveAgain: 'もう一度保存',
       saved: 'バックアップファイルを保存しました。安全な場所に保管してください。',
       continue: '続ける',
-      later: '後でやる（設定からいつでもエクスポートできます）',
+      later: '今はやらない（設定からいつでもエクスポートできます）',
     },
   },
   nostr: {
