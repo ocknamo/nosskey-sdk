@@ -16,7 +16,9 @@
 
 **アーキテクチャレベルの致命的欠陥は無い。** 2026-06-10 の前回診断で挙がった 🔴 High（H-1）と 🟡 Middle の主要項目（M-1 / M-3 / M-4 / M-5）は**すべて実装・マージ済み**であることをコード上で確認した。今回、3 つの攻撃モデルそれぞれについて「なぜ成立しないか」を経路単位で追跡し、防御が期待どおり機能していることを検証した。`npm audit` は本番・全体ともに**脆弱性 0 件**。
 
-新規に発見した**要対応（🔴/🟡）レベルの問題は無い**。残存するのは前回から継続の設計トレードオフ（M-2: wrap 鍵バックアップ強制化）と、実害の限定的な軽微指摘（Low）のみ。
+新規に発見した**要対応（🔴/🟡）レベルの問題は無い**。残存するのは前回から継続の設計トレードオフ（M-2: wrap 鍵バックアップ強制化）と、実害の限定的な軽微指摘（Low）のみ。今回は依存を `npm ci` で実際にインストールし、`@rx-nostr/crypto` の署名器（`seckeySigner`）挙動を**ソース精読＋実行で実測**した結果、なりすまし耐性の「根拠」を差し替えた（③参照。結論は不変、L-13 として多層防御の指摘を新設）。
+
+**検証コマンド実行結果（本診断時）**: `npm run format:check` ✅ / `npm run build` ✅ / `npm run test:coverage` ✅（nosskey-sdk 384・nosskey-iframe 149・svelte-app 213 の計 746 テスト全合格）/ `npm run check -w svelte-app` ✅（0 errors, 0 warnings）/ `npm ci` の `npm audit` ✅（脆弱性 0 件）。
 
 以下、攻撃モデル別に「なぜ問題ないか」を根拠付きで示し、末尾に残存リスクをまとめる。
 
@@ -94,9 +96,16 @@
 
 ## 攻撃モデル③: なりすましによるログイン — なぜ成立しないか
 
-### 署名鍵は常に PRF から導出され、親由来データを一切使わない
+### 有効な署名は sig↔pubkey のバインドにより実鍵でしか作れない
 
-- `signEvent` は `#getSecretKey` で PRF から鍵を解決し、`seckeySigner(sk)` が `id` / `pubkey` / `sig` を秘密鍵から再計算する（`nosskey.ts:624-639`）。親（または悪意ある呼び出し側）が `event.pubkey` / `id` / `sig` を偽装して渡しても、署名結果はユーザーの実鍵で上書きされる。**他人になりすました署名は生成できない**。
+> **訂正（依存ソース実測後）**: 当初「`seckeySigner` は親由来の `pubkey`/`id`/`sig` を無視して秘密鍵から再計算する」と記したが、これは**誤り**。`@rx-nostr/crypto` の実装（`node_modules/@rx-nostr/crypto/src/signer.ts:25-45`）は `pubkey: params.pubkey ?? pubhex` と、`id`/`sig` も `?? ` フォールバックで、**呼び出し側が与えた値を優先**する。さらに `id`/`sig`/`kind`/`pubkey`/`content`/`created_at`/`tags` が全て揃うと `ensureEventFields` が真になり**署名も検証もせずイベントをそのまま返す**。結論（なりすまし耐性）は下記の別機構で成立するため変わらないが、根拠を差し替える。
+
+- 実測（`seckeySigner(sk).signEvent(...)` を直接実行）で確認した挙動:
+  - **通常**（kind/content/tags のみ）→ `pubkey` は実鍵由来、`sig` は実鍵で計算、`verify` = **true**（正しい署名）。
+  - **親が `pubkey` を偽装**（id/sig 無し）→ 返る pubkey は偽装値だが、`sig` は実鍵が算出するため `schnorr.verify(sig, id, 偽装pubkey)` が**失敗**し `verify` = **false**（無効イベント）。
+  - **親が id/sig 込みの完全イベント**→ そのまま返る（署名されない）。攻撃者は元々持っていた（無効な）イベントが返るだけで、新たな有効署名は得られない。
+- したがって **他人になりすました「有効な」署名イベントは生成できない**。Nostr の検証は `sig` と `pubkey` のバインドを要求し、実鍵で作った `sig` は実鍵の pubkey でしか検証を通らないため。有効署名が生成されるのは「sig 省略 → 実鍵で計算」かつ「pubkey が実鍵由来」の経路のみで、その場合の署名対象（kind/tags/content）は同意ダイアログの表示と一致する（WYSIWYS 成立）。
+- 署名鍵自体は常に `#getSecretKey` 経由で PRF から解決され（`nosskey.ts:630`）、親由来データが鍵導出に混入することはない。
 
 ### PRF は rpId（origin）にバインドされ、フィッシング耐性を持つ
 
@@ -136,6 +145,7 @@
 | L-7 | `host.ts:201-205, 426-431` / `IframeHostScreen.svelte:32-36` | `nosskey:ready` / `visibility` を `targetOrigin:'*'` で送信。内容は boolean のみで実害小だが、Nosskey 利用の事実が任意の親に漏れる。オープン埋め込みでは親 origin を送信前に知り得ないため構造的トレードオフ。 |
 | L-8 | `client.ts:326` | `if (event.origin && ...)` が空 origin を素通し。直前の `event.source` 検証で実害はほぼ無いが条件が不要に緩い。 |
 | L-3 | `utils.ts:54-77` | 直接モードの `keyInfo.pubkey` は保存時に非認証。改ざんされると `getPublicKey()` が偽 npub を返し、署名は実鍵で行われるため表示 ID と署名鍵が食い違う。wrap モードは pubkey 検証で検知するが直接モードは未検証（別鍵導出になるだけで漏洩は無い）。localStorage 書き込み権限を前提とする低リスク。 |
+| **L-13（新規）** | `nosskey.ts:624-639` / `host.ts:273-281` | `signEventWithKeyInfo` が親（オープン埋め込みでは任意オリジン）由来の `event` を**サニタイズせず** `seckeySigner.signEvent` に渡す。`@rx-nostr/crypto` は `pubkey: params.pubkey ?? pubhex` で呼び出し側 pubkey を honor し、`id`/`sig` が揃うと署名せずパススルーする（`signer.ts:25-45`）。**実害は無効イベントが返るだけ**（sig↔pubkey バインドで有効署名にならない・秘密漏洩無し・WYSIWYS も成立）だが、多層防御として host または SDK が署名前に `id`/`sig`/`pubkey`（必要なら `created_at`）を除去し、返却イベントが「同意した内容を実鍵で署名したもの」であることを構造的に保証するのが望ましい。 |
 | L-9 | `ConsentPolicySettings.svelte` | `{@html}` 使用箇所。現状の挿入値は数値のみで安全だが、i18n 文字列が信頼境界に入る構造。slot 化を推奨。 |
 | L-11 | `.github/workflows/*.yml` | Actions がタグ参照（`@v4` 等）で SHA ピン留めなし。サプライチェーン強化として SHA 固定を推奨。 |
 | L-12 | `nip04.ts` | NIP-04（AES-CBC 認証なし）は padding oracle 等の既知の弱さを持つが、レガシー互換専用と明記し新規利用を非推奨化済み（`nip04.ts:9-17`）。現状の扱いで妥当。 |
@@ -148,7 +158,7 @@
 - **秘密のゼロ化**: PRF / KEK / nsec / キャッシュ / pending PRF のすべての破棄経路で `.fill(0)`。
 - **NIP-44 v2**: constant-time MAC 比較、会話鍵/per-message 鍵の非公開化、`#` バージョンプレフィクス拒否、padding 長検証。
 - **postMessage**: host 応答は要求元 origin 限定、client は source+origin 二重検証、型ガード（`isNosskeyRequest` 等）で不正メッセージを弾く。
-- **署名のなりすまし不能性**: 署名鍵は常に PRF 由来、親由来の pubkey/id/sig は無視。
+- **署名のなりすまし不能性**: 署名鍵は常に PRF 由来。親由来 pubkey/id/sig は `seckeySigner` が honor するが、sig↔pubkey バインドにより攻撃者操作イベントは schnorr 検証に失敗し、有効な偽署名は生成不能（実測確認・L-13 で多層防御を推奨）。
 - **フィッシング耐性**: PRF が rpId（origin）にバインド。
 - **設定改ざん耐性**: TTL クランプ・型ガード・沈黙降格の可視化。
 - **依存関係**: `npm audit` 脆弱性 0 件（本番・全体）、noble 系・週次 audit CI。
