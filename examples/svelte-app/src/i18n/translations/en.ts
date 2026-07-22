@@ -121,11 +121,11 @@ export const en: TranslationData = {
       changed: 'Language changed',
     },
     termMode: {
-      title: 'Terminology',
-      selectMode: 'Choose the wording used in the app:',
-      simpleLabel: 'Simple (plain words)',
-      standardLabel: 'Standard (Nostr terms)',
-      changed: 'Terminology changed',
+      title: 'Mode',
+      selectMode: 'Select mode:',
+      simpleLabel: 'Simple',
+      standardLabel: 'Technical',
+      changed: 'Mode changed',
     },
     theme: {
       title: 'Theme Settings',

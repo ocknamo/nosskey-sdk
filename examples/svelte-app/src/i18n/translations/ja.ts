@@ -121,11 +121,11 @@ export const ja: TranslationData = {
       changed: '言語を変更しました',
     },
     termMode: {
-      title: '用語の表示',
-      selectMode: 'アプリ内で使う用語を選択:',
-      simpleLabel: 'シンプル（わかりやすい用語）',
-      standardLabel: '標準（Nostr の用語）',
-      changed: '用語の表示を変更しました',
+      title: 'モード',
+      selectMode: 'モードを選択:',
+      simpleLabel: 'シンプル',
+      standardLabel: 'テクニカル',
+      changed: 'モードを変更しました',
     },
     theme: {
       title: 'テーマ設定',
