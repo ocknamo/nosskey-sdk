@@ -28,6 +28,7 @@ export const simpleJa: DeepPartial<TranslationData> = {
     exportSecretKeyWarning:
       '警告：リカバリーキーは誰とも共有しないでください。リカバリーキーを持つ人はあなたのアカウントを完全に制御できます。',
     showExportSection: 'リカバリーキーをエクスポート（危険）',
+    hideExportSection: 'エクスポートを隠す',
     exportWarningFinal:
       '最終警告：このリカバリーキーを共有すると、あなたのアカウントが乗っ取られる可能性があります。必ずバックアップ目的でのみ使用してください。',
     confirmExport: 'リカバリーキーをエクスポートする',
@@ -73,6 +74,7 @@ export const simpleJa: DeepPartial<TranslationData> = {
       warning:
         '注意: このバックアップを紛失するとアカウントへのアクセスができなくなる場合があります。安全な場所に保管してください。',
       showExportSection: 'バックアップを作成',
+      hideExportSection: 'バックアップの作成を隠す',
       restoreWarning:
         'このバックアップファイルは、同じパスキーと同じユーザー名でログインできない場合の復元に使用できます。',
       exportButton: 'バックアップを作成',
@@ -93,10 +95,15 @@ export const simpleJa: DeepPartial<TranslationData> = {
   },
   consent: {
     title: 'このサイトからのリクエスト',
+    titleConnect: 'このサイトからの接続リクエスト',
+    titleEncrypt: 'メッセージの暗号化リクエスト',
+    titleDecrypt: 'メッセージを読むリクエスト',
     connectDescription:
       'このサイトはあなたのユーザーIDと接続先サーバーの設定を読み取れるようになります。',
     eventKind: '内容の種類',
     method: 'リクエストの種類',
+    plaintext: 'メッセージの内容',
+    decryptNoPreview: 'メッセージの内容は読み込んだ後にしか確認できません。',
     methodLabel: {
       getPublicKey: 'ユーザーIDの取得',
       getRelays: '接続先サーバーの読み取り',
@@ -115,6 +122,7 @@ export const simpleJa: DeepPartial<TranslationData> = {
       rumor: '非公開メッセージ（内部データ）',
       seal: '非公開メッセージ（内部データ）',
       giftWrap: '非公開メッセージ（内部データ）',
+      unknown: 'その他の内容',
     },
   },
 };

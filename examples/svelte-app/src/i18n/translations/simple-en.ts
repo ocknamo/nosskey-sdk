@@ -27,6 +27,7 @@ export const simpleEn: DeepPartial<TranslationData> = {
     exportSecretKeyWarning:
       'Warning: Never share your recovery key with anyone. Anyone with your recovery key can fully control your account.',
     showExportSection: 'Export Recovery Key (Dangerous)',
+    hideExportSection: 'Hide Export',
     exportWarningFinal:
       'Final Warning: Sharing this recovery key can lead to your account being compromised. Use only for backup purposes.',
     confirmExport: 'Export Recovery Key',
@@ -72,6 +73,7 @@ export const simpleEn: DeepPartial<TranslationData> = {
       warning:
         'Warning: Losing this backup may result in loss of access to your account. Store it in a safe place.',
       showExportSection: 'Create Backup',
+      hideExportSection: 'Hide Backup',
       restoreWarning:
         'This backup file can be used for recovery when you cannot login with the same passkey and the same username.',
       exportButton: 'Create Backup',
@@ -92,9 +94,14 @@ export const simpleEn: DeepPartial<TranslationData> = {
   },
   consent: {
     title: 'Request from this site',
+    titleConnect: 'Connection request from this site',
+    titleEncrypt: 'Message encryption request',
+    titleDecrypt: 'Read message request',
     connectDescription: 'This site will be able to read your user ID and server settings.',
     eventKind: 'Type of content',
     method: 'Request type',
+    plaintext: 'Message content',
+    decryptNoPreview: 'The message content can only be seen after it is read.',
     methodLabel: {
       getPublicKey: 'Read user ID',
       getRelays: 'Read server list',
@@ -113,6 +120,7 @@ export const simpleEn: DeepPartial<TranslationData> = {
       rumor: 'Private message (internal)',
       seal: 'Private message (internal)',
       giftWrap: 'Private message (internal)',
+      unknown: 'Other content',
     },
   },
 };
