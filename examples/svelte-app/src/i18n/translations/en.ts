@@ -120,6 +120,13 @@ export const en: TranslationData = {
       englishLabel: 'English',
       changed: 'Language changed',
     },
+    termMode: {
+      title: 'Terminology',
+      selectMode: 'Choose the wording used in the app:',
+      simpleLabel: 'Simple (plain words)',
+      standardLabel: 'Standard (Nostr terms)',
+      changed: 'Terminology changed',
+    },
     theme: {
       title: 'Theme Settings',
       description: 'Change the appearance of the application.',

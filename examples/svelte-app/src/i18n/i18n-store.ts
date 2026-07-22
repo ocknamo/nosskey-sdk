@@ -1,6 +1,12 @@
 import { derived, writable } from 'svelte/store';
-import type { I18nStore, Language, TranslationData } from './translations.js';
-import { en, ja } from './translations.js';
+import type {
+  DeepPartial,
+  I18nStore,
+  Language,
+  TermMode,
+  TranslationData,
+} from './translations.js';
+import { en, ja, simpleEn, simpleJa } from './translations.js';
 
 // デフォルト言語（日本語）と翻訳データ
 const DEFAULT_LANGUAGE: Language = 'ja';
@@ -10,6 +16,16 @@ const translations: Record<Language, TranslationData> = {
   ja,
   en,
 };
+
+// シンプルモード（専門用語の置き換え）の部分オーバーレイ
+const simpleOverlays: Record<Language, DeepPartial<TranslationData>> = {
+  ja: simpleJa,
+  en: simpleEn,
+};
+
+// 用語表示モードのデフォルトはシンプル（一般ユーザー向け）
+const DEFAULT_TERM_MODE: TermMode = 'simple';
+export const TERM_MODE_STORAGE_KEY = 'nosskey_term_mode';
 
 // 親オリジンから `?embedded=1&lang=...` で言語を上書きされた場合、
 // localStorage には書き戻さない（次回スタンドアロン起動時に保持するため）。
@@ -64,11 +80,72 @@ export function changeLanguage(lang: Language): void {
   currentLanguage.set(lang);
 }
 
-// 現在の言語に基づいた翻訳データを提供するストア
-export const i18n = derived<typeof currentLanguage, I18nStore>(
-  currentLanguage,
-  ($currentLanguage) => ({
+// 用語表示モードをローカルストレージから読み込む（未保存時はシンプルモード）
+function loadTermMode(): TermMode {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(TERM_MODE_STORAGE_KEY);
+    if (saved === 'simple' || saved === 'standard') {
+      return saved;
+    }
+  }
+  return DEFAULT_TERM_MODE;
+}
+
+// 現在の用語表示モードを管理するストア
+export const termMode = writable<TermMode>(loadTermMode());
+
+// モード変更時にローカルストレージに保存
+termMode.subscribe((mode) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(TERM_MODE_STORAGE_KEY, mode);
+  }
+});
+
+// 用語表示モードを変更する関数
+export function changeTermMode(mode: TermMode): void {
+  termMode.set(mode);
+}
+
+// オーバーレイに定義されたキーだけを上書きする deep merge。
+// オーバーレイ側に無いキーは base（標準文言）がそのまま残る。
+function deepMerge<T extends object>(base: T, overlay: DeepPartial<T>): T {
+  const result: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(overlay)) {
+    if (value === undefined) continue;
+    const baseValue = result[key];
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof baseValue === 'object' &&
+      baseValue !== null
+    ) {
+      result[key] = deepMerge(baseValue as object, value as DeepPartial<object>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result as T;
+}
+
+// 言語×モードの組み合わせは少ないので、マージ結果はモジュールスコープでキャッシュする
+const mergedCache = new Map<Language, TranslationData>();
+
+function resolveTranslation(lang: Language, mode: TermMode): TranslationData {
+  if (mode === 'standard') return translations[lang];
+  let merged = mergedCache.get(lang);
+  if (!merged) {
+    merged = deepMerge(translations[lang], simpleOverlays[lang]);
+    mergedCache.set(lang, merged);
+  }
+  return merged;
+}
+
+// 現在の言語と用語表示モードに基づいた翻訳データを提供するストア
+export const i18n = derived<[typeof currentLanguage, typeof termMode], I18nStore>(
+  [currentLanguage, termMode],
+  ([$currentLanguage, $termMode]) => ({
     currentLanguage: $currentLanguage,
-    t: translations[$currentLanguage],
+    termMode: $termMode,
+    t: resolveTranslation($currentLanguage, $termMode),
   })
 );

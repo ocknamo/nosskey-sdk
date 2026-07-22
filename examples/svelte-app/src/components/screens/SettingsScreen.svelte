@@ -4,6 +4,7 @@ import ConsentPolicySettings from '../settings/ConsentPolicySettings.svelte';
 import DeveloperSection from '../settings/DeveloperSection.svelte';
 import LanguageSettings from '../settings/LanguageSettings.svelte';
 import RelaySettings from '../settings/RelaySettings.svelte';
+import TermModeSettings from '../settings/TermModeSettings.svelte';
 import TrustedOriginsSettings from '../settings/TrustedOriginsSettings.svelte';
 import ThemeSettings from '../settings/theme-settings.svelte';
 </script>
@@ -13,6 +14,7 @@ import ThemeSettings from '../settings/theme-settings.svelte';
   <ConsentPolicySettings />
   <TrustedOriginsSettings />
   <LanguageSettings />
+  <TermModeSettings />
   <ThemeSettings />
   <AppInfo />
   <DeveloperSection />
