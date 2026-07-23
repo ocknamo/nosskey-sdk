@@ -145,7 +145,7 @@ function openConsentSettings(): void {
         <p class="consent-decrypt-note">{$i18n.t.consent.decryptAlwaysAsk}</p>
       {/if}
 
-      {#if c.event}
+      {#if c.event && $i18n.termMode === "standard"}
         <details class="consent-raw">
           <summary>{$i18n.t.consent.showRaw}</summary>
           <pre>{JSON.stringify(c.event, null, 2)}</pre>
