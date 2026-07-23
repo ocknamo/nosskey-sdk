@@ -27,11 +27,11 @@ export const simpleJa: DeepPartial<TranslationData> = {
     exportSecretKey: 'リカバリーキーのエクスポート',
     exportSecretKeyWarning:
       '警告：リカバリーキーは誰とも共有しないでください。リカバリーキーを持つ人はあなたのアカウントを完全に制御できます。',
-    showExportSection: 'リカバリーキーをエクスポート（危険）',
+    showExportSection: 'エクスポート',
     hideExportSection: 'エクスポートを隠す',
     exportWarningFinal:
       '最終警告：このリカバリーキーを共有すると、あなたのアカウントが乗っ取られる可能性があります。必ずバックアップ目的でのみ使用してください。',
-    confirmExport: 'リカバリーキーをエクスポートする',
+    confirmExport: 'エクスポートする',
     yourSecretKey: 'あなたのリカバリーキー：',
     noKeyToExport: 'エクスポートするリカバリーキーがありません。ログイン状態を確認してください。',
     localStorage: {
