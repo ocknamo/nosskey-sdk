@@ -26,7 +26,7 @@ export const simpleEn: DeepPartial<TranslationData> = {
     exportSecretKey: 'Export Recovery Key',
     exportSecretKeyWarning:
       'Warning: Never share your recovery key with anyone. Anyone with your recovery key can fully control your account.',
-    showExportSection: 'Export',
+    showExportSection: 'Show Export',
     hideExportSection: 'Hide Export',
     exportWarningFinal:
       'Final Warning: Sharing this recovery key can lead to your account being compromised. Use only for backup purposes.',
