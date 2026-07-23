@@ -15,9 +15,7 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
       <SecretCacheSettings />
     {/if}
     <ExportKeyInfoComponent />
-    {#if $termMode === "standard"}
-      <ExportSecretKey />
-    {/if}
+    <ExportSecretKey />
     <LogoutSection />
     {#if $termMode === "standard"}
       <LocalStorageSection />
