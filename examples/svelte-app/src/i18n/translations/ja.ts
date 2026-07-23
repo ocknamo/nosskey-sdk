@@ -120,6 +120,13 @@ export const ja: TranslationData = {
       englishLabel: '英語 (English)',
       changed: '言語を変更しました',
     },
+    termMode: {
+      title: 'モード',
+      selectMode: 'モードを選択:',
+      simpleLabel: 'シンプル',
+      standardLabel: 'テクニカル',
+      changed: 'モードを変更しました',
+    },
     theme: {
       title: 'テーマ設定',
       description: 'アプリケーションの外観を変更できます。',

@@ -71,10 +71,10 @@ function handleReject() {
 }
 
 // Open the standalone app's settings screen in a new tab so the user can
-// review trusted sites and the consent policy. A new tab (rather than
-// in-place navigation) is used because the consent prompt is shown while
-// the app is acting as the signing iframe — navigating away would tear
-// down the iframe host.
+// review trusted sites (and, in technical mode, the consent policy).
+// A new tab (rather than in-place navigation) is used because the consent
+// prompt is shown while the app is acting as the signing iframe —
+// navigating away would tear down the iframe host.
 function openConsentSettings(): void {
   window.open(buildScreenUrl(window.location, 'settings'), '_blank', 'noopener');
 }
@@ -145,7 +145,7 @@ function openConsentSettings(): void {
         <p class="consent-decrypt-note">{$i18n.t.consent.decryptAlwaysAsk}</p>
       {/if}
 
-      {#if c.event}
+      {#if c.event && $i18n.termMode === "standard"}
         <details class="consent-raw">
           <summary>{$i18n.t.consent.showRaw}</summary>
           <pre>{JSON.stringify(c.event, null, 2)}</pre>

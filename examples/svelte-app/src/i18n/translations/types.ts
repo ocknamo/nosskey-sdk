@@ -5,6 +5,14 @@
 // 言語タイプの定義
 export type Language = 'ja' | 'en';
 
+// 用語表示モード。simple は Nostr の専門用語を一般ユーザー向けの表現に置き換える。
+export type TermMode = 'simple' | 'standard';
+
+// シンプルモード用の部分オーバーレイ型。未定義のキーは標準文言にフォールバックする。
+export type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+
 // 翻訳データの型定義
 export interface TranslationData {
   common: {
@@ -128,6 +136,13 @@ export interface TranslationData {
       selectLanguage: string;
       japaneseLabel: string;
       englishLabel: string;
+      changed: string;
+    };
+    termMode: {
+      title: string;
+      selectMode: string;
+      simpleLabel: string;
+      standardLabel: string;
       changed: string;
     };
     theme: {
@@ -272,5 +287,6 @@ export interface TranslationData {
 // 言語ストアの型定義
 export interface I18nStore {
   currentLanguage: Language;
+  termMode: TermMode;
   t: TranslationData;
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { termMode } from '../../i18n/i18n-store.js';
 import { isLoggedIn } from '../../store/app-state.js';
 import ExportKeyInfoComponent from '../settings/ExportKeyInfoComponent.svelte';
 import ExportSecretKey from '../settings/ExportSecretKey.svelte';
@@ -10,11 +11,15 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 
 <div class="settings-container">
   {#if $isLoggedIn}
-    <SecretCacheSettings />
+    {#if $termMode === "standard"}
+      <SecretCacheSettings />
+    {/if}
     <ExportKeyInfoComponent />
     <ExportSecretKey />
     <LogoutSection />
-    <LocalStorageSection />
+    {#if $termMode === "standard"}
+      <LocalStorageSection />
+    {/if}
   {:else}
     <ImportKeyInfo />
   {/if}

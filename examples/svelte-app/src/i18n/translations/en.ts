@@ -120,6 +120,13 @@ export const en: TranslationData = {
       englishLabel: 'English',
       changed: 'Language changed',
     },
+    termMode: {
+      title: 'Mode',
+      selectMode: 'Select mode:',
+      simpleLabel: 'Simple',
+      standardLabel: 'Technical',
+      changed: 'Mode changed',
+    },
     theme: {
       title: 'Theme Settings',
       description: 'Change the appearance of the application.',
