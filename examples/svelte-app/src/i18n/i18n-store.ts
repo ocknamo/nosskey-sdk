@@ -127,17 +127,12 @@ function deepMerge<T extends object>(base: T, overlay: DeepPartial<T>): T {
   return result as T;
 }
 
-// 言語×モードの組み合わせは少ないので、マージ結果はモジュールスコープでキャッシュする
-const mergedCache = new Map<Language, TranslationData>();
-
+// derived は言語/モードが変わったときだけ再計算し、結果も derived 側でメモ化される。
+// deepMerge はオーバーレイのキー数（数十）を走査するだけの軽処理なので、
+// 切替のたびに毎回マージして問題ない（キャッシュは不要）。
 function resolveTranslation(lang: Language, mode: TermMode): TranslationData {
   if (mode === 'standard') return translations[lang];
-  let merged = mergedCache.get(lang);
-  if (!merged) {
-    merged = deepMerge(translations[lang], simpleOverlays[lang]);
-    mergedCache.set(lang, merged);
-  }
-  return merged;
+  return deepMerge(translations[lang], simpleOverlays[lang]);
 }
 
 // 現在の言語と用語表示モードに基づいた翻訳データを提供するストア
