@@ -65,6 +65,16 @@ export interface TranslationData {
       confirmDelete: string;
       cancel: string;
     };
+    wrapBackup: {
+      title: string;
+      description: string;
+      warning: string;
+      saveButton: string;
+      saveAgain: string;
+      saved: string;
+      continue: string;
+      later: string;
+    };
   };
   nostr: {
     publicKey: string;

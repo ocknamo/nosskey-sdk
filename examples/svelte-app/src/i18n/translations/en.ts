@@ -54,6 +54,18 @@ export const en: TranslationData = {
       confirmDelete: 'Yes, delete',
       cancel: 'Cancel',
     },
+    wrapBackup: {
+      title: 'Backup',
+      description:
+        'Your imported private key is encrypted with your passkey and stored only in this browser. Saving a backup file lets you restore access even if browser data is cleared or you switch devices.',
+      warning:
+        'Warning: without a backup, clearing this site’s data will make this key unrecoverable.',
+      saveButton: 'Save backup file',
+      saveAgain: 'Save again',
+      saved: 'Backup file saved. Keep it somewhere safe.',
+      continue: 'Continue',
+      later: 'Not now (you can export anytime from Settings)',
+    },
   },
   nostr: {
     publicKey: 'Public Key',

@@ -121,7 +121,13 @@ async function importExisting() {
     seckey.fill(0);
     nsecInput = '';
 
+    // loginWith が先に current 鍵を localStorage へ永続化してから（= 鍵が
+    // 失われない状態にしてから）バックアップを促す。wrap モードは暗号化 nsec が
+    // localStorage にしか無いため、保存後に外部ファイルへのバックアップを推奨する。
     await appState.loginWith(keyInfo);
+    if (keyInfo.wrapped) {
+      appState.wrapBackupPrompt.set(keyInfo);
+    }
   } catch (error) {
     seckey.fill(0);
     console.error('nsec インポートエラー:', error);
