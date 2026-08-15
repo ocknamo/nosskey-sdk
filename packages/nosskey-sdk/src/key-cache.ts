@@ -11,6 +11,13 @@ import { bytesToHex } from './utils.js';
  */
 interface CacheEntry {
   id: string;
+  /**
+   * このエントリが属するアカウントの公開鍵（hex）。credentialId だけではエントリを
+   * 一意に特定できないため（同じパスキーで wrap モードの鍵と直接モードの鍵を作ると
+   * credentialId が同じで pubkey だけ異なるエントリが並ぶ）、読み出し時の照合に使う。
+   * 未指定で保存された場合は undefined。
+   */
+  pubkey?: string;
   sk: Uint8Array;
   expireAt: number;
 }
@@ -73,7 +80,7 @@ export class KeyCache {
    * @param credentialId クレデンシャルID
    * @param sk 秘密鍵
    */
-  setKey(credentialId: Uint8Array | string, sk: Uint8Array): void {
+  setKey(credentialId: Uint8Array | string, sk: Uint8Array, pubkey?: string): void {
     if (!this.#cacheOptions.enabled) return;
 
     const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
@@ -87,6 +94,7 @@ export class KeyCache {
     // 新しいエントリを保存
     this.#cachedEntry = {
       id,
+      ...(pubkey !== undefined && { pubkey }),
       sk: new Uint8Array(sk),
       expireAt,
     };
@@ -103,14 +111,21 @@ export class KeyCache {
 
   /**
    * キャッシュから秘密鍵を取得
+   *
+   * `pubkey` を渡した場合、保存時の pubkey と一致しなければキャッシュミスとして扱う。
+   * credentialId は同一パスキーから作られた複数アカウント（wrap モードと直接モード等）で
+   * 重複しうるため、これが無いと**別アカウントの秘密鍵**を返してしまい、表示される
+   * 公開鍵と実際の署名鍵が食い違う。
+   *
    * @param credentialId クレデンシャルID
+   * @param pubkey 期待するアカウントの公開鍵（hex）。省略時は照合しない
    * @returns 有効な秘密鍵またはundefined
    */
-  getKey(credentialId: Uint8Array | string): Uint8Array | undefined {
+  getKey(credentialId: Uint8Array | string, pubkey?: string): Uint8Array | undefined {
     if (!this.#cacheOptions.enabled) return undefined;
 
     const id = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
-    return this.#getCachedKeyIfValid(id);
+    return this.#getCachedKeyIfValid(id, pubkey);
   }
 
   /**
@@ -138,8 +153,14 @@ export class KeyCache {
    * @param credentialId クレデンシャルID
    * @returns 有効な秘密鍵またはundefined
    */
-  #getCachedKeyIfValid(credentialId: string): Uint8Array | undefined {
+  #getCachedKeyIfValid(credentialId: string, pubkey?: string): Uint8Array | undefined {
     if (!this.#cachedEntry || this.#cachedEntry.id !== credentialId) {
+      return undefined;
+    }
+
+    // pubkey を指定されたら必ず一致を要求する。保存時に pubkey を持たないエントリ
+    // （旧経路・テスト用）は「どのアカウントのものか不明」なのでミス扱いにする。
+    if (pubkey !== undefined && this.#cachedEntry.pubkey !== pubkey) {
       return undefined;
     }
 

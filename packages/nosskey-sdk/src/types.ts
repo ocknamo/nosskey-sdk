@@ -58,7 +58,10 @@ export type PasskeyLoginResult =
    * この端末に該当する鍵情報が無い。呼び出し側がユーザーに確認したうえで
    * `createNostrKey(credentialId)` を呼べば、追加の UV なしに PRF 直接モードの
    * 鍵を導出できる（assertion で得た PRF が内部キャッシュに退避されている。
-   * TTL は {@link PENDING_PRF_TTL_MS}）。
+   * TTL は 60 秒で、経過後は自動ゼロ化され、次回は再 assertion になる）。
+   *
+   * 導出せずに放置した場合も PRF は TTL 経過でゼロ化されるが、それまでは秘密値が
+   * メモリに残る。即時破棄したい場合は `clearCurrentKeyInfo()` を呼ぶこと。
    */
   | { status: 'unknown'; credentialId: string };
 

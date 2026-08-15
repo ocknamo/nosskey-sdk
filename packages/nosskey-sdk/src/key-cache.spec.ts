@@ -193,6 +193,29 @@ describe('KeyCache', () => {
       const result = keyCache.getKey('non-existent-id');
       expect(result).toBeUndefined();
     });
+
+    it('pubkey 付きで保存した鍵は同じ pubkey でのみ取得できる', () => {
+      // 同一パスキーで複数アカウント（wrap モードと直接モード等）を作ると credentialId が
+      // 衝突するため、pubkey まで一致しないと別アカウントの秘密鍵を返してしまう。
+      const testKey = new Uint8Array([1, 2, 3]);
+      const credentialId = 'shared-credential-id';
+
+      keyCache.setKey(credentialId, testKey, 'pubkey-a');
+
+      expect(keyCache.getKey(credentialId, 'pubkey-a')).toEqual(testKey);
+      expect(keyCache.getKey(credentialId, 'pubkey-b')).toBeUndefined();
+    });
+
+    it('pubkey 無しで保存した鍵は pubkey 指定の取得では返さない', () => {
+      // どのアカウントのものか不明なエントリは、照合を求められた時点でミス扱いにする。
+      const testKey = new Uint8Array([1, 2, 3]);
+      const credentialId = 'legacy-credential-id';
+
+      keyCache.setKey(credentialId, testKey);
+
+      expect(keyCache.getKey(credentialId)).toEqual(testKey);
+      expect(keyCache.getKey(credentialId, 'pubkey-a')).toBeUndefined();
+    });
   });
 
   describe('有効期限の処理', () => {

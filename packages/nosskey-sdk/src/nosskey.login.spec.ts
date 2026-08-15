@@ -5,25 +5,30 @@ import { STANDARD_SALT, WRAP_SALT } from './salt.js';
 import type { NostrKeyInfo } from './types.js';
 import { bytesToHex } from './utils.js';
 
+// 他の nosskey.*.spec.ts と違い、pubkey を秘密鍵から**決定的に**導出するモックにする。
+// 常に固定値を返すモックだと「salt が違えば別 pubkey になる」という本ファイルの主題
+// （ログイン導線の回帰）が fixture のリテラル差だけで通ってしまい、検証にならない。
 vi.mock('@rx-nostr/crypto', () => {
   return {
-    seckeySigner: vi.fn(() => ({
+    seckeySigner: vi.fn((skHex: string) => ({
       signEvent: vi.fn(async (event) => ({
         ...event,
         id: 'test-event-id',
         sig: 'test-signature',
       })),
-      getPublicKey: vi.fn(async () => 'test-pubkey'),
+      getPublicKey: vi.fn(async () => `pk:${skHex.slice(0, 16)}`),
     })),
   };
 });
 
 const CRED_ID_HEX = bytesToHex(mockCredentialId);
+/** モックの PRF 出力（32 バイトの 0x2a）から導出される pubkey。 */
+const DIRECT_PUBKEY = `pk:${'2a'.repeat(8)}`;
 
 /** 直接モード（PRF 出力がそのまま秘密鍵）のエントリ。 */
 const directEntry: NostrKeyInfo = {
   credentialId: CRED_ID_HEX,
-  pubkey: 'test-pubkey',
+  pubkey: DIRECT_PUBKEY,
   salt: STANDARD_SALT,
   username: 'alice',
 };
@@ -100,8 +105,12 @@ describe('NosskeyManager ログイン（保存済み鍵の復元）', () => {
       seedRegistry([wrapEntry]);
       const nosskey = new NosskeyManager();
 
+      const restoredResult = await nosskey.loginWithPasskey();
       const generated = await nosskey.createNostrKey();
 
+      // 同じパスキーでも、復元は保存済み pubkey・生成は標準 salt PRF 由来 pubkey になる
+      expect(restoredResult.status).toBe('restored');
+      expect(generated.pubkey).toBe(DIRECT_PUBKEY);
       expect(generated.pubkey).not.toBe(wrapEntry.pubkey);
       expect(generated.salt).toBe(STANDARD_SALT);
       expect(generated.wrapped).toBeUndefined();
@@ -166,6 +175,25 @@ describe('NosskeyManager ログイン（保存済み鍵の復元）', () => {
       expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
     });
 
+    it('回帰: 温めたキャッシュを同一 credentialId の別アカウントに流用しない', async () => {
+      // credentialId だけをキャッシュキーにすると、同じパスキーで作った別アカウント
+      // （wrap モード等）の署名に直接モードの鍵が使われ、表示 npub と署名鍵が食い違う。
+      seedRegistry([directEntry]);
+      const nosskey = new NosskeyManager({ cacheOptions: { enabled: true, timeoutMs: 60_000 } });
+
+      const result = await nosskey.loginWithPasskey();
+      expect(result.status).toBe('restored');
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+
+      // 同じ credentialId・別 pubkey の keyInfo で署名 → キャッシュを使ってはいけない
+      await nosskey.signEventWithKeyInfo(
+        { kind: 1, content: 'hello' },
+        { ...directEntry, pubkey: 'pk:someone-else' }
+      );
+
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(2);
+    });
+
     it('キャッシュ無効時も復元でき、署名時に改めて UV を要求する', async () => {
       seedRegistry([directEntry]);
       const nosskey = new NosskeyManager();
@@ -202,12 +230,21 @@ describe('NosskeyManager ログイン（保存済み鍵の復元）', () => {
       const found = nosskey.findKeyInfosByCredentialId(CRED_ID_HEX);
 
       expect(found).toHaveLength(1);
-      expect(found[0].pubkey).toBe('test-pubkey');
+      expect(found[0].pubkey).toBe(DIRECT_PUBKEY);
     });
 
     it('登録簿と current に同じ鍵があっても重複させない', () => {
       seedRegistry([directEntry]);
       mockLocalStorage.nosskey_keyinfo = JSON.stringify(directEntry);
+      const nosskey = new NosskeyManager();
+
+      expect(nosskey.findKeyInfosByCredentialId(CRED_ID_HEX)).toHaveLength(1);
+    });
+
+    it('credentialId の表記ゆれだけの同一アカウントを重複させない', () => {
+      // 照合が大文字小文字を無視する以上、重複判定も同じ正規化で行う必要がある
+      // （さもないと同一アカウントが 2 件になり ambiguous 扱いで締め出される）。
+      seedRegistry([directEntry, { ...directEntry, credentialId: CRED_ID_HEX.toUpperCase() }]);
       const nosskey = new NosskeyManager();
 
       expect(nosskey.findKeyInfosByCredentialId(CRED_ID_HEX)).toHaveLength(1);
@@ -220,7 +257,7 @@ describe('NosskeyManager ログイン（保存済み鍵の復元）', () => {
       const found = nosskey.findKeyInfosByCredentialId(CRED_ID_HEX);
       found[0].pubkey = 'mutated';
 
-      expect(nosskey.findKeyInfosByCredentialId(CRED_ID_HEX)[0].pubkey).toBe('test-pubkey');
+      expect(nosskey.findKeyInfosByCredentialId(CRED_ID_HEX)[0].pubkey).toBe(DIRECT_PUBKEY);
     });
   });
 });

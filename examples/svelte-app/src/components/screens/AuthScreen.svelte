@@ -182,9 +182,10 @@ async function deriveFromPasskey() {
 
   try {
     const keyInfo = await keyManager.createNostrKey(hexToBytes(unknownCredentialId));
-    unknownCredentialId = '';
 
     await appState.loginWith(keyInfo);
+    // 成功後にだけ畳む。loginWith が失敗した場合はカードを残し、その場で再試行できるようにする。
+    unknownCredentialId = '';
   } catch (error) {
     console.error('パスキーからの鍵導出エラー:', error);
     errorMessage = formatAuthError(
@@ -262,7 +263,7 @@ $effect(() => {
         </Button>
 
         {#if unknownCredentialId}
-          <div class="no-key-notice">
+          <div class="no-key-notice" role="alert">
             <div class="no-key-title">
               <span class="error-icon" aria-hidden="true">⚠️</span>
               {$i18n.t.auth.noKeyInfoTitle}

@@ -18,7 +18,10 @@ export const simpleEn: DeepPartial<TranslationData> = {
     noKeyInfoTitle: 'No account info found on this device',
     noKeyInfoDescription:
       'No account info linked to this passkey is left on this device. To get back into an account you used before, restore it from your backed-up account info. Restoring from the passkey gives you a different account than one brought over with a recovery key.',
-    deriveFromPasskey: 'Restore an account from this passkey',
+    // Must not read as "restore": this rebuilds a key from the passkey and never gets
+    // back an account brought over with a recovery key. It is not plain "create new"
+    // either — an account originally made with this passkey comes back identical.
+    deriveFromPasskey: 'Rebuild an account from this passkey',
   },
   nostr: {
     publicKey: 'User ID',

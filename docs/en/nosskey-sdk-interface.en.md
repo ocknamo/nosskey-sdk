@@ -254,6 +254,11 @@ UV count:
 Throws when a direct-mode entry's stored `pubkey` does not match the pubkey derived from
 the PRF (defense in depth — stored values live in tamperable plaintext storage).
 
+Note that the derived-key cache is bound to `pubkey` as well as `credentialId`. Creating
+several keys with one passkey (wrap mode and direct mode, say) makes credential IDs
+collide, and without that binding a signature would be made with another account's secret
+key while a different public key is displayed.
+
 #### createNostrKey()
 Creates NostrKeyInfo using PRF value directly as Nostr secret key (PRF direct mode).
 
