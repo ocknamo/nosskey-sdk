@@ -2,6 +2,7 @@ import { seckeySigner } from '@rx-nostr/crypto';
 import { KeyCache } from './key-cache.js';
 import {
   DEFAULT_REGISTRY_STORAGE_KEY,
+  isSameEntry,
   loadRegistry,
   normalizeEntry,
   persistRegistry,
@@ -29,6 +30,7 @@ import type {
   NostrKeyInfo,
   NostrKeyStorageOptions,
   PasskeyCreationOptions,
+  PasskeyLoginResult,
   SignOptions,
 } from './types.js';
 /**
@@ -362,6 +364,33 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * 指定 credentialId に紐づく保存済み NostrKeyInfo を返す（ディープコピー）。
+   *
+   * 登録簿と current スロットの和集合から探す。`registryEnabled: false` の構成でも
+   * current 鍵だけは引けるようにするため、両方を見て `pubkey + credentialId` で
+   * 重複を除く。credentialId の比較は大文字小文字を無視する（hex の表記ゆれ対策）。
+   *
+   * 同一 credentialId に複数エントリが返るのは、同じパスキーで複数の鍵を作った
+   * （例: wrap インポート後に直接モードの鍵も作った）場合。どれでログインするかは
+   * 呼び出し側がユーザーに選択させること。
+   *
+   * @param credentialId クレデンシャルID（hex）
+   */
+  findKeyInfosByCredentialId(credentialId: string): NostrKeyInfo[] {
+    const target = credentialId.toLowerCase();
+    const found: NostrKeyInfo[] = [];
+    const add = (entry: NostrKeyInfo | null): void => {
+      if (!entry) return;
+      if (entry.credentialId.toLowerCase() !== target) return;
+      if (found.some((existing) => isSameEntry(existing, entry))) return;
+      found.push(entry);
+    };
+    for (const entry of this.#loadRegistry()) add(entry);
+    add(this.getCurrentKeyInfo());
+    return found.map((k) => structuredClone(k));
+  }
+
+  /**
    * 登録簿から指定アカウント（pubkey + credentialId 一致）を削除する。
    * wrap モードのエントリを削除するとその暗号化 nsec は復元不能になる。
    * @param pubkey 公開鍵（hex）
@@ -491,7 +520,76 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * パスキーでログインする（保存済み鍵の**復元**）。
+   *
+   * WebAuthn の assertion を 1 回だけ実行し、返ってきた credentialId に紐づく
+   * 保存済み NostrKeyInfo を探して返す。該当が無い場合に鍵を新規生成することは
+   * **しない**（{@link PasskeyLoginResult} の `unknown` を返す）。
+   *
+   * これは {@link createNostrKey} との重要な違いである。`createNostrKey()` は
+   * PRF 出力をそのまま秘密鍵にする**鍵生成**なので、wrap モード（インポートした
+   * nsec）のパスキーに対して呼ぶと salt が異なるぶん必ず別 pubkey になり、
+   * 「ログインしたつもりが知らないアカウントになる」事故を起こす。
+   *
+   * UV の回数:
+   * - 直接モードの鍵が見つかった場合、assertion で得た PRF はその鍵の秘密鍵
+   *   そのものなので、保存済み pubkey と照合したうえで派生キャッシュに載せる。
+   *   よって初回署名で UV は再要求されない（キャッシュ有効時）。
+   * - wrap モードの鍵は salt が違うため、この PRF は使えない。秘密鍵は初回署名時に
+   *   wrap salt で改めて導出される。
+   * - `unknown` の場合、PRF は内部キャッシュに退避される。ユーザー確認のうえ
+   *   `createNostrKey(hexToBytes(credentialId))` を呼べば追加 UV なしで導出できる
+   *   （TTL は {@link PENDING_PRF_TTL_MS}。超過時は自動で再 assertion にフォールバック）。
+   *
+   * @throws 直接モードのエントリで「PRF から導出した pubkey != 保存済み pubkey」の場合。
+   *   保存値は改ざん可能な平文ストレージにあるため、多層防御として不一致を弾く。
+   */
+  async loginWithPasskey(): Promise<PasskeyLoginResult> {
+    // credentialId を渡さない = allowCredentials 空 = ユーザーにパスキーを選ばせる。
+    const { secret, id } = await getPrfSecret(undefined, this.#prfOptions, STANDARD_SALT_BYTES);
+    const credentialId = bytesToHex(id);
+    // 退避した場合は PRF の所有権が PendingPrfCache へ移る（TTL でゼロ化される）ため、
+    // finally 側でゼロ化してはいけない。
+    let stashed = false;
+    try {
+      const candidates = this.findKeyInfosByCredentialId(credentialId);
+
+      if (candidates.length === 0) {
+        this.#pendingPrf.store(id, { standard: secret });
+        stashed = true;
+        return { status: 'unknown', credentialId };
+      }
+
+      if (candidates.length > 1) {
+        return { status: 'ambiguous', credentialId, candidates };
+      }
+
+      const keyInfo = candidates[0];
+      if (!keyInfo.wrapped && normalizeSalt(keyInfo.salt) === STANDARD_SALT) {
+        const derivedPubkey = await seckeySigner(bytesToHex(secret)).getPublicKey();
+        if (derivedPubkey !== keyInfo.pubkey) {
+          throw new Error(
+            'Stored key info does not match this passkey (NostrKeyInfo may be tampered)'
+          );
+        }
+        // KeyCache は setKey でコピーを持つので、元バッファは finally でゼロ化してよい。
+        // キャッシュ無効時は setKey が no-op になる。
+        this.#keyCache.setKey(keyInfo.credentialId, secret);
+      }
+      return { status: 'restored', keyInfo };
+    } finally {
+      if (!stashed) secret.fill(0);
+    }
+  }
+
+  /**
    * PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを作成
+   *
+   * **これは鍵の新規生成であり、ログイン（保存済み鍵の復元）ではない。** 既存
+   * アカウントへのログインには {@link loginWithPasskey} を使うこと。wrap モードの
+   * パスキーに対して本メソッドを呼ぶと、wrap salt ではなく標準 salt で導出するため
+   * **必ず別 pubkey が生成される**（インポートした鍵には戻れない）。
+   *
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション
    */

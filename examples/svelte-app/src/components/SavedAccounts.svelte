@@ -114,7 +114,10 @@ onDestroy(() => {
 {#if $accounts.length > 0}
   <CardSection title={$i18n.t.auth.accounts.title}>
     <ul class="account-list">
-      {#each $accounts as account (account.pubkey)}
+      <!-- 登録簿の一意キーは pubkey + credentialId。pubkey だけをキーにすると、
+           同一 nsec を 2 つのパスキーでインポートしたときに duplicate key で
+           一覧ごと描画に失敗する。 -->
+      {#each $accounts as account (`${account.pubkey} ${account.credentialId}`)}
         <li class="account-item" animate:flip={{ duration: 200 }} out:slide={{ duration: 200 }}>
           <div class="account-row">
             <button

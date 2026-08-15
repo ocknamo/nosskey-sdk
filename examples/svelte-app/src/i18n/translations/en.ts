@@ -47,6 +47,12 @@ export const en: TranslationData = {
       'Enter your existing Nostr private key (nsec1...). It will be encrypted with your passkey and stored locally; signing and encryption operations work transparently via the passkey.',
     importNsec: 'Import',
     invalidNsec: 'Invalid nsec format. Please enter a bech32 string starting with "nsec1...".',
+    noKeyInfoTitle: 'No key info found on this device',
+    noKeyInfoDescription:
+      'No key info linked to this passkey is stored on this device. To sign in to an account you used before, restore it from your backed-up key info. Deriving a key from the passkey signs you in to a different account than an imported key.',
+    deriveFromPasskey: 'Derive a key from this passkey and sign in',
+    multipleAccountsForPasskey:
+      'This passkey is linked to several accounts. Pick one from "Saved accounts" above.',
     accounts: {
       title: 'Saved accounts',
       relogin: 'Re-login to this account',

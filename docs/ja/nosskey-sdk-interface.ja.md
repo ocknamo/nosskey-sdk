@@ -187,6 +187,18 @@ removeKeyInfo(pubkey: string, credentialId: string): void
 backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null
 ```
 
+#### findKeyInfosByCredentialId()
+指定 credentialId に紐づく保存済み NostrKeyInfo をディープコピーで返します。登録簿と
+current スロットの和集合から探し（`registryEnabled: false` でも current 鍵は引けます）、
+`pubkey + credentialId` で重複を除きます。credentialId の比較は大文字小文字を無視します。
+
+同一 credentialId で複数返るのは、同じパスキーで複数の鍵を作った場合（例: wrap インポート後に
+直接モードの鍵も作った）です。どれでログインするかは呼び出し側でユーザーに選ばせてください。
+
+```typescript
+findKeyInfosByCredentialId(credentialId: string): NostrKeyInfo[]
+```
+
 ### パスキー関連メソッド
 
 #### isPrfSupported()
@@ -205,6 +217,34 @@ async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 
 作成時に標準 salt と wrap salt の PRF を 1 回の UV で同時取得し、直後の `createNostrKey()` / `importNostrKey()` が消費するまで SDK 内部にキャッシュします。未消費のまま放置されたキャッシュは TTL（60 秒）経過で自動ゼロ化されるほか、`clearCurrentKeyInfo()`（ログアウト）/ `clearStoredKeyInfo()`（完全ワイプ）でも即時破棄されます（アプリ側での管理は不要）。
 
+#### loginWithPasskey()
+パスキーで**保存済み鍵を復元**します（ログイン）。WebAuthn の assertion を 1 回だけ実行し、
+返ってきた credentialId に紐づく保存済み NostrKeyInfo を探します。該当が無い場合に鍵を
+新規生成することは**しません**。
+
+```typescript
+async loginWithPasskey(): Promise<PasskeyLoginResult>
+
+type PasskeyLoginResult =
+  | { status: 'restored'; keyInfo: NostrKeyInfo }
+  | { status: 'ambiguous'; credentialId: string; candidates: NostrKeyInfo[] }
+  | { status: 'unknown'; credentialId: string };
+```
+
+- `restored`: 保存済みエントリが 1 件見つかった。そのまま `setCurrentKeyInfo()` に渡せます。
+- `ambiguous`: 同一 credentialId に複数アカウントが紐づいている。ユーザーに選ばせてください。
+- `unknown`: この端末に鍵情報が無い。**ユーザーに確認したうえで** `createNostrKey(hexToBytes(credentialId))`
+  を呼べば PRF 直接モードの鍵を導出できます。assertion で得た PRF が SDK 内部に退避されているため
+  追加の UV は不要です（TTL 60 秒。超過時は自動で再 assertion にフォールバックします）。
+
+UV の回数:
+- 直接モードの鍵が見つかった場合、assertion で得た PRF はその鍵の秘密鍵そのものなので、
+  保存済み `pubkey` と照合したうえで派生キャッシュに載せます（キャッシュ有効時は初回署名で UV を再要求しません）。
+- wrap モードの鍵は salt が異なるためこの PRF は使えず、秘密鍵は初回署名時に改めて導出されます。
+
+例外: 直接モードのエントリで「PRF から導出した pubkey ≠ 保存済み pubkey」の場合は throw します
+（保存値は改ざん可能な平文ストレージにあるため、多層防御として不一致を弾きます）。
+
 #### createNostrKey()
 PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを作成します（PRF 直接モード）。
 
@@ -214,6 +254,12 @@ async createNostrKey(
   options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
+
+> ⚠️ **これは鍵の新規生成であり、ログイン（保存済み鍵の復元）ではありません。** 既存アカウントへの
+> ログインには `loginWithPasskey()` を使ってください。wrap モード（`importNostrKey()` でインポートした
+> nsec）のパスキーに対して本メソッドを呼ぶと、wrap salt ではなく標準 salt で導出するため**必ず別の
+> pubkey が生成され**、インポートした鍵には戻れません。失敗せずに「正しく見える別アカウント」が
+> 成立してしまうため、ログイン導線でこれを呼ぶことは避けてください。
 
 #### importNostrKey()
 既存の Nostr 秘密鍵（nsec の 32 バイト生バイト）を PRF 由来 KEK で NIP-44 v2 暗号化して `NostrKeyInfo` を作成します（wrap モード）。NIP-44 v2 自己宛 DM パターン（`ourSk = KEK` / `peerPk = KEK·G`）で暗号化された payload が `NostrKeyInfo.wrapped.payload` に格納されます。

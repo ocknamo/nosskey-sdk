@@ -58,6 +58,10 @@ export interface TranslationData {
     nsecTip: string;
     importNsec: string;
     invalidNsec: string;
+    noKeyInfoTitle: string;
+    noKeyInfoDescription: string;
+    deriveFromPasskey: string;
+    multipleAccountsForPasskey: string;
     accounts: {
       title: string;
       relogin: string;

@@ -15,6 +15,10 @@ export const simpleEn: DeepPartial<TranslationData> = {
     nsecTip:
       'Enter the recovery key (a string starting with nsec1...) from another Nostr app to use that account here. The key is encrypted with your passkey and stored safely.',
     invalidNsec: 'Invalid recovery key. Please enter a string starting with "nsec1...".',
+    noKeyInfoTitle: 'No account info found on this device',
+    noKeyInfoDescription:
+      'No account info linked to this passkey is left on this device. To get back into an account you used before, restore it from your backed-up account info. Restoring from the passkey gives you a different account than one brought over with a recovery key.',
+    deriveFromPasskey: 'Restore an account from this passkey',
   },
   nostr: {
     publicKey: 'User ID',
