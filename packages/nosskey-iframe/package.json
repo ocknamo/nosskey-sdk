@@ -63,6 +63,6 @@
   },
   "devDependencies": {
     "nosskey-sdk": "*",
-    "happy-dom": "^20.9.0"
+    "happy-dom": "^20.11.2"
   }
 }
