@@ -44,10 +44,10 @@
     "prepublishOnly": "npm run copy-docs && npm run build"
   },
   "dependencies": {
-    "@noble/ciphers": "^2.2.0",
-    "@noble/curves": "^2.2.0",
+    "@noble/ciphers": "^2.3.0",
+    "@noble/curves": "^2.3.0",
     "@noble/hashes": "^2.2.0",
     "@rx-nostr/crypto": "^3.1.6",
-    "rx-nostr": "^3.6.1"
+    "rx-nostr": "^3.7.5"
   }
 }
