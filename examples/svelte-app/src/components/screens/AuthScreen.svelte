@@ -23,6 +23,9 @@ let activeTab = $state<AuthTab>(appState.hasLoggedInBefore() ? 'login' : 'regist
 let creationMethod = $state<CreationMethod>('new');
 let nsecInput = $state('');
 let nsecError = $state('');
+// ログイン時に鍵情報が見つからなかったパスキーの credentialId（hex）。
+// 空文字なら注意カード非表示。二次導線の導出ログインで使う。
+let unknownCredentialId = $state('');
 
 const keyManager = getNosskeyManager();
 
@@ -138,15 +141,53 @@ async function importExisting() {
 async function login() {
   isLoading = true;
   errorMessage = '';
+  unknownCredentialId = '';
 
   try {
-    // ログインタブ: credentialId を渡さず、ユーザーに既存パスキーを選択させて get()/PRF で
-    // 鍵を導出する（resident key 前提）。新規作成は createNew() に統合済み。
-    const keyInfo = await keyManager.createNostrKey();
+    // ログインタブ: ユーザーに既存パスキーを選択させ（resident key 前提）、返ってきた
+    // credentialId に紐づく保存済み鍵を復元する。ここで createNostrKey() を呼ぶと
+    // 「保存済み鍵の復元」ではなく「PRF 直接モードの鍵生成」になり、wrap モード
+    // （nsec インポート）のパスキーでは必ず別 pubkey になってしまう。
+    const result = await keyManager.loginWithPasskey();
 
-    await appState.loginWith(keyInfo);
+    if (result.status === 'restored') {
+      await appState.loginWith(result.keyInfo);
+      return;
+    }
+    if (result.status === 'ambiguous') {
+      errorMessage = $i18n.t.auth.multipleAccountsForPasskey;
+      return;
+    }
+    // 該当なし: 黙って新しい鍵を作らず、導出ログインは二次導線としてユーザーに委ねる。
+    unknownCredentialId = result.credentialId;
   } catch (error) {
     console.error('ログインエラー:', error);
+    errorMessage = formatAuthError(
+      $i18n.t.common.errorMessages.login,
+      $i18n.t.common.errorMessages.prfUnsupported,
+      error
+    );
+  } finally {
+    isLoading = false;
+  }
+}
+
+/**
+ * 鍵情報が見つからなかったときの二次導線。直前の assertion で得た PRF が SDK 内部に
+ * 退避されているため、通常は追加の UV なしで導出できる（TTL 超過時のみ再認証）。
+ */
+async function deriveFromPasskey() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    const keyInfo = await keyManager.createNostrKey(hexToBytes(unknownCredentialId));
+
+    await appState.loginWith(keyInfo);
+    // 成功後にだけ畳む。loginWith が失敗した場合はカードを残し、その場で再試行できるようにする。
+    unknownCredentialId = '';
+  } catch (error) {
+    console.error('パスキーからの鍵導出エラー:', error);
     errorMessage = formatAuthError(
       $i18n.t.common.errorMessages.login,
       $i18n.t.common.errorMessages.prfUnsupported,
@@ -160,6 +201,7 @@ async function login() {
 function selectTab(tab: AuthTab) {
   activeTab = tab;
   errorMessage = '';
+  unknownCredentialId = '';
   // タブ切替でも入力途中の nsec を state/DOM に残さない（「戻る」経路と同じ破棄方針）。
   showNew();
 }
@@ -219,6 +261,26 @@ $effect(() => {
         <Button onclick={() => login()} disabled={isLoading} size="large">
           {$i18n.t.auth.loginWith}
         </Button>
+
+        {#if unknownCredentialId}
+          <div class="no-key-notice" role="alert">
+            <div class="no-key-title">
+              <span class="error-icon" aria-hidden="true">⚠️</span>
+              {$i18n.t.auth.noKeyInfoTitle}
+            </div>
+            <p class="no-key-description">{$i18n.t.auth.noKeyInfoDescription}</p>
+            <div class="method-link-row">
+              <button
+                type="button"
+                class="method-link"
+                onclick={deriveFromPasskey}
+                disabled={isLoading}
+              >
+                {$i18n.t.auth.deriveFromPasskey}
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
     {:else}
       <div class="tab-panel">
@@ -385,6 +447,33 @@ $effect(() => {
   .method-link-row {
     margin-top: 16px;
     text-align: center;
+  }
+
+  /* 鍵情報が見つからなかったときの注意カード。導出ログインは事故（別アカウント生成）を
+     招きうるため、主ボタンより一段控えめな見た目にして意図的な操作にとどめる。 */
+  .no-key-notice {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    text-align: left;
+  }
+
+  .no-key-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .no-key-description {
+    margin: 8px 0 0 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
   }
 
   .method-link {

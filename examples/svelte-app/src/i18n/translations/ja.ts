@@ -47,6 +47,12 @@ export const ja: TranslationData = {
       '既存の Nostr 秘密鍵 (nsec1...) を入力。パスキーで暗号化保存され、署名・暗号化は透過的に動作します。',
     importNsec: 'インポート',
     invalidNsec: '無効な nsec 形式です。"nsec1..." で始まる bech32 文字列を入力してください。',
+    noKeyInfoTitle: 'この端末に鍵情報が見つかりませんでした',
+    noKeyInfoDescription:
+      'このパスキーに紐づく鍵情報がこの端末に保存されていません。以前使っていたアカウントで入る場合は、バックアップした鍵情報から復元してください。パスキーから鍵を導出してログインすると、インポート済みの鍵とは別のアカウントになります。',
+    deriveFromPasskey: 'パスキーから鍵を導出してログイン',
+    multipleAccountsForPasskey:
+      'このパスキーには複数のアカウントが紐づいています。上の「保存済みアカウント」から選択してください。',
     accounts: {
       title: '保存済みアカウント',
       relogin: 'このアカウントで再ログイン',

@@ -191,6 +191,20 @@ returned value does not affect internal state.
 backupKeyInfo(pubkey?: string, credentialId?: string): NostrKeyInfo | null
 ```
 
+#### findKeyInfosByCredentialId()
+Returns deep copies of the stored NostrKeyInfos linked to the given credential ID. It
+searches the union of the registry and the current slot (so the current key is still
+found with `registryEnabled: false`) and de-duplicates by `pubkey + credentialId`. The
+credential ID comparison is case-insensitive.
+
+More than one entry is returned when several keys were created with the same passkey
+(e.g. a direct-mode key created after a wrap import). Let the user pick which one to
+sign in with.
+
+```typescript
+findKeyInfosByCredentialId(credentialId: string): NostrKeyInfo[]
+```
+
 ### Passkey Related Methods
 
 #### isPrfSupported()
@@ -209,6 +223,42 @@ async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 
 During creation it evaluates the standard-salt and wrap-salt PRFs with a single UV and caches them inside the SDK until the subsequent `createNostrKey()` / `importNostrKey()` consumes them. A cache left unconsumed is automatically zeroized after a TTL (60 seconds), and is also discarded immediately by `clearCurrentKeyInfo()` (logout) / `clearStoredKeyInfo()` (full wipe) — no application-side management is required.
 
+#### loginWithPasskey()
+**Restores a stored key** with a passkey (sign-in). It runs a single WebAuthn assertion
+and looks up the stored NostrKeyInfo linked to the returned credential ID. It does
+**not** generate a new key when there is no match.
+
+```typescript
+async loginWithPasskey(): Promise<PasskeyLoginResult>
+
+type PasskeyLoginResult =
+  | { status: 'restored'; keyInfo: NostrKeyInfo }
+  | { status: 'ambiguous'; credentialId: string; candidates: NostrKeyInfo[] }
+  | { status: 'unknown'; credentialId: string };
+```
+
+- `restored`: exactly one stored entry was found; pass it straight to `setCurrentKeyInfo()`.
+- `ambiguous`: several accounts are linked to this credential ID; let the user pick one.
+- `unknown`: no key info on this device. **After confirming with the user**, calling
+  `createNostrKey(hexToBytes(credentialId))` derives a PRF direct-mode key with no extra
+  UV, because the PRF from the assertion is stashed inside the SDK (60-second TTL; after
+  that it falls back to a fresh assertion automatically).
+
+UV count:
+- For a direct-mode match, the PRF from the assertion *is* that key's secret key, so it is
+  checked against the stored `pubkey` and then placed in the derived-key cache (with the
+  cache enabled, the first signature does not ask for UV again).
+- A wrap-mode key uses a different salt, so that PRF cannot be reused; the secret key is
+  derived again on the first signature.
+
+Throws when a direct-mode entry's stored `pubkey` does not match the pubkey derived from
+the PRF (defense in depth — stored values live in tamperable plaintext storage).
+
+Note that the derived-key cache is bound to `pubkey` as well as `credentialId`. Creating
+several keys with one passkey (wrap mode and direct mode, say) makes credential IDs
+collide, and without that binding a signature would be made with another account's secret
+key while a different public key is displayed.
+
 #### createNostrKey()
 Creates NostrKeyInfo using PRF value directly as Nostr secret key (PRF direct mode).
 
@@ -218,6 +268,13 @@ async createNostrKey(
   options?: KeyOptions
 ): Promise<NostrKeyInfo>
 ```
+
+> ⚠️ **This generates a new key; it is not a sign-in (restore).** Use `loginWithPasskey()`
+> to sign in to an existing account. Calling this method against a wrap-mode passkey (an
+> nsec imported with `importNostrKey()`) derives with the standard salt instead of the wrap
+> salt, so it **always produces a different pubkey** and cannot get back to the imported
+> key. It does not fail — it silently yields a valid-looking different account — so never
+> use it as the sign-in path.
 
 #### importNostrKey()
 Imports an existing Nostr private key (32-byte raw nsec) and stores it encrypted by a PRF-derived KEK using NIP-44 v2 (wrap mode). The encrypted payload is produced by the self-DM pattern (`ourSk = KEK`, `peerPk = KEK·G`) and saved in `NostrKeyInfo.wrapped.payload`.

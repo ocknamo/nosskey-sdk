@@ -38,6 +38,34 @@ export interface NostrKeyInfo {
 }
 
 /**
+ * `NosskeyManager.loginWithPasskey()` の結果。
+ *
+ * ログインは「パスキーで assertion を取り、その credentialId に紐づく保存済み
+ * NostrKeyInfo を復元する」操作であり、鍵の新規生成とは区別される。該当が無い
+ * ケースを `unknown` として明示的に返すことで、呼び出し側が黙って別アイデンティティ
+ * を作ってしまうことを防ぐ（wrap モードのパスキーに対して直接モードの導出を行うと
+ * 必ず別 pubkey になるため、これはサイレントに起きると事故になる）。
+ */
+export type PasskeyLoginResult =
+  /** 保存済みの鍵情報が 1 件見つかり、それで復元できる。 */
+  | { status: 'restored'; keyInfo: NostrKeyInfo }
+  /**
+   * 同一 credentialId に複数のアカウントが紐づいている。呼び出し側で
+   * ユーザーに選択させること（`candidates` はディープコピー）。
+   */
+  | { status: 'ambiguous'; credentialId: string; candidates: NostrKeyInfo[] }
+  /**
+   * この端末に該当する鍵情報が無い。呼び出し側がユーザーに確認したうえで
+   * `createNostrKey(credentialId)` を呼べば、追加の UV なしに PRF 直接モードの
+   * 鍵を導出できる（assertion で得た PRF が内部キャッシュに退避されている。
+   * TTL は 60 秒で、経過後は自動ゼロ化され、次回は再 assertion になる）。
+   *
+   * 導出せずに放置した場合も PRF は TTL 経過でゼロ化されるが、それまでは秘密値が
+   * メモリに残る。即時破棄したい場合は `clearCurrentKeyInfo()` を呼ぶこと。
+   */
+  | { status: 'unknown'; credentialId: string };
+
+/**
  * パスキー作成用オプション
  */
 export interface PasskeyCreationOptions {
