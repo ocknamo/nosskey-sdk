@@ -38,8 +38,8 @@
           The current session state inside the iframe is reset.
         </p>
         <div class="row">
-          <button id="connect">Connect</button>
-          <button id="disconnect" class="secondary" disabled>Disconnect</button>
+          <button type="button" id="connect">Connect</button>
+          <button type="button" id="disconnect" class="secondary" disabled>Disconnect</button>
           <span id="status" class="status">disconnected</span>
         </div>
       </section>
@@ -47,14 +47,14 @@
       <section>
         <h2>2. Get public key</h2>
         <div class="row">
-          <button id="get-pubkey" disabled>Call window.nostr.getPublicKey()</button>
+          <button type="button" id="get-pubkey" disabled>Call window.nostr.getPublicKey()</button>
         </div>
       </section>
 
       <section>
         <h2>3. Get relays</h2>
         <div class="row">
-          <button id="get-relays" disabled>Call window.nostr.getRelays()</button>
+          <button type="button" id="get-relays" disabled>Call window.nostr.getRelays()</button>
         </div>
         <pre id="relays-output">No relays fetched yet.</pre>
       </section>
@@ -68,7 +68,7 @@
         >
         <input id="relay-url" type="url" value="wss://relay.damus.io" />
         <div class="row">
-          <button id="sign-publish" disabled>Sign &amp; publish</button>
+          <button type="button" id="sign-publish" disabled>Sign &amp; publish</button>
         </div>
       </section>
 
@@ -83,13 +83,13 @@
         <label for="nip44-peer">Peer public key (hex or npub)</label>
         <div class="row">
           <input id="nip44-peer" type="text" placeholder="64 hex characters or npub1…" />
-          <button id="nip44-use-self" class="secondary" disabled>Use my pubkey</button>
+          <button type="button" id="nip44-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip44-plaintext" style="margin-top:12px;">Plaintext</label>
         <textarea id="nip44-plaintext">hello, NIP-44 🌸</textarea>
         <div class="row">
-          <button id="nip44-encrypt" disabled>Encrypt → ciphertext</button>
-          <button id="nip44-decrypt" disabled>Decrypt → plaintext</button>
+          <button type="button" id="nip44-encrypt" disabled>Encrypt → ciphertext</button>
+          <button type="button" id="nip44-decrypt" disabled>Decrypt → plaintext</button>
         </div>
         <label for="nip44-ciphertext" style="margin-top:12px;">Ciphertext (base64)</label>
         <textarea id="nip44-ciphertext" placeholder="paste a NIP-44 v2 payload here, or click Encrypt above"></textarea>
@@ -107,13 +107,13 @@
         <label for="nip04-peer">Peer public key (hex or npub)</label>
         <div class="row">
           <input id="nip04-peer" type="text" placeholder="64 hex characters or npub1…" />
-          <button id="nip04-use-self" class="secondary" disabled>Use my pubkey</button>
+          <button type="button" id="nip04-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip04-plaintext" style="margin-top:12px;">Plaintext</label>
         <textarea id="nip04-plaintext">hello, NIP-04 (legacy)</textarea>
         <div class="row">
-          <button id="nip04-encrypt" disabled>Encrypt → ciphertext</button>
-          <button id="nip04-decrypt" disabled>Decrypt → plaintext</button>
+          <button type="button" id="nip04-encrypt" disabled>Encrypt → ciphertext</button>
+          <button type="button" id="nip04-decrypt" disabled>Decrypt → plaintext</button>
         </div>
         <label for="nip04-ciphertext" style="margin-top:12px;">Ciphertext (base64?iv=base64)</label>
         <textarea id="nip04-ciphertext" placeholder="paste a NIP-04 payload here, or click Encrypt above"></textarea>
@@ -127,7 +127,7 @@
           (falling back to the Relay URL in section 4).
         </p>
         <div class="row">
-          <button id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
+          <button type="button" id="nip04-send-dm" disabled>Send DM (kind:4 → relay)</button>
         </div>
       </section>
 
@@ -145,12 +145,12 @@
         <label for="nip17-peer">Peer public key (hex or npub)</label>
         <div class="row">
           <input id="nip17-peer" type="text" placeholder="64 hex characters or npub1…" />
-          <button id="nip17-use-self" class="secondary" disabled>Use my pubkey</button>
+          <button type="button" id="nip17-use-self" class="secondary" disabled>Use my pubkey</button>
         </div>
         <label for="nip17-plaintext" style="margin-top:12px;">Message</label>
         <textarea id="nip17-plaintext">hello, NIP-17 🎁</textarea>
         <div class="row">
-          <button id="nip17-send-dm" disabled>Send NIP-17 DM (kind:1059 → relay)</button>
+          <button type="button" id="nip17-send-dm" disabled>Send NIP-17 DM (kind:1059 → relay)</button>
         </div>
       </section>
 

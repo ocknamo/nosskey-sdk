@@ -3,9 +3,9 @@ import CopyIcon from '../../assets/copy-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { serializeKeyInfoForExport } from '../../utils/key-info-export.js';
-import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 // KeyInfoエクスポート関連の状態変数
 let showExportSection = $state(false);

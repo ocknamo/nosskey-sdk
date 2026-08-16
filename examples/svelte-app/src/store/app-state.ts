@@ -1,13 +1,13 @@
 import type { NostrKeyInfo } from 'nosskey-sdk';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager, resolveStorageHandle } from '../services/nosskey-manager.service.js';
-import { type ThemeMode, normalizeThemeMode } from '../theme/palettes.js';
+import { normalizeThemeMode, type ThemeMode } from '../theme/palettes.js';
 import { refreshAccounts } from './accounts.js';
 import {
-  DEFAULT_CACHE_TTL_SECONDS,
   cacheSecrets,
   cacheTimeout,
   clampCacheTimeout,
+  DEFAULT_CACHE_TTL_SECONDS,
 } from './secret-cache-settings.js';
 
 export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';

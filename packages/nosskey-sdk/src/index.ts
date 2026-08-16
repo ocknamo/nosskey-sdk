@@ -3,20 +3,10 @@
  * @packageDocumentation
  */
 
-// 型定義のエクスポート
-export * from './types.js';
-
-// クラスとユーティリティのエクスポート
-export { NosskeyManager } from './nosskey.js';
-
 // 登録簿（マルチアカウント）関連の公開ヘルパー。
 // isNostrKeyInfo は保存値が NostrKeyInfo の形をしているかの防御的チェックで、
 // ファイル/ストレージからのインポート時の検証に使える。
-export { isNostrKeyInfo, DEFAULT_REGISTRY_STORAGE_KEY } from './key-registry.js';
-
-// ユーティリティのエクスポート
-export { bytesToHex, hexToBytes, hexToBytesStrict } from './utils.js';
-
+export { DEFAULT_REGISTRY_STORAGE_KEY, isNostrKeyInfo } from './key-registry.js';
 // NIP-44 低レベル関数のエクスポート。
 // nip44Encrypt/Decrypt は ephemeral 秘密鍵での暗号化 (NIP-17 gift-wrap など、
 // 例: examples/parent-sample/src/nip17.ts) に必要。登録鍵専用の
@@ -26,10 +16,14 @@ export { bytesToHex, hexToBytes, hexToBytesStrict } from './utils.js';
 // nip04Encrypt/Decrypt メソッドで提供されるため公開しない。
 // getConversationKey / getMessageKeys 等のプリミティブは鍵/nonce 再利用の
 // 足場になりうるため意図的に非公開。
-export { nip44Encrypt, nip44Decrypt } from './nip44.js';
-
+export { nip44Decrypt, nip44Encrypt } from './nip44.js';
+// クラスとユーティリティのエクスポート
+export { NosskeyManager } from './nosskey.js';
 // PRFハンドラーのエクスポート
 export { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
-
 // テスト用ユーティリティのエクスポート
 export { registerDummyPasskey } from './test-utils.js';
+// 型定義のエクスポート
+export * from './types.js';
+// ユーティリティのエクスポート
+export { bytesToHex, hexToBytes, hexToBytesStrict } from './utils.js';

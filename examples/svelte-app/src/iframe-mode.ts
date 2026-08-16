@@ -1,5 +1,5 @@
 import type { ConsentRequest, NosskeyIframeHostOptions } from 'nosskey-iframe';
-import { NosskeyIframeHost, isDecryptMethod } from 'nosskey-iframe';
+import { isDecryptMethod, NosskeyIframeHost } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';

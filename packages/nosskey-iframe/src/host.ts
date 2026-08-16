@@ -5,6 +5,7 @@
  * @packageDocumentation
  */
 import {
+  isNosskeyRequest,
   type NosskeyErrorCode,
   type NosskeyMethod,
   type NosskeyReady,
@@ -12,7 +13,6 @@ import {
   type NosskeyResponse,
   type NosskeyVisibility,
   type RelayMap,
-  isNosskeyRequest,
 } from './protocol.js';
 import type { NosskeyManagerLike, NostrEvent } from './types.js';
 

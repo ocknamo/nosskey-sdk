@@ -15,10 +15,10 @@ import {
   trustedOrigins,
 } from './app-state.js';
 import {
-  MAX_CACHE_TTL_SECONDS,
-  MIN_CACHE_TTL_SECONDS,
   cacheSecrets,
   cacheTimeout,
+  MAX_CACHE_TTL_SECONDS,
+  MIN_CACHE_TTL_SECONDS,
 } from './secret-cache-settings.js';
 
 /** Map-backed in-memory Storage stand-in for a first-party storage handle. */

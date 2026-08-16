@@ -3,21 +3,10 @@
  * @packageDocumentation
  */
 
-export { NosskeyIframeClient, NosskeyIframeError } from './client.js';
 export type { NosskeyIframeClientOptions } from './client.js';
-export { NosskeyIframeHost } from './host.js';
+export { NosskeyIframeClient, NosskeyIframeError } from './client.js';
 export type { ConsentRequest, NosskeyIframeHostOptions, RateLimitOptions } from './host.js';
-export {
-  CONSENT_REQUIRED_METHODS,
-  NOSSKEY_ERROR_CODES,
-  isConnectMethod,
-  isDecryptMethod,
-  isEncryptMethod,
-  isNosskeyReady,
-  isNosskeyRequest,
-  isNosskeyResponse,
-  isNosskeyVisibility,
-} from './protocol.js';
+export { NosskeyIframeHost } from './host.js';
 export type {
   NosskeyErrorCode,
   NosskeyMessage,
@@ -28,5 +17,16 @@ export type {
   NosskeyResponse,
   NosskeyVisibility,
   RelayMap,
+} from './protocol.js';
+export {
+  CONSENT_REQUIRED_METHODS,
+  isConnectMethod,
+  isDecryptMethod,
+  isEncryptMethod,
+  isNosskeyReady,
+  isNosskeyRequest,
+  isNosskeyResponse,
+  isNosskeyVisibility,
+  NOSSKEY_ERROR_CODES,
 } from './protocol.js';
 export type { NosskeyManagerLike, NostrEvent } from './types.js';

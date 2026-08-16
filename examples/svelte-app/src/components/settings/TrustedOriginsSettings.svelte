@@ -2,8 +2,8 @@
 import DeleteIcon from '../../assets/delete-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { type PolicyKey, trustedOrigins } from '../../store/app-state.js';
-import CardSection from '../ui/CardSection.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 function removeMethod(origin: string, method: PolicyKey) {
   if (!confirm($i18n.t.settings.trustedOrigins.confirmRemove)) return;

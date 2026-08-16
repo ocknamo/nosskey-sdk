@@ -3,17 +3,17 @@ import { i18n } from '../../i18n/i18n-store.js';
 import {
   type ConsentDecision,
   type ConsentPolicy,
-  POLICY_KEYS,
-  type PolicyKey,
   consentPolicy,
   denyCounts,
+  POLICY_KEYS,
+  type PolicyKey,
   resetDenyCounts,
   storageCorruption,
 } from '../../store/app-state.js';
+import Button from '../ui/button/Button.svelte';
 import CardSection from '../ui/CardSection.svelte';
 import HelpTip from '../ui/HelpTip.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
-import Button from '../ui/button/Button.svelte';
 
 const OPTIONS: ConsentDecision[] = ['ask', 'always', 'deny'];
 

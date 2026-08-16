@@ -2,8 +2,8 @@ import { NosskeyIframeError } from 'nosskey-iframe';
 import type { NostrEvent } from 'nosskey-sdk';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  type NostrProvider,
   formatError,
+  type NostrProvider,
   nip04Decrypt,
   nip04Encrypt,
   nip04SendDm,

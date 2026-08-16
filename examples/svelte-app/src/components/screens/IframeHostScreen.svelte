@@ -20,9 +20,9 @@ type ActionVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning';
 type StorageAccessHandle = {
   localStorage: Storage;
 };
-type RequestStorageAccessFn = (options?: { all?: boolean }) => Promise<
-  StorageAccessHandle | undefined
->;
+type RequestStorageAccessFn = (options?: {
+  all?: boolean;
+}) => Promise<StorageAccessHandle | undefined>;
 
 let stopHost: (() => void) | null = null;
 let uiState: UiState = $state('running');

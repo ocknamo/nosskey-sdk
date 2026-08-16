@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeClient } from './client.js';
-import { createHarness } from './client.test-helpers.js';
 import type { Harness } from './client.test-helpers.js';
+import { createHarness } from './client.test-helpers.js';
 
 describe('NosskeyIframeClient', () => {
   let harness: Harness;

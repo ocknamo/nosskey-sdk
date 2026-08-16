@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeClient, NosskeyIframeError } from './client.js';
-import { createHarness } from './client.test-helpers.js';
 import type { Harness } from './client.test-helpers.js';
+import { createHarness } from './client.test-helpers.js';
 import type { NostrEvent } from './types.js';
 
 describe('NosskeyIframeClient', () => {

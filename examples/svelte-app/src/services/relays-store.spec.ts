@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_RELAY_URLS, RELAYS_STORAGE_KEY, loadRelays, saveRelays } from './relays-store.js';
+import { DEFAULT_RELAY_URLS, loadRelays, RELAYS_STORAGE_KEY, saveRelays } from './relays-store.js';
 
 const sortedDefaults = [...DEFAULT_RELAY_URLS].sort();
 

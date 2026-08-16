@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type ResolvedTheme,
-  THEME_PALETTES,
   normalizeThemeMode,
+  type ResolvedTheme,
   resolveTheme,
+  THEME_PALETTES,
 } from './palettes.js';
 
 describe('normalizeThemeMode', () => {

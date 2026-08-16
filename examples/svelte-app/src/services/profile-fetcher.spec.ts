@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { OTHER_SK, TEST_PUBKEY, TEST_SK, buildSignedKind0 } from './kind0-test-utils.js';
+import { buildSignedKind0, OTHER_SK, TEST_PUBKEY, TEST_SK } from './kind0-test-utils.js';
 import { fetchKind0Profile } from './profile-fetcher.js';
 
 /**

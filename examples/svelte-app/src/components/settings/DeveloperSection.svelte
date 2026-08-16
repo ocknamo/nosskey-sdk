@@ -1,9 +1,9 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
-import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import ToggleButton from '../ui/button/ToggleButton.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 let isLoading = $state(false);
 let errorMessage = $state('');

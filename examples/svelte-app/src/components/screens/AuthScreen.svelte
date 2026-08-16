@@ -8,9 +8,9 @@ import * as appState from '../../store/app-state.js';
 import { formatAuthError } from '../../utils/auth-error.js';
 import { isValidNsec, nsecToHex } from '../../utils/bech32-converter.js';
 import SavedAccounts from '../SavedAccounts.svelte';
-import HelpTip from '../ui/HelpTip.svelte';
 import Button from '../ui/button/Button.svelte';
 import TabButton from '../ui/button/TabButton.svelte';
+import HelpTip from '../ui/HelpTip.svelte';
 
 type AuthTab = 'login' | 'register';
 type CreationMethod = 'new' | 'import';

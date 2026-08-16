@@ -1,4 +1,4 @@
-import { type NostrKeyInfo, isNostrKeyInfo } from 'nosskey-sdk';
+import { isNostrKeyInfo, type NostrKeyInfo } from 'nosskey-sdk';
 import { writable } from 'svelte/store';
 import { peekNosskeyManager } from '../services/nosskey-manager.service.js';
 

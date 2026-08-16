@@ -2,9 +2,9 @@ import type { NostrEvent } from 'nosskey-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_PUBLISH_ACK_TIMEOUT_MS,
-  type RelayMap,
   publishEvent,
   publishToRelays,
+  type RelayMap,
   resolvePublishRelays,
 } from './relay.js';
 

@@ -1,6 +1,6 @@
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { type NostrEvent, bytesToHex, hexToBytes, nip44Decrypt, nip44Encrypt } from 'nosskey-sdk';
+import { bytesToHex, hexToBytes, type NostrEvent, nip44Decrypt, nip44Encrypt } from 'nosskey-sdk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildRumor, jitteredTimestamp, sendNip17Dm, signEphemeralEvent } from './nip17.js';
 

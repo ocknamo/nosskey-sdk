@@ -1,9 +1,9 @@
 <script lang="ts">
 import {
-  type NosskeyMethod,
   isConnectMethod,
   isDecryptMethod,
   isEncryptMethod,
+  type NosskeyMethod,
 } from 'nosskey-iframe';
 import { i18n } from '../i18n/i18n-store.js';
 import { approveConsent, pendingConsent, rejectConsent } from '../iframe-mode.js';

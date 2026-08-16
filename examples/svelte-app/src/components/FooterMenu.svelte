@@ -3,7 +3,7 @@ import AccountIcon from '../assets/account-icon.svg';
 import KeyIcon from '../assets/key-icon.svg';
 import SettingIcon from '../assets/setting-icon.svg';
 import { i18n } from '../i18n/i18n-store.js';
-import { type ScreenName, currentScreen } from '../store/app-state.js';
+import { currentScreen, type ScreenName } from '../store/app-state.js';
 import NavButton from './ui/button/NavButton.svelte';
 
 // 現在の画面

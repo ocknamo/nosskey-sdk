@@ -2,8 +2,8 @@
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { currentScreen, logout } from '../../store/app-state.js';
-import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 // 状態変数
 let clearResult = $state('');
