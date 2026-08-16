@@ -28,8 +28,11 @@ let nsecError = $state('');
 let unknownCredentialId = $state('');
 // パスキーは作成できたが create 時に PRF が返らず、鍵の作成を 2 タップ目に委ねている
 // 状態の credentialId（hex）。空文字なら通常の 1 タップ経路。
-// 永続化しない（リロードで消える）。中断した場合の救済はログインタブの
-// 「パスキーから鍵を導出」導線が担う。
+// 永続化しない（リロードで消える）。中断すると鍵情報なしのパスキーだけが残るが、
+// WebAuthn に削除 API は無いので回収はできない。
+// 救済導線: 新規作成の中断はログインタブの「パスキーから鍵を導出」で同じ鍵に戻せる。
+// 一方 nsec インポートの中断に救済は無い（deriveFromPasskey は標準 salt の直接モード
+// なので、インポートしたかった nsec とは別 pubkey になる）。もう一度インポートし直す。
 let pendingCredentialId = $state('');
 
 const keyManager = getNosskeyManager();
@@ -63,6 +66,13 @@ async function initialize() {
  * 要求するため NotAllowedError で落ち、「パスキーだけ作られて鍵情報が保存されない」
  * ＝ 以後ログインできない状態になる。よって false のときはここで一旦止め、
  * 2 タップ目のジェスチャ内で鍵の作成を行う。
+ *
+ * 既知のトレードオフ: create 時に PRF を返さない実装は WebKit だけではない
+ * （Chrome/Edge 146 以前 + Windows Hello、Firefox 146 以前など）。それらは
+ * ジェスチャ失効後の get() でも認証ダイアログが出るため本来 1 タップで済むが、
+ * ここでは一律 2 タップに倒している。「まず 1 タップを試し NotAllowedError を
+ * 捕まえてから 2 タップへ倒す」ハイブリッドも可能だが、NotAllowedError は
+ * ユーザーによるキャンセルとも区別できないため採用していない。
  */
 async function createPasskeyStep(mode: 'standard' | 'wrap') {
   const credentialId = await keyManager.createPasskey({
@@ -74,19 +84,33 @@ async function createPasskeyStep(mode: 'standard' | 'wrap') {
   return { credentialId, pendingPrf: keyManager.hasPendingPrf(credentialId, mode) };
 }
 
-function handleCreateError(error: unknown) {
-  console.error('パスキー作成エラー:', error);
+/**
+ * 新規作成経路のエラーをユーザー向け文言にして表示する。
+ * `resumed` は 2 タップ目かどうか。2 タップ目時点ではパスキーは既に作成済みで、
+ * 失敗しているのは鍵の導出なので「パスキー作成エラー」と出すと誤誘導になる
+ * （ユーザーが最初からやり直して孤児パスキーを増やす）。
+ */
+function handleCreateError(error: unknown, resumed = false) {
+  console.error(resumed ? '鍵作成（2 タップ目）エラー:' : 'パスキー作成エラー:', error);
   errorMessage = formatAuthError(
-    $i18n.t.common.errorMessages.passkeyCreation,
+    resumed
+      ? $i18n.t.common.errorMessages.secondTapFailed
+      : $i18n.t.common.errorMessages.passkeyCreation,
     $i18n.t.common.errorMessages.prfUnsupported,
     error
   );
 }
 
-function handleImportError(error: unknown) {
-  console.error('nsec インポートエラー:', error);
+/**
+ * nsec インポート経路のエラーをユーザー向け文言にして表示する。
+ * `resumed` の扱いは {@link handleCreateError} と同じ。
+ */
+function handleImportError(error: unknown, resumed = false) {
+  console.error(resumed ? 'インポート（2 タップ目）エラー:' : 'nsec インポートエラー:', error);
   errorMessage = formatAuthError(
-    $i18n.t.common.errorMessages.importNsec,
+    resumed
+      ? $i18n.t.common.errorMessages.secondTapFailed
+      : $i18n.t.common.errorMessages.importNsec,
     $i18n.t.common.errorMessages.prfUnsupported,
     error
   );
@@ -173,7 +197,7 @@ async function resumeCreateNew() {
   try {
     await completeCreateNew(hexToBytes(pendingCredentialId));
   } catch (error) {
-    handleCreateError(error);
+    handleCreateError(error, true);
   } finally {
     isLoading = false;
   }
@@ -223,7 +247,7 @@ async function resumeImport() {
     await completeImport(seckey, hexToBytes(pendingCredentialId));
   } catch (error) {
     seckey.fill(0);
-    handleImportError(error);
+    handleImportError(error, true);
   } finally {
     isLoading = false;
   }

@@ -259,6 +259,8 @@ if (keyMgr.hasPendingPrf(credentialId)) {
 }
 ```
 
+WebKit is not the only implementation that returns no PRF from `create()` (Chrome/Edge 146 and earlier with Windows Hello, Firefox 146 and earlier, etc.). Those still show an authentication dialog for a `get()` issued after the gesture expired, so they can finish in one tap — but `hasPendingPrf()` cannot tell whether a gesture is required. Whether to always fall back to two taps, or to try one tap first and switch only after catching `NotAllowedError`, is an application-level design decision (note that `NotAllowedError` is indistinguishable from a user cancellation).
+
 For nsec import (wrap mode), check with `hasPendingPrf(credentialId, 'wrap')`. See `createNew` / `importExisting` / `resumeCreateNew` / `resumeImport` in `examples/svelte-app/src/components/screens/AuthScreen.svelte` for a reference implementation.
 
 #### loginWithPasskey()

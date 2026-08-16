@@ -273,10 +273,11 @@ export interface NosskeyManagerLike {
    * 直前の `createPasskey()` / `loginWithPasskey()` で退避した PRF がまだ消費されずに
    * 残っているかを返す（同期・追加の UV なし）。
    *
-   * WebKit は `create()` 時に `prf.results` を返さないため false になる。その場合
-   * `createNostrKey()` / `importNostrKey()` は `navigator.credentials.get()` へ
-   * フォールバックするので、**必ず別のユーザー操作のハンドラ内で**呼び出すこと
-   * （WebKit は WebAuthn に transient activation を要求する）。
+   * `create()` が `prf.results` を返すかは実装依存で、WebKit は返さないとみられる
+   * （実機検証待ち）。false の場合 `createNostrKey()` / `importNostrKey()` は
+   * `navigator.credentials.get()` へフォールバックするので、**必ず別のユーザー操作の
+   * ハンドラ内で**呼び出すこと（WebKit は WebAuthn に transient activation を要求し、
+   * 失効後の get() は `NotAllowedError` になる）。
    *
    * @param credentialId `createPasskey()` が返した credentialId（バイト列 or hex 文字列）
    * @param mode `'standard'`（既定）= PRF 直接モード用 / `'wrap'` = wrap モードの KEK 用

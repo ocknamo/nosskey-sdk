@@ -253,6 +253,8 @@ if (keyMgr.hasPendingPrf(credentialId)) {
 }
 ```
 
+`create()` で PRF を返さない実装は WebKit だけではありません（Chrome/Edge 146 以前 + Windows Hello、Firefox 146 以前など）。それらはジェスチャ失効後の `get()` でも認証ダイアログが出るため本来 1 タップで完走できますが、`hasPendingPrf()` は「ジェスチャを要求するか」までは判別できません。一律 2 タップに倒すか、まず 1 タップを試して `NotAllowedError` を捕まえてから倒すかは、アプリ側の設計判断になります（後者は `NotAllowedError` がユーザーによるキャンセルと区別できない点に注意）。
+
 nsec インポート（wrap モード）では `hasPendingPrf(credentialId, 'wrap')` で判定します。参考実装は `examples/svelte-app/src/components/screens/AuthScreen.svelte` の `createNew` / `importExisting` / `resumeCreateNew` / `resumeImport`。
 
 #### loginWithPasskey()

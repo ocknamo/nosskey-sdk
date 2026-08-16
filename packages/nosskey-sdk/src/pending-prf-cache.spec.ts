@@ -56,6 +56,29 @@ describe('PendingPrfCache', () => {
       expect(cache.consume(credId, 'wrap')).toBeUndefined();
     });
 
+    it('該当 kind が無い場合も相方をゼロ化してエントリごと破棄する', () => {
+      // create 時に first だけ返し second を返さないオーセンティケータでは、
+      // entry に standard だけが載る。importNostrKey が wrap を consume しに来ても
+      // 空振りするが、そこで放置すると使われないと確定した 32 バイト秘密値
+      // （直接モードの秘密鍵そのもの）が TTL 満了まで heap に残ってしまう。
+      const cache = new PendingPrfCache();
+      const standard = new Uint8Array(32).fill(3);
+      cache.store(credId, { standard });
+
+      expect(cache.consume(credId, 'wrap')).toBeUndefined();
+
+      expect(Array.from(standard)).toEqual(Array.from(new Uint8Array(32)));
+      expect(cache.has(credId, 'standard')).toBe(false);
+      expect(cache.consume(credId, 'standard')).toBeUndefined();
+    });
+
+    it('該当 kind が無い場合も TTL タイマーは解除される', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(3) });
+      cache.consume(credId, 'wrap');
+      expect(() => vi.advanceTimersByTime(PENDING_PRF_TTL_MS)).not.toThrow();
+    });
+
     it('消費すると相方バッファをゼロ化してエントリごと破棄する', () => {
       const cache = new PendingPrfCache();
       const standard = new Uint8Array(32).fill(3);

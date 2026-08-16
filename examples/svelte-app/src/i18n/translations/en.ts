@@ -21,6 +21,8 @@ export const en: TranslationData = {
       passkeyCreation: 'Passkey Creation Error:',
       login: 'Login Error:',
       importNsec: 'nsec Import Error:',
+      // A second-tap failure happens after the passkey exists, so it is not a "creation" error
+      secondTapFailed: 'Could not finish the remaining step. Please try again:',
       prfUnsupported:
         "This passkey can't be used. Some authenticators such as Bitwarden are not supported, so please try a different passkey that supports the PRF extension (such as a platform passkey).",
     },

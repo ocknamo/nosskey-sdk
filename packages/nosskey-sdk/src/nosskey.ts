@@ -528,12 +528,20 @@ export class NosskeyManager implements NosskeyManagerLike {
    * 直前の {@link createPasskey} / {@link loginWithPasskey} で退避した PRF が、
    * まだ消費されずにキャッシュに残っているかを返す（同期・追加の UV は発生しない）。
    *
-   * **用途**: WebKit（iOS/macOS Safari）は WebAuthn `create()` 時に `prf.results` を
-   * 返さない（`enabled` のみ）。そのため `createPasskey()` は PRF を退避できず、
-   * 続く `createNostrKey()` / `importNostrKey()` は内部で `navigator.credentials.get()`
-   * へフォールバックする。この get() は `create()` の await が解けた後に発行されるため
-   * **ユーザージェスチャ（transient activation）が既に失効**しており、WebKit では
-   * `NotAllowedError` になる ＝ パスキーだけ作られて鍵情報が保存されない。
+   * **用途**: `create()` 時に PRF 出力（`prf.results`）を返すかどうかは実装依存で、
+   * `enabled: true` だけを返す実装が仕様上許容されている。WebKit（iOS/macOS Safari）は
+   * これに該当するとみられる（実機検証待ち）。返らない場合 `createPasskey()` は PRF を
+   * 退避できず、続く `createNostrKey()` / `importNostrKey()` は内部で
+   * `navigator.credentials.get()` へフォールバックする。この get() は `create()` の
+   * await が解けた後に発行されるため **ユーザージェスチャ（transient activation）が
+   * 既に失効**しており、WebKit では `NotAllowedError` になる ＝ パスキーだけ作られて
+   * 鍵情報が保存されない。
+   *
+   * なお `create()` で PRF を返さない実装は WebKit だけではない（Chrome/Edge 146 以前 +
+   * Windows Hello、Firefox 146 以前など）。それらはジェスチャ失効後の get() でも
+   * 認証ダイアログが出るため本来 1 タップで完走できるが、本メソッドは
+   * 「ジェスチャを要求するか」までは判別できない。2 タップに倒すか、まず 1 タップを
+   * 試して `NotAllowedError` を捕まえてから倒すかは呼び出し側の設計判断になる。
    *
    * `createPasskey()` の直後に本メソッドで false が返った場合は、そのまま
    * `createNostrKey()` / `importNostrKey()` へ進まず、**別のユーザー操作（2 タップ目）の

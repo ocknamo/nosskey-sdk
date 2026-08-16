@@ -34,6 +34,7 @@ export interface TranslationData {
       passkeyCreation: string;
       login: string;
       importNsec: string;
+      secondTapFailed: string;
       prfUnsupported: string;
     };
   };

@@ -21,6 +21,8 @@ export const ja: TranslationData = {
       passkeyCreation: 'パスキー作成エラー:',
       login: 'ログインエラー:',
       importNsec: 'nsec インポートエラー:',
+      // 2 タップ目の失敗はパスキー作成後なので「作成エラー」ではない
+      secondTapFailed: '続きの処理を完了できませんでした。もう一度お試しください:',
       prfUnsupported:
         'このパスキーは利用できません。Bitwarden など一部の認証器は未対応なため、PRF 拡張に対応した別のパスキー（プラットフォームのパスキーなど）でお試しください。',
     },
