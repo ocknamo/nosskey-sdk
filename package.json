@@ -31,6 +31,7 @@
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "happy-dom": "^20.11.2",
     "tsup": "^8.4.0",
     "typescript": "~5.8.3",
     "vitest": "^4.1.8"
