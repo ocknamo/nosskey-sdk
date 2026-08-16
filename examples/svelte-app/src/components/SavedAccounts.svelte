@@ -10,9 +10,9 @@ import { getNosskeyManager } from '../services/nosskey-manager.service.js';
 import { accounts, removeAccount } from '../store/accounts.js';
 import * as appState from '../store/app-state.js';
 import { shortenNpub } from '../utils/bech32-converter.js';
-import CardSection from './ui/CardSection.svelte';
 import Button from './ui/button/Button.svelte';
 import IconButton from './ui/button/IconButton.svelte';
+import CardSection from './ui/CardSection.svelte';
 
 interface Props {
   /** 再ログイン失敗時に親へエラーメッセージを通知する。 */

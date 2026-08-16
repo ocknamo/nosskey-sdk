@@ -3,9 +3,9 @@ import type { RelayMap } from 'nosskey-iframe';
 import DeleteIcon from '../../assets/delete-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { loadRelays, saveRelays } from '../../services/relays-store.js';
-import CardSection from '../ui/CardSection.svelte';
 import Button from '../ui/button/Button.svelte';
 import IconButton from '../ui/button/IconButton.svelte';
+import CardSection from '../ui/CardSection.svelte';
 
 let relays = $state<RelayMap>(loadRelays());
 let newRelayUrl = $state('');

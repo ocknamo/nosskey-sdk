@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NosskeyIframeHost } from './host.js';
-import { createFakeWindow, makeManager } from './host.test-helpers.js';
 import type { DispatchableWindow } from './host.test-helpers.js';
+import { createFakeWindow, makeManager } from './host.test-helpers.js';
 
 describe('NosskeyIframeHost', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;

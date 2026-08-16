@@ -1,25 +1,24 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "include": ["./packages/*/src/**", "./examples/*"],
-    "ignore": [
-      "./examples/svelte-app/dist",
-      "examples/svelte-app/node_modules",
-      "./packages/*/dist",
-      "./packages/*/node_modules",
-      "./dist",
-      "./node_modules",
-      "./examples/*/coverage",
-      "./packages/*/coverage"
+    "includes": [
+      "packages/**/*/src/**",
+      "examples/**/*",
+      "!examples/svelte-app/dist",
+      "!**/examples/svelte-app/node_modules",
+      "!packages/**/*/dist",
+      "!packages/**/*/node_modules",
+      "!dist",
+      "!node_modules",
+      "!examples/**/*/coverage",
+      "!packages/**/*/coverage"
     ]
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "complexity": {
         "useLiteralKeys": "off"
       },
@@ -27,11 +26,8 @@
         "useImportExtensions": {
           "level": "error",
           "options": {
-            "suggestedExtensions": {
-              "ts": {
-                "module": "js",
-                "component": "js"
-              }
+            "extensionMappings": {
+              "ts": "js"
             }
           }
         }

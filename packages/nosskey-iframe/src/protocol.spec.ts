@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONSENT_REQUIRED_METHODS,
-  NOSSKEY_ERROR_CODES,
-  type NosskeyErrorCode,
-  type NosskeyMethod,
   isConnectMethod,
   isDecryptMethod,
   isEncryptMethod,
@@ -11,6 +8,9 @@ import {
   isNosskeyRequest,
   isNosskeyResponse,
   isNosskeyVisibility,
+  NOSSKEY_ERROR_CODES,
+  type NosskeyErrorCode,
+  type NosskeyMethod,
 } from './protocol.js';
 
 describe('protocol: isNosskeyRequest', () => {

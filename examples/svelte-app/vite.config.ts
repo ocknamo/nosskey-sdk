@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { type Connect, type Plugin, defineConfig } from 'vite';
+import { type Connect, defineConfig, type Plugin } from 'vite';
 import { CONTENT_SECURITY_POLICY } from './src/csp.js';
 
 // Gitのcommit hashを取得

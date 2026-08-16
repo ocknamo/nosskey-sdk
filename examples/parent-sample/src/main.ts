@@ -2,8 +2,8 @@ import { NosskeyIframeClient, NosskeyIframeError } from 'nosskey-iframe';
 import type { NostrEvent } from 'nosskey-sdk';
 import { sendNip17Dm } from './nip17.js';
 import {
-  type NostrProvider,
   formatError,
+  type NostrProvider,
   nip04Decrypt,
   nip04Encrypt,
   nip04SendDm,
@@ -14,18 +14,18 @@ import {
 import { publishToRelays, resolvePublishRelays } from './relay.js';
 import { createToaster } from './toast.js';
 import {
-  type LangChoice,
-  type ThemeChoice,
   applyParentTheme,
   clearParentTheme,
   createLogger,
   installModalVisibilityListener,
+  type LangChoice,
   queryUiElements,
   requireEl,
   resolveTheme,
   setConnectedUI,
   setModalVisible,
   setStatus,
+  type ThemeChoice,
 } from './ui.js';
 import { parsePeerPubkey, parseRelayUrl } from './validation.js';
 

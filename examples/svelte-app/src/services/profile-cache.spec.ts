@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  PROFILE_CACHE_KEY,
   isSafePictureUrl,
   loadCachedProfile,
+  PROFILE_CACHE_KEY,
   pruneCache,
   saveCachedProfile,
 } from './profile-cache.js';

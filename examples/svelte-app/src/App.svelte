@@ -7,13 +7,13 @@ import IframeHostScreen from './components/screens/IframeHostScreen.svelte';
 import KeyManagementScreen from './components/screens/KeyManagement.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
 import {
-  type ThemeMode,
   currentScreen,
   currentTheme,
   isScreenName,
   restoreLoginState,
+  type ThemeMode,
 } from './store/app-state.js';
-import { THEME_PALETTES, resolveTheme } from './theme/palettes.js';
+import { resolveTheme, THEME_PALETTES } from './theme/palettes.js';
 
 let screen = $state('account');
 

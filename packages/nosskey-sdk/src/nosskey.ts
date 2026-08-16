@@ -13,11 +13,11 @@ import { nip44Decrypt, nip44Encrypt } from './nip44.js';
 import { PendingPrfCache } from './pending-prf-cache.js';
 import { createPasskey, getPrfSecret, isPrfSupported } from './prf-handler.js';
 import {
+  normalizeSalt,
   STANDARD_SALT,
   STANDARD_SALT_BYTES,
   WRAP_SALT,
   WRAP_SALT_BYTES,
-  normalizeSalt,
 } from './salt.js';
 import type {
   GetPrfSecretOptions,

@@ -1,11 +1,11 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  cacheTimeout,
+  clampCacheTimeout,
   DEFAULT_CACHE_TTL_SECONDS,
   MAX_CACHE_TTL_SECONDS,
   MIN_CACHE_TTL_SECONDS,
-  cacheTimeout,
-  clampCacheTimeout,
 } from './secret-cache-settings.js';
 
 describe('clampCacheTimeout', () => {

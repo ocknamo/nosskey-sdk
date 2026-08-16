@@ -18,7 +18,7 @@
  */
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { type NostrEvent, bytesToHex, hexToBytes, nip44Encrypt } from 'nosskey-sdk';
+import { bytesToHex, hexToBytes, type NostrEvent, nip44Encrypt } from 'nosskey-sdk';
 
 const KIND_CHAT_MESSAGE = 14;
 const KIND_SEAL = 13;

@@ -1,6 +1,6 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
-import { type ThemeMode, currentTheme } from '../../store/app-state.js';
+import { currentTheme, type ThemeMode } from '../../store/app-state.js';
 import CardSection from '../ui/CardSection.svelte';
 import SettingMessage from '../ui/SettingMessage.svelte';
 

@@ -5,12 +5,12 @@
  * @packageDocumentation
  */
 import {
-  type NosskeyRequest,
-  type NosskeyResponse,
-  type RelayMap,
   isNosskeyReady,
   isNosskeyResponse,
   isNosskeyVisibility,
+  type NosskeyRequest,
+  type NosskeyResponse,
+  type RelayMap,
 } from './protocol.js';
 import type { NostrEvent } from './types.js';
 

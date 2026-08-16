@@ -2,11 +2,11 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  buildSignedKind0,
   OTHER_PUBKEY,
   OTHER_SK,
   TEST_PUBKEY,
   TEST_SK,
-  buildSignedKind0,
 } from '../services/kind0-test-utils.js';
 import { PROFILE_CACHE_KEY } from '../services/profile-cache.js';
 import { RELAYS_STORAGE_KEY } from '../services/relays-store.js';
