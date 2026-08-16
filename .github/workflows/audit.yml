@@ -13,6 +13,8 @@ jobs:
   audit:
     name: npm audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,5 +24,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Audit dependencies
-        run: npm audit
+      # 本番依存は配布物に含まれるため、深刻度を問わず失敗させる
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      # 開発依存はビルドツール由来のトランジティブが大半のため high 以上のみ失敗させる
+      # (--audit-level は終了コードのみを制御し、レポート自体は全件出力される)
+      - name: Audit all dependencies (high and above)
+        run: npm audit --audit-level=high
