@@ -87,6 +87,23 @@ export class PendingPrfCache {
   }
 
   /**
+   * 指定 credentialId / kind の未消費 PRF が残っているかを返す。
+   *
+   * {@link consume} と違いバッファには一切触れない（消費もゼロ化もしない）ので、
+   * 「create 時に PRF が返ってきたか」を呼び出し側が判定してから
+   * consume するかどうかを決める用途に使える。
+   *
+   * 注意: {@link consume} と同じく**同期のまま**保つこと。has() の結果を見てから
+   * consume() するまでの間に await を挟むと、その隙に TTL タイマーが発火して
+   * 「has は true だったのに consume が undefined」になりうる。
+   */
+  has(credentialId: Uint8Array | string | undefined, kind: 'standard' | 'wrap'): boolean {
+    if (!credentialId) return false;
+    const key = typeof credentialId === 'string' ? credentialId : bytesToHex(credentialId);
+    return this.#byCredId.get(key)?.[kind] !== undefined;
+  }
+
+  /**
    * 退避した未消費 PRF キャッシュをすべてゼロ化して破棄する。
    * 未消費エントリは TTL（{@link PENDING_PRF_TTL_MS}）経過でも自動ゼロ化されるが、
    * ログアウト・完全ワイプ時は待たずに即時掃除する。

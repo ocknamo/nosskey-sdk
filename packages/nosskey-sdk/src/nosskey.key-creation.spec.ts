@@ -337,6 +337,79 @@ describe('NosskeyManager', () => {
       await nosskey.createNostrKey();
       expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
     });
+
+    it('hasPendingPrf は create で PRF が返った kind に true を返す', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      expect(nosskey.hasPendingPrf(credentialId)).toBe(true);
+      expect(nosskey.hasPendingPrf(credentialId, 'standard')).toBe(true);
+      expect(nosskey.hasPendingPrf(credentialId, 'wrap')).toBe(true);
+      // hex 文字列でも照会できる
+      expect(nosskey.hasPendingPrf(bytesToHex(credentialId))).toBe(true);
+      // 照会しただけではキャッシュは消えない（get() フォールバックに落ちない）
+      await nosskey.createNostrKey(credentialId);
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('hasPendingPrf は未知の credentialId や消費済みの kind に false を返す', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      expect(nosskey.hasPendingPrf(new Uint8Array(16).fill(9))).toBe(false);
+
+      // standard を消費すると相方の wrap ごとエントリが破棄される
+      await nosskey.createNostrKey(credentialId);
+      expect(nosskey.hasPendingPrf(credentialId, 'standard')).toBe(false);
+      expect(nosskey.hasPendingPrf(credentialId, 'wrap')).toBe(false);
+    });
+  });
+
+  describe('create 時に PRF を返さないブラウザ（WebKit 相当）', () => {
+    // WebKit は create 時に prf.enabled のみを返し results を返さない。
+    // この場合 createPasskey は PRF を退避できず、hasPendingPrf が false になる。
+    // アプリはそれを見て「2 タップ目のユーザージェスチャ内で createNostrKey を呼ぶ」
+    // 経路へ分岐する（ジェスチャ失効後の get() は WebKit で NotAllowedError になるため）。
+    beforeEach(() => {
+      Object.defineProperty(globalThis.navigator, 'credentials', {
+        value: {
+          create: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({ prf: { enabled: true } })),
+          })),
+          get: vi.fn(async () => ({
+            rawId: mockCredentialId.buffer,
+            getClientExtensionResults: vi.fn(() => ({
+              prf: {
+                results: { first: new Uint8Array(32).fill(mockPrfResultValue).buffer },
+              },
+            })),
+          })),
+        },
+        configurable: true,
+      });
+    });
+
+    it('createPasskey 後の hasPendingPrf は standard / wrap とも false', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      expect(nosskey.hasPendingPrf(credentialId, 'standard')).toBe(false);
+      expect(nosskey.hasPendingPrf(credentialId, 'wrap')).toBe(false);
+      // create までは 1 度も get() を呼ばない（＝ ジェスチャ内で完結している）
+      expect(navigator.credentials.get).not.toHaveBeenCalled();
+    });
+
+    it('createNostrKey は従来どおり get() フォールバックで鍵を作れる（後方互換）', async () => {
+      const nosskey = new NosskeyManager();
+      const credentialId = await nosskey.createPasskey();
+
+      const keyInfo = await nosskey.createNostrKey(credentialId);
+
+      expect(keyInfo.salt).toBe('6e6f7374722d70776b');
+      expect(keyInfo.credentialId).toBe(bytesToHex(credentialId));
+      expect(navigator.credentials.get).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('createNostrKey', () => {

@@ -51,6 +51,10 @@ export const ja: TranslationData = {
     noKeyInfoDescription:
       'このパスキーに紐づく鍵情報がこの端末に保存されていません。以前使っていたアカウントで入る場合は、バックアップした鍵情報から復元してください。パスキーから鍵を導出してログインすると、インポート済みの鍵とは別のアカウントになります。',
     deriveFromPasskey: 'パスキーから鍵を導出してログイン',
+    secondTapTitle: 'あとワンステップです',
+    secondTapCreateDescription: 'いま作成したパスキーで鍵を作成します。',
+    secondTapImportDescription: 'いま作成したパスキーでインポートを完了します。',
+    secondTapAction: '続ける',
     multipleAccountsForPasskey:
       'このパスキーには複数のアカウントが紐づいています。上の「保存済みアカウント」から選択してください。',
     accounts: {

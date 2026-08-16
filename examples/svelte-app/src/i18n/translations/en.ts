@@ -51,6 +51,10 @@ export const en: TranslationData = {
     noKeyInfoDescription:
       'No key info linked to this passkey is stored on this device. To sign in to an account you used before, restore it from your backed-up key info. Deriving a key from the passkey signs you in to a different account than an imported key.',
     deriveFromPasskey: 'Derive a key from this passkey and sign in',
+    secondTapTitle: 'One more step',
+    secondTapCreateDescription: 'Your key will be created with the passkey you just made.',
+    secondTapImportDescription: 'Your import will be finished with the passkey you just made.',
+    secondTapAction: 'Continue',
     multipleAccountsForPasskey:
       'This passkey is linked to several accounts. Pick one from "Saved accounts" above.',
     accounts: {

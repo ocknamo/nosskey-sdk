@@ -270,6 +270,20 @@ export interface NosskeyManagerLike {
   createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>;
 
   /**
+   * 直前の `createPasskey()` / `loginWithPasskey()` で退避した PRF がまだ消費されずに
+   * 残っているかを返す（同期・追加の UV なし）。
+   *
+   * WebKit は `create()` 時に `prf.results` を返さないため false になる。その場合
+   * `createNostrKey()` / `importNostrKey()` は `navigator.credentials.get()` へ
+   * フォールバックするので、**必ず別のユーザー操作のハンドラ内で**呼び出すこと
+   * （WebKit は WebAuthn に transient activation を要求する）。
+   *
+   * @param credentialId `createPasskey()` が返した credentialId（バイト列 or hex 文字列）
+   * @param mode `'standard'`（既定）= PRF 直接モード用 / `'wrap'` = wrap モードの KEK 用
+   */
+  hasPendingPrf(credentialId: Uint8Array | string, mode?: 'standard' | 'wrap'): boolean;
+
+  /**
    * PRF値を直接Nostrシークレットキーとして使用してNostrKeyInfoを作成
    * @param credentialId 使用するクレデンシャルID（省略時はユーザーが選択したパスキーが使用される）
    * @param options オプション

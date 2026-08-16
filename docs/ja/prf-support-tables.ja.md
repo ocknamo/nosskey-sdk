@@ -8,7 +8,7 @@
 | 区分 | プラットフォーム／ブラウザ | 最低バージョン (Stable) | デフォルト状態 | 備考 |
 |------|--------------------------|----------------------|--------------|------|
 | **ブラウザ** | Chromium 系<br>(Chrome, Edge, Opera, Brave…) | 116 以降 | ON | セキュリティキー／Google Password Manager との PRF は 116 以降。macOS の iCloud キーチェーン PRF は Chrome 132 以降、Windows Hello の登録時 PRF は Chrome 147 以降 |
-| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | WWDC 24 で発表。iCloud Passkey（プラットフォーム認証器）では動作。外付け CTAP2 セキュリティキーへの PRF 拡張データ受け渡しは未対応 |
+| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | WWDC 24 で発表。iCloud Passkey（プラットフォーム認証器）では動作。外付け CTAP2 セキュリティキーへの PRF 拡張データ受け渡しは未対応。**登録時（`create()`）は `prf.enabled` のみで `results` を返さない**とみられ、PRF の取得には別途 `get()` が必要（実機検証待ち。後述の「登録時 PRF と user gesture」参照） |
 | | Firefox | 135 以降 | ON | Firefox 135（2025-02-04）でデフォルト有効化（フラグ不要）。147 で登録時 PRF をバックポート、148+ で Windows Hello との登録・認証の両対応。Android 版 Firefox は未対応 |
 | **プラットフォーム<br>オーセンティケータ** | Google Password Manager Passkey<br>(Android 14+ / Chrome 116+) | 116 | ON | Chromium で PRF が利用可能、ハイブリッド経路も対応 |
 | | Apple Passkeys<br>(Touch ID / Face ID on macOS 15・iOS 18 以降) | 18 / 15 | ON | 自動パスキーアップグレードと同時に PRF サポート |
@@ -22,6 +22,19 @@
 - **対応（条件付き）**：OS の対応バージョンや対応ブラウザなど、追加の要件を満たせば利用可。
 - Chromium 系ブラウザは同じ Blink 実装を共有するため、Chrome=Edge=Opera でほぼ同じ挙動。
 - PRF が機能するには **ブラウザ + OS + オーセンティケータのすべてが実装している必要**があります。たとえば Windows Hello では、OS 側が対応ビルドであっても Chrome/Edge 146 以前のブラウザでは登録時に PRF が生成されません。
+
+#### 登録時 PRF と user gesture
+
+「PRF に対応している」ことと「**登録時（`create()`）に PRF 出力を返す**」ことは別問題です。WebAuthn L3 では `create()` の `prf` 結果に `results` を含めるかどうかは実装依存で、`enabled: true` だけを返す実装が許容されています。
+
+これはアプリの実装に直接影響します。`create()` が `results` を返さない場合、PRF を得るには続けて `navigator.credentials.get()` を呼ぶ必要がありますが、その get() は `create()` の await が解けた後 ＝ **ユーザージェスチャ（transient activation）が失効した後**に発行されます。WebKit は WebAuthn 呼び出しに transient activation を要求するため `NotAllowedError` になり、**パスキーだけが作成されて鍵情報が保存されない**という失敗をします。
+
+| 挙動 | Chromium 系 | WebKit（Safari） |
+|------|-------------|------------------|
+| `create()` の `prf.results` | 返る | 返らないとみられる（`enabled` のみ・実機検証待ち） |
+| 登録から鍵導出までに必要なユーザー操作 | 1 タップ | 2 タップ（create と get を別ジェスチャに分ける） |
+
+本 SDK では `NosskeyManager.hasPendingPrf(credentialId, mode)` で「`create()` 時に PRF が取れたか」を同期照会でき、取れなかった場合はアプリ側で 2 タップ目の導線を出す設計にしています（`docs/{ja,en}/nosskey-sdk-interface` の `hasPendingPrf()` 節、参考実装は `examples/svelte-app` の `AuthScreen.svelte`）。
 
 #### 公式ドキュメント
 

@@ -22,6 +22,12 @@ export const simpleEn: DeepPartial<TranslationData> = {
     // back an account brought over with a recovery key. It is not plain "create new"
     // either — an account originally made with this passkey comes back identical.
     deriveFromPasskey: 'Rebuild an account from this passkey',
+    // secondTapTitle / secondTapAction carry no jargon, so the en.ts strings are reused.
+    secondTapCreateDescription: 'Your account will be created with the passkey you just made.',
+    // Must not say "created" on the import side: this brings over an existing account
+    // rather than making a new one (same caution as deriveFromPasskey).
+    secondTapImportDescription:
+      'Bringing your account over will finish with the passkey you just made.',
   },
   nostr: {
     publicKey: 'User ID',

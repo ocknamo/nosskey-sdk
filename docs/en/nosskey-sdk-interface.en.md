@@ -223,6 +223,44 @@ async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 
 During creation it evaluates the standard-salt and wrap-salt PRFs with a single UV and caches them inside the SDK until the subsequent `createNostrKey()` / `importNostrKey()` consumes them. A cache left unconsumed is automatically zeroized after a TTL (60 seconds), and is also discarded immediately by `clearCurrentKeyInfo()` (logout) / `clearStoredKeyInfo()` (full wipe) — no application-side management is required.
 
+#### hasPendingPrf()
+Returns whether the PRF stashed by the preceding `createPasskey()` / `loginWithPasskey()` is still cached and unconsumed (synchronous; triggers no extra UV).
+
+```typescript
+hasPendingPrf(
+  credentialId: Uint8Array | string,
+  mode?: 'standard' | 'wrap' // defaults to 'standard'
+): boolean
+```
+
+- `'standard'`: for PRF direct mode (consumed by `createNostrKey()`)
+- `'wrap'`: for the wrap-mode KEK (consumed by `importNostrKey()`)
+
+> **⚠️ WebKit (iOS / macOS Safari) requires a two-tap flow**
+>
+> WebKit does not return `prf.results` from WebAuthn `create()` (only `enabled`). `createPasskey()` therefore has no PRF to stash, and the subsequent `createNostrKey()` / `importNostrKey()` falls back to `navigator.credentials.get()` internally.
+>
+> That get() is issued after the `create()` await resolves — i.e. **after the user gesture (transient activation) has expired**. WebKit requires transient activation for WebAuthn calls, so it fails with `NotAllowedError`, leaving **a passkey created but no `NostrKeyInfo` stored** (the user can never sign in afterwards).
+>
+> When `hasPendingPrf()` returns `false` right after `createPasskey()`, do not continue to key creation. Call `createNostrKey()` / `importNostrKey()` **from a separate user-gesture handler** instead.
+
+```typescript
+const credentialId = await keyMgr.createPasskey();
+
+if (keyMgr.hasPendingPrf(credentialId)) {
+  // PRF was available at create time (e.g. Chrome): done in one tap
+  const keyInfo = await keyMgr.createNostrKey(credentialId);
+  await login(keyInfo);
+} else {
+  // Not available (e.g. Safari): show a second-tap button. Calling
+  // keyMgr.createNostrKey(credentialId) from its click handler issues the
+  // get() inside a user gesture.
+  showSecondTapButton(credentialId);
+}
+```
+
+For nsec import (wrap mode), check with `hasPendingPrf(credentialId, 'wrap')`. See `createNew` / `importExisting` / `resumeCreateNew` / `resumeImport` in `examples/svelte-app/src/components/screens/AuthScreen.svelte` for a reference implementation.
+
 #### loginWithPasskey()
 **Restores a stored key** with a passkey (sign-in). It runs a single WebAuthn assertion
 and looks up the stored NostrKeyInfo linked to the returned credential ID. It does
