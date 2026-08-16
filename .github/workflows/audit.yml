@@ -24,11 +24,14 @@ jobs:
         with:
           node-version: '22'
 
-      # 本番依存は配布物に含まれるため、深刻度を問わず失敗させる
+      # SDK の本番依存は深刻度を問わず失敗させる
       - name: Audit production dependencies
         run: npm audit --omit=dev
 
-      # 開発依存はビルドツール由来のトランジティブが大半のため high 以上のみ失敗させる
+      # 開発依存を含む全体。svelte のように devDependencies でありながら
+      # バンドルへ展開されて配信されるものがあるため、閾値は moderate までとし、
+      # ビルドツール由来の low なトランジティブのみを許容する。
       # (--audit-level は終了コードのみを制御し、レポート自体は全件出力される)
-      - name: Audit all dependencies (high and above)
-        run: npm audit --audit-level=high
+      - name: Audit all dependencies (moderate and above)
+        if: always()
+        run: npm audit --audit-level=moderate
