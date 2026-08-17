@@ -525,6 +525,50 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * 直前の {@link createPasskey} / {@link loginWithPasskey} で退避した PRF が、
+   * まだ消費されずにキャッシュに残っているかを返す（同期・追加の UV は発生しない）。
+   *
+   * **用途**: `create()` 時に PRF 出力（`prf.results`）を返すかどうかは実装依存で、
+   * `enabled: true` だけを返す実装が仕様上許容されている。WebKit（iOS/macOS Safari）は
+   * これに該当するとみられる（実機検証待ち）。返らない場合 `createPasskey()` は PRF を
+   * 退避できず、続く `createNostrKey()` / `importNostrKey()` は内部で
+   * `navigator.credentials.get()` へフォールバックする。この get() は `create()` の
+   * await が解けた後に発行されるため **ユーザージェスチャ（transient activation）が
+   * 既に失効**しており、WebKit では `NotAllowedError` になる ＝ パスキーだけ作られて
+   * 鍵情報が保存されない。
+   *
+   * なお `create()` で PRF を返さない実装は WebKit だけではない（Chrome/Edge 146 以前 +
+   * Windows Hello、Firefox 146 以前など）。それらはジェスチャ失効後の get() でも
+   * 認証ダイアログが出るため本来 1 タップで完走できるが、本メソッドは
+   * 「ジェスチャを要求するか」までは判別できない。2 タップに倒すか、まず 1 タップを
+   * 試して `NotAllowedError` を捕まえてから倒すかは呼び出し側の設計判断になる。
+   *
+   * `createPasskey()` の直後に本メソッドで false が返った場合は、そのまま
+   * `createNostrKey()` / `importNostrKey()` へ進まず、**別のユーザー操作（2 タップ目）の
+   * ハンドラ内で**呼び出すこと。そうすれば get() がジェスチャ内で発行される。
+   *
+   * ```ts
+   * const credentialId = await keyMgr.createPasskey();
+   * if (keyMgr.hasPendingPrf(credentialId)) {
+   *   // create 時に PRF が取れた（Chrome など）: このまま 1 タップで完了
+   *   return await keyMgr.createNostrKey(credentialId);
+   * }
+   * // 取れなかった（Safari など）: 2 タップ目のボタンを出し、そのハンドラで
+   * // keyMgr.createNostrKey(credentialId) を呼ぶ
+   * ```
+   *
+   * @param credentialId `createPasskey()` が返した credentialId（バイト列 or hex 文字列）
+   * @param mode `'standard'`（既定）= PRF 直接モード用（{@link createNostrKey} が消費）/
+   *             `'wrap'` = wrap モードの KEK 用（{@link importNostrKey} が消費）
+   */
+  hasPendingPrf(
+    credentialId: Uint8Array | string,
+    mode: 'standard' | 'wrap' = 'standard'
+  ): boolean {
+    return this.#pendingPrf.has(credentialId, mode);
+  }
+
+  /**
    * パスキーでログインする（保存済み鍵の**復元**）。
    *
    * WebAuthn の assertion を 1 回だけ実行し、返ってきた credentialId に紐づく

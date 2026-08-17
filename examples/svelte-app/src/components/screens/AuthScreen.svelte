@@ -1,5 +1,5 @@
 <script lang="ts">
-import { hexToBytes } from 'nosskey-sdk';
+import { bytesToHex, hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -26,6 +26,14 @@ let nsecError = $state('');
 // ログイン時に鍵情報が見つからなかったパスキーの credentialId（hex）。
 // 空文字なら注意カード非表示。二次導線の導出ログインで使う。
 let unknownCredentialId = $state('');
+// パスキーは作成できたが create 時に PRF が返らず、鍵の作成を 2 タップ目に委ねている
+// 状態の credentialId（hex）。空文字なら通常の 1 タップ経路。
+// 永続化しない（リロードで消える）。中断すると鍵情報なしのパスキーだけが残るが、
+// WebAuthn に削除 API は無いので回収はできない。
+// 救済導線: 新規作成の中断はログインタブの「パスキーから鍵を導出」で同じ鍵に戻せる。
+// 一方 nsec インポートの中断に救済は無い（deriveFromPasskey は標準 salt の直接モード
+// なので、インポートしたかった nsec とは別 pubkey になる）。もう一度インポートし直す。
+let pendingCredentialId = $state('');
 
 const keyManager = getNosskeyManager();
 
@@ -48,34 +56,148 @@ async function initialize() {
   }
 }
 
+/**
+ * 新しいパスキーを作成する。1 タップ目の共通前半。
+ *
+ * 戻り値の `pendingPrf` は「create 時に PRF が返ってきたか」。false の場合、続く
+ * createNostrKey / importNostrKey は内部で navigator.credentials.get() へ
+ * フォールバックするが、その get() は create の await が解けた後 ＝ ユーザージェスチャ
+ * 失効後の発行になる。WebKit（iOS/macOS Safari）は WebAuthn に transient activation を
+ * 要求するため NotAllowedError で落ち、「パスキーだけ作られて鍵情報が保存されない」
+ * ＝ 以後ログインできない状態になる。よって false のときはここで一旦止め、
+ * 2 タップ目のジェスチャ内で鍵の作成を行う。
+ *
+ * 既知のトレードオフ: create 時に PRF を返さない実装は WebKit だけではない
+ * （Chrome/Edge 146 以前 + Windows Hello、Firefox 146 以前など）。それらは
+ * ジェスチャ失効後の get() でも認証ダイアログが出るため本来 1 タップで済むが、
+ * ここでは一律 2 タップに倒している。「まず 1 タップを試し NotAllowedError を
+ * 捕まえてから 2 タップへ倒す」ハイブリッドも可能だが、NotAllowedError は
+ * ユーザーによるキャンセルとも区別できないため採用していない。
+ */
+async function createPasskeyStep(mode: 'standard' | 'wrap') {
+  const credentialId = await keyManager.createPasskey({
+    user: {
+      name: username || 'user@nosskey',
+      displayName: username || 'user@nosskey',
+    },
+  });
+  return { credentialId, pendingPrf: keyManager.hasPendingPrf(credentialId, mode) };
+}
+
+/**
+ * 新規作成経路のエラーをユーザー向け文言にして表示する。
+ * `resumed` は 2 タップ目かどうか。2 タップ目時点ではパスキーは既に作成済みで、
+ * 失敗しているのは鍵の導出なので「パスキー作成エラー」と出すと誤誘導になる
+ * （ユーザーが最初からやり直して孤児パスキーを増やす）。
+ */
+function handleCreateError(error: unknown, resumed = false) {
+  console.error(resumed ? '鍵作成（2 タップ目）エラー:' : 'パスキー作成エラー:', error);
+  errorMessage = formatAuthError(
+    resumed
+      ? $i18n.t.common.errorMessages.secondTapFailed
+      : $i18n.t.common.errorMessages.passkeyCreation,
+    $i18n.t.common.errorMessages.prfUnsupported,
+    error
+  );
+}
+
+/**
+ * nsec インポート経路のエラーをユーザー向け文言にして表示する。
+ * `resumed` の扱いは {@link handleCreateError} と同じ。
+ */
+function handleImportError(error: unknown, resumed = false) {
+  console.error(resumed ? 'インポート（2 タップ目）エラー:' : 'nsec インポートエラー:', error);
+  errorMessage = formatAuthError(
+    resumed
+      ? $i18n.t.common.errorMessages.secondTapFailed
+      : $i18n.t.common.errorMessages.importNsec,
+    $i18n.t.common.errorMessages.prfUnsupported,
+    error
+  );
+}
+
+/**
+ * nsec 入力欄を検証して 32B の秘密鍵バイト列にする。不正なら nsecError を立てて null を返す。
+ * 1 タップ目・2 タップ目の双方から呼ぶ（nsec バッファはタップ間で保持せず、
+ * 2 タップ目でも入力値から作り直す）。
+ */
+function parseNsecInput(): Uint8Array | null {
+  const trimmed = nsecInput.trim();
+  if (!isValidNsec(trimmed)) {
+    nsecError = $i18n.t.auth.invalidNsec;
+    return null;
+  }
+  const nsecHex = nsecToHex(trimmed);
+  if (!nsecHex) {
+    nsecError = $i18n.t.auth.invalidNsec;
+    return null;
+  }
+  const seckey = hexToBytes(nsecHex);
+  // nsecToHex は bech32 デコードと prefix チェックのみで 32B を保証しない。
+  // SDK 側でも検証するが、UI レイヤで早期に弾いて分かりやすいメッセージを出す。
+  if (seckey.length !== 32) {
+    seckey.fill(0);
+    nsecError = $i18n.t.auth.invalidNsec;
+    return null;
+  }
+  return seckey;
+}
+
+/** 鍵生成〜ログインの共通後半（新規作成）。isLoading / エラーは呼び出し側が管理する。 */
+async function completeCreateNew(credentialId: Uint8Array) {
+  const keyInfo = await keyManager.createNostrKey(credentialId, {
+    username: username.trim() || undefined,
+  });
+  await appState.loginWith(keyInfo);
+  // 成功後にだけ畳む。失敗時はカードを残してその場で再試行できるようにする。
+  pendingCredentialId = '';
+}
+
+/** wrap 化〜ログインの共通後半（nsec インポート）。isLoading / エラーは呼び出し側が管理する。 */
+async function completeImport(seckey: Uint8Array, credentialId: Uint8Array) {
+  const keyInfo = await keyManager.importNostrKey(seckey, credentialId, {
+    username: username.trim() || undefined,
+  });
+
+  // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
+  // 入力欄も即座にクリアして DOM 上に nsec を残さない。
+  seckey.fill(0);
+  nsecInput = '';
+
+  await appState.loginWith(keyInfo);
+  pendingCredentialId = '';
+}
+
 async function createNew() {
   isLoading = true;
   errorMessage = '';
 
   try {
-    // createPasskey（WebAuthn create）で標準 salt の PRF が #pendingPrfByCredId に
-    // キャッシュされるため、続く createNostrKey はそれを消費して 2 回目の get()（UV）を
-    // 省ける。nsec インポート経路（createPasskey → importNostrKey）と対称に、create と
-    // 鍵生成・ログインを 1 ボタン・1 UV に統合する。create 時に PRF を返さないブラウザでは
-    // createNostrKey 内で getPrfSecret() に自動フォールバックする（その場合のみ追加 UV）。
-    const newCredentialId = await keyManager.createPasskey({
-      user: {
-        name: username || 'user@nosskey',
-        displayName: username || 'user@nosskey',
-      },
-    });
-    const keyInfo = await keyManager.createNostrKey(newCredentialId, {
-      username: username.trim() || undefined,
-    });
-
-    await appState.loginWith(keyInfo);
+    // createPasskey（WebAuthn create）で標準 salt の PRF がキャッシュされていれば、
+    // 続く createNostrKey はそれを消費して 2 回目の get()（UV）を省ける。
+    // 返らなかった場合は 2 タップ目に委ねる（createPasskeyStep のコメント参照）。
+    const { credentialId, pendingPrf } = await createPasskeyStep('standard');
+    if (!pendingPrf) {
+      pendingCredentialId = bytesToHex(credentialId);
+      return;
+    }
+    await completeCreateNew(credentialId);
   } catch (error) {
-    console.error('パスキー作成エラー:', error);
-    errorMessage = formatAuthError(
-      $i18n.t.common.errorMessages.passkeyCreation,
-      $i18n.t.common.errorMessages.prfUnsupported,
-      error
-    );
+    handleCreateError(error);
+  } finally {
+    isLoading = false;
+  }
+}
+
+/** 2 タップ目（新規作成）。新しいユーザージェスチャ内で credentials.get() を発行する。 */
+async function resumeCreateNew() {
+  isLoading = true;
+  errorMessage = '';
+
+  try {
+    await completeCreateNew(hexToBytes(pendingCredentialId));
+  } catch (error) {
+    handleCreateError(error, true);
   } finally {
     isLoading = false;
   }
@@ -86,53 +208,46 @@ async function importExisting() {
   errorMessage = '';
   nsecError = '';
 
-  const trimmed = nsecInput.trim();
-  if (!isValidNsec(trimmed)) {
-    nsecError = $i18n.t.auth.invalidNsec;
-    isLoading = false;
-    return;
-  }
-  const nsecHex = nsecToHex(trimmed);
-  if (!nsecHex) {
-    nsecError = $i18n.t.auth.invalidNsec;
-    isLoading = false;
-    return;
-  }
-  const seckey = hexToBytes(nsecHex);
-  // nsecToHex は bech32 デコードと prefix チェックのみで 32B を保証しない。
-  // SDK 側でも検証するが、UI レイヤで早期に弾いて分かりやすいメッセージを出す。
-  if (seckey.length !== 32) {
-    seckey.fill(0);
-    nsecError = $i18n.t.auth.invalidNsec;
+  const seckey = parseNsecInput();
+  if (!seckey) {
     isLoading = false;
     return;
   }
 
   try {
-    const newCredentialId = await keyManager.createPasskey({
-      user: {
-        name: username || 'user@nosskey',
-        displayName: username || 'user@nosskey',
-      },
-    });
-    const keyInfo = await keyManager.importNostrKey(seckey, newCredentialId, {
-      username: username.trim() || undefined,
-    });
-
-    // 二重防御: SDK 側でゼロ化済みだが UI 側のバッファ参照も明示的に消す。
-    // 入力欄も即座にクリアして DOM 上に nsec を残さない。
-    seckey.fill(0);
-    nsecInput = '';
-
-    await appState.loginWith(keyInfo);
+    const { credentialId, pendingPrf } = await createPasskeyStep('wrap');
+    if (!pendingPrf) {
+      // nsec バッファはタップ間で保持しない。2 タップ目に nsecInput から作り直す。
+      seckey.fill(0);
+      pendingCredentialId = bytesToHex(credentialId);
+      return;
+    }
+    await completeImport(seckey, credentialId);
   } catch (error) {
     seckey.fill(0);
-    console.error('nsec インポートエラー:', error);
-    errorMessage = formatAuthError(
-      $i18n.t.common.errorMessages.importNsec,
-      $i18n.t.common.errorMessages.prfUnsupported,
-      error
-    );
+    handleImportError(error);
+  } finally {
+    isLoading = false;
+  }
+}
+
+/** 2 タップ目（nsec インポート）。新しいユーザージェスチャ内で credentials.get() を発行する。 */
+async function resumeImport() {
+  isLoading = true;
+  errorMessage = '';
+  nsecError = '';
+
+  const seckey = parseNsecInput();
+  if (!seckey) {
+    isLoading = false;
+    return;
+  }
+
+  try {
+    await completeImport(seckey, hexToBytes(pendingCredentialId));
+  } catch (error) {
+    seckey.fill(0);
+    handleImportError(error, true);
   } finally {
     isLoading = false;
   }
@@ -209,6 +324,9 @@ function selectTab(tab: AuthTab) {
 function showImport() {
   creationMethod = 'import';
   errorMessage = '';
+  // 作成方法を変えた ＝ やり直しの意思表示。作成済みパスキーの続きは破棄する
+  // （そのパスキーは鍵情報なしで残るが、WebAuthn に削除 API は無い）。
+  pendingCredentialId = '';
 }
 
 function showNew() {
@@ -218,6 +336,7 @@ function showNew() {
   nsecInput = '';
   nsecError = '';
   errorMessage = '';
+  pendingCredentialId = '';
 }
 
 $effect(() => {
@@ -263,12 +382,12 @@ $effect(() => {
         </Button>
 
         {#if unknownCredentialId}
-          <div class="no-key-notice" role="alert">
-            <div class="no-key-title">
+          <div class="notice-card" role="alert">
+            <div class="notice-title">
               <span class="error-icon" aria-hidden="true">⚠️</span>
               {$i18n.t.auth.noKeyInfoTitle}
             </div>
-            <p class="no-key-description">{$i18n.t.auth.noKeyInfoDescription}</p>
+            <p class="notice-description">{$i18n.t.auth.noKeyInfoDescription}</p>
             <div class="method-link-row">
               <button
                 type="button"
@@ -299,19 +418,37 @@ $effect(() => {
         </div>
 
         {#if creationMethod === "new"}
-          <Button onclick={createNew} disabled={isLoading} size="large">
-            {$i18n.t.auth.createNew}
-          </Button>
-          <div class="method-link-row">
-            <button
-              type="button"
-              class="method-link"
-              onclick={showImport}
-              disabled={isLoading}
-            >
-              {$i18n.t.auth.methodImport}
-            </button>
-          </div>
+          {#if pendingCredentialId}
+            <div class="notice-card second-tap" role="status">
+              <div class="notice-title">{$i18n.t.auth.secondTapTitle}</div>
+              <p class="notice-description">
+                {$i18n.t.auth.secondTapCreateDescription}
+              </p>
+              <div class="second-tap-action">
+                <Button
+                  onclick={resumeCreateNew}
+                  disabled={isLoading}
+                  size="large"
+                >
+                  {$i18n.t.auth.secondTapAction}
+                </Button>
+              </div>
+            </div>
+          {:else}
+            <Button onclick={createNew} disabled={isLoading} size="large">
+              {$i18n.t.auth.createNew}
+            </Button>
+            <div class="method-link-row">
+              <button
+                type="button"
+                class="method-link"
+                onclick={showImport}
+                disabled={isLoading}
+              >
+                {$i18n.t.auth.methodImport}
+              </button>
+            </div>
+          {/if}
         {:else}
           <div class="nsec-input">
             <div class="nsec-label-row">
@@ -331,13 +468,31 @@ $effect(() => {
               <div class="error-message">{nsecError}</div>
             {/if}
           </div>
-          <Button
-            onclick={importExisting}
-            disabled={isLoading || !nsecInput.trim()}
-            size="large"
-          >
-            {$i18n.t.auth.importNsec}
-          </Button>
+          {#if pendingCredentialId}
+            <div class="notice-card second-tap" role="status">
+              <div class="notice-title">{$i18n.t.auth.secondTapTitle}</div>
+              <p class="notice-description">
+                {$i18n.t.auth.secondTapImportDescription}
+              </p>
+              <div class="second-tap-action">
+                <Button
+                  onclick={resumeImport}
+                  disabled={isLoading || !nsecInput.trim()}
+                  size="large"
+                >
+                  {$i18n.t.auth.secondTapAction}
+                </Button>
+              </div>
+            </div>
+          {:else}
+            <Button
+              onclick={importExisting}
+              disabled={isLoading || !nsecInput.trim()}
+              size="large"
+            >
+              {$i18n.t.auth.importNsec}
+            </Button>
+          {/if}
           <div class="method-link-row">
             <button
               type="button"
@@ -449,9 +604,12 @@ $effect(() => {
     text-align: center;
   }
 
-  /* 鍵情報が見つからなかったときの注意カード。導出ログインは事故（別アカウント生成）を
-     招きうるため、主ボタンより一段控えめな見た目にして意図的な操作にとどめる。 */
-  .no-key-notice {
+  /* 補足カードの共通ガワ。2 つの用途で使う:
+     1. 鍵情報が見つからなかったときの注意カード。導出ログインは事故（別アカウント生成）を
+        招きうるため、主ボタンより一段控えめな見た目にして意図的な操作にとどめる。
+     2. 2 タップ目の案内カード（.second-tap）。こちらは異常ではなく WebKit での正規フロー
+        なので、警告色・警告アイコンを使わず主ボタンを内包する。 */
+  .notice-card {
     margin-top: 20px;
     padding: 16px;
     border: 1px solid var(--color-border);
@@ -460,7 +618,12 @@ $effect(() => {
     text-align: left;
   }
 
-  .no-key-title {
+  .notice-card.second-tap {
+    margin-top: 0;
+    text-align: center;
+  }
+
+  .notice-title {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -469,11 +632,25 @@ $effect(() => {
     color: var(--color-text-primary);
   }
 
-  .no-key-description {
+  .notice-card.second-tap .notice-title {
+    justify-content: center;
+  }
+
+  /* .notice-description は上位で text-align: left が効くため、
+     中央寄せの見出し・ボタンに合わせて明示的に上書きする。 */
+  .notice-card.second-tap .notice-description {
+    text-align: center;
+  }
+
+  .notice-description {
     margin: 8px 0 0 0;
     font-size: 0.85rem;
     line-height: 1.6;
     color: var(--color-text-secondary);
+  }
+
+  .second-tap-action {
+    margin-top: 16px;
   }
 
   .method-link {

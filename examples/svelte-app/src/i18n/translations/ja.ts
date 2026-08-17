@@ -21,6 +21,8 @@ export const ja: TranslationData = {
       passkeyCreation: 'パスキー作成エラー:',
       login: 'ログインエラー:',
       importNsec: 'nsec インポートエラー:',
+      // 2 タップ目の失敗はパスキー作成後なので「作成エラー」ではない
+      secondTapFailed: '続きの処理を完了できませんでした。もう一度お試しください:',
       prfUnsupported:
         'このパスキーは利用できません。Bitwarden など一部の認証器は未対応なため、PRF 拡張に対応した別のパスキー（プラットフォームのパスキーなど）でお試しください。',
     },
@@ -51,6 +53,10 @@ export const ja: TranslationData = {
     noKeyInfoDescription:
       'このパスキーに紐づく鍵情報がこの端末に保存されていません。以前使っていたアカウントで入る場合は、バックアップした鍵情報から復元してください。パスキーから鍵を導出してログインすると、インポート済みの鍵とは別のアカウントになります。',
     deriveFromPasskey: 'パスキーから鍵を導出してログイン',
+    secondTapTitle: 'あとワンステップです',
+    secondTapCreateDescription: 'いま作成したパスキーで鍵を作成します。',
+    secondTapImportDescription: 'いま作成したパスキーでインポートを完了します。',
+    secondTapAction: '続ける',
     multipleAccountsForPasskey:
       'このパスキーには複数のアカウントが紐づいています。上の「保存済みアカウント」から選択してください。',
     accounts: {

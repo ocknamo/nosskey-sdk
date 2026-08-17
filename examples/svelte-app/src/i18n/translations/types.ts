@@ -34,6 +34,7 @@ export interface TranslationData {
       passkeyCreation: string;
       login: string;
       importNsec: string;
+      secondTapFailed: string;
       prfUnsupported: string;
     };
   };
@@ -61,6 +62,10 @@ export interface TranslationData {
     noKeyInfoTitle: string;
     noKeyInfoDescription: string;
     deriveFromPasskey: string;
+    secondTapTitle: string;
+    secondTapCreateDescription: string;
+    secondTapImportDescription: string;
+    secondTapAction: string;
     multipleAccountsForPasskey: string;
     accounts: {
       title: string;

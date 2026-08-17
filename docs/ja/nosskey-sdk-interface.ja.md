@@ -217,6 +217,46 @@ async createPasskey(options?: PasskeyCreationOptions): Promise<Uint8Array>
 
 作成時に標準 salt と wrap salt の PRF を 1 回の UV で同時取得し、直後の `createNostrKey()` / `importNostrKey()` が消費するまで SDK 内部にキャッシュします。未消費のまま放置されたキャッシュは TTL（60 秒）経過で自動ゼロ化されるほか、`clearCurrentKeyInfo()`（ログアウト）/ `clearStoredKeyInfo()`（完全ワイプ）でも即時破棄されます（アプリ側での管理は不要）。
 
+#### hasPendingPrf()
+直前の `createPasskey()` / `loginWithPasskey()` で退避した PRF がまだ消費されずに残っているかを返します（同期・追加の UV なし）。
+
+```typescript
+hasPendingPrf(
+  credentialId: Uint8Array | string,
+  mode?: 'standard' | 'wrap' // 既定 'standard'
+): boolean
+```
+
+- `'standard'`: PRF 直接モード用（`createNostrKey()` が消費）
+- `'wrap'`: wrap モードの KEK 用（`importNostrKey()` が消費）
+
+> **⚠️ WebKit（iOS / macOS Safari）では 2 タップ経路が必須です**
+>
+> WebKit は WebAuthn `create()` 時に `prf.results` を返しません（`enabled` のみ）。そのため `createPasskey()` は PRF を退避できず、続く `createNostrKey()` / `importNostrKey()` は内部で `navigator.credentials.get()` へフォールバックします。
+>
+> この get() は `create()` の await が解けた後 ＝ **ユーザージェスチャ（transient activation）が失効した後**に発行されます。WebKit は WebAuthn 呼び出しに transient activation を要求するため `NotAllowedError` になり、**パスキーだけが作成されて `NostrKeyInfo` は保存されない**（＝ 以後ログインできない）状態になります。
+>
+> `createPasskey()` の直後に `hasPendingPrf()` が `false` を返した場合は、そのまま鍵作成へ進まず、**別のユーザー操作のハンドラ内で** `createNostrKey()` / `importNostrKey()` を呼んでください。
+
+```typescript
+const credentialId = await keyMgr.createPasskey();
+
+if (keyMgr.hasPendingPrf(credentialId)) {
+  // create 時に PRF が取れた（Chrome など）: 1 タップで完了
+  const keyInfo = await keyMgr.createNostrKey(credentialId);
+  await login(keyInfo);
+} else {
+  // 取れなかった（Safari など）: 2 タップ目のボタンを出す。
+  // そのクリックハンドラで keyMgr.createNostrKey(credentialId) を呼べば
+  // get() がユーザージェスチャ内で発行される。
+  showSecondTapButton(credentialId);
+}
+```
+
+`create()` で PRF を返さない実装は WebKit だけではありません（Chrome/Edge 146 以前 + Windows Hello、Firefox 146 以前など）。それらはジェスチャ失効後の `get()` でも認証ダイアログが出るため本来 1 タップで完走できますが、`hasPendingPrf()` は「ジェスチャを要求するか」までは判別できません。一律 2 タップに倒すか、まず 1 タップを試して `NotAllowedError` を捕まえてから倒すかは、アプリ側の設計判断になります（後者は `NotAllowedError` がユーザーによるキャンセルと区別できない点に注意）。
+
+nsec インポート（wrap モード）では `hasPendingPrf(credentialId, 'wrap')` で判定します。参考実装は `examples/svelte-app/src/components/screens/AuthScreen.svelte` の `createNew` / `importExisting` / `resumeCreateNew` / `resumeImport`。
+
 #### loginWithPasskey()
 パスキーで**保存済み鍵を復元**します（ログイン）。WebAuthn の assertion を 1 回だけ実行し、
 返ってきた credentialId に紐づく保存済み NostrKeyInfo を探します。該当が無い場合に鍵を

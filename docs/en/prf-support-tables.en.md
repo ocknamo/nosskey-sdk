@@ -7,7 +7,7 @@
 | Category | Platform/Browser | Minimum Version (Stable) | Default Status | Notes |
 |----------|------------------|--------------------------|----------------|-------|
 | **Browser** | Chromium-based<br>(Chrome, Edge, Opera, Brave...) | 116 and later | ON | PRF with security keys / Google Password Manager since 116. PRF via iCloud Keychain on macOS since Chrome 132; PRF-on-create with Windows Hello since Chrome 147 |
-| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | Announced at WWDC 24. Works with iCloud Passkey (platform authenticator). PRF extension data is not passed to external CTAP2 security keys |
+| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | Announced at WWDC 24. Works with iCloud Passkey (platform authenticator). PRF extension data is not passed to external CTAP2 security keys. **Appears to return only `prf.enabled` from `create()`, without `results`**, so a separate `get()` is required to obtain the PRF (pending on-device verification; see "PRF on create and user gesture" below) |
 | | Firefox | 135 and later | ON | Enabled by default (no flag) since Firefox 135 (2025-02-04). Creation-time PRF backported in 147; full create/authentication support with Windows Hello in 148+. Firefox for Android is not supported |
 | **Platform<br>Authenticator** | Google Password Manager Passkey<br>(Android 14+ / Chrome 116+) | 116 | ON | PRF available in Chromium, hybrid path also supported |
 | | Apple Passkeys<br>(Touch ID / Face ID on macOS 15・iOS 18 and later) | 18 / 15 | ON | PRF support added along with automatic passkey upgrade |
@@ -21,6 +21,19 @@
 - **Supported (conditional)**: Available once additional requirements are met, such as a supported OS version or browser.
 - Chromium-based browsers share the same Blink implementation, so Chrome=Edge=Opera behave almost identically.
 - For PRF to function, **the browser, OS, and authenticator must all implement it**. For example, with Windows Hello, even if the OS is on a supported build, PRF is not generated at creation time on Chrome/Edge 146 or earlier.
+
+#### PRF on create and user gesture
+
+"Supports PRF" and "**returns PRF output from `create()`**" are two different things. In WebAuthn L3, whether the `prf` result of `create()` includes `results` is implementation-defined, and returning only `enabled: true` is permitted.
+
+This directly affects application code. When `create()` returns no `results`, obtaining the PRF requires a follow-up `navigator.credentials.get()` — but that get() is issued after the `create()` await resolves, i.e. **after the user gesture (transient activation) has expired**. WebKit requires transient activation for WebAuthn calls, so it fails with `NotAllowedError`, leaving **a passkey created but no key info stored**.
+
+| Behavior | Chromium-based | WebKit (Safari) |
+|----------|----------------|-----------------|
+| `prf.results` from `create()` | Returned | Appears not to be returned (`enabled` only; pending on-device verification) |
+| User actions needed from registration to key derivation | 1 tap | 2 taps (create and get in separate gestures) |
+
+This SDK exposes `NosskeyManager.hasPendingPrf(credentialId, mode)` as a synchronous check for "was a PRF obtained at `create()` time", so the application can present a second-tap flow when it was not. See the `hasPendingPrf()` section in `docs/{ja,en}/nosskey-sdk-interface`, and `AuthScreen.svelte` in `examples/svelte-app` for a reference implementation.
 
 #### Official Documentation
 

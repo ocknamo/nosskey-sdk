@@ -23,6 +23,11 @@ export const simpleJa: DeepPartial<TranslationData> = {
     // 引き継いだ（インポートした）アカウントには戻らない。一方、このパスキーで
     // 作ったアカウントなら同じものに戻るため「新規作成」とも言い切れない。
     deriveFromPasskey: 'このパスキーからアカウントを作り直して入る',
+    // secondTapTitle / secondTapAction は専門用語を含まないため ja.ts の文言をそのまま使う。
+    secondTapCreateDescription: 'いま作成したパスキーでアカウントを作成します。',
+    // 引き継ぎ側で「作成します」と書かないこと: 既存アカウントを持ち込む操作であり、
+    // 新しいアカウントができるわけではない（deriveFromPasskey と同じ注意）。
+    secondTapImportDescription: 'いま作成したパスキーで引き継ぎを完了します。',
   },
   nostr: {
     publicKey: 'ユーザーID',

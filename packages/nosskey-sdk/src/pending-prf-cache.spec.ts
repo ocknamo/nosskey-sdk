@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PENDING_PRF_TTL_MS, PendingPrfCache } from './pending-prf-cache.js';
+import { bytesToHex } from './utils.js';
 
 describe('PendingPrfCache', () => {
   const credId = new Uint8Array(16).fill(1);
@@ -55,6 +56,29 @@ describe('PendingPrfCache', () => {
       expect(cache.consume(credId, 'wrap')).toBeUndefined();
     });
 
+    it('該当 kind が無い場合も相方をゼロ化してエントリごと破棄する', () => {
+      // create 時に first だけ返し second を返さないオーセンティケータでは、
+      // entry に standard だけが載る。importNostrKey が wrap を consume しに来ても
+      // 空振りするが、そこで放置すると使われないと確定した 32 バイト秘密値
+      // （直接モードの秘密鍵そのもの）が TTL 満了まで heap に残ってしまう。
+      const cache = new PendingPrfCache();
+      const standard = new Uint8Array(32).fill(3);
+      cache.store(credId, { standard });
+
+      expect(cache.consume(credId, 'wrap')).toBeUndefined();
+
+      expect(Array.from(standard)).toEqual(Array.from(new Uint8Array(32)));
+      expect(cache.has(credId, 'standard')).toBe(false);
+      expect(cache.consume(credId, 'standard')).toBeUndefined();
+    });
+
+    it('該当 kind が無い場合も TTL タイマーは解除される', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(3) });
+      cache.consume(credId, 'wrap');
+      expect(() => vi.advanceTimersByTime(PENDING_PRF_TTL_MS)).not.toThrow();
+    });
+
     it('消費すると相方バッファをゼロ化してエントリごと破棄する', () => {
       const cache = new PendingPrfCache();
       const standard = new Uint8Array(32).fill(3);
@@ -75,6 +99,69 @@ describe('PendingPrfCache', () => {
       cache.consume(credId, 'standard');
       // 解除済みタイマーが残っていないことを間接確認
       expect(() => vi.advanceTimersByTime(PENDING_PRF_TTL_MS)).not.toThrow();
+    });
+  });
+
+  describe('has', () => {
+    it('credentialId が undefined なら false を返す', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(3) });
+      expect(cache.has(undefined, 'standard')).toBe(false);
+    });
+
+    it('エントリが無ければ false を返す', () => {
+      const cache = new PendingPrfCache();
+      expect(cache.has(credId, 'standard')).toBe(false);
+    });
+
+    it('store した kind だけ true を返す', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(3) });
+      expect(cache.has(credId, 'standard')).toBe(true);
+      expect(cache.has(credId, 'wrap')).toBe(false);
+    });
+
+    it('hex 文字列の credentialId でも照会できる', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { wrap: new Uint8Array(32).fill(4) });
+      expect(cache.has(bytesToHex(credId), 'wrap')).toBe(true);
+      expect(cache.has(bytesToHex(credId), 'standard')).toBe(false);
+    });
+
+    it('値を消費もゼロ化もしない（has の後でも consume が同じバッファを返す）', () => {
+      const cache = new PendingPrfCache();
+      const standard = new Uint8Array(32).fill(3);
+      cache.store(credId, { standard });
+
+      expect(cache.has(credId, 'standard')).toBe(true);
+      expect(cache.has(credId, 'standard')).toBe(true);
+
+      // 何度照会しても値は生きたまま
+      expect(Array.from(standard)).toEqual(Array.from(new Uint8Array(32).fill(3)));
+      expect(cache.consume(credId, 'standard')).toBe(standard);
+    });
+
+    it('consume 後は false を返す', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(3) });
+      cache.consume(credId, 'standard');
+      expect(cache.has(credId, 'standard')).toBe(false);
+    });
+
+    it('TTL 経過後は false を返す', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(5) });
+
+      vi.advanceTimersByTime(PENDING_PRF_TTL_MS);
+
+      expect(cache.has(credId, 'standard')).toBe(false);
+    });
+
+    it('clearAll 後は false を返す', () => {
+      const cache = new PendingPrfCache();
+      cache.store(credId, { standard: new Uint8Array(32).fill(5) });
+      cache.clearAll();
+      expect(cache.has(credId, 'standard')).toBe(false);
     });
   });
 
