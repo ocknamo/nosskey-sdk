@@ -8,7 +8,7 @@
 | 区分 | プラットフォーム／ブラウザ | 最低バージョン (Stable) | デフォルト状態 | 備考 |
 |------|--------------------------|----------------------|--------------|------|
 | **ブラウザ** | Chromium 系<br>(Chrome, Edge, Opera, Brave…) | 116 以降 | ON | セキュリティキー／Google Password Manager との PRF は 116 以降。macOS の iCloud キーチェーン PRF は Chrome 132 以降、Windows Hello の登録時 PRF は Chrome 147 以降 |
-| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | WWDC 24 で発表。iCloud Passkey（プラットフォーム認証器）では動作。外付け CTAP2 セキュリティキーへの PRF 拡張データ受け渡しは未対応。**登録時（`create()`）は `prf.enabled` のみで `results` を返さない**とみられ、PRF の取得には別途 `get()` が必要（実機検証待ち。後述の「登録時 PRF と user gesture」参照） |
+| | Safari 18<br>(macOS 15 / iOS 18 / iPadOS 18) | 18.0 | ON | WWDC 24 で発表。iCloud Passkey（プラットフォーム認証器）では動作。外付け CTAP2 セキュリティキーへの PRF 拡張データ受け渡しは未対応。**登録時（`create()`）に `prf.results` を返す**ことを iPhone 実機で確認済み（2026-09。後述の「登録時 PRF と user gesture」参照） |
 | | Firefox | 135 以降 | ON | Firefox 135（2025-02-04）でデフォルト有効化（フラグ不要）。147 で登録時 PRF をバックポート、148+ で Windows Hello との登録・認証の両対応。Android 版 Firefox は未対応 |
 | **プラットフォーム<br>オーセンティケータ** | Google Password Manager Passkey<br>(Android 14+ / Chrome 116+) | 116 | ON | Chromium で PRF が利用可能、ハイブリッド経路も対応 |
 | | Apple Passkeys<br>(Touch ID / Face ID on macOS 15・iOS 18 以降) | 18 / 15 | ON | 自動パスキーアップグレードと同時に PRF サポート |
@@ -27,14 +27,18 @@
 
 「PRF に対応している」ことと「**登録時（`create()`）に PRF 出力を返す**」ことは別問題です。WebAuthn L3 では `create()` の `prf` 結果に `results` を含めるかどうかは実装依存で、`enabled: true` だけを返す実装が許容されています。
 
-これはアプリの実装に直接影響します。`create()` が `results` を返さない場合、PRF を得るには続けて `navigator.credentials.get()` を呼ぶ必要がありますが、その get() は `create()` の await が解けた後 ＝ **ユーザージェスチャ（transient activation）が失効した後**に発行されます。WebKit は WebAuthn 呼び出しに transient activation を要求するため `NotAllowedError` になり、**パスキーだけが作成されて鍵情報が保存されない**という失敗をします。
+これはアプリの実装に影響します。`create()` が `results` を返さない実装では、PRF を得るために続けて `navigator.credentials.get()` を呼ぶ必要がありますが、その get() は `create()` の await が解けた後 ＝ **ユーザージェスチャ（transient activation）が失効した後**に発行されます。ジェスチャを厳格に要求する実装ではここで `NotAllowedError` になり、**パスキーだけが作成されて鍵情報が保存されない**という失敗が起こりえます。
 
-| 挙動 | Chromium 系 | WebKit（Safari） |
-|------|-------------|------------------|
-| `create()` の `prf.results` | 返る | 返らないとみられる（`enabled` のみ・実機検証待ち） |
-| 登録から鍵導出までに必要なユーザー操作 | 1 タップ | 2 タップ（create と get を別ジェスチャに分ける） |
+| 挙動 | Chromium 系 | WebKit（Safari / iOS） |
+|------|-------------|------------------------|
+| `create()` の `prf.results` | 返る | **返る**（iPhone 実機で確認、2026-09） |
+| 登録から鍵導出までに必要なユーザー操作 | 1 タップ | 1 タップ（Face ID 1 回） |
 
-本 SDK では `NosskeyManager.hasPendingPrf(credentialId, mode)` で「`create()` 時に PRF が取れたか」を同期照会でき、取れなかった場合はアプリ側で 2 タップ目の導線を出す設計にしています（`docs/{ja,en}/nosskey-sdk-interface` の `hasPendingPrf()` 節、参考実装は `examples/svelte-app` の `AuthScreen.svelte`）。
+**実機検証の結果（2026-09）**: iOS Safari（svelte-app 単体、iframe なし）で新規登録すると Face ID の確認は **1 回だけ**で、パスキー作成から鍵作成・ログインまで完走します。これは `create()` が `prf.results` を返しており、`getPrfSecret()` へのフォールバックが発生していないことを意味します。
+
+したがって「WebKit は登録時に PRF を返さないため 2 回目の `get()` が必要で、それがジェスチャ失効により失敗する」という仮説は **iOS Safari については否定されました**。「iOS で登録したのにログインできない」という報告の原因は別にあり、iframe 埋め込み時のストレージ分離（partitioned localStorage）の可能性が高いと考えられます（`docs/todo.md` の該当項目を参照）。
+
+なお `create()` で PRF を返さない実装は現存します（Chrome/Edge 146 以前 + Windows Hello、Firefox 146 以前など）。それらはジェスチャ失効後の `get()` でも認証ダイアログが出るため 1 タップで完走できますが、将来ジェスチャ要求が厳格化された場合に備え、登録直後の `get()` はユーザー操作の直後に発行するのが安全です。
 
 #### 公式ドキュメント
 
