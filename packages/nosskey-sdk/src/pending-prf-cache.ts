@@ -62,9 +62,16 @@ export class PendingPrfCache {
    * 指定 credentialId / kind の PRF を取り出して返す。
    *
    * 正常運用では create 直後に createNostrKey か importNostrKey の **どちらか一方** しか
-   * 呼ばれないため、片方を消費したタイミングで「相方」のバッファも即時ゼロ化して
+   * 呼ばれないため、消費を試みたタイミングで「相方」のバッファも即時ゼロ化して
    * Map エントリごと削除する（未消費の秘匿バイトを heap に放置しない）。
    * credentialId が undefined（= ユーザー選択待ち）の場合はキャッシュ照合できないので undefined を返す。
+   *
+   * **要求 kind が無い場合もエントリごと破棄する**。エントリはあるが片方の kind しか
+   * 載っていない状況は実際に起こる（create 時に first だけ返し second を返さない
+   * オーセンティケータ）。ここで早期 return すると、呼び出し側は get() フォールバックへ
+   * 進むのに、使われないと確定した相方の 32 バイト秘密値だけが TTL 満了まで heap に
+   * 残り続ける。本クラスの目的は秘匿バイトを heap に放置しないことなので、
+   * 「消費できなかった」経路でも掃除する。
    *
    * 注意: 本メソッドは**同期のまま**保つこと。Map 取得からタイマー解除・削除までが
    * 同期で完結しているため「hit 直後・使用前に TTL タイマーが発火して値がゼロ化される」
@@ -76,10 +83,10 @@ export class PendingPrfCache {
     const entry = this.#byCredId.get(key);
     if (!entry) return undefined;
     const value = entry[kind];
-    if (!value) return undefined;
-    // 消費したので TTL タイマーは不要になる
+    // 消費を試みた時点で TTL タイマーは不要になる（hit / miss どちらでも破棄するため）
     if (entry.timer !== undefined) clearTimeout(entry.timer);
-    // 相方は今後使われない前提でゼロ化して破棄
+    // 相方は今後使われない前提でゼロ化。miss の場合は要求 kind 側が undefined なので
+    // 実質「エントリに残っている全バッファ」をゼロ化することになる。
     const other = kind === 'standard' ? 'wrap' : 'standard';
     entry[other]?.fill(0);
     this.#byCredId.delete(key);
