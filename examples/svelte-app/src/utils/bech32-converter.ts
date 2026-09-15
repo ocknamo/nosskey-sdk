@@ -93,6 +93,10 @@ function describeBech32Error(e: unknown): string {
     'Invalid prefix',
     'Unknown character',
     'Data too short',
+    // 本モジュール自身が投げるもの。入力を含まない定数なのでそのまま通す。
+    // prefix 違いは実運用で最も起きる失敗であり、計測モードで見たい情報そのもの。
+    'Not an npub format',
+    'Not an nsec format',
   ];
   const matched = known.find((reason) => message.startsWith(reason));
   if (matched) return matched;

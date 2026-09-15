@@ -42,6 +42,7 @@ let dispose: (() => void) | null = null;
 /** 未捕捉例外ブリッジの解除関数。 */
 let removeUncaughtBridge: (() => void) | null = null;
 
+/** 計測モードか（起動時に 1 回だけ解決してキャッシュする）。 */
 function enabled(): boolean {
   if (enabledCache === null) enabledCache = isDebugConsoleEnabled();
   return enabledCache;
@@ -62,6 +63,8 @@ export function isDebugEnabled(): boolean {
 
 /** テスト用。モジュールキャッシュを初期化する。 */
 export function resetDebugConsoleForTest(): void {
+  document.documentElement.style.removeProperty('--nosskey-debug-panel-height');
+  document.body.classList.remove('nosskey-debug-console');
   enabledCache = null;
   removeUncaughtBridge?.();
   removeUncaughtBridge = null;
@@ -105,12 +108,26 @@ export async function startDebugConsole(options: { height?: number } = {}): Prom
     // 0.1.5 は戻り値なし、リポジトリ main は dispose 関数を返す。両対応にする。
     const result: unknown = createConsoleViewer({ show: 'always', height });
     dispose = typeof result === 'function' ? (result as () => void) : null;
+    markPanelMounted(height);
     warnAboutSharing();
   } catch (err) {
     // 計測の失敗でアプリを止めない。ブリッジは張ったままなので、パネルが出なくても
     // ブラウザ標準の console には未捕捉例外が残る。
     console.warn('[nosskey:debug] failed to start console viewer', describeError(err));
   }
+}
+
+/**
+ * パネルが載ったことを DOM に知らせる。
+ *
+ * パネルは `position: fixed; bottom: 0` で画面下部を占有し、console-daijin が
+ * 設定する `body { padding-bottom }` は fixed 要素を動かさない。つまりアプリ側の
+ * 固定要素（フッターナビ・状態カードのボタン）はパネルの下敷きになり**タップ
+ * できなくなる**。高さを CSS 変数で公開し、各コンポーネントがそれを避ける。
+ */
+function markPanelMounted(height: number): void {
+  document.documentElement.style.setProperty('--nosskey-debug-panel-height', `${height}px`);
+  document.body.classList.add('nosskey-debug-console');
 }
 
 /**
@@ -170,6 +187,7 @@ export function collectStorageDiagnostics(): StorageDiagnostics {
   // 状態照会 API は副作用（メモリキャッシュ・salt 書き戻し）を持つので呼ばず、
   // ストレージハンドルだけを渡して診断側が getItem で直接読む。
   const manager = peekNosskeyManager();
+  const storageOptions = manager?.getStorageOptions();
   return buildStorageDiagnostics({
     location: window.location,
     userAgent: navigator.userAgent,

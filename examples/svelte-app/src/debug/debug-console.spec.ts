@@ -190,6 +190,42 @@ describe('startDebugConsole', () => {
     }
   });
 
+  // 回帰ガード: console-daijin の console 差し替えは createConsoleViewer() の末尾で
+  // 行われるため、それより前に出した警告はパネル本文に残らない（parent-sample で
+  // 実際に一度壊れた）。共有前確認の注意はログ全文に同梱されないと意味がない。
+  it('emits the sharing warning only after the viewer has hooked console', async () => {
+    setUrl('?debug=1');
+    const order: string[] = [];
+    createConsoleViewer.mockImplementation(() => {
+      order.push('createConsoleViewer');
+    });
+    vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+      order.push(`warn:${String(args[0]).slice(0, 20)}`);
+    });
+
+    await startDebugConsole();
+
+    expect(order[0]).toBe('createConsoleViewer');
+    expect(order[1]).toContain('[nosskey:debug]');
+  });
+
+  it('publishes the panel height so fixed UI can move out from under it', async () => {
+    setUrl('?debug=1');
+    await startDebugConsole({ height: 160 });
+    expect(document.body.classList.contains('nosskey-debug-console')).toBe(true);
+    expect(document.documentElement.style.getPropertyValue('--nosskey-debug-panel-height')).toBe(
+      '160px'
+    );
+  });
+
+  it('leaves the document untouched when the flag is absent', async () => {
+    await startDebugConsole();
+    expect(document.body.classList.contains('nosskey-debug-console')).toBe(false);
+    expect(document.documentElement.style.getPropertyValue('--nosskey-debug-panel-height')).toBe(
+      ''
+    );
+  });
+
   it('keeps the uncaught bridge when the viewer import fails', async () => {
     setUrl('?debug=1');
     createConsoleViewer.mockImplementation(() => {

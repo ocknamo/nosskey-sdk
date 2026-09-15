@@ -2,7 +2,7 @@
  * アプリ内のハッシュルートへの遷移ヘルパー。
  * iframe 埋め込み時は別タブで開く必要があるため、URL 組み立てを純粋関数に切り出す。
  */
-import { appendDebugFlag } from '../debug/debug-flag.js';
+import { appendDebugFlag, isDebugConsoleEnabled } from '../debug/debug-flag.js';
 import type { ScreenName } from '../store/app-state.js';
 
 export interface ScreenUrlOptions {
@@ -52,7 +52,11 @@ export function buildHashForScreen(currentHash: string, screen: string): string 
   const kept = new URLSearchParams();
   for (const key of PERSISTENT_HASH_PARAMS) {
     const value = source.get(key);
-    if (value !== null) kept.set(key, value);
+    // `debug=0` のような無効値まで引き継ぐと、意味のないパラメータが全画面の URL に
+    // residue として残る。実際に有効なときだけ持ち回る。
+    if (value !== null && isDebugConsoleEnabled({ search: `?${key}=${value}`, hash: '' })) {
+      kept.set(key, value);
+    }
   }
   const query = kept.toString();
   return query ? `#/${screen}?${query}` : `#/${screen}`;

@@ -19,6 +19,7 @@ const TRUTHY = new Set(['', '1', 'true', 'on', 'yes']);
 
 type LocationLike = Pick<Location, 'search' | 'hash'>;
 
+/** 引数の location か、無ければ `window.location` を返す（SSR では null）。 */
 function resolveLocation(loc?: LocationLike): LocationLike | null {
   if (loc) return loc;
   return typeof window !== 'undefined' ? window.location : null;
@@ -30,6 +31,7 @@ function hashQuery(hash: string): string {
   return index < 0 ? '' : hash.slice(index);
 }
 
+/** クエリ文字列に有効な `debug` が含まれるか。 */
 function hasDebugParam(search: string): boolean {
   if (!search) return false;
   const value = new URLSearchParams(search).get('debug');

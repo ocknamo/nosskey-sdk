@@ -52,13 +52,16 @@ async function detectInitialState(): Promise<void> {
   if (typeof document.requestStorageAccess !== 'function') {
     // No Storage Access API: partitioned localStorage is all we can see.
     // debugLog の引数は計測が無効でも評価されるので、副作用のある `hasKeyInfo()` を
-    // ここには置かない（結果は直後の分岐ログで出す）。
+    // ここには置かない。この分岐は applyStorageGrant へ到達せず後続ログも無いため、
+    // 確定した uiState をここで明示的に出す。
     debugLog('SAA: requestStorageAccess is not a function');
     if (manager.hasKeyInfo()) {
       uiState = 'running';
+      debugLog('SAA: no API; using partitioned key info (uiState=running)');
       return;
     }
     uiState = 'unsupported';
+    debugLog('SAA: no API and no key info (uiState=unsupported)');
     postVisibility(true);
     return;
   }
@@ -321,10 +324,6 @@ onMount(() => {
   if (isEmbeddedIframeMode()) {
     document.body.classList.add('nosskey-embedded');
   }
-  if (debugMode) {
-    // 計測パネルが下部を占有するので、カードの操作ボタンが隠れないよう逃がす。
-    document.body.classList.add('nosskey-debug-console');
-  }
   stopHost = startIframeHost();
   if (debugMode) {
     // パネルは iframe の中に描画されるが、親は `nosskey:visibility` を受け取るまで
@@ -338,7 +337,6 @@ onMount(() => {
 
 onDestroy(() => {
   document.body.classList.remove('nosskey-embedded');
-  document.body.classList.remove('nosskey-debug-console');
   stopHost?.();
   stopHost = null;
   document.removeEventListener('visibilitychange', handleVisibilityRecheck);
@@ -558,10 +556,11 @@ onDestroy(() => {
     padding: 12px;
   }
 
-  /* 計測モード (?debug=1): console-daijin のパネル (iframe 内では 120px) が
-     下部に固定されるため、カードを上へ逃がしてボタンが隠れないようにする。 */
+  /* 計測モード (?debug=1): console-daijin のパネルが下部に固定されるため、
+     カードを上へ逃がしてボタンが隠れないようにする。高さは debug-console.ts が
+     実際に渡した値（iframe 内 120px / それ以外 200px）を変数で公開している。 */
   :global(body.nosskey-debug-console) .iframe-host {
-    padding-bottom: 132px;
+    padding-bottom: calc(var(--nosskey-debug-panel-height, 0px) + 12px);
   }
 
   :global(body.nosskey-embedded) .card {

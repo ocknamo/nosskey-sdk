@@ -26,6 +26,7 @@ const TRUTHY = new Set(['', '1', 'true', 'on', 'yes']);
 /** パネルを二重に出さないための番人。 */
 let started = false;
 
+/** クエリ文字列に有効な `debug` が含まれるか。 */
 function hasDebugParam(search: string): boolean {
   if (!search) return false;
   const value = new URLSearchParams(search).get('debug');

@@ -138,6 +138,7 @@ function parseCookiePairs(raw: string): { name: string; value: string }[] {
   return pairs;
 }
 
+/** percent-encoding された cookie 値をデコードする。壊れていれば null。 */
 function decodeCookieValue(value: string): string | null {
   try {
     return decodeURIComponent(value);
@@ -158,6 +159,12 @@ interface PeekableStorage {
   peekItem(key: string): string | null;
 }
 
+/**
+ * 副作用のない読み出しを持つ実装か。ダックタイピングなので、`MultiStorage` を
+ * 別のアダプタで包む場合は **`peekItem` も必ず転送すること**。転送し忘れると
+ * 無言で `getItem`（back-fill 付き）に戻り、計測が観測対象を書き換える状態へ
+ * 静かに退行する。
+ */
 function isPeekable(storage: Storage): storage is Storage & PeekableStorage {
   return typeof (storage as Partial<PeekableStorage>).peekItem === 'function';
 }
