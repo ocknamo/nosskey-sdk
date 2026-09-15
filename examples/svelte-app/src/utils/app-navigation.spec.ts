@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScreenUrl } from './app-navigation.js';
+import { buildScreenUrl, screenNameFromHash } from './app-navigation.js';
 
 describe('buildScreenUrl', () => {
   it('builds a hash route URL from origin and pathname', () => {
@@ -27,5 +27,28 @@ describe('buildScreenUrl', () => {
     // Location.search is intentionally ignored — only origin + pathname are used.
     const loc = { origin: 'https://example.com', pathname: '/' };
     expect(buildScreenUrl(loc, 'account')).not.toContain('?');
+  });
+});
+
+describe('screenNameFromHash', () => {
+  it('extracts the screen name from a plain hash route', () => {
+    expect(screenNameFromHash('#/iframe')).toBe('iframe');
+    expect(screenNameFromHash('#/account')).toBe('account');
+  });
+
+  it('drops a hash query so #/iframe?debug=1 still resolves to the iframe route', () => {
+    expect(screenNameFromHash('#/iframe?debug=1')).toBe('iframe');
+    expect(screenNameFromHash('#/settings?theme=auto&lang=ja')).toBe('settings');
+  });
+
+  it('tolerates a missing leading # or /', () => {
+    expect(screenNameFromHash('/key')).toBe('key');
+    expect(screenNameFromHash('key')).toBe('key');
+  });
+
+  it('returns an empty string for an empty hash so the caller can default', () => {
+    expect(screenNameFromHash('')).toBe('');
+    expect(screenNameFromHash('#')).toBe('');
+    expect(screenNameFromHash('#/')).toBe('');
   });
 });

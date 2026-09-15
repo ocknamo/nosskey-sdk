@@ -1,10 +1,13 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
+import { debugLog, describeError, logStorageDiagnostics } from '../../debug/debug-console.js';
+import { isDebugConsoleEnabled } from '../../debug/debug-flag.js';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
+import { isLikelyWebKit } from '../../utils/user-agent.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
 
@@ -25,6 +28,9 @@ type RequestStorageAccessFn = (options?: {
 }) => Promise<StorageAccessHandle | undefined>;
 
 let stopHost: (() => void) | null = null;
+// 調査用。`?debug=1` のときだけ true。パネルを見せるために iframe を自動表示し、
+// 判定の分岐をログに出す。
+const debugMode = isDebugConsoleEnabled();
 let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);
@@ -37,8 +43,12 @@ function postVisibility(visible: boolean): void {
 
 async function detectInitialState(): Promise<void> {
   const manager = getNosskeyManager();
+  logStorageDiagnostics('iframe: detectInitialState enter');
   if (typeof document.requestStorageAccess !== 'function') {
     // No Storage Access API: partitioned localStorage is all we can see.
+    debugLog('SAA: requestStorageAccess is not a function', {
+      hasKeyInfo: manager.hasKeyInfo(),
+    });
     if (manager.hasKeyInfo()) {
       uiState = 'running';
       return;
@@ -57,7 +67,9 @@ async function detectInitialState(): Promise<void> {
   let handle: StorageAccessHandle | null;
   try {
     handle = await callRequestStorageAccess();
+    debugLog('SAA: silent grant resolved', { handle: handle === null ? 'null' : 'handle' });
   } catch (err) {
+    debugLog('SAA: silent grant rejected', describeError(err));
     if (err instanceof DOMException && err.name === 'NotAllowedError') {
       // No silent grant. Fall back to partitioned key info if available so the
       // user can still sign with their cached key; first-party data (relays,
@@ -70,6 +82,9 @@ async function detectInitialState(): Promise<void> {
       postVisibility(true);
       return;
     }
+    // NotAllowedError 以外はここで再送出され、`onMount` の `void` 呼び出しにより
+    // unhandled rejection になる（状態カードが一切出ない経路）。デバッグモードでは
+    // console-daijin がこの rejection を拾うので、そこで観測できる。
     throw err;
   }
   applyStorageGrant(handle);
@@ -97,12 +112,18 @@ async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
   }
   try {
     const result = await fn.call(document, { all: true });
+    debugLog('SAA: requestStorageAccess({all:true}) returned', {
+      type: typeof result,
+      keys: result && typeof result === 'object' ? Object.keys(result) : null,
+      isHandle: isStorageAccessHandle(result),
+    });
     return isStorageAccessHandle(result) ? result : null;
   } catch (err) {
     // Older implementations reject the `{ all: true }` argument with a
     // TypeError. Fall back to the zero-arg form which at least grants cookie
     // access; Firefox's zero-arg form also unpartitions localStorage.
     if (err instanceof TypeError) {
+      debugLog('SAA: {all:true} rejected with TypeError; retrying zero-arg form');
       await fn.call(document);
       return null;
     }
@@ -112,6 +133,10 @@ async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
 
 function applyStorageGrant(handle: StorageAccessHandle | null): void {
   const manager = getNosskeyManager();
+  debugLog('SAA: applyStorageGrant', {
+    branch: handle ? 'handle' : isLikelyWebKit() ? 'webkit-cookie' : 'none',
+    userAgent: navigator.userAgent,
+  });
   if (handle) {
     // Chrome: window.localStorage remains partitioned after the grant —
     // only handle.localStorage points at unpartitioned storage. Thread it
@@ -120,7 +145,7 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     manager.setStorageOptions({ storage: handle.localStorage });
   } else if (isLikelyWebKit()) {
     // Safari/iOS (and any other WebKit-based iOS browser — see
-    // isLikelyWebKit comment): SAA grant unpartitions cookies but NOT
+    // `utils/user-agent.ts`): SAA grant unpartitions cookies but NOT
     // localStorage. The standalone tab mirrors NostrKeyInfo into a
     // first-party cookie via MultiStorage; switch the manager to read from
     // that CookieStorage so we can rehydrate the key after a parent reload.
@@ -140,19 +165,7 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
   } else {
     uiState = 'noKeyExists';
   }
-}
-
-// iOS / iPadOS では Apple のポリシーで全ブラウザが WebKit を使うため、
-// CriOS (iOS Chrome) / FxiOS (iOS Firefox) / EdgiOS (iOS Edge) すべて
-// Safari と同じ Storage Access API の制約（cookie のみ unpartition、
-// localStorage は partition のまま）を受ける。よって関数名は「Safari」
-// 限定ではなく「WebKit」とし、cookie 経路フォールバックの対象に含める。
-function isLikelyWebKit(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent;
-  // デスクトップ Chromium / Android Chrome / デスクトップ Edge は UA に
-  // "Safari" を含むが本来の WebKit ではないので除外する。
-  return /Safari/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua);
+  logStorageDiagnostics(`iframe: applyStorageGrant done (uiState=${uiState})`);
 }
 
 async function requestAccess(): Promise<void> {
@@ -162,6 +175,7 @@ async function requestAccess(): Promise<void> {
     const handle = await callRequestStorageAccess();
     applyStorageGrant(handle);
   } catch (err) {
+    debugLog('SAA: manual grant rejected', describeError(err));
     uiState = 'denied';
     errorMessage = err instanceof Error ? err.message : String(err);
   } finally {
@@ -193,7 +207,11 @@ function handleClose(): void {
 // する前に、まずその 2 点だけのために `noopener` を外す価値があるかを
 // 検討すること。
 function openSetup(): void {
-  window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
+  window.open(
+    buildScreenUrl(window.location, 'account', { debug: debugMode }),
+    '_blank',
+    'noopener'
+  );
 }
 
 // Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again
@@ -211,6 +229,7 @@ function handleVisibilityRecheck(): void {
   if (typeof document === 'undefined') return;
   if (document.visibilityState !== 'visible') return;
   if (uiState === 'running' || uiState === 'granted') return;
+  debugLog('iframe: visibility recheck', { uiState });
   void detectInitialState();
 }
 
@@ -297,7 +316,16 @@ onMount(() => {
   if (isEmbeddedIframeMode()) {
     document.body.classList.add('nosskey-embedded');
   }
+  if (debugMode) {
+    // 計測パネルが下部を占有するので、カードの操作ボタンが隠れないよう逃がす。
+    document.body.classList.add('nosskey-debug-console');
+  }
   stopHost = startIframeHost();
+  if (debugMode) {
+    // パネルは iframe の中に描画されるが、親は `nosskey:visibility` を受け取るまで
+    // iframe を display:none にしている。調査時だけ自動で開かせる。
+    postVisibility(true);
+  }
   document.addEventListener('visibilitychange', handleVisibilityRecheck);
   window.addEventListener('pageshow', handleVisibilityRecheck);
   void detectInitialState();
@@ -305,6 +333,7 @@ onMount(() => {
 
 onDestroy(() => {
   document.body.classList.remove('nosskey-embedded');
+  document.body.classList.remove('nosskey-debug-console');
   stopHost?.();
   stopHost = null;
   document.removeEventListener('visibilitychange', handleVisibilityRecheck);
@@ -522,6 +551,12 @@ onDestroy(() => {
   :global(body.nosskey-embedded) .iframe-host {
     background: transparent;
     padding: 12px;
+  }
+
+  /* 計測モード (?debug=1): console-daijin のパネル (iframe 内では 120px) が
+     下部に固定されるため、カードを上へ逃がしてボタンが隠れないようにする。 */
+  :global(body.nosskey-debug-console) .iframe-host {
+    padding-bottom: 132px;
   }
 
   :global(body.nosskey-embedded) .card {

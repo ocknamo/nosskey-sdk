@@ -14,6 +14,7 @@ import {
   type ThemeMode,
 } from './store/app-state.js';
 import { resolveTheme, THEME_PALETTES } from './theme/palettes.js';
+import { screenNameFromHash } from './utils/app-navigation.js';
 
 let screen = $state('account');
 
@@ -21,9 +22,7 @@ let screen = $state('account');
 // screen の更新は updateHash に集約するため、ここでは直接代入せず
 // currentScreen.set 経由でストア → updateHash に流す。
 function initializeFromHash() {
-  const hash = window.location.hash.substring(1);
-  const name = hash.startsWith('/') ? hash.substring(1) : hash;
-  const newScreen = name || 'account';
+  const newScreen = screenNameFromHash(window.location.hash) || 'account';
 
   if (isScreenName(newScreen)) {
     currentScreen.set(newScreen);
