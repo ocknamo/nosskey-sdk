@@ -71,4 +71,13 @@ describe('buildHashForScreen', () => {
     expect(buildHashForScreen('#/iframe', 'account')).toBe('#/account');
     expect(buildHashForScreen('', 'account')).toBe('#/account');
   });
+
+  it('drops params outside the persist list so screen-local state cannot leak', () => {
+    expect(buildHashForScreen('#/key?tab=2', 'account')).toBe('#/account');
+    expect(buildHashForScreen('#/key?tab=2&debug=1', 'account')).toBe('#/account?debug=1');
+  });
+
+  it('keeps a valueless debug flag usable across screens', () => {
+    expect(buildHashForScreen('#/iframe?debug', 'account')).toBe('#/account?debug=');
+  });
 });

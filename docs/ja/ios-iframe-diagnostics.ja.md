@@ -48,10 +48,28 @@ iframe 内から「セットアップを開く」で別タブへ飛ぶときも�
 where: https://nosskey.app/ route=/iframe framed=true secure=true
 ua: Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) ...
 webkitHeuristic=true storageAccessApi=available
-localStorage: available=true nosskey_pwk=312B/direct
+localStorage: available=true (none)
 cookie: total=3 len=812 nosskey:nosskey_pwk=430B/direct
-manager: initialized=true hasKeyInfo=false storage=MultiStorage
+manager: initialized=true storage=CookieStorage nosskey_pwk=430B/direct
 ```
+
+各行の意味:
+
+| 行 | 何を見ているか |
+|----|----------------|
+| `where` | origin・ハッシュルート・iframe の中か・secure context か |
+| `ua` | UA 全文（`webkitHeuristic` の判定根拠。秘密ではないので全文出す） |
+| `webkitHeuristic` | cookie フォールバック分岐に入る側かどうか。**実際の分岐と同じ関数**を使う |
+| `storageAccessApi` | `document.requestStorageAccess` が存在するか |
+| `localStorage` | 素の `window.localStorage`（iframe では partition された側） |
+| `cookie` | `document.cookie`（SAA グラント後に unpartition される側） |
+| `manager` | SDK が実際に読み書きしているハンドルとその中身 |
+
+`localStorage` と `manager` を別々に出すのが要点。SAA グラント後は SDK のハンドルが
+差し替わる（Chromium は SAA ハンドル、WebKit は `CookieStorage`）ため、両者の中身が
+食い違う。その差分がどの経路で鍵が見えているかを直接示す。上の例は「素の
+localStorage には無いが cookie 経由では見えている」＝ WebKit の cookie ブリッジが
+効いている状態である。
 
 `[nosskey:debug]` の行は**値を一切出さない。** 記録するのはキー名・バイト長・
 モード種別（`direct` / `wrap` / `mixed` / `empty` / `unparsable`）だけ。
@@ -98,6 +116,7 @@ SAA: applyStorageGrant {branch: webkit-cookie, userAgent: ...}
 | カードが出ずに無言で死ぬ | `unhandledrejection` 行 | `DOMException/InvalidStateError` 等、`NotAllowedError` 以外が出る |
 | SAA の前提（ジェスチャ / ファーストパーティ操作）を満たしていない | `SAA: silent grant rejected` と、許可タップ後の `SAA: manual grant rejected` | タップしてもプロンプトが出ずに `NotAllowedError` |
 | cookie ブリッジが成立していない | スタンドアロンタブの `cookie:` 行 | `nosskey:nosskey_pwk` が出ない／`length` が 4096 に迫る／数日後に消える |
+| SDK が鍵を見つけられていない | iframe の `manager:` 行 | `storage=...` の後ろが `(none)` |
 | cookie のホスト不一致 | `where:` 行の origin | 登録したタブと iframe で origin が違う（`www.` 有無、`pages.dev`） |
 | UA 判定漏れでフォールバックに入らない | `webkitHeuristic` と `applyStorageGrant {branch}` | iOS なのに `webkitHeuristic=false` / `branch: none` |
 | `{all:true}` の戻り値で誤分岐 | `requestStorageAccess({all:true}) returned` | `isHandle: true` なのに鍵が見えない |
@@ -115,6 +134,11 @@ SAA: applyStorageGrant {branch: webkit-cookie, userAgent: ...}
 - パネルは iframe 内では 120px に縮め、状態カードを上へ逃がす
   （`body.nosskey-debug-console`）。それでも表示は窮屈なので、長いログは
   コピーして読むこと。
+- **計測は観測対象を書き換えない。** 診断は SDK の状態照会 API（`hasKeyInfo()` 等、
+  メモリキャッシュと salt 書き戻しの副作用がある）を呼ばず、`MultiStorage` からは
+  back-fill しない `peekItem()` で読む。`getItem()` で読むと cookie の値が
+  localStorage へ実体化し、「partitioned localStorage に鍵が見えるか」という
+  最重要の判定が偽陰性になるため。
 
 ## 関連
 

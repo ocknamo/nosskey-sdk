@@ -3,7 +3,8 @@
  *
  * iOS 実機では DevTools を開けないため、`?debug=1` が付いているときだけ
  * オンページのコンソールビューア（console-daijin）と診断ログを有効化する。
- * 本番の通常アクセスでは一切読み込まれない（動的 import）。
+ * フラグ解決そのものは本番バンドルに含まれる（動的 import で分離されているのは
+ * console-daijin 本体だけ）。
  *
  * 受理する位置は 2 箇所:
  * - `location.search` — `NosskeyIframeClient.buildIframeUrl()` が `embedded` /

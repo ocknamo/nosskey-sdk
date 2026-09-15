@@ -70,13 +70,16 @@ export async function startDebugConsole(): Promise<void> {
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[parent-sample] unhandledrejection', describeError(event.reason));
   });
-  console.warn(
-    '[parent-sample] This panel captures the whole page console. Review the log before sharing it.'
-  );
   try {
     const { createConsoleViewer } = await import('console-daijin');
     createConsoleViewer({ show: 'always', height: 200 });
+    // 警告は createConsoleViewer() の**後**に出す。console の差し替えはその内部の
+    // 末尾で行われるため、前に出すとブラウザ標準 console にしか残らず、ログ全文を
+    // コピーして共有したときに注意書きが同梱されない。
+    console.warn(
+      '[parent-sample] This panel captures the whole page console. Review the log before sharing it.'
+    );
   } catch (err) {
-    console.warn('[parent-sample] failed to start console viewer', err);
+    console.warn('[parent-sample] failed to start console viewer', describeError(err));
   }
 }

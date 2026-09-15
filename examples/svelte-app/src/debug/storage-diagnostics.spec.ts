@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildStorageDiagnostics,
   classifyKeyInfo,
@@ -154,6 +154,53 @@ describe('buildStorageDiagnostics', () => {
     expect(report.manager.error).toBe('SecurityError');
     expect(report.manager.entries).toEqual([]);
     expect(report.route).toBe('/iframe');
+  });
+
+  // 回帰ガード: MultiStorage.getItem() はミラーヒット時に primary へ書き戻すため、
+  // 診断がそれを呼ぶと「partitioned localStorage に鍵が見えるか」という最重要の
+  // 判定を計測自身が偽陰性にする。peekItem を持つ実装では必ずそちらを使う。
+  it('prefers the side-effect-free peekItem when the storage offers one', () => {
+    const getItem = vi.fn(() => DIRECT);
+    const peekItem = vi.fn((key: string) => (key === 'nosskey_pwk' ? DIRECT : null));
+    const peekable = { getItem, peekItem } as unknown as Storage;
+
+    const report = buildStorageDiagnostics(
+      sources({ manager: { initialized: true, storage: peekable } })
+    );
+
+    expect(peekItem).toHaveBeenCalled();
+    expect(getItem).not.toHaveBeenCalled();
+    expect(report.manager.entries).toEqual([
+      { key: 'nosskey_pwk', length: DIRECT.length, mode: 'direct' },
+    ]);
+  });
+
+  it('reads the storage keys the manager is actually configured with', () => {
+    const custom = fakeStorage({ custom_current: DIRECT });
+    const report = buildStorageDiagnostics(
+      sources({
+        manager: {
+          initialized: true,
+          storage: custom,
+          storageKeys: ['custom_current', 'custom_registry'],
+        },
+      })
+    );
+    expect(report.manager.entries).toEqual([
+      { key: 'custom_current', length: DIRECT.length, mode: 'direct' },
+    ]);
+  });
+
+  it('ignores empty or missing configured keys', () => {
+    const report = buildStorageDiagnostics(
+      sources({
+        localStorage: fakeStorage({ nosskey_pwk: DIRECT }),
+        manager: { initialized: true, storage: null, storageKeys: [undefined, ''] },
+      })
+    );
+    expect(report.localStorage.entries).toEqual([
+      { key: 'nosskey_pwk', length: DIRECT.length, mode: 'direct' },
+    ]);
   });
 
   it('distinguishes an uninitialised manager from one with no storage handle', () => {

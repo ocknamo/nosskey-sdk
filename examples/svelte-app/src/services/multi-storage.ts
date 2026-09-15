@@ -23,19 +23,39 @@ export class MultiStorage implements Storage {
   }
 
   getItem(key: string): string | null {
+    return this.#lookup(key, true);
+  }
+
+  /**
+   * 書き戻しをせずに読む。`getItem` と違い primary へ一切書き込まない。
+   *
+   * 計測・診断用。`getItem` はミラーにヒットすると primary へ back-fill するため、
+   * 「iframe の partitioned localStorage に鍵が見えているか」を観測しようとする
+   * コードがそれを呼ぶと、cookie 側の値を localStorage へ実体化してしまい、
+   * **観測対象そのものを書き換える**（次の観測が偽陰性になる）。読むだけの
+   * 用途は必ずこちらを使うこと。
+   */
+  peekItem(key: string): string | null {
+    return this.#lookup(key, false);
+  }
+
+  /**
+   * primary → mirrors の順に探す。`backfill` が true のときだけ、ミラーで見つけた
+   * 値を primary へ書き戻す（以降の読み出しを早くし、ストレージ間の整合性も保つ）。
+   */
+  #lookup(key: string, backfill: boolean): string | null {
     const direct = this.#primary.getItem(key);
     if (direct !== null) return direct;
     for (const mirror of this.#mirrors) {
       try {
         const fallback = mirror.getItem(key);
         if (fallback !== null) {
-          // ミラーにあったら primary にも書き戻して以降の読み出しを早くし、
-          // ストレージ間の整合性も担保する。書き込み失敗は無視（読み取りに
-          // 影響しない）。
-          try {
-            this.#primary.setItem(key, fallback);
-          } catch {
-            /* primary 書き込み失敗は無害 */
+          if (backfill) {
+            try {
+              this.#primary.setItem(key, fallback);
+            } catch {
+              /* primary 書き込み失敗は無害 */
+            }
           }
           return fallback;
         }

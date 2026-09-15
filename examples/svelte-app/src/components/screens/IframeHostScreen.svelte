@@ -51,9 +51,9 @@ async function detectInitialState(): Promise<void> {
   logStorageDiagnostics('iframe: detectInitialState enter');
   if (typeof document.requestStorageAccess !== 'function') {
     // No Storage Access API: partitioned localStorage is all we can see.
-    debugLog('SAA: requestStorageAccess is not a function', {
-      hasKeyInfo: manager.hasKeyInfo(),
-    });
+    // debugLog の引数は計測が無効でも評価されるので、副作用のある `hasKeyInfo()` を
+    // ここには置かない（結果は直後の分岐ログで出す）。
+    debugLog('SAA: requestStorageAccess is not a function');
     if (manager.hasKeyInfo()) {
       uiState = 'running';
       return;

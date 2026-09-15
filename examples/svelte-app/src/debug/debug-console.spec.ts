@@ -35,6 +35,7 @@ beforeEach(() => {
   // 前テストが残した cookie を消す（テスト間で診断結果が混ざらないように）。
   for (const pair of document.cookie.split(';')) {
     const name = pair.trim().split('=')[0];
+    // biome-ignore lint/suspicious/noDocumentCookie: テストのセットアップで実 cookie を操作する
     if (name) document.cookie = `${name}=; Path=/; Max-Age=0`;
   }
   localStorage.clear();
@@ -77,6 +78,7 @@ describe('collectStorageDiagnostics', () => {
   it('reads live localStorage and cookies without exposing their values', () => {
     const keyInfo = JSON.stringify({ credentialId: 'aa', pubkey: 'bb', salt: 'cc' });
     localStorage.setItem('nosskey_pwk', keyInfo);
+    // biome-ignore lint/suspicious/noDocumentCookie: 実 cookie を読む経路の検証が目的
     document.cookie = `nosskey:nosskey_pwk=${encodeURIComponent(keyInfo)}; Path=/`;
 
     const report = collectStorageDiagnostics();
@@ -109,6 +111,24 @@ describe('collectStorageDiagnostics', () => {
     expect(hasKeyInfo).not.toHaveBeenCalled();
     expect(getCurrentKeyInfo).not.toHaveBeenCalled();
     expect(report.manager.initialized).toBe(true);
+  });
+
+  // 回帰ガード: アプリの実ハンドルは MultiStorage(localStorage, [cookie]) であり、
+  // getItem はミラーヒット時に primary へ書き戻す。診断がそれを踏むと、次の
+  // スナップショットの `localStorage:` 行に鍵が現れて仮説判定が偽陰性になる。
+  it('does not materialise mirrored values into localStorage while reading', () => {
+    const keyInfo = JSON.stringify({ credentialId: 'aa', pubkey: 'bb', salt: 'cc' });
+    getNosskeyManager();
+    // cookie にだけ存在する状態（= iframe で SAA grant 後に見えるのは cookie のみ）
+    // biome-ignore lint/suspicious/noDocumentCookie: back-fill の有無を実測するため
+    document.cookie = `nosskey:nosskey_pwk=${encodeURIComponent(keyInfo)}; Path=/`;
+    localStorage.removeItem('nosskey_pwk');
+
+    const report = collectStorageDiagnostics();
+
+    expect(report.manager.entries.map((e) => e.key)).toContain('nosskey_pwk');
+    expect(localStorage.getItem('nosskey_pwk')).toBeNull();
+    expect(report.localStorage.entries).toEqual([]);
   });
 
   it('reads the key info through the manager storage handle', () => {

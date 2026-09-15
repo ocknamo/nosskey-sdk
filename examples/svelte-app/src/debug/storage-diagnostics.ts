@@ -6,23 +6,34 @@
  * 実機で切り分けるためのもの。DevTools を開けない iOS 実機で、
  * console-daijin のオンページパネルに出す前提で設計している。
  *
- * **本モジュールは値を一切出さない。** 記録するのはキー名・バイト長・モード種別だけ。
+ * **本モジュールは保存値を出さない。** 記録するのはキー名・バイト長・モード種別と、
+ * 調査に必要な環境情報（UA 全文・origin・パス）だけ。
  * `NostrKeyInfo` に秘密鍵は含まれないが、`pubkey` / `credentialId` は利用者を
  * 一意に特定できるうえ、ログはスクリーンショットや貼り付けで外部へ渡る前提の
  * ため、識別子そのものをパネルに出さない方針とする。
  * （パネル自体はアプリ全体の console を取り込むため、この保証が及ぶのは本モジュールが
  * 出す行だけである。`docs/ja/ios-iframe-diagnostics.ja.md` の「ログの持ち出し」節を参照。）
  *
- * **SDK の状態照会 API は呼ばない。** `NosskeyManager.hasKeyInfo()` は読み込んだ
- * 鍵情報をメモリへキャッシュし、旧 salt を検出するとストレージへ書き戻す。計測が
- * 観測対象を書き換えると、後続の `applyStorageGrant()` の判定が変わり調査結果その
- * ものを誤らせるため、ストレージハンドルから `getItem` で直接読む。
+ * **観測対象を書き換えない。** 計測が状態を変えると、後続の `applyStorageGrant()` の
+ * 判定や次のスナップショットが変わり、調査結果そのものを誤らせる。避けるべき経路が
+ * 2 つある:
+ * - `NosskeyManager.hasKeyInfo()` は読み込んだ鍵情報をメモリへキャッシュし、旧 salt を
+ *   検出するとストレージへ書き戻す → SDK の状態照会 API は呼ばない。
+ * - `MultiStorage.getItem()` はミラー（cookie）にヒットすると primary（localStorage）へ
+ *   back-fill する → 「partitioned localStorage に鍵が見えているか」という最重要の
+ *   判定を計測自身が偽陰性にする。読み取りには `peekItem()` を使う。
  */
 import { DEFAULT_COOKIE_PREFIX } from '../services/cookie-storage.js';
 import { isLikelyWebKit } from '../utils/user-agent.js';
 
-/** 診断対象の SDK ストレージキー。current スロットと登録簿のみを見る。 */
-const KEY_INFO_KEYS = ['nosskey_pwk', 'nosskey_keyinfo', 'nosskey_accounts'] as const;
+/**
+ * 診断対象の既定ストレージキー。current スロットと登録簿のみを見る。
+ *
+ * `nosskey_pwk` はこのアプリの設定値、`nosskey_keyinfo` は SDK 既定、
+ * `nosskey_accounts` は登録簿既定。マネージャが別のキーに設定されている場合は
+ * `ManagerSnapshot.storageKeys` 経由で合流させるので、ここは fallback にすぎない。
+ */
+const DEFAULT_KEY_INFO_KEYS = ['nosskey_pwk', 'nosskey_keyinfo', 'nosskey_accounts'] as const;
 
 /** 保存値の「形」だけを表す分類。値そのものは記録しない。 */
 export type KeyInfoMode = 'direct' | 'wrap' | 'mixed' | 'empty' | 'unparsable';
@@ -65,6 +76,12 @@ export interface ManagerSnapshot {
   initialized: boolean;
   /** `manager.getStorageOptions().storage`。実装クラス名と中身の読み取りに使う。 */
   storage: Storage | null;
+  /**
+   * マネージャが実際に設定されているストレージキー（current スロット・登録簿）。
+   * 既定から変更されている場合に診断が無言で `(none)` を出さないよう、既定キーと
+   * 合流させる。
+   */
+  storageKeys?: (string | undefined)[];
 }
 
 export interface DiagnosticsSources {
@@ -136,15 +153,32 @@ function routeOf(hash: string): string {
   return (queryAt < 0 ? withoutHash : withoutHash.slice(0, queryAt)) || '/';
 }
 
+/** 副作用のない読み出しを持つストレージ（`MultiStorage`）。 */
+interface PeekableStorage {
+  peekItem(key: string): string | null;
+}
+
+function isPeekable(storage: Storage): storage is Storage & PeekableStorage {
+  return typeof (storage as Partial<PeekableStorage>).peekItem === 'function';
+}
+
 /**
- * ストレージから鍵情報キーを読み、値を出さない統計に畳む。`getItem` しか呼ばない
- * ので SDK 側のキャッシュや書き戻しは発生しない。
+ * ストレージから鍵情報キーを読み、保存値を出さない統計に畳む。
+ *
+ * `peekItem()` を持つ実装（`MultiStorage`）では必ずそちらを使う。`getItem()` は
+ * ミラーヒット時に primary へ書き戻すため、読むだけのつもりが観測対象を変える。
  */
-function readEntries(storage: Storage): { entries: StoredKeyStat[]; error?: string } {
+function readEntries(
+  storage: Storage,
+  keys: readonly string[]
+): { entries: StoredKeyStat[]; error?: string } {
+  const read = isPeekable(storage)
+    ? (key: string) => storage.peekItem(key)
+    : (key: string) => storage.getItem(key);
   const entries: StoredKeyStat[] = [];
-  for (const key of KEY_INFO_KEYS) {
+  for (const key of keys) {
     try {
-      const raw = storage.getItem(key);
+      const raw = read(key);
       if (raw === null) continue;
       entries.push({ key, length: raw.length, mode: classifyKeyInfo(raw) });
     } catch (err) {
@@ -156,13 +190,18 @@ function readEntries(storage: Storage): { entries: StoredKeyStat[]; error?: stri
 
 /** 注入された素材から診断スナップショットを組み立てる純粋関数。 */
 export function buildStorageDiagnostics(sources: DiagnosticsSources): StorageDiagnostics {
-  const ls = sources.localStorage ? readEntries(sources.localStorage) : { entries: [] };
+  // マネージャ設定のキーと既定キーを重複なく合流させる。
+  const keys = [
+    ...new Set([...(sources.manager.storageKeys ?? []), ...DEFAULT_KEY_INFO_KEYS]),
+  ].filter((key): key is string => typeof key === 'string' && key.length > 0);
+
+  const ls = sources.localStorage ? readEntries(sources.localStorage, keys) : { entries: [] };
   const lsError = ls.error ?? sources.localStorageError;
   const lsAvailable = sources.localStorage !== null && ls.error === undefined;
   const lsEntries = ls.entries;
 
   const managerStorage = sources.manager.storage;
-  const managerRead = managerStorage ? readEntries(managerStorage) : { entries: [] };
+  const managerRead = managerStorage ? readEntries(managerStorage, keys) : { entries: [] };
 
   const pairs = parseCookiePairs(sources.cookie);
   const nosskeyCookies: StoredKeyStat[] = [];

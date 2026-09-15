@@ -172,3 +172,57 @@ describe('MultiStorage', () => {
     expect(primary.length).toBe(0);
   });
 });
+
+describe('MultiStorage.peekItem', () => {
+  let primary: MemoryStorage;
+  let mirror: MemoryStorage;
+  let multi: MultiStorage;
+
+  beforeEach(() => {
+    primary = new MemoryStorage();
+    mirror = new MemoryStorage();
+    multi = new MultiStorage({ primary, mirrors: [mirror] });
+  });
+
+  it('primary の値をそのまま返す', () => {
+    primary.setItem('k', 'from-primary');
+    expect(multi.peekItem('k')).toBe('from-primary');
+  });
+
+  // 診断用の読み出しはこれが本題。getItem と違い観測対象を書き換えない。
+  it('mirror から読んでも primary へ back-fill しない', () => {
+    mirror.setItem('k', 'from-mirror');
+    const setItem = vi.spyOn(primary, 'setItem');
+
+    expect(multi.peekItem('k')).toBe('from-mirror');
+
+    expect(setItem).not.toHaveBeenCalled();
+    expect(primary.getItem('k')).toBeNull();
+  });
+
+  it('getItem は従来どおり back-fill する（peekItem との差分を固定する）', () => {
+    mirror.setItem('k', 'from-mirror');
+
+    expect(multi.getItem('k')).toBe('from-mirror');
+
+    expect(primary.getItem('k')).toBe('from-mirror');
+  });
+
+  it('どこにも無ければ null を返す', () => {
+    expect(multi.peekItem('missing')).toBeNull();
+  });
+
+  it('mirror の読み取りが throw しても次の mirror へ進む', () => {
+    const broken = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    } as unknown as Storage;
+    const good = new MemoryStorage();
+    good.setItem('k', 'from-second');
+    const multiple = new MultiStorage({ primary, mirrors: [broken, good] });
+
+    expect(multiple.peekItem('k')).toBe('from-second');
+    expect(primary.getItem('k')).toBeNull();
+  });
+});

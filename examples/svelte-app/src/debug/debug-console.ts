@@ -12,8 +12,9 @@
  * ライブラリ側が将来これを拾うようになると 1 事象が 2 行出るが、取りこぼすより
  * 重複する方が調査上は安全なので許容する。
  *
- * 通常アクセスでは動的 import ごと評価されないため、本番バンドルの実行経路に
- * 計測コードは乗らない。
+ * 本モジュール自体は静的 import されるため本番バンドルに含まれる（フラグ無効時は
+ * 各関数が即 return する）。動的 import なのは console-daijin 本体だけで、そちらは
+ * 別チャンクに分離され、`?debug=1` が無ければ取得もされない。
  */
 import { peekNosskeyManager } from '../services/nosskey-manager.service.js';
 import { isDebugConsoleEnabled } from './debug-flag.js';
@@ -70,8 +71,11 @@ export function resetDebugConsoleForTest(): void {
 }
 
 /**
- * 調査用ログ。デバッグモードでないときは完全な no-op なので、呼び出し側に
- * 条件分岐を撒かずに済む。
+ * 調査用ログ。デバッグモードでないときは何も出力しない。
+ *
+ * ただし**引数は呼び出し前に必ず評価される**。副作用のある式（`hasKeyInfo()` の
+ * ような SDK の状態照会 API など）を引数に置くと、計測が無効でもその副作用だけが
+ * 走る。渡してよいのは値の読み出しだけに留めること。
  */
 export function debugLog(...args: unknown[]): void {
   if (!enabled()) return;
@@ -105,7 +109,7 @@ export async function startDebugConsole(options: { height?: number } = {}): Prom
   } catch (err) {
     // 計測の失敗でアプリを止めない。ブリッジは張ったままなので、パネルが出なくても
     // ブラウザ標準の console には未捕捉例外が残る。
-    console.warn('[nosskey:debug] failed to start console viewer', err);
+    console.warn('[nosskey:debug] failed to start console viewer', describeError(err));
   }
 }
 
@@ -178,6 +182,9 @@ export function collectStorageDiagnostics(): StorageDiagnostics {
     manager: {
       initialized: manager !== null,
       storage: manager?.getStorageOptions().storage ?? null,
+      storageKeys: manager
+        ? [manager.getStorageOptions().storageKey, manager.getStorageOptions().registryStorageKey]
+        : [],
     },
   });
 }

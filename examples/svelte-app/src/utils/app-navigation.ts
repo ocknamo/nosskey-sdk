@@ -29,8 +29,17 @@ export function screenNameFromHash(hash: string): string {
 }
 
 /**
- * 画面遷移後に書き戻すハッシュを組み立てる。現在のハッシュに付いているクエリ
- * （`#/iframe?debug=1` の `?debug=1`）はそのまま引き継ぐ。
+ * 画面遷移後も引き継ぐハッシュ内クエリのキー。
+ *
+ * ホワイトリストにしているのは、引き継ぎが「アプリ全体で 1 つの計測スイッチを
+ * 保つ」ためのものだからである。無差別に引き継ぐと、将来 `#/key?tab=2` のような
+ * 画面固有パラメータを足したときに、それが他画面へ付いて回る。
+ */
+const PERSISTENT_HASH_PARAMS = ['debug'] as const;
+
+/**
+ * 画面遷移後に書き戻すハッシュを組み立てる。現在のハッシュに付いているクエリの
+ * うち {@link PERSISTENT_HASH_PARAMS} のキーだけを引き継ぐ。
  *
  * 引き継がないと、`updateHash` が `#/{screen}` を書き戻した時点でクエリが消える。
  * 計測モードはリロードや BFCache 復帰のたびに URL から読み直されるため、消えると
@@ -38,8 +47,15 @@ export function screenNameFromHash(hash: string): string {
  */
 export function buildHashForScreen(currentHash: string, screen: string): string {
   const queryAt = currentHash.indexOf('?');
-  const query = queryAt < 0 ? '' : currentHash.slice(queryAt);
-  return `#/${screen}${query}`;
+  if (queryAt < 0) return `#/${screen}`;
+  const source = new URLSearchParams(currentHash.slice(queryAt));
+  const kept = new URLSearchParams();
+  for (const key of PERSISTENT_HASH_PARAMS) {
+    const value = source.get(key);
+    if (value !== null) kept.set(key, value);
+  }
+  const query = kept.toString();
+  return query ? `#/${screen}?${query}` : `#/${screen}`;
 }
 
 /**

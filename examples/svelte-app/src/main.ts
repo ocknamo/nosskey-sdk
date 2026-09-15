@@ -3,8 +3,8 @@ import './app.css';
 import App from './App.svelte';
 import { logStorageDiagnostics, startDebugConsole } from './debug/debug-console.js';
 
-// `?debug=1` のときだけオンページコンソールを起動する。通常アクセスでは動的
-// import ごと評価されないため、本番バンドルの実行経路に計測コードは乗らない。
+// `?debug=1` のときだけオンページコンソールを起動する。フラグが無ければ即 return し、
+// console-daijin 本体（別チャンク）は取得もされない。
 //
 // `mount()` の**前に await する**のが要点。console-daijin は起動した時点以降の
 // console しか拾わないため、ここで待たないとアプリ初期化中のログ（iframe の
