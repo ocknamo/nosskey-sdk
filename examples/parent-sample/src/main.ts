@@ -1,5 +1,6 @@
 import { NosskeyIframeClient, NosskeyIframeError } from 'nosskey-iframe';
 import type { NostrEvent } from 'nosskey-sdk';
+import { isDebugEnabled, startDebugConsole, withIframeDebugFlag } from './debug.js';
 import { sendNip17Dm } from './nip17.js';
 import {
   formatError,
@@ -80,12 +81,15 @@ async function publish(
 }
 
 async function connect(): Promise<void> {
-  const iframeUrl = ui.iframeUrl.value.trim();
-  if (!iframeUrl) {
+  const rawIframeUrl = ui.iframeUrl.value.trim();
+  if (!rawIframeUrl) {
     log('Connect aborted: iframe URL is empty.');
     toaster.show('Connect aborted: iframe URL is empty.', 'error');
     return;
   }
+  // 調査時は iframe 側にも `debug=1` を渡し、親と iframe の両方のログパネルを
+  // 同時に立ち上げる。通常時は入力された URL をそのまま使う。
+  const iframeUrl = withIframeDebugFlag(rawIframeUrl, isDebugEnabled());
   setStatus(ui.status, 'connecting…');
   const themeChoice = ui.parentTheme.value as ThemeChoice;
   const langChoice = ui.parentLang.value as LangChoice;
@@ -455,6 +459,9 @@ ui.nip17UseSelf.addEventListener('click', () => {
 ui.nip17SendDm.addEventListener('click', () => {
   void runNip17SendDm();
 });
+
+// `?debug=1` のときだけオンページコンソールを起動する（iOS 実機調査用）。
+void startDebugConsole();
 
 log(
   'Ready. Open the host app (default http://localhost:5173/#/settings) to create a passkey first.'

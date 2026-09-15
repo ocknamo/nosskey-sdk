@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScreenUrl } from './app-navigation.js';
+import { buildHashForScreen, buildScreenUrl, screenNameFromHash } from './app-navigation.js';
 
 describe('buildScreenUrl', () => {
   it('builds a hash route URL from origin and pathname', () => {
@@ -27,5 +27,57 @@ describe('buildScreenUrl', () => {
     // Location.search is intentionally ignored — only origin + pathname are used.
     const loc = { origin: 'https://example.com', pathname: '/' };
     expect(buildScreenUrl(loc, 'account')).not.toContain('?');
+  });
+});
+
+describe('screenNameFromHash', () => {
+  it('extracts the screen name from a plain hash route', () => {
+    expect(screenNameFromHash('#/iframe')).toBe('iframe');
+    expect(screenNameFromHash('#/account')).toBe('account');
+  });
+
+  it('drops a hash query so #/iframe?debug=1 still resolves to the iframe route', () => {
+    expect(screenNameFromHash('#/iframe?debug=1')).toBe('iframe');
+    expect(screenNameFromHash('#/settings?theme=auto&lang=ja')).toBe('settings');
+  });
+
+  it('tolerates a missing leading # or /', () => {
+    expect(screenNameFromHash('/key')).toBe('key');
+    expect(screenNameFromHash('key')).toBe('key');
+  });
+
+  it('returns an empty string for an empty hash so the caller can default', () => {
+    expect(screenNameFromHash('')).toBe('');
+    expect(screenNameFromHash('#')).toBe('');
+    expect(screenNameFromHash('#/')).toBe('');
+  });
+});
+
+describe('buildHashForScreen', () => {
+  it('keeps a hash query when the router writes the hash back', () => {
+    expect(buildHashForScreen('#/iframe?debug=1', 'iframe')).toBe('#/iframe?debug=1');
+  });
+
+  it('carries the query across a screen change', () => {
+    expect(buildHashForScreen('#/iframe?debug=1', 'account')).toBe('#/account?debug=1');
+  });
+
+  it('is a no-op round trip, so the router never loops on its own write', () => {
+    const written = buildHashForScreen('#/iframe?debug=1', 'iframe');
+    expect(buildHashForScreen(written, screenNameFromHash(written))).toBe(written);
+  });
+
+  it('adds nothing when there is no hash query', () => {
+    expect(buildHashForScreen('#/iframe', 'account')).toBe('#/account');
+    expect(buildHashForScreen('', 'account')).toBe('#/account');
+  });
+
+  it('drops params outside the persist list so screen-local state cannot leak', () => {
+    expect(buildHashForScreen('#/key?tab=2', 'account')).toBe('#/account');
+    expect(buildHashForScreen('#/key?tab=2&debug=1', 'account')).toBe('#/account?debug=1');
+  });
+
+  it('keeps a valueless debug flag usable across screens', () => {
+    expect(buildHashForScreen('#/iframe?debug', 'account')).toBe('#/account?debug=');
   });
 });

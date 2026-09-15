@@ -32,7 +32,11 @@ interface ResolvedOptions {
   document: { cookie: string } | null;
 }
 
-const DEFAULT_PREFIX = 'nosskey:';
+/**
+ * cookie 名のデフォルトプレフィクス。計測用の診断ログが「どの cookie が
+ * Nosskey のものか」を判別するのにも使うため公開する。
+ */
+export const DEFAULT_COOKIE_PREFIX = 'nosskey:';
 const DEFAULT_MAX_AGE_SECONDS = 31_536_000; // 1 year
 
 function resolveOptions(options?: CookieStorageOptions): ResolvedOptions {
@@ -40,7 +44,7 @@ function resolveOptions(options?: CookieStorageOptions): ResolvedOptions {
     options?.document ??
     (typeof document !== 'undefined' ? (document as { cookie: string }) : null);
   return {
-    prefix: options?.prefix ?? DEFAULT_PREFIX,
+    prefix: options?.prefix ?? DEFAULT_COOKIE_PREFIX,
     maxAgeSeconds: options?.maxAgeSeconds ?? DEFAULT_MAX_AGE_SECONDS,
     document: doc,
   };

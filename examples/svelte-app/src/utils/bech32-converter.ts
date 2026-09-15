@@ -72,6 +72,40 @@ export function hexToNsec(hexPrivkey: string): string {
 }
 
 /**
+ * bech32 のデコード失敗を、入力文字列を含まない分類名に落とす。
+ *
+ * `bech32@2` は失敗メッセージへ**入力文字列そのもの**を連結する
+ * （`Invalid checksum for <入力>` / `<入力> too short` 等）。そのまま
+ * `console.error` へ渡すと、打ち間違えた nsec が console に流れ、計測モード
+ * （`?debug=1`）のパネル経由で外部へ持ち出されうる。一方で `e.name` は常に
+ * `'Error'` で切り分けの役に立たないため、既知の失敗理由だけを既定の語に
+ * 対応付けて返す。未知のメッセージは入力が混ざっている可能性があるので出さない。
+ */
+function describeBech32Error(e: unknown): string {
+  if (!(e instanceof Error)) return 'unknown error';
+  const message = e.message;
+  const known = [
+    'Invalid checksum',
+    'Mixed-case string',
+    'No separator character',
+    'Missing prefix',
+    'Exceeds length limit',
+    'Invalid prefix',
+    'Unknown character',
+    'Data too short',
+    // 本モジュール自身が投げるもの。入力を含まない定数なのでそのまま通す。
+    // prefix 違いは実運用で最も起きる失敗であり、計測モードで見たい情報そのもの。
+    'Not an npub format',
+    'Not an nsec format',
+  ];
+  const matched = known.find((reason) => message.startsWith(reason));
+  if (matched) return matched;
+  // `<入力> too short` のように入力が先頭に来る形式は分類名だけを返す。
+  if (message.endsWith('too short')) return 'too short';
+  return 'unrecognized bech32 error';
+}
+
+/**
  * npub形式を16進数形式に変換
  */
 export function npubToHex(npub: string): string | null {
@@ -88,7 +122,9 @@ export function npubToHex(npub: string): string | null {
     // バイト配列を16進数文字列に変換
     return bytesToHex(bytes);
   } catch (e) {
-    console.error('npubからhexへの変換エラー:', e);
+    // nsec 側と同じ理由で例外オブジェクトを出さない（bech32 は失敗メッセージへ
+    // 入力文字列を埋め込む）。npub は公開情報だが、扱いを揃えて事故を防ぐ。
+    console.error('npubからhexへの変換エラー:', describeBech32Error(e));
     return null;
   }
 }
@@ -110,7 +146,10 @@ export function nsecToHex(nsec: string): string | null {
     // バイト配列を16進数文字列に変換
     return bytesToHex(bytes);
   } catch (e) {
-    console.error('nsecからhexへの変換エラー:', e);
+    // 例外オブジェクトをそのまま出さない。bech32 の `decode()` は失敗メッセージへ
+    // **入力文字列そのもの**を埋め込む（`Invalid checksum for <入力>` 等）ため、
+    // 打ち間違えた nsec が console に流れる。分類名だけに落とす。
+    console.error('nsecからhexへの変換エラー:', describeBech32Error(e));
     return null;
   }
 }

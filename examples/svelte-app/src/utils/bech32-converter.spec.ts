@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, it, test, vi } from 'vitest';
 import {
   hexToNpub,
   hexToNsec,
@@ -132,5 +132,59 @@ describe('bech32Converter', () => {
       const hex = nsecToHex(nsec);
       expect(hex).toBe(privkeyHex);
     });
+  });
+});
+
+// 回帰ガード: bech32@2 は失敗メッセージへ**入力文字列そのもの**を連結する
+// （`Invalid checksum for <入力>` 等）。計測モード（?debug=1）のパネルは console を
+// 全取り込みしてログ全文が共有されるため、ここで入力を出すと打ち間違えた nsec が
+// 外部へ持ち出される。分類名だけを出す不変条件を固定する。
+describe('変換エラーのログに入力文字列を出さない', () => {
+  const HEX = '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa';
+  const validNsec = hexToNsec(HEX) as string;
+  const validNpub = hexToNpub(HEX) as string;
+
+  /** `console.error` に渡された全引数を 1 本の文字列に畳む。 */
+  function loggedText(spy: { mock: { calls: unknown[][] } }): string {
+    return spy.mock.calls.map((call) => call.join(' ')).join('\n');
+  }
+
+  // いずれも bech32 が入力を埋め込むメッセージを投げるケース。
+  const cases: { label: string; input: string }[] = [
+    // checksum 不正: 正しい nsec のデータ部を 1 文字書き換える
+    { label: 'invalid checksum', input: `${validNsec.slice(0, -5)}qqqqq` },
+    // セパレータ無し
+    { label: 'no separator', input: 'nsecabcdefghijklmnopqrstuvwxyz' },
+    // 大文字小文字混在
+    { label: 'mixed case', input: `N${validNsec.slice(1)}` },
+    // 短すぎる
+    { label: 'too short', input: 'nsec1q' },
+  ];
+
+  it.each(cases)('nsecToHex は入力を含まない分類名だけを出す ($label)', ({ input }) => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(nsecToHex(input)).toBeNull();
+    const logged = loggedText(spy);
+    expect(logged).not.toContain(input);
+    // 入力の一部（データ部の断片）も漏れていないこと
+    expect(logged).not.toContain(input.slice(5, 20));
+    expect(logged).toContain('変換エラー');
+    spy.mockRestore();
+  });
+
+  it('npubToHex も同じ扱いにする', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const input = `${validNpub.slice(0, -5)}qqqqq`;
+    expect(npubToHex(input)).toBeNull();
+    expect(loggedText(spy)).not.toContain(input);
+    spy.mockRestore();
+  });
+
+  it('prefix 違いは分類名として読めるまま残す（切り分け性を落とさない）', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // 正しい bech32 だが prefix が nsec ではない → 自作メッセージ経路
+    expect(nsecToHex(validNpub)).toBeNull();
+    expect(loggedText(spy)).toContain('Not an nsec format');
+    spy.mockRestore();
   });
 });

@@ -14,6 +14,7 @@ import {
   type ThemeMode,
 } from './store/app-state.js';
 import { resolveTheme, THEME_PALETTES } from './theme/palettes.js';
+import { buildHashForScreen, screenNameFromHash } from './utils/app-navigation.js';
 
 let screen = $state('account');
 
@@ -21,9 +22,7 @@ let screen = $state('account');
 // screen の更新は updateHash に集約するため、ここでは直接代入せず
 // currentScreen.set 経由でストア → updateHash に流す。
 function initializeFromHash() {
-  const hash = window.location.hash.substring(1);
-  const name = hash.startsWith('/') ? hash.substring(1) : hash;
-  const newScreen = name || 'account';
+  const newScreen = screenNameFromHash(window.location.hash) || 'account';
 
   if (isScreenName(newScreen)) {
     currentScreen.set(newScreen);
@@ -76,9 +75,11 @@ function updateHash(value: string) {
     savedScrollPositions.set(previousScreen, getScrollY());
   }
 
-  // URLハッシュの変更によるループを防ぐ
-  if (window.location.hash !== `#/${value}`) {
-    window.location.hash = `#/${value}`;
+  // URLハッシュの変更によるループを防ぐ。ハッシュ内クエリ（?debug=1 など）は
+  // buildHashForScreen が引き継ぐので、書き戻しで消えることはない。
+  const nextHash = buildHashForScreen(window.location.hash, value);
+  if (window.location.hash !== nextHash) {
+    window.location.hash = nextHash;
   }
   screen = value;
 
