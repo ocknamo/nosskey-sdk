@@ -1,7 +1,11 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
-import { debugLog, describeError, logStorageDiagnostics } from '../../debug/debug-console.js';
-import { isDebugConsoleEnabled } from '../../debug/debug-flag.js';
+import {
+  debugLog,
+  describeError,
+  isDebugEnabled,
+  logStorageDiagnostics,
+} from '../../debug/debug-console.js';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -29,8 +33,9 @@ type RequestStorageAccessFn = (options?: {
 
 let stopHost: (() => void) | null = null;
 // 調査用。`?debug=1` のときだけ true。パネルを見せるために iframe を自動表示し、
-// 判定の分岐をログに出す。
-const debugMode = isDebugConsoleEnabled();
+// 判定の分岐をログに出す。起動時に解決済みの値を使う（location を読み直すと
+// `updateHash` の書き戻し後のハッシュを読んでしまう）。
+const debugMode = isDebugEnabled();
 let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);

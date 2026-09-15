@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetNosskeyManager } from '../services/nosskey-manager.service.js';
+import { getNosskeyManager, resetNosskeyManager } from '../services/nosskey-manager.service.js';
 import {
   collectStorageDiagnostics,
   debugLog,
@@ -91,9 +91,34 @@ describe('collectStorageDiagnostics', () => {
   it('reports an uninitialised manager instead of constructing one', () => {
     expect(collectStorageDiagnostics().manager).toEqual({
       initialized: false,
-      hasKeyInfo: false,
       storageKind: 'not-initialized',
+      entries: [],
     });
+  });
+
+  // 回帰ガード: `hasKeyInfo()` は読み込んだ鍵情報をメモリへキャッシュし、旧 salt を
+  // 検出するとストレージへ書き戻す。診断がこれを呼ぶと、後続の applyStorageGrant()
+  // の判定が計測の有無で変わり、調査結果そのものが歪む。
+  it('never calls the SDK state accessors, which mutate manager state', () => {
+    const manager = getNosskeyManager();
+    const hasKeyInfo = vi.spyOn(manager, 'hasKeyInfo');
+    const getCurrentKeyInfo = vi.spyOn(manager, 'getCurrentKeyInfo');
+
+    const report = collectStorageDiagnostics();
+
+    expect(hasKeyInfo).not.toHaveBeenCalled();
+    expect(getCurrentKeyInfo).not.toHaveBeenCalled();
+    expect(report.manager.initialized).toBe(true);
+  });
+
+  it('reads the key info through the manager storage handle', () => {
+    const keyInfo = JSON.stringify({ credentialId: 'aa', pubkey: 'bb', salt: 'cc' });
+    const manager = getNosskeyManager();
+    manager.getStorageOptions().storage?.setItem('nosskey_pwk', keyInfo);
+
+    expect(collectStorageDiagnostics().manager.entries).toEqual([
+      { key: 'nosskey_pwk', length: keyInfo.length, mode: 'direct' },
+    ]);
   });
 });
 

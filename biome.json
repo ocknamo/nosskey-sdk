@@ -5,7 +5,7 @@
     "includes": [
       "packages/**/*/src/**",
       "examples/**/*",
-      "!examples/svelte-app/dist",
+      "!examples/**/dist",
       "!**/examples/svelte-app/node_modules",
       "!packages/**/*/dist",
       "!packages/**/*/node_modules",

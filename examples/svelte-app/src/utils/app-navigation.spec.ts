@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScreenUrl, screenNameFromHash } from './app-navigation.js';
+import { buildHashForScreen, buildScreenUrl, screenNameFromHash } from './app-navigation.js';
 
 describe('buildScreenUrl', () => {
   it('builds a hash route URL from origin and pathname', () => {
@@ -50,5 +50,25 @@ describe('screenNameFromHash', () => {
     expect(screenNameFromHash('')).toBe('');
     expect(screenNameFromHash('#')).toBe('');
     expect(screenNameFromHash('#/')).toBe('');
+  });
+});
+
+describe('buildHashForScreen', () => {
+  it('keeps a hash query when the router writes the hash back', () => {
+    expect(buildHashForScreen('#/iframe?debug=1', 'iframe')).toBe('#/iframe?debug=1');
+  });
+
+  it('carries the query across a screen change', () => {
+    expect(buildHashForScreen('#/iframe?debug=1', 'account')).toBe('#/account?debug=1');
+  });
+
+  it('is a no-op round trip, so the router never loops on its own write', () => {
+    const written = buildHashForScreen('#/iframe?debug=1', 'iframe');
+    expect(buildHashForScreen(written, screenNameFromHash(written))).toBe(written);
+  });
+
+  it('adds nothing when there is no hash query', () => {
+    expect(buildHashForScreen('#/iframe', 'account')).toBe('#/account');
+    expect(buildHashForScreen('', 'account')).toBe('#/account');
   });
 });

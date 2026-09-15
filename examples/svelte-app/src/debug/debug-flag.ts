@@ -50,9 +50,9 @@ export function isDebugConsoleEnabled(loc?: LocationLike): boolean {
  * `url.searchParams.set()` で既存クエリを保持したまま `embedded` 等を足すため、
  * 親 → iframe の受け渡しで最も壊れにくいから。
  */
-export function appendDebugFlag(url: string, base?: string): string {
+export function appendDebugFlag(url: string): string {
   try {
-    const parsed = new URL(url, base);
+    const parsed = new URL(url);
     parsed.searchParams.set('debug', '1');
     return parsed.toString();
   } catch {

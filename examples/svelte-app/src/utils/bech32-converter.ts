@@ -88,7 +88,9 @@ export function npubToHex(npub: string): string | null {
     // バイト配列を16進数文字列に変換
     return bytesToHex(bytes);
   } catch (e) {
-    console.error('npubからhexへの変換エラー:', e);
+    // nsec 側と同じ理由で例外オブジェクトを出さない（bech32 は失敗メッセージへ
+    // 入力文字列を埋め込む）。npub は公開情報だが、扱いを揃えて事故を防ぐ。
+    console.error('npubからhexへの変換エラー:', e instanceof Error ? e.name : 'unknown error');
     return null;
   }
 }
@@ -110,7 +112,10 @@ export function nsecToHex(nsec: string): string | null {
     // バイト配列を16進数文字列に変換
     return bytesToHex(bytes);
   } catch (e) {
-    console.error('nsecからhexへの変換エラー:', e);
+    // 例外オブジェクトをそのまま出さない。bech32 の `decode()` は失敗メッセージへ
+    // **入力文字列そのもの**を埋め込む（`Invalid checksum for <入力>` 等）ため、
+    // 打ち間違えた nsec が console に流れる。名前だけに落とす。
+    console.error('nsecからhexへの変換エラー:', e instanceof Error ? e.name : 'unknown error');
     return null;
   }
 }

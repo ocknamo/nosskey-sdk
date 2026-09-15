@@ -14,11 +14,6 @@ export interface ScreenUrlOptions {
 }
 
 /**
- * アプリのハッシュルートへの絶対 URL を組み立てる。
- * クエリ文字列（`?embedded=1` など）は引き継がず、別タブでは通常の
- * スタンドアロン版アプリが開くようにする（`debug` だけは明示指定で引き継ぐ）。
- */
-/**
  * `location.hash` から画面名を取り出す。先頭の `#` / `/` と、ハッシュ内クエリ
  * （`#/iframe?debug=1`）を落とす。
  *
@@ -33,6 +28,25 @@ export function screenNameFromHash(hash: string): string {
   return withoutQuery.startsWith('/') ? withoutQuery.slice(1) : withoutQuery;
 }
 
+/**
+ * 画面遷移後に書き戻すハッシュを組み立てる。現在のハッシュに付いているクエリ
+ * （`#/iframe?debug=1` の `?debug=1`）はそのまま引き継ぐ。
+ *
+ * 引き継がないと、`updateHash` が `#/{screen}` を書き戻した時点でクエリが消える。
+ * 計測モードはリロードや BFCache 復帰のたびに URL から読み直されるため、消えると
+ * 実機で「さっきまで出ていたパネルが出ない」という再現性の無さに化ける。
+ */
+export function buildHashForScreen(currentHash: string, screen: string): string {
+  const queryAt = currentHash.indexOf('?');
+  const query = queryAt < 0 ? '' : currentHash.slice(queryAt);
+  return `#/${screen}${query}`;
+}
+
+/**
+ * アプリのハッシュルートへの絶対 URL を組み立てる。
+ * クエリ文字列（`?embedded=1` など）は引き継がず、別タブでは通常の
+ * スタンドアロン版アプリが開くようにする（`debug` だけは明示指定で引き継ぐ）。
+ */
 export function buildScreenUrl(
   loc: Pick<Location, 'origin' | 'pathname'>,
   screen: ScreenName,

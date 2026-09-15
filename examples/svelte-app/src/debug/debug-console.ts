@@ -23,7 +23,10 @@ import {
   type StorageDiagnostics,
 } from './storage-diagnostics.js';
 
-/** `isDebugConsoleEnabled()` の結果をキャッシュする（location は変わらない）。 */
+/**
+ * `isDebugConsoleEnabled()` の結果をキャッシュする。アプリはマウント直後に
+ * `location.hash` を書き戻すため、起動時に一度だけ解決して以後は使い回す。
+ */
 let enabledCache: boolean | null = null;
 
 /** パネルを二重に出さないための番人。 */
@@ -41,6 +44,19 @@ let removeUncaughtBridge: (() => void) | null = null;
 function enabled(): boolean {
   if (enabledCache === null) enabledCache = isDebugConsoleEnabled();
   return enabledCache;
+}
+
+/**
+ * 計測モードか。**`isDebugConsoleEnabled()` を直接呼ばず必ずこちらを使うこと。**
+ *
+ * `main.ts` が `mount()` より前に解決した値を返す。アプリはマウント直後に
+ * `updateHash` で `location.hash` を書き戻すため、画面コンポーネントの中から
+ * location を読み直すと、その時点のハッシュ次第でフラグを取りこぼす
+ * （`#/iframe?debug=1` で実際に起きていた）。解決を起動時 1 回に固定して、
+ * 以後の URL 書き換えから切り離す。
+ */
+export function isDebugEnabled(): boolean {
+  return enabled();
 }
 
 /** テスト用。モジュールキャッシュを初期化する。 */
@@ -85,11 +101,28 @@ export async function startDebugConsole(options: { height?: number } = {}): Prom
     // 0.1.5 は戻り値なし、リポジトリ main は dispose 関数を返す。両対応にする。
     const result: unknown = createConsoleViewer({ show: 'always', height });
     dispose = typeof result === 'function' ? (result as () => void) : null;
+    warnAboutSharing();
   } catch (err) {
     // 計測の失敗でアプリを止めない。ブリッジは張ったままなので、パネルが出なくても
     // ブラウザ標準の console には未捕捉例外が残る。
     console.warn('[nosskey:debug] failed to start console viewer', err);
   }
+}
+
+/**
+ * パネル冒頭に共有時の注意を出す。
+ *
+ * `[nosskey:debug]` 行は値を出さないが、**パネルはアプリ全体の console を
+ * 無差別に取り込む**ため、他所のログや例外メッセージに秘密値が載る可能性まで
+ * 消せるわけではない。ログ全文を貼り付けて共有する運用を前提にしている以上、
+ * この非対称を読む人の目の前に置いておく必要がある。
+ */
+function warnAboutSharing(): void {
+  console.warn(
+    '[nosskey:debug] このパネルはアプリ全体の console を取り込みます。' +
+      '[nosskey:debug] 行は値を出しませんが、他のログには秘密値が載りうるため、' +
+      '共有前に全文を目視で確認してください。'
+  );
 }
 
 /**
@@ -129,6 +162,9 @@ export function collectStorageDiagnostics(): StorageDiagnostics {
     // Safari は cookie が完全にブロックされた文脈で throw することがある。
     cookie = '';
   }
+  // `peekNosskeyManager()` はマネージャを新規構築しない。`hasKeyInfo()` 等の
+  // 状態照会 API は副作用（メモリキャッシュ・salt 書き戻し）を持つので呼ばず、
+  // ストレージハンドルだけを渡して診断側が getItem で直接読む。
   const manager = peekNosskeyManager();
   return buildStorageDiagnostics({
     location: window.location,
@@ -141,7 +177,6 @@ export function collectStorageDiagnostics(): StorageDiagnostics {
     cookie,
     manager: {
       initialized: manager !== null,
-      hasKeyInfo: manager?.hasKeyInfo() ?? false,
       storage: manager?.getStorageOptions().storage ?? null,
     },
   });

@@ -34,7 +34,7 @@ function sources(overrides: Partial<DiagnosticsSources> = {}): DiagnosticsSource
     hasStorageAccessApi: true,
     localStorage: fakeStorage({}),
     cookie: '',
-    manager: { initialized: true, hasKeyInfo: false, storage: null },
+    manager: { initialized: true, storage: null },
     ...overrides,
   };
 }
@@ -120,34 +120,50 @@ describe('buildStorageDiagnostics', () => {
     expect(report.cookie.nosskey[0].mode).toBe('unparsable');
   });
 
-  it('reports the manager storage implementation name', () => {
-    class CookieStorage {}
+  it('reports the manager storage implementation name and reads through that handle', () => {
+    class CookieStorage {
+      getItem(key: string): string | null {
+        return key === 'nosskey_pwk' ? WRAPPED : null;
+      }
+    }
     const report = buildStorageDiagnostics(
       sources({
-        manager: {
-          initialized: true,
-          hasKeyInfo: true,
-          storage: new CookieStorage() as unknown as Storage,
-        },
+        // SAA グラント後は manager のハンドルと window.localStorage が食い違う。
+        // その差分が見えることが本項目の目的。
+        localStorage: fakeStorage({ nosskey_pwk: DIRECT }),
+        manager: { initialized: true, storage: new CookieStorage() as unknown as Storage },
       })
     );
     expect(report.manager).toEqual({
       initialized: true,
-      hasKeyInfo: true,
       storageKind: 'CookieStorage',
+      entries: [{ key: 'nosskey_pwk', length: WRAPPED.length, mode: 'wrap' }],
     });
+    expect(report.localStorage.entries[0].mode).toBe('direct');
+  });
+
+  it('records a throwing manager storage without losing the rest of the report', () => {
+    const throwing = {
+      getItem: () => {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    } as unknown as Storage;
+    const report = buildStorageDiagnostics(
+      sources({ manager: { initialized: true, storage: throwing } })
+    );
+    expect(report.manager.error).toBe('SecurityError');
+    expect(report.manager.entries).toEqual([]);
+    expect(report.route).toBe('/iframe');
   });
 
   it('distinguishes an uninitialised manager from one with no storage handle', () => {
     expect(
-      buildStorageDiagnostics(
-        sources({ manager: { initialized: false, hasKeyInfo: false, storage: null } })
-      ).manager.storageKind
+      buildStorageDiagnostics(sources({ manager: { initialized: false, storage: null } })).manager
+        .storageKind
     ).toBe('not-initialized');
     expect(
-      buildStorageDiagnostics(
-        sources({ manager: { initialized: true, hasKeyInfo: false, storage: null } })
-      ).manager.storageKind
+      buildStorageDiagnostics(sources({ manager: { initialized: true, storage: null } })).manager
+        .storageKind
     ).toBe('none');
   });
 
@@ -175,6 +191,6 @@ describe('formatStorageDiagnostics', () => {
     const text = formatStorageDiagnostics(buildStorageDiagnostics(sources()));
     expect(text.split('\n')).toHaveLength(6);
     expect(text).toContain('localStorage: available=true (none)');
-    expect(text).toContain('manager: initialized=true hasKeyInfo=false storage=none');
+    expect(text).toContain('manager: initialized=true storage=none (none)');
   });
 });

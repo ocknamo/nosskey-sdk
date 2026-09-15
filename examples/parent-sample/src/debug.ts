@@ -8,6 +8,18 @@
  * 同時に採取できるようにする（スマホで 2 つの URL を手入力させない）。
  */
 
+/**
+ * 例外を「名前 + メッセージ」に潰す。オブジェクトをそのまま `console.error` へ
+ * 渡すと、reason が署名済みイベントや鍵情報だった場合に全プロパティがパネルへ
+ * 展開される。パネルのログは貼り付けて共有される前提なので、ここで絞る。
+ */
+function describeError(value: unknown): string {
+  if (value instanceof DOMException) return `DOMException/${value.name}: ${value.message}`;
+  if (value instanceof Error) return `${value.name}: ${value.message}`;
+  if (typeof value === 'string') return value;
+  return `(${typeof value})`;
+}
+
 /** `debug` に与えられたとき有効と見なす値。値なし（`?debug`）も有効。 */
 const TRUTHY = new Set(['', '1', 'true', 'on', 'yes']);
 
@@ -53,11 +65,14 @@ export async function startDebugConsole(): Promise<void> {
   // 公開版 console-daijin 0.1.5 は未捕捉例外を拾わないため自前で橋渡しする。
   // 親側では `client.ready()` のタイムアウトなど、ハンドラ外で落ちる経路が該当する。
   window.addEventListener('error', (event) => {
-    console.error('[parent-sample] uncaught', event.message || event.error);
+    console.error('[parent-sample] uncaught', describeError(event.error ?? event.message));
   });
   window.addEventListener('unhandledrejection', (event) => {
-    console.error('[parent-sample] unhandledrejection', event.reason);
+    console.error('[parent-sample] unhandledrejection', describeError(event.reason));
   });
+  console.warn(
+    '[parent-sample] This panel captures the whole page console. Review the log before sharing it.'
+  );
   try {
     const { createConsoleViewer } = await import('console-daijin');
     createConsoleViewer({ show: 'always', height: 200 });

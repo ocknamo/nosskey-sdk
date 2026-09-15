@@ -16,7 +16,7 @@ iPhone は DevTools を開けない。Mac の Web インスペクタでリモー
 
 ## 有効化
 
-URL に `debug=1` を付ける。3 通りとも受理する。
+URL に `debug=1` を付ける。下表のいずれの書き方でも受理する。
 
 | 経路 | URL 例 |
 |------|--------|
@@ -53,10 +53,12 @@ cookie: total=3 len=812 nosskey:nosskey_pwk=430B/direct
 manager: initialized=true hasKeyInfo=false storage=MultiStorage
 ```
 
-**値は一切出さない。** 記録するのはキー名・バイト長・モード種別（`direct` /
-`wrap` / `mixed` / `empty` / `unparsable`）だけ。`NostrKeyInfo` に秘密鍵は
-含まれないが、`pubkey` と `credentialId` は利用者を一意に特定できるため、
-スクリーンショットや貼り付けで外部へ渡ることを前提に伏せている。
+`[nosskey:debug]` の行は**値を一切出さない。** 記録するのはキー名・バイト長・
+モード種別（`direct` / `wrap` / `mixed` / `empty` / `unparsable`）だけ。
+`NostrKeyInfo` に秘密鍵は含まれないが、`pubkey` と `credentialId` は利用者を
+一意に特定できるため、スクリーンショットや貼り付けで外部へ渡ることを前提に伏せている。
+
+この保証が及ぶのは `[nosskey:debug]` の行だけである。次節を必ず読むこと。
 
 ### 2. 分岐ログ
 
@@ -75,7 +77,18 @@ SAA: applyStorageGrant {branch: webkit-cookie, userAgent: ...}
 ## ログの持ち出し
 
 パネル右上のコピーボタンで全文をクリップボードへ取れる（クリップボードが
-使えない文脈では textarea にフォールバックする）。そのまま貼り付けて共有する。
+使えない文脈では textarea にフォールバックする）。
+
+> **共有する前に全文を目視で確認すること。**
+> パネルは `[nosskey:debug]` 行だけでなく、**アプリ全体の `console` 出力を
+> 無差別に取り込む**。診断スナップショットが値を出さないことと、パネル全体が
+> 安全であることは別問題である。起動時にもパネルへ同じ注意を 1 行出している。
+>
+> 例として、`bech32` の `decode()` は失敗メッセージへ入力文字列をそのまま
+> 埋め込むため、打ち間違えた nsec が `console.error` に流れうる。本調査に
+> 合わせて `utils/bech32-converter.ts` は例外名だけを出すよう直したが、
+> 例外オブジェクトを丸ごと出す箇所は他にも残っている（`docs/todo.md` の
+> 「console へ例外オブジェクトを丸ごと出している箇所の棚卸し」を参照）。
 
 ## 仮説 → 判定に使う値
 

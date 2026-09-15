@@ -6,10 +6,17 @@
  * 実機で切り分けるためのもの。DevTools を開けない iOS 実機で、
  * console-daijin のオンページパネルに出す前提で設計している。
  *
- * **値は絶対に出さない。** 記録するのはキー名・バイト長・モード種別だけ。
+ * **本モジュールは値を一切出さない。** 記録するのはキー名・バイト長・モード種別だけ。
  * `NostrKeyInfo` に秘密鍵は含まれないが、`pubkey` / `credentialId` は利用者を
  * 一意に特定できるうえ、ログはスクリーンショットや貼り付けで外部へ渡る前提の
  * ため、識別子そのものをパネルに出さない方針とする。
+ * （パネル自体はアプリ全体の console を取り込むため、この保証が及ぶのは本モジュールが
+ * 出す行だけである。`docs/ja/ios-iframe-diagnostics.ja.md` の「ログの持ち出し」節を参照。）
+ *
+ * **SDK の状態照会 API は呼ばない。** `NosskeyManager.hasKeyInfo()` は読み込んだ
+ * 鍵情報をメモリへキャッシュし、旧 salt を検出するとストレージへ書き戻す。計測が
+ * 観測対象を書き換えると、後続の `applyStorageGrant()` の判定が変わり調査結果その
+ * ものを誤らせるため、ストレージハンドルから `getItem` で直接読む。
  */
 import { DEFAULT_COOKIE_PREFIX } from '../services/cookie-storage.js';
 import { isLikelyWebKit } from '../utils/user-agent.js';
@@ -41,14 +48,22 @@ export interface StorageDiagnostics {
   storageAccessApi: 'available' | 'missing';
   localStorage: { available: boolean; entries: StoredKeyStat[]; error?: string };
   cookie: { total: number; nosskey: StoredKeyStat[]; totalLength: number; error?: string };
-  manager: { initialized: boolean; hasKeyInfo: boolean; storageKind: string };
+  /**
+   * SDK のストレージハンドル越しの観測値。SAA グラント後や cookie 経路への
+   * 差し替え後は `window.localStorage` と中身が食い違うため、別枠で記録する。
+   */
+  manager: {
+    initialized: boolean;
+    storageKind: string;
+    entries: StoredKeyStat[];
+    error?: string;
+  };
 }
 
 /** マネージャ側の観測値。未構築（`peekNosskeyManager()` が null）も表現する。 */
 export interface ManagerSnapshot {
   initialized: boolean;
-  hasKeyInfo: boolean;
-  /** `manager.getStorageOptions().storage`。実装クラス名だけを記録する。 */
+  /** `manager.getStorageOptions().storage`。実装クラス名と中身の読み取りに使う。 */
   storage: Storage | null;
 }
 
@@ -121,24 +136,33 @@ function routeOf(hash: string): string {
   return (queryAt < 0 ? withoutHash : withoutHash.slice(0, queryAt)) || '/';
 }
 
-/** 注入された素材から診断スナップショットを組み立てる純粋関数。 */
-export function buildStorageDiagnostics(sources: DiagnosticsSources): StorageDiagnostics {
-  const lsEntries: StoredKeyStat[] = [];
-  let lsAvailable = sources.localStorage !== null;
-  let lsError = sources.localStorageError;
-  if (sources.localStorage) {
-    for (const key of KEY_INFO_KEYS) {
-      try {
-        const raw = sources.localStorage.getItem(key);
-        if (raw === null) continue;
-        lsEntries.push({ key, length: raw.length, mode: classifyKeyInfo(raw) });
-      } catch (err) {
-        lsAvailable = false;
-        lsError = err instanceof Error ? err.name : String(err);
-        break;
-      }
+/**
+ * ストレージから鍵情報キーを読み、値を出さない統計に畳む。`getItem` しか呼ばない
+ * ので SDK 側のキャッシュや書き戻しは発生しない。
+ */
+function readEntries(storage: Storage): { entries: StoredKeyStat[]; error?: string } {
+  const entries: StoredKeyStat[] = [];
+  for (const key of KEY_INFO_KEYS) {
+    try {
+      const raw = storage.getItem(key);
+      if (raw === null) continue;
+      entries.push({ key, length: raw.length, mode: classifyKeyInfo(raw) });
+    } catch (err) {
+      return { entries, error: err instanceof Error ? err.name : String(err) };
     }
   }
+  return { entries };
+}
+
+/** 注入された素材から診断スナップショットを組み立てる純粋関数。 */
+export function buildStorageDiagnostics(sources: DiagnosticsSources): StorageDiagnostics {
+  const ls = sources.localStorage ? readEntries(sources.localStorage) : { entries: [] };
+  const lsError = ls.error ?? sources.localStorageError;
+  const lsAvailable = sources.localStorage !== null && ls.error === undefined;
+  const lsEntries = ls.entries;
+
+  const managerStorage = sources.manager.storage;
+  const managerRead = managerStorage ? readEntries(managerStorage) : { entries: [] };
 
   const pairs = parseCookiePairs(sources.cookie);
   const nosskeyCookies: StoredKeyStat[] = [];
@@ -174,10 +198,11 @@ export function buildStorageDiagnostics(sources: DiagnosticsSources): StorageDia
     },
     manager: {
       initialized: sources.manager.initialized,
-      hasKeyInfo: sources.manager.hasKeyInfo,
       storageKind: sources.manager.initialized
-        ? (sources.manager.storage?.constructor?.name ?? 'none')
+        ? (managerStorage?.constructor?.name ?? 'none')
         : 'not-initialized',
+      entries: managerRead.entries,
+      ...(managerRead.error && { error: managerRead.error }),
     },
   };
 }
@@ -194,6 +219,8 @@ export function formatStorageDiagnostics(d: StorageDiagnostics): string {
       d.localStorage.error ? ` error=${d.localStorage.error}` : ''
     } ${stat(d.localStorage.entries)}`,
     `cookie: total=${d.cookie.total} len=${d.cookie.totalLength} ${stat(d.cookie.nosskey)}`,
-    `manager: initialized=${d.manager.initialized} hasKeyInfo=${d.manager.hasKeyInfo} storage=${d.manager.storageKind}`,
+    `manager: initialized=${d.manager.initialized} storage=${d.manager.storageKind}${
+      d.manager.error ? ` error=${d.manager.error}` : ''
+    } ${stat(d.manager.entries)}`,
   ].join('\n');
 }
