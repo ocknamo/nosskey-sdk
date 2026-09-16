@@ -40,9 +40,10 @@ let stopHost: (() => void) | null = null;
 let initialDetection: Promise<void> = Promise.resolve();
 /**
  * 鍵が見えないまま届いたリクエストの保留分。ユーザーがアクセスを許可したら true、
- * カードを閉じたら false で一斉に解決する。配列なのは `getPublicKey` と
- * `getRelays` のように複数が同時に待つことがあるため（1 個しか持たないと
- * 先行分が取りこぼされる）。
+ * カードを閉じたら false で一斉に解決する。配列なのは `signEvent` や nip44/nip04 の
+ * ように複数のリクエストが同時に待つことがあるため（1 個しか持たないと先行分を
+ * 取りこぼす）。`getRelays` は鍵が無いと同意ゲートの前に空マップを返すので、
+ * 回復待ちには入らない。
  */
 let recoveryWaiters: Array<(recovered: boolean) => void> = [];
 // 調査用。`?debug=1` のときだけ true。パネルを見せるために iframe を自動表示し、
@@ -59,7 +60,23 @@ function postVisibility(visible: boolean): void {
   }
 }
 
+/**
+ * 初期判定。**決して reject しない。** `nosskey:ready` がこの完了を待つため、
+ * ここで throw すると親が待ち続ける。加えて以前は unhandled rejection になって
+ * 状態カードが一切出ず、画面が無言で固まっていた。
+ */
 async function detectInitialState(): Promise<void> {
+  try {
+    await runInitialDetection();
+  } catch (err) {
+    console.error('[nosskey] storage access detection failed', describeError(err));
+    uiState = 'denied';
+    errorMessage = err instanceof Error ? err.message : String(err);
+    postVisibility(true);
+  }
+}
+
+async function runInitialDetection(): Promise<void> {
   const manager = getNosskeyManager();
   logStorageDiagnostics('iframe: detectInitialState enter');
   if (typeof document.requestStorageAccess !== 'function') {
@@ -103,15 +120,8 @@ async function detectInitialState(): Promise<void> {
       postVisibility(true);
       return;
     }
-    // NotAllowedError 以外もカードを出して終わらせる。以前はここで再送出しており、
-    // `onMount` の `void` 呼び出しで unhandled rejection になって**状態カードが
-    // 一切出ない**（画面が無言で固まる）経路があった。加えて今は `nosskey:ready` が
-    // この完了を待つため、ここで throw すると親が待ち続けることになる。
-    console.error('[nosskey] storage access detection failed', describeError(err));
-    uiState = 'denied';
-    errorMessage = err instanceof Error ? err.message : String(err);
-    postVisibility(true);
-    return;
+    // NotAllowedError 以外は呼び出し元の catch がカードを出す。
+    throw err;
   }
   applyStorageGrant(handle);
   if (uiState === 'noKeyExists') {
@@ -227,8 +237,10 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     uiState = 'noKeyExists';
   }
   logStorageDiagnostics(`iframe: applyStorageGrant done (uiState=${uiState})`);
-  // 保留中のリクエストがあれば、ここが「回復できたか」の答えになる。
-  if (manager.hasKeyInfo()) settleRecovery(true);
+  // グラントの成否に関わらず、ここが保留中リクエストの答えになる。鍵が無いまま
+  // （`noKeyExists`）でも決着させること。放置すると「待たない」はずの状態で待ち
+  // 続け、親がタイムアウトするまで iframe が出たままになる。
+  settleRecovery(manager.hasKeyInfo());
 }
 
 async function requestAccess(): Promise<void> {

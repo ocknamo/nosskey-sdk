@@ -211,9 +211,9 @@ WebKit は `requestStorageAccess()` に**ユーザージェスチャを必須**�
 | オプション | 役割 |
 |-----------|------|
 | `storageReady?: Promise<unknown>` | これが settle するまで `nosskey:ready` を送らない。ストレージの解決が終わる前に親へ「送っていい」と言わないための門。`STORAGE_READY_TIMEOUT_MS` (5 秒) で頭打ちにするので、settle しない Promise を渡してもハンドシェイクは壊れない |
-| `onKeyUnavailable?: () => Promise<boolean>` | 鍵が無いとき `NO_KEY` を即答せず、iframe を表示したうえでこれを await する。回復 UI を出し、鍵が読めるようになったら `true`、ユーザーが閉じた / そもそも鍵が無いなら `false` を返す |
+| `onKeyUnavailable?: () => Promise<boolean>` | 鍵が無いとき `NO_KEY` を即答せず、iframe を表示したうえでこれを await する。回復 UI を出し、鍵が読めるようになったら `true`、ユーザーが閉じた / そもそも鍵が無いなら `false` を返す。settle しないハンドラ対策に `KEY_RECOVERY_TIMEOUT_MS` (60 秒、client の既定リクエストタイムアウトと同値) で打ち切る |
 
-`onKeyUnavailable` が `true` を返しても host は `hasKeyInfo()` を**再判定**します (ハンドラの自己申告は信用しない)。`false` は連続拒否としてオリジン別レート制限にも計上され、任意のオリジンがリクエストを撃ち続けて iframe を開かせ続けることを防ぎます。
+`onKeyUnavailable` が `true` を返しても host は `hasKeyInfo()` を**再判定**します (ハンドラの自己申告は信用しない)。`false` は連続拒否としてオリジン別レート制限に計上されます。回復パスは iframe を開くため、このレート制限は `requireUserConsent: false` の host でも**独立に**評価され、任意のオリジンがリクエストを撃ち続けて iframe を開かせ続けることを防ぎます。なお回復の成功はカウンタを**リセットしません** — ユーザーが承認したのはストレージアクセスであって、そのオリジンのリクエストではないからです。
 
 **待ってはいけないケース**があります。パスキー自体が無い (`noKeyExists`) / Storage Access API が無い (`unsupported`) 場合は、別タブでの登録を待つことになり親のリクエストタイムアウト (既定 60 秒) を必ず超えます。リファレンス実装は `utils/key-recovery.ts` の `decideKeyRecovery()` でこの線引きを行い、該当時は即 `false` を返します。
 

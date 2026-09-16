@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NosskeyIframeHost, STORAGE_READY_TIMEOUT_MS } from './host.js';
+import { KEY_RECOVERY_TIMEOUT_MS, NosskeyIframeHost, STORAGE_READY_TIMEOUT_MS } from './host.js';
 import type { DispatchableWindow } from './host.test-helpers.js';
 import { createFakeWindow, makeManager } from './host.test-helpers.js';
 import { isNosskeyReady, isNosskeyVisibility } from './protocol.js';
@@ -227,6 +227,69 @@ describe('NosskeyIframeHost key recovery', () => {
     expect(visibilityFlags(win)).toEqual([]);
   });
 
+  // ハンドラが settle しないまま残っても、リクエストと iframe の可視性を
+  // 永久に開けっぱなしにしない。
+  it('gives up on a recovery handler that never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      const { manager } = makeRecoverableManager();
+      const win = makeHost({ manager, onKeyUnavailable: () => new Promise<boolean>(() => {}) });
+
+      const dispatched = requestPublicKey(win);
+      await vi.advanceTimersByTimeAsync(KEY_RECOVERY_TIMEOUT_MS);
+      await dispatched;
+
+      expect(errorCodeOf(win)).toBe('NO_KEY');
+      expect(visibilityFlags(win)).toEqual([true, false]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports INTERNAL and restores visibility when the recovery handler throws', async () => {
+    const { manager } = makeRecoverableManager();
+    const win = makeHost({
+      manager,
+      onKeyUnavailable: async () => {
+        throw new Error('recovery blew up');
+      },
+    });
+
+    await requestPublicKey(win);
+
+    expect(errorCodeOf(win)).toBe('INTERNAL');
+    expect(visibilityFlags(win)).toEqual([true, false]);
+  });
+
+  // 回復の成功は「ストレージアクセスの承認」であってこのオリジンへの承認ではない。
+  // ここでカウンタをリセットすると、連続拒否済みのオリジンが拒否枠を回復できる。
+  // consent 承認によるリセットは既存の設計なので、ここは consent 無しで切り分ける。
+  it('does not reset the rejection counter when recovery succeeds', async () => {
+    const { manager, recover } = makeRecoverableManager();
+    let allowRecovery = false;
+    const win = makeHost({
+      manager,
+      requireUserConsent: false,
+      onKeyUnavailable: async () => {
+        if (!allowRecovery) return false;
+        recover();
+        return true;
+      },
+      rateLimit: { maxConsecutiveRejections: 2, blockMs: 60_000 },
+    });
+
+    await requestPublicKey(win); // 拒否 1 回目
+    allowRecovery = true;
+    await requestPublicKey(win); // 回復成功（カウンタは据え置きであるべき）
+    allowRecovery = false;
+    manager.hasKeyInfo = vi.fn(() => false); // 鍵が再び読めなくなる
+    await requestPublicKey(win); // 拒否 2 回目 → しきい値に到達
+    await requestPublicKey(win);
+
+    const last = win.sent[win.sent.length - 1];
+    expect((last.data as { error?: { code: string } }).error?.code).toBe('RATE_LIMITED');
+  });
+
   // 回復 UI の連続拒否でも iframe を開かせ続けられないようにする。
   it('counts a dismissed recovery towards the per-origin rate limit', async () => {
     const { manager } = makeRecoverableManager();
@@ -244,6 +307,27 @@ describe('NosskeyIframeHost key recovery', () => {
     await requestPublicKey(win);
 
     expect(onKeyUnavailable).toHaveBeenCalledTimes(2);
+    const last = win.sent[win.sent.length - 1];
+    expect((last.data as { error?: { code: string } }).error?.code).toBe('RATE_LIMITED');
+    // ブロック後は回復 UI も iframe の可視化も起こさない（2 回分の true/false のみ）。
+    expect(visibilityFlags(win)).toEqual([true, false, true, false]);
+  });
+
+  // consent ゲートを持たない host でも、回復パスは iframe を開くのでレート制限が要る。
+  it('rate-limits the recovery path even without a consent gate', async () => {
+    const { manager } = makeRecoverableManager();
+    const onKeyUnavailable = vi.fn(async () => false);
+    const win = makeHost({
+      manager,
+      requireUserConsent: false,
+      onKeyUnavailable,
+      rateLimit: { maxConsecutiveRejections: 1, blockMs: 60_000 },
+    });
+
+    await requestPublicKey(win);
+    await requestPublicKey(win);
+
+    expect(onKeyUnavailable).toHaveBeenCalledTimes(1);
     const last = win.sent[win.sent.length - 1];
     expect((last.data as { error?: { code: string } }).error?.code).toBe('RATE_LIMITED');
   });

@@ -317,12 +317,15 @@ behaviour without them is unchanged.
 | Option | Role |
 |--------|------|
 | `storageReady?: Promise<unknown>` | Holds back `nosskey:ready` until it settles, so the parent is not told "you may send" before storage has been resolved. Capped by `STORAGE_READY_TIMEOUT_MS` (5s), so a promise that never settles cannot break the handshake |
-| `onKeyUnavailable?: () => Promise<boolean>` | Instead of answering `NO_KEY` immediately when there is no key, the host reveals the iframe and awaits this. Show a recovery UI and resolve `true` once the key is readable, `false` if the user dismissed it or no key exists |
+| `onKeyUnavailable?: () => Promise<boolean>` | Instead of answering `NO_KEY` immediately when there is no key, the host reveals the iframe and awaits this. Show a recovery UI and resolve `true` once the key is readable, `false` if the user dismissed it or no key exists. Capped by `KEY_RECOVERY_TIMEOUT_MS` (60s, matching the client's default request timeout) so a handler that never settles cannot hold the request — and the iframe — open |
 
 Even when `onKeyUnavailable` resolves `true` the host **re-checks**
 `hasKeyInfo()` — the handler's own claim is not trusted. A `false` counts as a
-rejection for the per-origin rate limiter, so an arbitrary origin cannot keep
-the iframe open by re-issuing requests.
+rejection for the per-origin rate limiter. Because the recovery path opens the
+iframe, that limiter is evaluated **independently of `requireUserConsent`**, so
+an arbitrary origin cannot keep the iframe open by re-issuing requests. A
+successful recovery does **not** reset the counter: the user approved storage
+access, not this origin's requests.
 
 **Some cases must not wait.** With no passkey at all (`noKeyExists`) or no
 Storage Access API (`unsupported`), waiting means waiting for registration in

@@ -30,10 +30,10 @@ describe('decideKeyRecovery', () => {
     expect(decideKeyRecovery(false, 'unsupported')).toBe('unrecoverable');
   });
 
-  // 判定が終わる前 (running) / 終わった直後 (granted) に鍵が無いのは、
-  // 回復の余地が残っている状態なので待つ側に倒す。
-  it('waits for the states that mean detection is still in play', () => {
-    expect(decideKeyRecovery(false, 'running')).toBe('wait');
-    expect(decideKeyRecovery(false, 'granted')).toBe('wait');
+  // 待機は「ユーザーが決着させられるカードがある」ことが前提。`running` はカードを
+  // 描画せず、`granted` は成功表示で操作を促さないため、待つと誰も解決できない。
+  it('does not wait in states where the user has no way to settle it', () => {
+    expect(decideKeyRecovery(false, 'running')).toBe('unrecoverable');
+    expect(decideKeyRecovery(false, 'granted')).toBe('unrecoverable');
   });
 });
