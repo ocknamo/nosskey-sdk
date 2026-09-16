@@ -73,9 +73,56 @@ export interface NosskeyIframeHostOptions {
    * @default enabled with maxConsecutiveRejections=5, blockMs=60000
    */
   rateLimit?: RateLimitOptions | false;
+  /**
+   * Called when a consent-required request arrives while the manager has no key,
+   * instead of failing the request with `NO_KEY` right away. The iframe is made
+   * visible first, so the host page can show a recovery UI (e.g. the Storage
+   * Access API prompt) and resolve `true` once the key is readable.
+   *
+   * This exists because WebKit partitions a third-party iframe's `localStorage`
+   * and only unpartitions cookies, and only after a **user gesture**. Without
+   * this hook the host answers `NO_KEY` before the user has had any chance to
+   * grant access; the parent has already given up by the time recovery succeeds,
+   * so the user sees "access granted" and a failed login at the same time.
+   *
+   * Resolve `false` when the key genuinely does not exist or the user dismissed
+   * the recovery UI — the request then fails with `NO_KEY` as before. Do not
+   * wait on anything slow (e.g. registering a new passkey in another tab): the
+   * parent's request timeout, 60s by default, is still running.
+   *
+   * Omit to keep the previous behaviour (immediate `NO_KEY`, iframe stays hidden).
+   */
+  onKeyUnavailable?: () => Promise<boolean>;
+  /**
+   * Delays the `nosskey:ready` handshake until this settles (resolved or
+   * rejected). Use it to finish resolving which storage the manager reads from
+   * before the parent is told it may start sending requests — otherwise the
+   * first request races storage recovery and fails with `NO_KEY`.
+   *
+   * Capped at {@link STORAGE_READY_TIMEOUT_MS} so a gate that never settles
+   * cannot brick the handshake.
+   */
+  storageReady?: Promise<unknown>;
   /** Override the window used to install the message listener. Defaults to globalThis.window. */
   window?: Window;
 }
+
+/**
+ * How long {@link NosskeyIframeHostOptions.storageReady} may delay the ready
+ * handshake. Past this the host announces readiness anyway: a late handshake
+ * degrades to the old racy behaviour, while no handshake at all breaks the
+ * parent entirely.
+ */
+export const STORAGE_READY_TIMEOUT_MS = 5_000;
+
+/**
+ * How long {@link NosskeyIframeHostOptions.onKeyUnavailable} may hold a request
+ * open. A handler that never settles would otherwise leave the request awaiting
+ * forever — and with it the iframe visible, since the visibility is only
+ * restored once the request finishes. Matches `NosskeyIframeClient`'s default
+ * request timeout so the host cleans up no later than the parent gives up.
+ */
+export const KEY_RECOVERY_TIMEOUT_MS = 60_000;
 
 /** Tuning for the per-origin consent rate limiter. See {@link NosskeyIframeHostOptions.rateLimit}. */
 export interface RateLimitOptions {
@@ -113,6 +160,8 @@ interface ResolvedOptions {
   requireUserConsent: boolean;
   onConsent?: (request: ConsentRequest) => Promise<boolean>;
   onGetRelays?: () => Promise<RelayMap>;
+  onKeyUnavailable?: () => Promise<boolean>;
+  storageReady?: Promise<unknown>;
   rateLimit: ResolvedRateLimit | null;
   window: Window;
 }
@@ -152,6 +201,8 @@ function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
     requireUserConsent: options.requireUserConsent ?? true,
     onConsent: options.onConsent,
     onGetRelays: options.onGetRelays,
+    onKeyUnavailable: options.onKeyUnavailable,
+    storageReady: options.storageReady,
     rateLimit: resolveRateLimit(options.rateLimit),
     window: win,
   };
@@ -160,6 +211,25 @@ function resolveOptions(options: NosskeyIframeHostOptions): ResolvedOptions {
 function isOriginAllowed(allowed: string[] | '*', origin: string): boolean {
   if (allowed === '*') return true;
   return allowed.includes(origin);
+}
+
+/**
+ * Resolve `false` if `promise` has not settled within `ms`. Used as a backstop
+ * for host-supplied handlers: without it a handler that never settles keeps the
+ * request — and the iframe's visibility — open forever.
+ */
+async function withTimeout(promise: Promise<boolean>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 function buildError(code: NosskeyErrorCode, message: string) {
@@ -173,6 +243,12 @@ function buildError(code: NosskeyErrorCode, message: string) {
 export class NosskeyIframeHost {
   readonly #options: ResolvedOptions;
   #started = false;
+  /**
+   * Incremented on every {@link start}. A deferred ready announcement compares
+   * it before posting, so a `stop()` / `start()` cycle cannot let the previous
+   * run's pending announcement fire for the current one.
+   */
+  #runId = 0;
   #listener: ((event: MessageEvent) => Promise<void>) | null = null;
   /** Per-origin consent rate-limit state. Lazily populated. */
   readonly #rateState = new Map<string, OriginRateState>();
@@ -185,6 +261,7 @@ export class NosskeyIframeHost {
   start(): void {
     if (this.#started) return;
     this.#started = true;
+    const runId = ++this.#runId;
 
     if (this.#options.allowedOrigins === '*') {
       console.warn(
@@ -198,6 +275,40 @@ export class NosskeyIframeHost {
     this.#listener = (event: MessageEvent) => this.#handleMessage(event);
     this.#options.window.addEventListener('message', this.#listener as unknown as EventListener);
 
+    // The listener is installed synchronously, but readiness is announced only
+    // once storage has settled: a parent told "ready" too early fires its first
+    // request while the iframe still reads partitioned (empty) storage.
+    void this.#announceReady(runId);
+  }
+
+  /**
+   * Post `nosskey:ready` once {@link NosskeyIframeHostOptions.storageReady}
+   * settles, or after {@link STORAGE_READY_TIMEOUT_MS}, whichever comes first.
+   * A rejected gate still announces readiness — storage recovery failing is not
+   * a reason to leave the parent hanging.
+   */
+  async #announceReady(runId: number): Promise<void> {
+    const gate = this.#options.storageReady;
+    if (gate) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          gate,
+          new Promise((resolve) => {
+            timer = setTimeout(resolve, STORAGE_READY_TIMEOUT_MS);
+          }),
+        ]);
+      } catch (err) {
+        // A failed storage resolution is not a reason to leave the parent
+        // hanging — announce readiness and let the request path report it.
+        console.warn('[nosskey-iframe] storageReady rejected; announcing ready anyway', err);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    }
+    // Between awaiting and here the host may have been stopped, or stopped and
+    // started again — in which case the current run owns the announcement.
+    if (!this.#started || runId !== this.#runId) return;
     const ready: NosskeyReady = { type: 'nosskey:ready' };
     const parent = this.#options.window.parent;
     if (parent && parent !== this.#options.window) {
@@ -350,26 +461,45 @@ export class NosskeyIframeHost {
    * encrypt/decrypt methods.
    */
   async #withVisibilityAndConsent<T>(consent: ConsentRequest, run: () => Promise<T>): Promise<T> {
-    const { manager, requireUserConsent, onConsent } = this.#options;
-    if (!manager.hasKeyInfo()) {
+    const { manager, requireUserConsent, onConsent, onKeyUnavailable } = this.#options;
+    // Recovery is attempted only when the host offered a way to do it. Without
+    // one the answer is the same immediate NO_KEY as before, and the iframe is
+    // never revealed for a keyless host.
+    const needsRecovery = !manager.hasKeyInfo();
+    if (needsRecovery && !onKeyUnavailable) {
       throw new HostError('NO_KEY', 'No key is configured in the iframe.');
     }
-    if (requireUserConsent) {
-      if (!onConsent) {
-        throw new HostError(
-          'INTERNAL',
-          'onConsent must be provided when requireUserConsent is true.'
-        );
-      }
-      // Block flooding origins *before* revealing the iframe: a blocked origin
-      // gets no dialog and no visibility flicker.
+    if (requireUserConsent && !onConsent) {
+      throw new HostError(
+        'INTERNAL',
+        'onConsent must be provided when requireUserConsent is true.'
+      );
+    }
+    // Block flooding origins *before* revealing the iframe: a blocked origin
+    // gets no dialog, no recovery UI and no visibility flicker. Recovery is
+    // gated too, and independently of `requireUserConsent`: it also opens the
+    // iframe, so a host without a consent gate would otherwise be defenceless.
+    if (requireUserConsent || needsRecovery) {
       this.#assertNotRateLimited(consent.origin);
     }
-    // Show the iframe so the consent dialog is interactable and so any
-    // cross-origin WebAuthn prompt fired inside the manager call has a
-    // visible frame to attach to.
+    // Show the iframe so the recovery UI and the consent dialog are
+    // interactable, and so any cross-origin WebAuthn prompt fired inside the
+    // manager call has a visible frame to attach to.
     this.#postVisibility(true);
     try {
+      if (needsRecovery && onKeyUnavailable) {
+        const recovered = await withTimeout(onKeyUnavailable(), KEY_RECOVERY_TIMEOUT_MS);
+        // A dismissed recovery counts like a rejection so that an origin cannot
+        // keep forcing the iframe open by re-requesting. A successful one does
+        // not clear the counter: the user approved storage access, not this
+        // origin's requests, so the consent-fatigue guard must keep its state.
+        if (!recovered) this.#recordConsentOutcome(consent.origin, false);
+        // Re-check rather than trust the handler: the key must actually be
+        // readable now, not merely reported as recovered.
+        if (!recovered || !manager.hasKeyInfo()) {
+          throw new HostError('NO_KEY', 'No key is configured in the iframe.');
+        }
+      }
       if (requireUserConsent && onConsent) {
         const approved = await onConsent(consent);
         this.#recordConsentOutcome(consent.origin, approved);

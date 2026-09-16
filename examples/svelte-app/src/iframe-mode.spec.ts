@@ -7,6 +7,7 @@ import {
   onConsentWithFreshSettings,
   pendingConsent,
   rejectConsent,
+  resetConsentQueueForTest,
 } from './iframe-mode.js';
 import { getNosskeyManager, resetNosskeyManager } from './services/nosskey-manager.service.js';
 import { consentPolicy, denyCounts, resetDenyCounts, trustedOrigins } from './store/app-state.js';
@@ -52,6 +53,7 @@ const getRelaysRequest: ConsentRequest = {
 
 beforeEach(() => {
   // 各テストを独立させる: SDK マネージャのハンドル / ストレージ残留を持ち越さない。
+  resetConsentQueueForTest();
   resetNosskeyManager();
   localStorage.clear();
   sessionStorage.clear();
@@ -259,5 +261,36 @@ describe('onConsentWithFreshSettings', () => {
     expect(result).toBe(false);
     expect(get(denyCounts).signEvent).toBe(1);
     expect(warn).toHaveBeenCalledOnce();
+  });
+});
+
+// 回帰ガード: 以前は `pendingConsent.set()` が前の要求ごと上書きしており、
+// 2 件目が届くと 1 件目の resolve が誰からも呼ばれず永久に宙吊りになっていた
+// （host 側は await のまま finally に到達せず、iframe も表示されたまま残る）。
+// ストレージ回復待ちの導入で「保留していた複数リクエストが一斉に解放される」
+// 経路ができ、この取りこぼしが通常経路に昇格したためキューで順次さばく。
+describe('同時に届いた同意要求', () => {
+  it('2 件目が 1 件目を宙吊りにせず、順番にダイアログへ出す', async () => {
+    const first = onConsent(signRequest);
+    const second = onConsent(nip04Request);
+
+    // 表示されるのは先頭のみ。
+    expect(get(pendingConsent)?.method).toBe('signEvent');
+
+    approveConsent();
+    await expect(first).resolves.toBe(true);
+
+    // 1 件目を決着させると 2 件目が繰り上がる。
+    expect(get(pendingConsent)?.method).toBe('nip04_decrypt');
+
+    rejectConsent();
+    await expect(second).resolves.toBe(false);
+    expect(get(pendingConsent)).toBeNull();
+  });
+
+  it('待ち行列が空のときの操作は何も壊さない', () => {
+    expect(() => approveConsent()).not.toThrow();
+    expect(() => rejectConsent()).not.toThrow();
+    expect(get(pendingConsent)).toBeNull();
   });
 });

@@ -138,6 +138,7 @@ host.start();
 - 両側が HTTPS で配信されている (WebAuthn 必須)。
 - host ページの実効オリジンが、パスキー作成時の WebAuthn RP-ID と一致する。
 - 親がクロスオリジンの場合、host 側がユーザージェスチャ上で `document.requestStorageAccess({ all: true })` を呼んでいる (Chrome 115+ では第三者 iframe storage が partition される)。詳細は上記 host ガイド参照。
+- WebKit (iOS) ではグラントにユーザーのタップが要るため、host 側で `storageReady` (ストレージ解決まで `nosskey:ready` を遅らせる) と `onKeyUnavailable` (`NO_KEY` を即答せず、ユーザーが許可するまでリクエストを保留する) も渡すこと。いずれも省略可能で、省略時は従来の挙動。
 
 ---
 

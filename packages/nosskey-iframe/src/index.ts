@@ -6,7 +6,7 @@
 export type { NosskeyIframeClientOptions } from './client.js';
 export { NosskeyIframeClient, NosskeyIframeError } from './client.js';
 export type { ConsentRequest, NosskeyIframeHostOptions, RateLimitOptions } from './host.js';
-export { NosskeyIframeHost } from './host.js';
+export { KEY_RECOVERY_TIMEOUT_MS, NosskeyIframeHost, STORAGE_READY_TIMEOUT_MS } from './host.js';
 export type {
   NosskeyErrorCode,
   NosskeyMessage,

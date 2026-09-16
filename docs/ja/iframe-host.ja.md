@@ -193,6 +193,30 @@ Chrome 115+ や Firefox の Total Cookie Protection では、**サードパー�
 
 `nosskey:visibility` postMessage はプロトコルの一部であり、親側の `NosskeyIframeClient` が iframe 要素の表示/非表示を自動で切り替えます。
 
+### リクエストと回復の競合 (iOS で「許可したのにログインできない」問題)
+
+上の手順 2 は**ユーザーのタップを待つ**のに対し、親のリクエストは iframe が ready を通知した直後に飛んできます。素朴に組むと次の順序になり、ユーザーが許可した頃には親が既にあきらめています。
+
+```
+iframe: ready 通知 → 親: getPublicKey() → host: 鍵が無い → NO_KEY を即答
+                                   （ここでユーザーがやっと「許可」をタップ）
+iframe: cookie 経由で鍵を回復 → 「鍵を読み込みました」
+                                   → しかし親の Promise は既に reject 済み
+```
+
+WebKit は `requestStorageAccess()` に**ユーザージェスチャを必須**とするため、iOS ではサイレントグラントがまず成功せず、この順序に必ずはまります。画面には「アクセスが許可されました」と「ログインできません」が同時に出ます。
+
+`NosskeyIframeHost` はこれを 2 つのオプションで解消します。どちらも省略可能で、省略時の挙動は従来どおりです。
+
+| オプション | 役割 |
+|-----------|------|
+| `storageReady?: Promise<unknown>` | これが settle するまで `nosskey:ready` を送らない。ストレージの解決が終わる前に親へ「送っていい」と言わないための門。`STORAGE_READY_TIMEOUT_MS` (5 秒) で頭打ちにするので、settle しない Promise を渡してもハンドシェイクは壊れない |
+| `onKeyUnavailable?: () => Promise<boolean>` | 鍵が無いとき `NO_KEY` を即答せず、iframe を表示したうえでこれを await する。回復 UI を出し、鍵が読めるようになったら `true`、ユーザーが閉じた / そもそも鍵が無いなら `false` を返す。settle しないハンドラ対策に `KEY_RECOVERY_TIMEOUT_MS` (60 秒、client の既定リクエストタイムアウトと同値) で打ち切る |
+
+`onKeyUnavailable` が `true` を返しても host は `hasKeyInfo()` を**再判定**します (ハンドラの自己申告は信用しない)。`false` は連続拒否としてオリジン別レート制限に計上されます。回復パスは iframe を開くため、このレート制限は `requireUserConsent: false` の host でも**独立に**評価され、任意のオリジンがリクエストを撃ち続けて iframe を開かせ続けることを防ぎます。なお回復の成功はカウンタを**リセットしません** — ユーザーが承認したのはストレージアクセスであって、そのオリジンのリクエストではないからです。
+
+**待ってはいけないケース**があります。パスキー自体が無い (`noKeyExists`) / Storage Access API が無い (`unsupported`) 場合は、別タブでの登録を待つことになり親のリクエストタイムアウト (既定 60 秒) を必ず超えます。リファレンス実装は `utils/key-recovery.ts` の `decideKeyRecovery()` でこの線引きを行い、該当時は即 `false` を返します。
+
 ## テーマ・言語・埋め込みモード
 
 親アプリは URL クエリパラメータで表示設定を渡せます。`NosskeyIframeClient` が `buildIframeUrl()` ヘルパー経由で付与します:

@@ -23,6 +23,46 @@ export interface PendingConsent extends ConsentRequest {
 export const pendingConsent = writable<PendingConsent | null>(null);
 
 /**
+ * 表示待ちの同意要求。`pendingConsent` は常にこの先頭を指す。
+ *
+ * ストアに直接 set していた頃は、2 件目が届くと 1 件目の `resolve` ごと上書きされ、
+ * 先行リクエストが永久に解決されなかった（host 側は `await onConsent` のまま
+ * `finally` に到達せず、iframe も表示されたまま残る）。ストレージ回復待ちの導入で
+ * 「保留していた複数リクエストが一斉に解放される」経路ができ、この取りこぼしが
+ * 例外的なケースから通常経路に昇格したため、キューで順次さばく。
+ */
+let consentQueue: PendingConsent[] = [];
+
+/** 先頭をストアへ反映する。キューが空なら null。 */
+function showHeadConsent(): void {
+  pendingConsent.set(consentQueue[0] ?? null);
+}
+
+/**
+ * 先頭の同意要求を決着させ、次があれば表示する。
+ * キューが空のときは何もしない（多重クリック対策）。
+ */
+function settleHeadConsent(approved: boolean, options?: ApproveOptions): void {
+  const head = consentQueue.shift();
+  showHeadConsent();
+  head?.resolve(approved, options);
+}
+
+/** テスト用。前のテストが残した保留を持ち越さない。 */
+export function resetConsentQueueForTest(): void {
+  consentQueue = [];
+  pendingConsent.set(null);
+}
+
+/** 保留中の同意要求をすべて拒否で決着させる（ホスト停止時など）。 */
+function drainConsentQueue(): void {
+  const queued = consentQueue;
+  consentQueue = [];
+  showHeadConsent();
+  for (const entry of queued) entry.resolve(false);
+}
+
+/**
  * `trustOrigin` が ON のとき、リクエストの origin × method 単位で信頼リストに追加する。
  * すべてのメソッドを許可するのではなく、現在のリクエスト method（policyKey 単位）のみを許可する点に注意。
  *
@@ -74,13 +114,14 @@ export function onConsent(request: ConsentRequest): Promise<boolean> {
   }
 
   return new Promise<boolean>((resolve) => {
-    pendingConsent.set({
+    consentQueue.push({
       ...request,
       resolve: (approved, options) => {
         if (approved) rememberOriginIfRequested(request, options);
         resolve(approved);
       },
     });
+    showHeadConsent();
   });
 }
 
@@ -96,17 +137,11 @@ export function onConsentWithFreshSettings(request: ConsentRequest): Promise<boo
 }
 
 export function approveConsent(options?: ApproveOptions): void {
-  pendingConsent.update((current) => {
-    current?.resolve(true, options);
-    return null;
-  });
+  settleHeadConsent(true, options);
 }
 
 export function rejectConsent(): void {
-  pendingConsent.update((current) => {
-    current?.resolve(false);
-    return null;
-  });
+  settleHeadConsent(false);
 }
 
 export function isEmbeddedIframeMode(): boolean {
@@ -134,9 +169,7 @@ export function startIframeHost(overrides: Partial<NosskeyIframeHostOptions> = {
   host.start();
   return () => {
     host.stop();
-    pendingConsent.update((current) => {
-      current?.resolve(false);
-      return null;
-    });
+    // 保留を残すと、親のリクエストがタイムアウトまで宙吊りになる。
+    drainConsentQueue();
   };
 }

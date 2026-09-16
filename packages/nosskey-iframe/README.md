@@ -139,6 +139,7 @@ When you ship to production, verify each item:
 - Both sides are served over HTTPS (WebAuthn requirement).
 - The host page's effective origin matches the WebAuthn RP-ID used when the passkey was created.
 - The host implements `document.requestStorageAccess({ all: true })` on a user gesture when the parent is cross-origin (Chrome 115+ partitions third-party iframe storage). See the host guide above.
+- On WebKit (iOS) the grant needs a user tap, so the host should also pass `storageReady` (delays the `nosskey:ready` handshake until storage is resolved) and `onKeyUnavailable` (parks a request while the user grants access instead of answering `NO_KEY` immediately). Both are optional; omitting them keeps the previous behaviour.
 
 ---
 
