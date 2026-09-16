@@ -295,6 +295,41 @@ different parent origin, so a naive first call returns `NO_KEY`.
 The `nosskey:visibility` postMessage is part of the protocol; the parent-side
 `NosskeyIframeClient` toggles the iframe element's visibility automatically.
 
+### Requests racing recovery (the iOS "granted but still cannot log in" bug)
+
+Step 2 above **waits for a user tap**, while the parent's first request arrives
+as soon as the iframe announces readiness. Done naively the order is:
+
+```
+iframe: ready → parent: getPublicKey() → host: no key → answers NO_KEY at once
+                              (only now does the user tap "Grant access")
+iframe: recovers the key via cookies → "key loaded"
+                              → but the parent's promise already rejected
+```
+
+WebKit **requires a user gesture** for `requestStorageAccess()`, so on iOS the
+silent grant essentially never succeeds and this order always happens. The user
+is shown "access granted" and "login failed" at the same time.
+
+`NosskeyIframeHost` closes this with two options. Both are optional and the
+behaviour without them is unchanged.
+
+| Option | Role |
+|--------|------|
+| `storageReady?: Promise<unknown>` | Holds back `nosskey:ready` until it settles, so the parent is not told "you may send" before storage has been resolved. Capped by `STORAGE_READY_TIMEOUT_MS` (5s), so a promise that never settles cannot break the handshake |
+| `onKeyUnavailable?: () => Promise<boolean>` | Instead of answering `NO_KEY` immediately when there is no key, the host reveals the iframe and awaits this. Show a recovery UI and resolve `true` once the key is readable, `false` if the user dismissed it or no key exists |
+
+Even when `onKeyUnavailable` resolves `true` the host **re-checks**
+`hasKeyInfo()` — the handler's own claim is not trusted. A `false` counts as a
+rejection for the per-origin rate limiter, so an arbitrary origin cannot keep
+the iframe open by re-issuing requests.
+
+**Some cases must not wait.** With no passkey at all (`noKeyExists`) or no
+Storage Access API (`unsupported`), waiting means waiting for registration in
+another tab, which always exceeds the parent's request timeout (60s by
+default). The reference implementation draws that line in
+`decideKeyRecovery()` (`utils/key-recovery.ts`) and returns `false` right away.
+
 ## Theme, language & embedded mode
 
 A parent app can pass display preferences via URL query parameters that

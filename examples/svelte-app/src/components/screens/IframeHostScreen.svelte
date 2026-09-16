@@ -11,6 +11,7 @@ import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../ifr
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
+import { decideKeyRecovery } from '../../utils/key-recovery.js';
 import { isLikelyWebKit } from '../../utils/user-agent.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -32,6 +33,18 @@ type RequestStorageAccessFn = (options?: {
 }) => Promise<StorageAccessHandle | undefined>;
 
 let stopHost: (() => void) | null = null;
+/**
+ * 初期ストレージ判定の完了。`nosskey:ready` をこれが解決するまで遅らせることで、
+ * 親の最初のリクエストが partitioned（＝空）ストレージを見て NO_KEY になるのを防ぐ。
+ */
+let initialDetection: Promise<void> = Promise.resolve();
+/**
+ * 鍵が見えないまま届いたリクエストの保留分。ユーザーがアクセスを許可したら true、
+ * カードを閉じたら false で一斉に解決する。配列なのは `getPublicKey` と
+ * `getRelays` のように複数が同時に待つことがあるため（1 個しか持たないと
+ * 先行分が取りこぼされる）。
+ */
+let recoveryWaiters: Array<(recovered: boolean) => void> = [];
 // 調査用。`?debug=1` のときだけ true。パネルを見せるために iframe を自動表示し、
 // 判定の分岐をログに出す。起動時に解決済みの値を使う（location を読み直すと
 // `updateHash` の書き戻し後のハッシュを読んでしまう）。
@@ -90,15 +103,55 @@ async function detectInitialState(): Promise<void> {
       postVisibility(true);
       return;
     }
-    // NotAllowedError 以外はここで再送出され、`onMount` の `void` 呼び出しにより
-    // unhandled rejection になる（状態カードが一切出ない経路）。デバッグモードでは
-    // console-daijin がこの rejection を拾うので、そこで観測できる。
-    throw err;
+    // NotAllowedError 以外もカードを出して終わらせる。以前はここで再送出しており、
+    // `onMount` の `void` 呼び出しで unhandled rejection になって**状態カードが
+    // 一切出ない**（画面が無言で固まる）経路があった。加えて今は `nosskey:ready` が
+    // この完了を待つため、ここで throw すると親が待ち続けることになる。
+    console.error('[nosskey] storage access detection failed', describeError(err));
+    uiState = 'denied';
+    errorMessage = err instanceof Error ? err.message : String(err);
+    postVisibility(true);
+    return;
   }
   applyStorageGrant(handle);
   if (uiState === 'noKeyExists') {
     postVisibility(true);
   }
+}
+
+/**
+ * 保留中の回復リクエストを一斉に決着させる。二重解決を防ぐため先に配列を空にする。
+ */
+function settleRecovery(recovered: boolean): void {
+  const waiters = recoveryWaiters;
+  recoveryWaiters = [];
+  for (const resolve of waiters) resolve(recovered);
+}
+
+/**
+ * 鍵が読めないまま届いたリクエストを、回復の見込みがある間だけ保留する。
+ *
+ * WebKit はクロスオリジン iframe の localStorage を partition し、cookie を
+ * unpartition するのは **ユーザージェスチャ後の** Storage Access API グラントだけ。
+ * ここで待たずに NO_KEY を返すと、ユーザーが許可した頃には親が既にあきらめており、
+ * 「アクセスを許可しました」と「ログインできません」が同時に出る。
+ *
+ * パスキー自体が無い場合は待たない。別タブでの登録を待つと親のリクエスト
+ * タイムアウト（既定 60 秒）を確実に超えるため。
+ */
+async function waitForKeyRecovery(): Promise<boolean> {
+  await initialDetection;
+  const decision = decideKeyRecovery(getNosskeyManager().hasKeyInfo(), uiState);
+  if (decision === 'available') return true;
+  if (decision === 'unrecoverable') {
+    debugLog('recovery: no key to recover', { uiState });
+    return false;
+  }
+  // iframe の可視化は host が `onKeyUnavailable` を呼ぶ前に済ませている。
+  debugLog('recovery: waiting for the user to grant storage access', { uiState });
+  return new Promise<boolean>((resolve) => {
+    recoveryWaiters.push(resolve);
+  });
 }
 
 function isStorageAccessHandle(value: unknown): value is StorageAccessHandle {
@@ -174,6 +227,8 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
     uiState = 'noKeyExists';
   }
   logStorageDiagnostics(`iframe: applyStorageGrant done (uiState=${uiState})`);
+  // 保留中のリクエストがあれば、ここが「回復できたか」の答えになる。
+  if (manager.hasKeyInfo()) settleRecovery(true);
 }
 
 async function requestAccess(): Promise<void> {
@@ -192,6 +247,8 @@ async function requestAccess(): Promise<void> {
 }
 
 function handleClose(): void {
+  // 閉じる = 回復しない、という意思表示。保留中のリクエストは NO_KEY で終わる。
+  settleRecovery(false);
   postVisibility(false);
 }
 
@@ -324,7 +381,13 @@ onMount(() => {
   if (isEmbeddedIframeMode()) {
     document.body.classList.add('nosskey-embedded');
   }
-  stopHost = startIframeHost();
+  // 判定を先に走らせ、その完了を `storageReady` として host へ渡す。ready を
+  // 遅らせないと、親の最初のリクエストが回復前のストレージを見て NO_KEY になる。
+  initialDetection = detectInitialState();
+  stopHost = startIframeHost({
+    storageReady: initialDetection,
+    onKeyUnavailable: waitForKeyRecovery,
+  });
   if (debugMode) {
     // パネルは iframe の中に描画されるが、親は `nosskey:visibility` を受け取るまで
     // iframe を display:none にしている。調査時だけ自動で開かせる。
@@ -332,10 +395,11 @@ onMount(() => {
   }
   document.addEventListener('visibilitychange', handleVisibilityRecheck);
   window.addEventListener('pageshow', handleVisibilityRecheck);
-  void detectInitialState();
 });
 
 onDestroy(() => {
+  // 破棄時に保留を残すと、親のリクエストがタイムアウトまで宙吊りになる。
+  settleRecovery(false);
   document.body.classList.remove('nosskey-embedded');
   stopHost?.();
   stopHost = null;
