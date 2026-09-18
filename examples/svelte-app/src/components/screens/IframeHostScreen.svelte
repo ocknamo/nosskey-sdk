@@ -258,6 +258,16 @@ async function requestAccess(): Promise<void> {
   }
 }
 
+/**
+ * フォーカスの出入りを記録する。WebKit は `credentials.get()` を
+ * 「ドキュメントがフォーカスされていること」で門前払いする（`The document is not
+ * focused.`）ため、署名の直前に iframe がフォーカスを持てていたかが決定的になる。
+ * 計測モードでのみ記録する。
+ */
+function logFocus(event: Event): void {
+  debugLog(`focus: ${event.type}`, { hasFocus: document.hasFocus() });
+}
+
 function handleClose(): void {
   // 閉じる = 回復しない、という意思表示。保留中のリクエストは NO_KEY で終わる。
   settleRecovery(false);
@@ -407,6 +417,10 @@ onMount(() => {
   }
   document.addEventListener('visibilitychange', handleVisibilityRecheck);
   window.addEventListener('pageshow', handleVisibilityRecheck);
+  if (debugMode) {
+    window.addEventListener('focus', logFocus);
+    window.addEventListener('blur', logFocus);
+  }
 });
 
 onDestroy(() => {
@@ -417,6 +431,8 @@ onDestroy(() => {
   stopHost = null;
   document.removeEventListener('visibilitychange', handleVisibilityRecheck);
   window.removeEventListener('pageshow', handleVisibilityRecheck);
+  window.removeEventListener('focus', logFocus);
+  window.removeEventListener('blur', logFocus);
 });
 </script>
 

@@ -1,6 +1,7 @@
 import type { ConsentRequest, NosskeyIframeHostOptions } from 'nosskey-iframe';
 import { isDecryptMethod, NosskeyIframeHost } from 'nosskey-iframe';
 import { get, writable } from 'svelte/store';
+import { debugLog } from './debug/debug-console.js';
 import { getNosskeyManager } from './services/nosskey-manager.service.js';
 import { loadRelays } from './services/relays-store.js';
 import {
@@ -133,7 +134,17 @@ export function onConsent(request: ConsentRequest): Promise<boolean> {
  */
 export function onConsentWithFreshSettings(request: ConsentRequest): Promise<boolean> {
   reloadSettings();
-  return onConsent(request);
+  return onConsent(request).then((approved) => {
+    // 署名直前のフォーカス状態。WebKit はここが false だと
+    // `credentials.get()` を `The document is not focused.` で拒否する。
+    // host はこの直後に iframe へフォーカスを取りに行くので、その前の値になる。
+    debugLog('consent settled', {
+      method: request.method,
+      approved,
+      hasFocusBeforeRun: typeof document === 'undefined' ? null : document.hasFocus(),
+    });
+    return approved;
+  });
 }
 
 export function approveConsent(options?: ApproveOptions): void {
