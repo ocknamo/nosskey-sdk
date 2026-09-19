@@ -5,6 +5,7 @@
  * @packageDocumentation
  */
 import {
+  isConnectMethod,
   isNosskeyRequest,
   type NosskeyErrorCode,
   type NosskeyMethod,
@@ -252,6 +253,8 @@ export class NosskeyIframeHost {
   #listener: ((event: MessageEvent) => Promise<void>) | null = null;
   /** Per-origin consent rate-limit state. Lazily populated. */
   readonly #rateState = new Map<string, OriginRateState>();
+  /** Hidden element used to pull focus into this document. Created on first use. */
+  #focusAnchor: HTMLElement | null = null;
 
   constructor(options: NosskeyIframeHostOptions) {
     this.#options = resolveOptions(options);
@@ -320,6 +323,8 @@ export class NosskeyIframeHost {
   stop(): void {
     if (!this.#started) return;
     this.#started = false;
+    this.#focusAnchor?.remove();
+    this.#focusAnchor = null;
     if (this.#listener) {
       this.#options.window.removeEventListener(
         'message',
@@ -507,9 +512,56 @@ export class NosskeyIframeHost {
           throw new HostError('USER_REJECTED', `User rejected the ${consent.method} request.`);
         }
       }
+      // Only for operations that derive the secret key — `getPublicKey` and
+      // `getRelays` just read storage, and taking focus for those would pull it
+      // off whatever the parent page had focused.
+      if (!isConnectMethod(consent.method)) this.#focusForWebAuthn();
       return await run();
     } finally {
       this.#postVisibility(false);
+    }
+  }
+
+  /**
+   * Give this document focus before an operation that may invoke WebAuthn.
+   *
+   * WebKit refuses `navigator.credentials.get()` with "The document is not
+   * focused." unless the calling document is the focused one. The user taps in
+   * the *parent* page, which focuses the parent; when consent is auto-approved
+   * (a trusted origin, or an `always` policy) nothing is ever tapped inside the
+   * iframe, so every signature fails. Observed on iOS 18.7 / Safari 26.6.1,
+   * where signing only succeeded right after the user had tapped the storage
+   * access button inside the iframe.
+   *
+   * Best-effort and silent: focus is a hint, and a host that cannot take it
+   * should still let the operation run and report the real error.
+   */
+  #focusForWebAuthn(): void {
+    const win = this.#options.window;
+    const doc = win.document as Document | undefined;
+    if (!doc || doc.hasFocus?.()) return;
+    try {
+      win.focus();
+    } catch {
+      // A cross-origin frame may be refused; the element focus below is the fallback.
+    }
+    if (doc.hasFocus?.()) return;
+    try {
+      // Moving focus to a real element is what actually brings focus into this
+      // document. The anchor is kept (not removed) because removing a focused
+      // element hands focus straight back.
+      if (!this.#focusAnchor || !this.#focusAnchor.isConnected) {
+        const anchor = doc.createElement('div');
+        anchor.tabIndex = -1;
+        anchor.setAttribute('aria-hidden', 'true');
+        anchor.style.cssText =
+          'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+        doc.body?.appendChild(anchor);
+        this.#focusAnchor = anchor;
+      }
+      this.#focusAnchor.focus({ preventScroll: true });
+    } catch {
+      // Best effort. The operation still runs and surfaces the real failure.
     }
   }
 
