@@ -75,6 +75,22 @@ Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*
 
 Without that header Chromium refuses to run WebAuthn inside the iframe.
 
+### Keep the iframe alive
+
+Mount the iframe once and leave it mounted for the life of the page. **Do not
+tear it down and remount it on `visibilitychange`, focus, or route changes.**
+
+Browsers scope a Storage Access grant to the *document*. A live iframe keeps its
+grant across tab switches; a remounted one starts over, so the user is asked to
+grant storage access every single time they come back to your tab. On iOS Safari
+this is the difference between one prompt and a prompt on every tab switch.
+
+Remounting used to be the only way to notice that the user had switched accounts
+in the signing app, because the iframe read the account once at mount. It is no
+longer needed: the host re-reads the stored account before serving each request,
+so a long-lived iframe picks up both account switches and sign-outs on the next
+call.
+
 For a complete walk-through (storage partitioning, Storage Access API recovery, error handling, UX modal patterns) see
 [`docs/en/iframe-integration.en.md`](../../docs/en/iframe-integration.en.md).
 A runnable demo lives at [`examples/parent-sample`](../../examples/parent-sample).

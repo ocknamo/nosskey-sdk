@@ -46,6 +46,21 @@ export interface NostrEvent {
 export interface NosskeyManagerLike {
   /** Returns true when a `NostrKeyInfo` is available (memory or storage). */
   hasKeyInfo(): boolean;
+  /**
+   * Optional: re-read the stored account, non-destructively.
+   *
+   * The host calls this before serving a request so that a long-lived iframe
+   * keeps answering for the *current* account. Parents are expected to keep
+   * this iframe alive across tab switches — tearing it down would also drop
+   * the Storage Access grant, which browsers scope to the document — so the
+   * account read at mount can be stale by the time a request arrives.
+   *
+   * Implementations must keep the account they already hold when storage
+   * yields nothing: a transient read failure must not look like a logout.
+   * Omitting the method keeps the previous behaviour (answer from whatever
+   * the manager already holds).
+   */
+  reloadCurrentKeyInfo?(): unknown;
   /** NIP-07 `getPublicKey`. */
   getPublicKey(): Promise<string>;
   /** NIP-07 `signEvent`. */
@@ -65,7 +80,7 @@ export interface NosskeyManagerLike {
 //
 // Imports below resolve through the dev-only `nosskey-sdk` workspace dep and
 // are erased by tsup. If `nosskey-sdk` ever drifts (e.g. tightens `NostrEvent`
-// or changes one of the seven `NosskeyManagerLike` method signatures we
+// or changes one of the `NosskeyManagerLike` method signatures we
 // depend on), one of these assertions becomes a type error and the build
 // fails — surfacing the incompatibility before publish.
 // ---------------------------------------------------------------------------
@@ -89,3 +104,10 @@ type _NostrEventReverseCompat = _AssertExtends<SdkNostrEvent, NostrEvent>;
 // from gaining new methods without an iframe release, which is the opposite
 // of what we want (SDK is the superset by design).
 type _ManagerCompat = _AssertExtends<NosskeyManagerLike, SdkNosskeyManagerLike>;
+
+// `reloadCurrentKeyInfo` is declared optional above so that third-party manager
+// implementations stay valid without it. That optionality also means the check
+// above would keep passing if the SDK dropped or renamed the method — the host
+// would silently go back to answering with a stale account. Assert its presence
+// on the SDK side separately so a rename fails the build instead.
+type _ReloadPresent = _AssertExtends<{ reloadCurrentKeyInfo(): unknown }, SdkNosskeyManagerLike>;

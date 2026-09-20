@@ -11,7 +11,7 @@ import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../ifr
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
-import { decideKeyRecovery } from '../../utils/key-recovery.js';
+import { decideKeyRecovery, shouldRevealOnDetection } from '../../utils/key-recovery.js';
 import { isLikelyWebKit } from '../../utils/user-agent.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -38,6 +38,10 @@ let stopHost: (() => void) | null = null;
  * 親の最初のリクエストが partitioned（＝空）ストレージを見て NO_KEY になるのを防ぐ。
  */
 let initialDetection: Promise<void> = Promise.resolve();
+/** 実行中の判定。`visibilitychange` と `pageshow` の近接発火を 1 回にまとめる。 */
+let detectionInFlight: Promise<void> | null = null;
+/** 一度でも判定が確定したか。再判定の失敗で状態を格下げしないための目印。 */
+let detectionSettledOnce = false;
 /**
  * 鍵が見えないまま届いたリクエストの保留分。ユーザーがアクセスを許可したら true、
  * カードを閉じたら false で一斉に解決する。配列なのは `signEvent` や nip44/nip04 の
@@ -64,16 +68,44 @@ function postVisibility(visible: boolean): void {
  * 初期判定。**決して reject しない。** `nosskey:ready` がこの完了を待つため、
  * ここで throw すると親が待ち続ける。加えて以前は unhandled rejection になって
  * 状態カードが一切出ず、画面が無言で固まっていた。
+ *
+ * 再入可（タブ復帰のたびに呼ばれる）。実行中の判定があればそれに相乗りする。
+ * iframe を作り直さなくなったぶん同じドキュメントで何度も走るので、
+ * `visibilitychange` と `pageshow` が近接して発火したときに silent SAA を
+ * 二重に投げないようにする（Safari は連続呼び出しを throttle することがある）。
  */
 async function detectInitialState(): Promise<void> {
+  if (detectionInFlight) return detectionInFlight;
+  detectionInFlight = runDetectionOnce();
+  try {
+    await detectionInFlight;
+  } finally {
+    detectionInFlight = null;
+  }
+}
+
+async function runDetectionOnce(): Promise<void> {
+  const firstRun = !detectionSettledOnce;
   try {
     await runInitialDetection();
   } catch (err) {
     console.error('[nosskey] storage access detection failed', describeError(err));
-    uiState = 'denied';
-    errorMessage = err instanceof Error ? err.message : String(err);
-    postVisibility(true);
+    // 再判定の失敗で確定済みの状態を `denied` に格下げしない。`partitioned` は
+    // 「許可すれば読める」でカードに導線があるのに対し、`denied` はエラー表示に
+    // なる。タブ復帰のたびに走る再判定が一度でもコケると、以後ずっとエラー表示の
+    // まま（しかも自分からは開かない＝誰も気づけない）になってしまう。
+    if (firstRun) {
+      uiState = 'denied';
+      errorMessage = err instanceof Error ? err.message : String(err);
+    } else {
+      debugLog('SAA: recheck failed; keeping the settled state', { uiState });
+    }
   }
+  detectionSettledOnce = true;
+  // 自分から iframe を開くのは「待っても解決しない」状態だけ。判定はタブ復帰の
+  // たびに再実行されるため、ここで無条件に開くと毎回カードが出てしまう。
+  // 判断の根拠は `shouldRevealOnDetection` に置いてある。
+  if (shouldRevealOnDetection(uiState)) postVisibility(true);
 }
 
 async function runInitialDetection(): Promise<void> {
@@ -92,7 +124,6 @@ async function runInitialDetection(): Promise<void> {
     }
     uiState = 'unsupported';
     debugLog('SAA: no API and no key info (uiState=unsupported)');
-    postVisibility(true);
     return;
   }
   // Try silently first: browsers that remember a prior grant for this
@@ -116,17 +147,15 @@ async function runInitialDetection(): Promise<void> {
         uiState = 'running';
         return;
       }
+      // カードは出せる状態にしておくが、開くかどうかは呼び出し元に任せる
+      // （`shouldRevealOnDetection` が「待てる状態では開かない」を決めている）。
       uiState = 'partitioned';
-      postVisibility(true);
       return;
     }
-    // NotAllowedError 以外は呼び出し元の catch がカードを出す。
+    // NotAllowedError 以外は呼び出し元の catch が `denied` を確定させる。
     throw err;
   }
   applyStorageGrant(handle);
-  if (uiState === 'noKeyExists') {
-    postVisibility(true);
-  }
 }
 
 /**

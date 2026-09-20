@@ -133,6 +133,25 @@ setCurrentKeyInfo(keyInfo: NostrKeyInfo): void
 getCurrentKeyInfo(): NostrKeyInfo | null
 ```
 
+#### reloadCurrentKeyInfo()
+現在のNostrKeyInfoをストレージから読み直します。`getCurrentKeyInfo()` が最初に読んだ値を
+インスタンスの寿命のあいだ持ち続けるのに対し、こちらは毎回ストレージを見ます。他サイトに
+埋め込まれた署名 iframe のように同じドキュメントが長く生き続けるケースで、別タブで行われた
+アカウント切り替えやログアウトを、作り直さずに検出するための API です。作り直しは親ページが
+従来やっていたことですが、ドキュメントの Storage Access グラントを失うため、ユーザーはタブを
+切り替えるたびに許可を求められます。
+
+読み取りに成功した結果はそのまま反映します。ストレージが空なら in-memory も空になります
+（ログアウトはこの経路で伝わります）。ストレージを参照できなかった場合 — 未設定、または
+3rd-party Cookie 全ブロック時のように `getItem` が例外を投げた場合 — は in-memory を維持
+します。これは「削除された」ではなく「読めない」だからです。このメソッドが保存済みの鍵を
+削除することはありません。削除は `clearCurrentKeyInfo()` / `clearStoredKeyInfo()` を
+使ってください。
+
+```typescript
+reloadCurrentKeyInfo(): NostrKeyInfo | null
+```
+
 #### hasKeyInfo()
 NostrKeyInfoが存在するかどうかを確認します。
 

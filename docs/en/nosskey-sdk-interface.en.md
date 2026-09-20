@@ -135,6 +135,25 @@ Gets the current NostrKeyInfo. Attempts to load from storage if not set.
 getCurrentKeyInfo(): NostrKeyInfo | null
 ```
 
+#### reloadCurrentKeyInfo()
+Re-reads the current NostrKeyInfo from storage. `getCurrentKeyInfo()` keeps whatever it
+read first for the lifetime of the instance; this one looks at storage every time, so a
+long-lived document (a signing iframe embedded in another site) can notice an account
+switch — or a sign-out — performed elsewhere without being torn down and remounted.
+Remounting is what a parent page used to do, and it costs the document's Storage Access
+grant, so the user gets re-prompted on every tab switch.
+
+A successful read is applied as-is: if storage is empty, the in-memory account is
+cleared too (this is how a sign-out propagates). If storage could not be consulted at
+all — none configured, or `getItem` threw, as it does when third-party cookies are
+fully blocked — the in-memory account is kept, because that is "unreadable", not
+"deleted". This method never deletes stored key material; use `clearCurrentKeyInfo()`
+or `clearStoredKeyInfo()` for that.
+
+```typescript
+reloadCurrentKeyInfo(): NostrKeyInfo | null
+```
+
 #### hasKeyInfo()
 Checks if NostrKeyInfo exists.
 

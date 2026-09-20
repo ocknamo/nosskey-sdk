@@ -175,6 +175,61 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * current の NostrKeyInfo をストレージから**読み直す**（保存済みの値は消さない）。
+   *
+   * {@link getCurrentKeyInfo} は一度読んだ値を in-memory に持ち続けるため、同じ
+   * ドキュメントが生き続ける埋め込み（署名 iframe）では、ユーザーが別タブで
+   * アカウントを切り替えても古い値を返し続ける。これを解消する唯一の手段が
+   * これまで「ドキュメントごと作り直す」ことだったが、iframe でそれをやると
+   * Storage Access のグラント（**ドキュメント単位**）も一緒に捨てることになり、
+   * タブを切り替えるたびに許可モーダルが出る原因になっていた。
+   *
+   * **読み取りに成功した結果はそのまま反映する。空なら in-memory も空にする。**
+   * これは別タブでのログアウト（{@link clearCurrentKeyInfo}）を埋め込み側へ伝える
+   * ための経路でもある。ここで「空なら現状維持」にすると、ユーザーがサインアウト
+   * したのに埋め込み先がそのアカウントとして署名し続けることになる。
+   *
+   * 反対に、**ストレージに触れなかった場合は in-memory を維持する**。ストレージが
+   * 未設定、または getItem が例外を投げた（3rd-party Cookie 全ブロック時の
+   * SecurityError など）ケースは「消された」ではなく「今は読めない」であり、
+   * ここで鍵を落とすと署名できなくなる。
+   *
+   * アカウントが変わった（pubkey 不一致、ログアウト含む）ときだけ、派生秘密鍵の
+   * キャッシュと登録簿キャッシュを破棄する。前者は current でなくなったアカウント
+   * の平文秘密鍵を heap に残さないため。
+   *
+   * 副作用: 読み込みは旧 salt 値の修復保存を伴うことがある（
+   * {@link NostrKeyInfo.salt} の正規化）。一度成功すれば以降は起きない自己修復。
+   *
+   * @returns 反映後の current NostrKeyInfo
+   */
+  reloadCurrentKeyInfo(): NostrKeyInfo | null {
+    if (!this.#storageOptions.enabled) return this.#currentKeyInfo;
+    // ストレージが無いのは「空」ではなく「読めない」。現状維持。
+    if (!this.#resolveStorage()) return this.#currentKeyInfo;
+
+    let reloaded: NostrKeyInfo | null;
+    try {
+      reloaded = this.#loadKeyInfoFromStorage();
+    } catch (e) {
+      // 読み取り自体が失敗した。削除と区別できないのではなく、**区別できている**
+      // ので現状維持でよい（空が返ったわけではない）。
+      console.error('Failed to re-read stored NostrKeyInfo', e);
+      return this.#currentKeyInfo;
+    }
+
+    if (reloaded?.pubkey !== this.#currentKeyInfo?.pubkey) {
+      // アカウントが入れ替わった、またはログアウトされた。current でなくなった
+      // アカウントの平文秘密鍵は heap に残さない。登録簿も別タブで更新されている
+      // 可能性があるため読み直させる。
+      this.#keyCache.clearAllCachedKeys();
+      this.#registryCache = null;
+    }
+    this.#currentKeyInfo = reloaded;
+    return reloaded;
+  }
+
+  /**
    * NostrKeyInfoが存在するかどうかを確認
    * ストレージの設定に応じてメモリやストレージから検索
    * @returns NostrKeyInfoが存在するかどうか
