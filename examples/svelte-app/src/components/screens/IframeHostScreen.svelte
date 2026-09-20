@@ -11,7 +11,7 @@ import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../ifr
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { reloadSettings } from '../../store/app-state.js';
 import { buildScreenUrl } from '../../utils/app-navigation.js';
-import { decideKeyRecovery } from '../../utils/key-recovery.js';
+import { decideKeyRecovery, shouldRevealOnDetection } from '../../utils/key-recovery.js';
 import { isLikelyWebKit } from '../../utils/user-agent.js';
 import ConsentDialog from '../ConsentDialog.svelte';
 import Button from '../ui/button/Button.svelte';
@@ -72,8 +72,11 @@ async function detectInitialState(): Promise<void> {
     console.error('[nosskey] storage access detection failed', describeError(err));
     uiState = 'denied';
     errorMessage = err instanceof Error ? err.message : String(err);
-    postVisibility(true);
   }
+  // 自分から iframe を開くのは「待っても解決しない」状態だけ。判定はタブ復帰の
+  // たびに再実行されるため、ここで無条件に開くと毎回カードが出てしまう。
+  // 判断の根拠は `shouldRevealOnDetection` に置いてある。
+  if (shouldRevealOnDetection(uiState)) postVisibility(true);
 }
 
 async function runInitialDetection(): Promise<void> {
@@ -92,7 +95,6 @@ async function runInitialDetection(): Promise<void> {
     }
     uiState = 'unsupported';
     debugLog('SAA: no API and no key info (uiState=unsupported)');
-    postVisibility(true);
     return;
   }
   // Try silently first: browsers that remember a prior grant for this
@@ -116,17 +118,15 @@ async function runInitialDetection(): Promise<void> {
         uiState = 'running';
         return;
       }
+      // カードは出せる状態にしておくが、開くかどうかは呼び出し元に任せる
+      // （`shouldRevealOnDetection` が「待てる状態では開かない」を決めている）。
       uiState = 'partitioned';
-      postVisibility(true);
       return;
     }
-    // NotAllowedError 以外は呼び出し元の catch がカードを出す。
+    // NotAllowedError 以外は呼び出し元の catch が `denied` を確定させる。
     throw err;
   }
   applyStorageGrant(handle);
-  if (uiState === 'noKeyExists') {
-    postVisibility(true);
-  }
 }
 
 /**

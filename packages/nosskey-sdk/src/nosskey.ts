@@ -175,6 +175,43 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
+   * current の NostrKeyInfo をストレージから**読み直す**（非破壊）。
+   *
+   * {@link getCurrentKeyInfo} は一度読んだ値を in-memory に持ち続けるため、同じ
+   * ドキュメントが生き続ける埋め込み（署名 iframe）では、ユーザーが別タブで
+   * アカウントを切り替えても古い値を返し続ける。これを解消する唯一の手段が
+   * これまで「ドキュメントごと作り直す」ことだったが、iframe でそれをやると
+   * Storage Access のグラント（**ドキュメント単位**）も一緒に捨てることになり、
+   * タブを切り替えるたびに許可モーダルが出る原因になっていた。
+   *
+   * **ストレージから読めなかった場合は in-memory の値を維持する。** 埋め込み先では
+   * ストレージが一時的に読めなくなること（partition されている、ブリッジしている
+   * cookie が ITP で失効した）があり、そこで鍵を落とすと署名できなくなる。
+   * 「消された」と「今は読めない」をストレージは区別できないので、ここでは
+   * 消去を推定しない。鍵を消すのは {@link clearCurrentKeyInfo} と
+   * {@link clearStoredKeyInfo} の役割。
+   *
+   * 読み直した結果 pubkey が変わっていたときだけ、派生秘密鍵のキャッシュを破棄する
+   * （current でなくなったアカウントの平文秘密鍵を heap に残さない）。
+   *
+   * @returns 反映後の current NostrKeyInfo
+   */
+  reloadCurrentKeyInfo(): NostrKeyInfo | null {
+    if (!this.#storageOptions.enabled) return this.#currentKeyInfo;
+
+    const reloaded = this.#loadKeyInfoFromStorage();
+    if (!reloaded) return this.#currentKeyInfo;
+
+    if (this.#currentKeyInfo?.pubkey !== reloaded.pubkey) {
+      this.#keyCache.clearAllCachedKeys();
+    }
+    this.#currentKeyInfo = reloaded;
+    // 登録簿も別タブ・別バケットで更新されている可能性があるため読み直させる。
+    this.#registryCache = null;
+    return reloaded;
+  }
+
+  /**
    * NostrKeyInfoが存在するかどうかを確認
    * ストレージの設定に応じてメモリやストレージから検索
    * @returns NostrKeyInfoが存在するかどうか

@@ -41,3 +41,26 @@ export function decideKeyRecovery(hasKeyInfo: boolean, uiState: RecoveryUiState)
   if (hasKeyInfo) return 'available';
   return uiState === 'partitioned' || uiState === 'denied' ? 'wait' : 'unrecoverable';
 }
+
+/**
+ * 初期判定を終えた直後に、iframe を**こちらから**開くべき状態か。
+ *
+ * 開くのは「ユーザーが動かない限り先に進めず、しかも誰もリクエストしてくれない
+ * かもしれない」状態だけに絞る。`partitioned` / `denied` のように *待てば*
+ * 解決する状態で開いてはいけない:
+ *
+ * - グラントは**ドキュメント単位**なので、親は iframe を作り直さず生かし続ける。
+ *   すると初期判定はタブ復帰のたびに再実行される。そこで開くと「タブを切り替える
+ *   たびにストレージ許可のモーダルが出る」ことになる。
+ * - 鍵が実際に要る瞬間には host が `onKeyUnavailable` の直前に
+ *   `nosskey:visibility` を出して開いてくれる。待てる状態はそこに任せれば、
+ *   カードは**必要になった瞬間にだけ**出る。
+ *
+ * 判定そのものは {@link decideKeyRecovery} の裏返し: 「待てない（= リクエストが
+ * 来ても解決しない）」状態だけが、こちらから見せる価値のある状態にあたる。
+ * カードを描画しない `running` と、成功表示で操作を促さない `granted` は除く。
+ */
+export function shouldRevealOnDetection(uiState: RecoveryUiState): boolean {
+  if (uiState === 'running' || uiState === 'granted') return false;
+  return decideKeyRecovery(false, uiState) === 'unrecoverable';
+}

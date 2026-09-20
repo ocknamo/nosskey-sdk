@@ -196,6 +196,21 @@ export interface NosskeyManagerLike {
   getCurrentKeyInfo(): NostrKeyInfo | null;
 
   /**
+   * current の NostrKeyInfo をストレージから**読み直す**（非破壊）。
+   *
+   * `getCurrentKeyInfo()` が一度読んだ値を持ち続けるのに対し、こちらは毎回
+   * ストレージを見る。同じドキュメントが長く生き続ける埋め込み（署名 iframe）が、
+   * 別タブでのアカウント切り替えを、ドキュメントを作り直さずに拾うための API。
+   *
+   * ストレージから読めなかった場合は in-memory の値を維持する（一時的な読み取り
+   * 失敗でログアウトさせない）。鍵の消去は `clearCurrentKeyInfo()` /
+   * `clearStoredKeyInfo()` を使うこと。
+   *
+   * @returns 反映後の current NostrKeyInfo
+   */
+  reloadCurrentKeyInfo(): NostrKeyInfo | null;
+
+  /**
    * NostrKeyInfoが存在するかどうかを確認
    * ストレージの設定に応じてメモリやストレージから検索
    * @returns NostrKeyInfoが存在するかどうか

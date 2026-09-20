@@ -467,6 +467,19 @@ export class NosskeyIframeHost {
    */
   async #withVisibilityAndConsent<T>(consent: ConsentRequest, run: () => Promise<T>): Promise<T> {
     const { manager, requireUserConsent, onConsent, onKeyUnavailable } = this.#options;
+    // Answer for the account that is in storage *now*, not the one read when
+    // this document mounted. Parents are told to keep the iframe alive across
+    // tab switches — destroying it would also drop the Storage Access grant,
+    // which browsers scope to the document, and re-prompt the user every time —
+    // so without this the iframe would keep serving a stale account after the
+    // user switched accounts in the standalone app.
+    //
+    // Optional and non-destructive: a manager that does not implement it
+    // behaves exactly as before, and one that does keeps the account it already
+    // holds when storage yields nothing. Cheap enough to do per request (one
+    // storage read), and this is the only point where it cannot race the
+    // parent's own visibility handling.
+    manager.reloadCurrentKeyInfo?.();
     // Recovery is attempted only when the host offered a way to do it. Without
     // one the answer is the same immediate NO_KEY as before, and the iframe is
     // never revealed for a keyless host.
