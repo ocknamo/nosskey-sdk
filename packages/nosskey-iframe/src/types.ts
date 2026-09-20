@@ -104,3 +104,10 @@ type _NostrEventReverseCompat = _AssertExtends<SdkNostrEvent, NostrEvent>;
 // from gaining new methods without an iframe release, which is the opposite
 // of what we want (SDK is the superset by design).
 type _ManagerCompat = _AssertExtends<NosskeyManagerLike, SdkNosskeyManagerLike>;
+
+// `reloadCurrentKeyInfo` is declared optional above so that third-party manager
+// implementations stay valid without it. That optionality also means the check
+// above would keep passing if the SDK dropped or renamed the method — the host
+// would silently go back to answering with a stale account. Assert its presence
+// on the SDK side separately so a rename fails the build instead.
+type _ReloadPresent = _AssertExtends<{ reloadCurrentKeyInfo(): unknown }, SdkNosskeyManagerLike>;

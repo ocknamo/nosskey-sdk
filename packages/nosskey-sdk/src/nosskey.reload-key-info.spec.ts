@@ -65,20 +65,21 @@ describe('NosskeyManager.reloadCurrentKeyInfo', () => {
     expect(manager.getCurrentKeyInfo()?.pubkey).toBe('bbbb');
   });
 
-  it('ストレージが読めなくなっても in-memory の鍵情報を落とさない', () => {
+  // ログアウトの伝播。これが効かないと、ユーザーが別タブでサインアウトしても
+  // 埋め込み先はそのアカウントとして署名し続ける（アカウント境界の問題）。
+  it('別タブでのログアウト（current が空になった）を反映する', () => {
     const storage = makeStorage({ nosskey_keyinfo: JSON.stringify(keyInfo('aaaa')) });
     const manager = makeManager(storage);
-    expect(manager.getCurrentKeyInfo()?.pubkey).toBe('aaaa');
+    expect(manager.hasKeyInfo()).toBe(true);
 
-    // partition・cookie の ITP 失効などで「今は読めない」状態。消去とは区別できない
-    // ので、ここで鍵を捨てるとユーザーは署名できなくなる。
     storage.removeItem('nosskey_keyinfo');
 
-    expect(manager.reloadCurrentKeyInfo()?.pubkey).toBe('aaaa');
-    expect(manager.hasKeyInfo()).toBe(true);
+    expect(manager.reloadCurrentKeyInfo()).toBeNull();
+    expect(manager.hasKeyInfo()).toBe(false);
+    expect(clearAll).toHaveBeenCalled();
   });
 
-  it('壊れた JSON でも in-memory の鍵情報を落とさない', () => {
+  it('壊れた JSON は「鍵なし」として扱う（作り直していた頃と同じ結論）', () => {
     const storage = makeStorage({ nosskey_keyinfo: JSON.stringify(keyInfo('aaaa')) });
     const manager = makeManager(storage);
     expect(manager.getCurrentKeyInfo()?.pubkey).toBe('aaaa');
@@ -86,7 +87,43 @@ describe('NosskeyManager.reloadCurrentKeyInfo', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     storage.setItem('nosskey_keyinfo', '{ not json');
 
+    expect(manager.reloadCurrentKeyInfo()).toBeNull();
+  });
+
+  // 「空が返った」と「読めなかった」は別物。後者で鍵を落とすと署名できなくなる。
+  it('getItem が例外を投げたら in-memory の鍵情報を維持する', () => {
+    const storage = makeStorage({ nosskey_keyinfo: JSON.stringify(keyInfo('aaaa')) });
+    const manager = makeManager(storage);
+    expect(manager.getCurrentKeyInfo()?.pubkey).toBe('aaaa');
+
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(storage, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+
     expect(manager.reloadCurrentKeyInfo()?.pubkey).toBe('aaaa');
+    expect(manager.hasKeyInfo()).toBe(true);
+  });
+
+  it('ストレージ参照が無いときは in-memory の鍵情報を維持する', () => {
+    // storage を明示せず globalThis.localStorage だけに頼るマネージャを作り、
+    // 鍵を読ませてから localStorage 自体を取り上げる。空ではなく「読めない」。
+    const storage = makeStorage({ nosskey_keyinfo: JSON.stringify(keyInfo('aaaa')) });
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
+    try {
+      const manager = new NosskeyManager({
+        storageOptions: { enabled: true, registryEnabled: false },
+      });
+      expect(manager.getCurrentKeyInfo()?.pubkey).toBe('aaaa');
+
+      Object.defineProperty(globalThis, 'localStorage', { value: undefined, configurable: true });
+      expect(manager.reloadCurrentKeyInfo()?.pubkey).toBe('aaaa');
+      expect(manager.hasKeyInfo()).toBe(true);
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original);
+      else Reflect.deleteProperty(globalThis as object, 'localStorage');
+    }
   });
 
   it('pubkey が変わったときだけ派生鍵キャッシュを破棄する', () => {

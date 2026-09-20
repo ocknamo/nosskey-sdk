@@ -133,4 +133,65 @@ describe('NosskeyIframeHost key reload', () => {
 
     expect(reloadCurrentKeyInfo).toHaveBeenCalledTimes(2);
   });
+
+  // マネージャが投げてもリクエストは壊さない。読み直せなかっただけで、
+  // 既に持っているアカウントで応答できる（3rd-party Cookie 全ブロック時の
+  // SecurityError など、まさに対象ブラウザで起こりうる）。
+  it('serves the request when the reload throws', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const manager = makeManager({
+      reloadCurrentKeyInfo: vi.fn(() => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      }),
+      getPublicKey: vi.fn(async () => 'pub'),
+    });
+    const { win } = makeHost(manager);
+
+    await request(win, 'getPublicKey');
+
+    expect(findResponse(win).result).toBe('pub');
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  // 同意を取ったあとにアカウントを差し替えられると、ユーザーが承認したのとは
+  // 別のアカウントで実行されてしまう。in-flight がある間は読み直さない。
+  it('does not swap the account underneath an in-flight request', async () => {
+    const reloadCurrentKeyInfo = vi.fn();
+    let releaseFirst: (() => void) | undefined;
+    const firstStarted = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let gate: (() => void) | undefined;
+    const manager = makeManager({
+      reloadCurrentKeyInfo,
+      signEvent: vi.fn(async (event) => {
+        releaseFirst?.();
+        await new Promise<void>((resolve) => {
+          gate = resolve;
+        });
+        return event;
+      }),
+      getPublicKey: vi.fn(async () => 'pub'),
+    });
+    const { win } = makeHost(manager);
+
+    const first = request(win, 'signEvent', signParams);
+    await firstStarted;
+    expect(reloadCurrentKeyInfo).toHaveBeenCalledTimes(1);
+
+    // 1 本目が走っている間に 2 本目。読み直しは起きてはいけない。
+    const second = request(win, 'getPublicKey');
+    // 2 本目が読み直し地点まで到達したことを保証してから数える（マクロタスク待ち）。
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(reloadCurrentKeyInfo).toHaveBeenCalledTimes(1);
+
+    gate?.();
+    await first;
+    await second;
+
+    // 1 本目が終わったあとの次のリクエストでは読み直す。
+    await request(win, 'getPublicKey');
+    expect(reloadCurrentKeyInfo).toHaveBeenCalledTimes(2);
+  });
 });

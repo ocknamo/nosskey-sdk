@@ -175,7 +175,7 @@ export class NosskeyManager implements NosskeyManagerLike {
   }
 
   /**
-   * current の NostrKeyInfo をストレージから**読み直す**（非破壊）。
+   * current の NostrKeyInfo をストレージから**読み直す**（保存済みの値は消さない）。
    *
    * {@link getCurrentKeyInfo} は一度読んだ値を in-memory に持ち続けるため、同じ
    * ドキュメントが生き続ける埋め込み（署名 iframe）では、ユーザーが別タブで
@@ -184,30 +184,48 @@ export class NosskeyManager implements NosskeyManagerLike {
    * Storage Access のグラント（**ドキュメント単位**）も一緒に捨てることになり、
    * タブを切り替えるたびに許可モーダルが出る原因になっていた。
    *
-   * **ストレージから読めなかった場合は in-memory の値を維持する。** 埋め込み先では
-   * ストレージが一時的に読めなくなること（partition されている、ブリッジしている
-   * cookie が ITP で失効した）があり、そこで鍵を落とすと署名できなくなる。
-   * 「消された」と「今は読めない」をストレージは区別できないので、ここでは
-   * 消去を推定しない。鍵を消すのは {@link clearCurrentKeyInfo} と
-   * {@link clearStoredKeyInfo} の役割。
+   * **読み取りに成功した結果はそのまま反映する。空なら in-memory も空にする。**
+   * これは別タブでのログアウト（{@link clearCurrentKeyInfo}）を埋め込み側へ伝える
+   * ための経路でもある。ここで「空なら現状維持」にすると、ユーザーがサインアウト
+   * したのに埋め込み先がそのアカウントとして署名し続けることになる。
    *
-   * 読み直した結果 pubkey が変わっていたときだけ、派生秘密鍵のキャッシュを破棄する
-   * （current でなくなったアカウントの平文秘密鍵を heap に残さない）。
+   * 反対に、**ストレージに触れなかった場合は in-memory を維持する**。ストレージが
+   * 未設定、または getItem が例外を投げた（3rd-party Cookie 全ブロック時の
+   * SecurityError など）ケースは「消された」ではなく「今は読めない」であり、
+   * ここで鍵を落とすと署名できなくなる。
+   *
+   * アカウントが変わった（pubkey 不一致、ログアウト含む）ときだけ、派生秘密鍵の
+   * キャッシュと登録簿キャッシュを破棄する。前者は current でなくなったアカウント
+   * の平文秘密鍵を heap に残さないため。
+   *
+   * 副作用: 読み込みは旧 salt 値の修復保存を伴うことがある（
+   * {@link NostrKeyInfo.salt} の正規化）。一度成功すれば以降は起きない自己修復。
    *
    * @returns 反映後の current NostrKeyInfo
    */
   reloadCurrentKeyInfo(): NostrKeyInfo | null {
     if (!this.#storageOptions.enabled) return this.#currentKeyInfo;
+    // ストレージが無いのは「空」ではなく「読めない」。現状維持。
+    if (!this.#resolveStorage()) return this.#currentKeyInfo;
 
-    const reloaded = this.#loadKeyInfoFromStorage();
-    if (!reloaded) return this.#currentKeyInfo;
+    let reloaded: NostrKeyInfo | null;
+    try {
+      reloaded = this.#loadKeyInfoFromStorage();
+    } catch (e) {
+      // 読み取り自体が失敗した。削除と区別できないのではなく、**区別できている**
+      // ので現状維持でよい（空が返ったわけではない）。
+      console.error('Failed to re-read stored NostrKeyInfo', e);
+      return this.#currentKeyInfo;
+    }
 
-    if (this.#currentKeyInfo?.pubkey !== reloaded.pubkey) {
+    if (reloaded?.pubkey !== this.#currentKeyInfo?.pubkey) {
+      // アカウントが入れ替わった、またはログアウトされた。current でなくなった
+      // アカウントの平文秘密鍵は heap に残さない。登録簿も別タブで更新されている
+      // 可能性があるため読み直させる。
       this.#keyCache.clearAllCachedKeys();
+      this.#registryCache = null;
     }
     this.#currentKeyInfo = reloaded;
-    // 登録簿も別タブ・別バケットで更新されている可能性があるため読み直させる。
-    this.#registryCache = null;
     return reloaded;
   }
 

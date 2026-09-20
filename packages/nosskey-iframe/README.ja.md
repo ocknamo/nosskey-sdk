@@ -74,6 +74,21 @@ Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*
 
 このヘッダがないと Chromium は iframe 内での WebAuthn 実行を拒否します。
 
+### iframe は作り直さない
+
+iframe はページの寿命のあいだ 1 回だけマウントし、そのまま生かしておいてください。
+**`visibilitychange`・フォーカス・ルート変更などで破棄して作り直さないこと。**
+
+ブラウザは Storage Access のグラントを**ドキュメント単位**で管理します。生きている
+iframe はタブを切り替えてもグラントを保持しますが、作り直すとゼロからやり直しになり、
+ユーザーはタブに戻るたびにストレージアクセスの許可を求められます。iOS Safari では
+「最初の 1 回だけ」と「タブを切り替えるたび」の差になります。
+
+以前は、署名アプリ側でのアカウント切り替えに気づく手段が作り直ししかありませんでした
+（iframe はマウント時に一度だけアカウントを読んでいたため）。現在は host がリクエスト
+ごとに保存済みアカウントを読み直すので、生かしたままの iframe でもアカウント切り替えと
+ログアウトの両方を次の呼び出しで拾えます。
+
 詳細な統合手順 (storage partitioning、Storage Access API による復旧、エラーハンドリング、モーダル UX 等) は
 [`docs/ja/iframe-integration.ja.md`](../../docs/ja/iframe-integration.ja.md) を参照。
 動作可能なデモは [`examples/parent-sample`](../../examples/parent-sample) にあります。
