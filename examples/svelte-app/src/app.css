@@ -133,7 +133,8 @@ select:hover:not(:disabled):not(:focus) {
 input::placeholder,
 textarea::placeholder {
   color: var(--color-text-muted);
-  opacity: 0.85;
+  /* Firefox は既定で placeholder を半透明にするため、コントラスト確保のため打ち消す */
+  opacity: 1;
 }
 
 input:focus,
