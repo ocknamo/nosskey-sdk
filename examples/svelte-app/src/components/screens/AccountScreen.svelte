@@ -35,7 +35,9 @@ onMount(() => {
   .account-screen {
     max-width: 700px;
     margin: 0 auto;
-    /* フッター分の下余白は .app-container 側で確保済みなので、ここでは足さない */
+    /* フッター分の下余白は .app-container 側で確保済みなので、ここでは足さない。
+       padding 20px と max-width 700px は AuthScreen.svelte の .watermark-layer（画面端までの見切れ）と
+       値を合わせているので、変えるときは両方を直すこと。 */
     padding: 20px;
     display: flex;
     flex-direction: column;

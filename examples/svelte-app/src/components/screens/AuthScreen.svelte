@@ -386,7 +386,9 @@ $effect(() => {
   }
 
   /* 透かしを収めるレイヤー。モバイルでは画面右端（.account-screen の左右 padding 20px 分外側）
-     まで広げ、そこからはみ出した部分を切り取って「見切れ」にする。 */
+     まで広げ、そこからはみ出した部分を切り取って「見切れ」にする。top: -20px は同じく上 padding 分で、
+     固定ヘッダーの下端に揃える。
+     ※ AccountScreen.svelte の .account-screen（padding 20px / max-width 700px）と値を合わせている。 */
   .watermark-layer {
     position: absolute;
     top: -20px;
@@ -437,7 +439,8 @@ $effect(() => {
 
   .subtitle {
     font-size: 1.15rem;
-    /* モバイルでは透かしロゴが背後に重なるため、本文色でコントラストを確保する（PC は副次色） */
+    /* モバイル（700px 未満）では透かしロゴが背後に重なるため、本文色でコントラストを確保する。
+       タブレット幅も同じ色にそろえ、PC のみ副次色にする。 */
     color: var(--color-text);
     margin: 0;
     line-height: 1.5;
