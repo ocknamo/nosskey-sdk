@@ -56,6 +56,8 @@ function handleClick() {
   .btn:focus-visible {
     outline: 2px solid var(--color-button-primary);
     outline-offset: 4px;
+    /* 全体共通の button:focus-visible の淡い box-shadow を打ち消し、二重枠にしない */
+    box-shadow: none;
   }
 
   .btn:disabled {

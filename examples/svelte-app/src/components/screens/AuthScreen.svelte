@@ -592,7 +592,8 @@ $effect(() => {
   }
 
   .method-link--forward::after {
-    /* 矢印は装飾なので読み上げない */
+    /* 矢印は装飾なので読み上げない（代替テキスト構文の非対応ブラウザ向けに先に素の指定を置く） */
+    content: " →";
     content: " →" / "";
   }
 
@@ -611,7 +612,7 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-        text-align: left;
+    text-align: left;
   }
 
   .nsec-label-row {
@@ -643,7 +644,7 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-        text-align: left;
+    text-align: left;
   }
 
   .username-label-row {
