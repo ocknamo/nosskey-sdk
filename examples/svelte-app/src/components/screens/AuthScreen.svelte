@@ -459,8 +459,8 @@ $effect(() => {
     }
 
     .watermark {
-      width: 240px;
-      height: 240px;
+      width: clamp(300px, 46vw, 400px);
+      height: clamp(300px, 46vw, 400px);
       transform: none;
     }
   }
