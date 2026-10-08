@@ -279,7 +279,7 @@ graph TD
 
 通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、モバイルでは `FooterMenu`、PC では `HeaderBar` のナビで切り替えます。
 
-PC（幅 960px 以上）では各画面が 2 カラムになります。`key` / `settings` は `app.css` の `.screen-columns` / `.screen-column` でカードを左右に振り分け、モバイルでは列ラッパーを `display: contents` にして各カードの `order` で従来の縦並びを保ちます。未ログインの `account` は左にヒーロー、右にフォームを置きます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
+PC（幅 960px 以上）では各画面が 2 カラムになります。`key` / `settings` は `app.css` の `.screen-columns` / `.screen-column` でカードを左右に振り分け、モバイルでは列ラッパーを `display: contents` にして左列 → 右列の DOM 順で 1 列に並べます（表示順とフォーカス順を一致させるため、従来の縦並びになるよう列へ振り分けています）。未ログインの `account` は左にヒーロー、右にフォームを置きます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
 
 ```mermaid
 graph LR

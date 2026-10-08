@@ -56,26 +56,29 @@ const PURPLE_DARK: Record<string, string> = {
   // ボーダー色バリエーション（ダーク）
   '--color-border-strong': '#3A3A46',
   '--color-border-light': '#2A2A33',
-  '--color-border-medium': '#3A3A46',
+  '--color-border-medium': '#4A4A55',
 
   // ボタン色（ダーク）
   '--color-button-primary': '#7C5CFA',
   '--color-button-secondary': '#24242D',
-  '--color-button-success': '#16A34A',
+  '--color-button-success': '#15803D',
   '--color-button-warning': '#FBBF24',
-  '--color-button-danger': '#E5484D',
+  '--color-button-danger': '#DC2626',
   '--color-button-info': '#3B82F6',
   // 塗りボタン（primary 以外の面ボタン）の文字色。
   '--color-button-secondary-text': '#E9E9F0',
   // primary ボタンの塗り。パープル系はバイオレット→インディゴのグラデーション。
-  '--gradient-primary': 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
+  // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
+  '--gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)',
+  // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
+  '--color-primary-glow': 'rgba(124, 58, 237, 0.55)',
 
   // ボタンホバー色（ダーク）
   '--color-button-primary-hover': '#8D70FF',
   '--color-button-secondary-hover': '#2E2E39',
-  '--color-button-success-hover': '#22C55E',
+  '--color-button-success-hover': '#166534',
   '--color-button-warning-hover': '#FCD34D',
-  '--color-button-danger-hover': '#EC5D5E',
+  '--color-button-danger-hover': '#B91C1C',
   '--color-button-info-hover': '#60A5FA',
 
   // ボタン無効化色（ダーク）
@@ -162,19 +165,22 @@ const PURPLE_LIGHT: Record<string, string> = {
   // ボタン色（ライト）
   '--color-button-primary': '#6E56CF',
   '--color-button-secondary': '#EEEEF3',
-  '--color-button-success': '#16A34A',
+  '--color-button-success': '#15803D',
   '--color-button-warning': '#D97706',
   '--color-button-danger': '#DC2626',
   '--color-button-info': '#2563EB',
   // 塗りボタン（primary 以外の面ボタン）の文字色。
   '--color-button-secondary-text': '#2B2B36',
   // primary ボタンの塗り。パープル系はバイオレット→インディゴのグラデーション。
-  '--gradient-primary': 'linear-gradient(135deg, #7C5CFA 0%, #5B5BE8 100%)',
+  // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
+  '--gradient-primary': 'linear-gradient(135deg, #6E56CF 0%, #4F46E5 100%)',
+  // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
+  '--color-primary-glow': 'rgba(110, 86, 207, 0.45)',
 
   // ボタンホバー色（ライト）
   '--color-button-primary-hover': '#5B46B8',
   '--color-button-secondary-hover': '#E4E4EB',
-  '--color-button-success-hover': '#15803D',
+  '--color-button-success-hover': '#166534',
   '--color-button-warning-hover': '#B45309',
   '--color-button-danger-hover': '#B91C1C',
   '--color-button-info-hover': '#1D4ED8',
@@ -229,7 +235,13 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-button-primary': '#A0A0A8',
   '--color-button-primary-hover': '#C4C4CC',
   '--gradient-primary': 'linear-gradient(135deg, #A0A0A8 0%, #A0A0A8 100%)',
+  '--color-primary-glow': 'transparent',
   '--color-text-on-primary': '#000000',
+  // 塗りボタンの文字が黒（text-on-primary）なので、黒文字で読める明るさの塗りにする。
+  '--color-button-success': '#16A34A',
+  '--color-button-success-hover': '#22C55E',
+  '--color-button-danger': '#E5484D',
+  '--color-button-danger-hover': '#EF6B6E',
   '--color-primary-alpha-20': 'rgba(160, 160, 168, 0.2)',
   '--color-primary-alpha-08': 'rgba(160, 160, 168, 0.08)',
   // 面はパープル系の紫みを抜いた純グレーにする。
@@ -242,6 +254,9 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-surface-alt': '#1E1E1E',
   '--color-elevated': '#2C2C2C',
   '--color-surface-hover': '#262626',
+  '--color-border-strong': '#3A3A3A',
+  '--color-border-light': '#2A2A2A',
+  '--color-border-medium': '#4A4A4A',
   '--color-button-secondary': '#262626',
   '--color-button-secondary-hover': '#303030',
   // 黒 SVG を明るいグレー (#A0A0A8 相当) へ着色（hue なし、明度のみ）。
@@ -263,13 +278,19 @@ const NEUTRAL_LIGHT: Record<string, string> = {
   '--color-button-primary': '#5A5A66',
   '--color-button-primary-hover': '#42424D',
   '--gradient-primary': 'linear-gradient(135deg, #5A5A66 0%, #5A5A66 100%)',
+  '--color-primary-glow': 'transparent',
   '--color-primary-alpha-20': 'rgba(90, 90, 102, 0.2)',
   '--color-primary-alpha-08': 'rgba(90, 90, 102, 0.08)',
   // 面はパープル系の紫みを抜いた純グレーにする。
   '--color-background': '#F5F5F5',
   '--color-surface': '#F7F7F7',
+  '--color-overlay': '#F3F3F3',
   '--color-surface-alt': '#F7F7F7',
+  '--color-surface-light': '#FAFAFA',
   '--color-surface-hover': '#EEEEEE',
+  '--color-border-strong': '#D6D6D6',
+  '--color-border-light': '#ECECEC',
+  '--color-border-medium': '#D6D6D6',
   '--color-button-secondary': '#EEEEEE',
   '--color-button-secondary-hover': '#E4E4E4',
   // 黒 SVG を濃いグレー (#5A5A66 相当) へ着色（hue なし、明度のみ）。

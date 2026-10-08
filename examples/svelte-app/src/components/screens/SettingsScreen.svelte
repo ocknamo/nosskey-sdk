@@ -10,27 +10,31 @@ import TrustedOriginsSettings from '../settings/TrustedOriginsSettings.svelte';
 import ThemeSettings from '../settings/theme-settings.svelte';
 </script>
 
-<!-- PC は 2 カラム。左: リレー・信頼済みサイト・言語・テーマ / 右: 同意ポリシー・
-     モード・アプリ情報・開発者向け。style:order はモバイル 1 列時の並び順で、
-     従来の縦並び（リレー → 同意 → 信頼済み → 言語 → モード → テーマ → 情報 → 開発者）を保つ。
-     モード切替でカードが増減しても TermModeSettings は同じ列に留まるため再マウントされない。 -->
+<!-- PC は 2 カラム。モバイルでは左列 → 右列の DOM 順がそのまま 1 列の並びになる
+     （standard: リレー → 同意 → 信頼済み → 言語 → モード → テーマ → 情報 → 開発者 /
+       simple: 信頼済み → 言語 → モード → テーマ → 情報）。
+     言語設定だけはモードで列を変えて左右の高さを揃える。モード切替を操作する
+     TermModeSettings はどちらのモードでも右列に留まるため再マウントされない。 -->
 <div class="settings-container screen-columns">
   <div class="screen-column">
     {#if $termMode === "standard"}
-      <div style:order="1"><RelaySettings /></div>
+      <RelaySettings />
+      <ConsentPolicySettings />
     {/if}
-    <div style:order="3"><TrustedOriginsSettings /></div>
-    <div style:order="4"><LanguageSettings /></div>
-    <div style:order="6"><ThemeSettings /></div>
+    <TrustedOriginsSettings />
+    {#if $termMode !== "standard"}
+      <LanguageSettings />
+    {/if}
   </div>
   <div class="screen-column">
     {#if $termMode === "standard"}
-      <div style:order="2"><ConsentPolicySettings /></div>
+      <LanguageSettings />
     {/if}
-    <div style:order="5"><TermModeSettings /></div>
-    <div style:order="7"><AppInfo /></div>
+    <TermModeSettings />
+    <ThemeSettings />
+    <AppInfo />
     {#if $termMode === "standard"}
-      <div style:order="8"><DeveloperSection /></div>
+      <DeveloperSection />
     {/if}
   </div>
 </div>

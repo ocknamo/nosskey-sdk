@@ -25,6 +25,7 @@ function getPageTitle(screenName: string): string {
   }
 }
 
+// 画面遷移処理（PC のヘッダーナビ用）
 function navigateTo(target: ScreenName) {
   currentScreen.set(target);
 }
@@ -41,7 +42,7 @@ function navigateTo(target: ScreenName) {
       <span class="page-title">{getPageTitle(screen)}</span>
     </div>
     <!-- PC: フッターの代わりにヘッダー右側へナビを置く -->
-    <nav class="header-nav" aria-label="メインナビゲーション">
+    <nav class="header-nav" aria-label={$i18n.t.navigation.mainNav}>
       {#each NAV_ITEMS as item (item.screen)}
         <button
           type="button"
@@ -67,7 +68,8 @@ function navigateTo(target: ScreenName) {
     top: 0;
     left: 0;
     right: 0;
-    /* 背面のコンテンツをうっすら透かすすりガラス風 */
+    /* 背面のコンテンツをうっすら透かすすりガラス風（color-mix 非対応時は不透明） */
+    background-color: var(--color-card);
     background-color: color-mix(in srgb, var(--color-card) 82%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(16px);
     backdrop-filter: saturate(180%) blur(16px);
@@ -183,7 +185,8 @@ function navigateTo(target: ScreenName) {
 
     .header-nav__item.active {
       background-color: var(--color-primary-alpha-20);
-      color: var(--color-primary);
+      /* 淡い塗りの上でも本文サイズのコントラストを確保するため一段濃い（暗色では明るい）色 */
+      color: var(--color-secondary);
       font-weight: 600;
     }
 

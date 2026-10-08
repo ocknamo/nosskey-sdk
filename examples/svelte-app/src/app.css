@@ -132,7 +132,8 @@ select:hover:not(:disabled):not(:focus) {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
+  opacity: 0.85;
 }
 
 input:focus,
@@ -180,9 +181,9 @@ ol li {
 /*
  * 画面の 2 カラムレイアウト。
  * - PC (>= 960px): .screen-column を左右 2 列に並べ、各列はカードを縦に積む。
- * - モバイル: 列のラッパーを display: contents で消し、各カードのラッパーに付けた
- *   `order` で 1 列に並べる。これにより PC で左右に振り分けても、モバイルでは
- *   従来どおりの並び順を保てる（列ごとの order は DOM 順に昇順で振ること）。
+ * - モバイル: 列のラッパーを display: contents で消し、カードを DOM 順に 1 列で並べる。
+ *   表示順とフォーカス・読み上げ順を一致させるため、左列 → 右列の DOM 順がそのまま
+ *   モバイルの並び順になるよう列へ振り分けること。
  */
 .screen-columns {
   display: flex;

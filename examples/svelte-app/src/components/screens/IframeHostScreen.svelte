@@ -376,7 +376,8 @@ function cardForState(state: Exclude<UiState, 'running'>): CardConfig {
         tone: 'warning',
         action: {
           label: t.grantStorageAccess,
-          variant: 'warning',
+          // ユーザー操作必須の唯一の主操作なので、目立つ primary で出す
+          variant: 'primary',
           onclick: () => void requestAccess(),
         },
         secondaryLink: { label: t.openSetup, onclick: openSetup },

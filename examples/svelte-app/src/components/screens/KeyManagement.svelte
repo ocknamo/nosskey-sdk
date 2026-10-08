@@ -10,20 +10,20 @@ import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 </script>
 
 <!-- ログイン中は PC で 2 カラム。左: キャッシュ設定・鍵情報バックアップ / 右: 秘密鍵
-     エクスポート・ログアウト・ストレージ消去。style:order はモバイル 1 列時の並び順。 -->
+     エクスポート・ログアウト・ストレージ消去。モバイルでは DOM 順に 1 列で並ぶ。 -->
 {#if $isLoggedIn}
   <div class="settings-container screen-columns">
     <div class="screen-column">
       {#if $termMode === "standard"}
-        <div style:order="1"><SecretCacheSettings /></div>
+        <SecretCacheSettings />
       {/if}
-      <div style:order="2"><ExportKeyInfoComponent /></div>
+      <ExportKeyInfoComponent />
     </div>
     <div class="screen-column">
-      <div style:order="3"><ExportSecretKey /></div>
-      <div style:order="4"><LogoutSection /></div>
+      <ExportSecretKey />
+      <LogoutSection />
       {#if $termMode === "standard"}
-        <div style:order="5"><LocalStorageSection /></div>
+        <LocalStorageSection />
       {/if}
     </div>
   </div>

@@ -69,6 +69,13 @@ function handleClick() {
       0 0 0 1px var(--color-border);
   }
 
+  /* アクティブ面の浮き影より後ろに置き、キーボードフォーカス時はリングを併記する */
+  .btn-tab.active:focus-visible {
+    box-shadow:
+      0 1px 2px var(--color-shadow-strong),
+      0 0 0 2px var(--color-button-primary);
+  }
+
   .btn-tab:hover:not(:disabled):not(.active) {
     background-color: var(--color-surface-hover);
     color: var(--color-text);

@@ -18,7 +18,7 @@ function navigateTo(target: ScreenName) {
 }
 </script>
 
-<footer class="footer-menu" role="navigation" aria-label="メインナビゲーション">
+<footer class="footer-menu" role="navigation" aria-label={$i18n.t.navigation.mainNav}>
   <div class="footer-content">
     {#each NAV_ITEMS as item (item.screen)}
       <NavButton
@@ -42,13 +42,13 @@ function navigateTo(target: ScreenName) {
     bottom: 0;
     left: 0;
     right: 0;
-    /* 背面のコンテンツをうっすら透かすすりガラス風 */
+    /* 背面のコンテンツをうっすら透かすすりガラス風（color-mix 非対応時は不透明） */
+    background-color: var(--color-card);
     background-color: color-mix(in srgb, var(--color-card) 82%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(16px);
     backdrop-filter: saturate(180%) blur(16px);
     z-index: 100;
     border-top: var(--border-width, 1px) solid var(--color-border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
     transition:
       background-color 0.3s ease,
       border-color 0.3s ease;

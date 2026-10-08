@@ -221,6 +221,8 @@ export interface TranslationData {
     account: string;
     key: string;
     settings: string;
+    // ナビゲーションランドマークの aria-label
+    mainNav: string;
   };
   consent: {
     title: string;

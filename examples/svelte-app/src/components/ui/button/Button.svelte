@@ -88,14 +88,14 @@ function handleClick() {
     color: var(--color-text-on-primary);
     box-shadow:
       0 1px 2px var(--color-shadow),
-      0 6px 16px -6px var(--color-button-primary);
+      0 6px 16px -6px var(--color-primary-glow);
   }
 
   .btn-primary:hover:not(:disabled) {
     filter: brightness(1.08);
     box-shadow:
       0 1px 2px var(--color-shadow),
-      0 10px 22px -8px var(--color-button-primary);
+      0 10px 22px -8px var(--color-primary-glow);
   }
 
   .btn-primary:disabled {
@@ -118,7 +118,7 @@ function handleClick() {
   /* Danger Button */
   .btn-danger {
     background-color: var(--color-button-danger);
-    color: #ffffff;
+    color: var(--color-text-on-primary);
     box-shadow: 0 1px 2px var(--color-shadow);
   }
 
@@ -133,7 +133,7 @@ function handleClick() {
   /* Success Button */
   .btn-success {
     background-color: var(--color-button-success);
-    color: #ffffff;
+    color: var(--color-text-on-primary);
     box-shadow: 0 1px 2px var(--color-shadow);
   }
 
