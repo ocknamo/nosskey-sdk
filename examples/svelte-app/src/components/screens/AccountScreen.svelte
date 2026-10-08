@@ -53,8 +53,11 @@ onMount(() => {
     }
   }
 
-  /* 枠で囲まず、左の縦線だけで示す控えめな注意書き */
+  /* 枠で囲まず、左の縦線だけで示す控えめな注意書き。
+     ログインタブなどフォームが短いとき、AuthScreen の透かし（isolation で前面側に描かれる）が
+     下へはみ出して重なることがあるため、position を与えて DOM 順どおり透かしより手前に描く。 */
   .warning-bar {
+    position: relative;
     max-width: 520px;
     border-left: 3px solid var(--color-warning);
     padding: 2px 12px;
