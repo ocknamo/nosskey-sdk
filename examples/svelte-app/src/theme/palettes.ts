@@ -41,14 +41,11 @@ const PURPLE_DARK: Record<string, string> = {
   // 背景色バリエーション（ダーク）
   '--color-surface': '#18181F',
   '--color-overlay': '#1F1F27',
-  '--color-surface-alt': '#1C1C24',
-  '--color-surface-light': '#2C2C36',
 
   // テキスト色バリエーション（ダーク）
   '--color-text-primary': '#FAFAFC',
   '--color-text-disabled': '#5F5F6B',
   '--color-text-muted': '#9A9AA8',
-  '--color-text-inverse': '#0A0A0D',
   '--color-text-dark': '#D4D4DE',
 
   // ボーダー色バリエーション（ダーク）
@@ -75,7 +72,6 @@ const PURPLE_DARK: Record<string, string> = {
   '--color-button-primary-hover': '#8D70FF',
   '--color-button-secondary-hover': '#2E2E39',
   '--color-button-success-hover': '#166534',
-  '--color-button-warning-hover': '#FCD34D',
   '--color-button-danger-hover': '#B91C1C',
   '--color-button-info-hover': '#60A5FA',
 
@@ -143,14 +139,11 @@ const PURPLE_LIGHT: Record<string, string> = {
   // 背景色バリエーション（ライト）
   '--color-surface': '#F7F7FA',
   '--color-overlay': '#F3F3F7',
-  '--color-surface-alt': '#F7F7FA',
-  '--color-surface-light': '#FAFAFC',
 
   // テキスト色バリエーション（ライト）
   '--color-text-primary': '#14141F',
   '--color-text-disabled': '#A1A1AE',
   '--color-text-muted': '#6B6B7B',
-  '--color-text-inverse': '#FFFFFF',
   '--color-text-dark': '#2B2B36',
 
   // ボーダー色バリエーション（ライト）
@@ -177,7 +170,6 @@ const PURPLE_LIGHT: Record<string, string> = {
   '--color-button-primary-hover': '#5B46B8',
   '--color-button-secondary-hover': '#E4E4EB',
   '--color-button-success-hover': '#166534',
-  '--color-button-warning-hover': '#B45309',
   '--color-button-danger-hover': '#B91C1C',
   '--color-button-info-hover': '#1D4ED8',
 
@@ -245,9 +237,7 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-card': '#141414',
   '--color-tertiary': '#222222',
   '--color-overlay': '#1F1F1F',
-  '--color-surface-light': '#2C2C2C',
   '--color-surface': '#1A1A1A',
-  '--color-surface-alt': '#1E1E1E',
   '--color-surface-hover': '#262626',
   '--color-border-strong': '#3A3A3A',
   '--color-border-light': '#2A2A2A',
@@ -280,8 +270,6 @@ const NEUTRAL_LIGHT: Record<string, string> = {
   '--color-background': '#F5F5F5',
   '--color-surface': '#F7F7F7',
   '--color-overlay': '#F3F3F3',
-  '--color-surface-alt': '#F7F7F7',
-  '--color-surface-light': '#FAFAFA',
   '--color-surface-hover': '#EEEEEE',
   '--color-border-strong': '#D6D6D6',
   '--color-border-light': '#ECECEC',

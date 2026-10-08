@@ -506,10 +506,6 @@ $effect(() => {
     text-align: left;
   }
 
-  .tab-panel > :global(*) {
-    margin: 0;
-  }
-
   /* 入力欄・注意カードは列の幅いっぱいに広げる */
   .tab-panel > .username-input,
   .tab-panel > .nsec-input,
