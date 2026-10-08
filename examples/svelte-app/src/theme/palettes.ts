@@ -341,3 +341,11 @@ export function resolveTheme(mode: ThemeMode, prefersDark: boolean): ResolvedThe
   }
   return mode;
 }
+
+/**
+ * 解決済みテーマが暗色系か。ロゴのようにテーマで画像そのものを差し替えたい箇所向けに、
+ * `App.svelte` が `<html data-color-scheme="dark|light">` を設定するのに使う。
+ */
+export function isDarkTheme(resolved: ResolvedTheme): boolean {
+  return resolved === 'purple-dark' || resolved === 'neutral-dark';
+}

@@ -29,7 +29,7 @@
 examples/svelte-app/
 ├── public/
 │   ├── _headers                   # Cloudflare Pages 用ヘッダ (Permissions-Policy 等)
-│   └── nosskey.svg                # アプリアイコン
+│   └── nosskey.svg                # アプリアイコン（ファビコン）
 ├── src/
 │   ├── components/
 │   │   ├── ConsentDialog.svelte        # iframe モードの同意ダイアログ
@@ -64,7 +64,7 @@ examples/svelte-app/
 │   │           ├── NavButton.svelte
 │   │           ├── TabButton.svelte
 │   │           └── ToggleButton.svelte
-│   ├── assets/                     # SVG アイコンなど
+│   ├── assets/                     # SVG アイコンなど（ロゴはライト用 nosskey.svg / ダーク用 nosskey-dark.svg を <html data-color-scheme> で出し分け）
 │   ├── i18n/                       # 多言語対応
 │   │   ├── i18n-store.ts           # 言語ストア
 │   │   └── translations.ts         # 翻訳データ

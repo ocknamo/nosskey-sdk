@@ -1,5 +1,6 @@
 <script lang="ts">
 import NosskeyLogo from '../assets/nosskey.svg';
+import NosskeyLogoDark from '../assets/nosskey-dark.svg';
 import { i18n } from '../i18n/i18n-store.js';
 import { currentScreen, type ScreenName } from '../store/app-state.js';
 import { NAV_ITEMS } from './nav-items.js';
@@ -34,7 +35,9 @@ function navigateTo(target: ScreenName) {
 <header class="header-bar">
   <div class="header-content">
     <div class="header-left">
-      <img class="app-logo" src={NosskeyLogo} alt="" width="28" height="28" />
+      <!-- テーマの明暗でロゴを差し替える（<html data-color-scheme> を CSS で参照） -->
+      <img class="app-logo app-logo--light" src={NosskeyLogo} alt="" width="28" height="28" />
+      <img class="app-logo app-logo--dark" src={NosskeyLogoDark} alt="" width="28" height="28" />
       <h1 class="app-title">Nosskey</h1>
     </div>
     <!-- モバイル: 中央にページタイトル（ナビはフッター） -->
@@ -103,6 +106,15 @@ function navigateTo(target: ScreenName) {
     height: 28px;
     border-radius: 8px;
     flex-shrink: 0;
+  }
+
+  .app-logo--dark,
+  :global([data-color-scheme="dark"]) .app-logo--light {
+    display: none;
+  }
+
+  :global([data-color-scheme="dark"]) .app-logo--dark {
+    display: block;
   }
 
   .app-title {

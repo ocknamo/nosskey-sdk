@@ -1,6 +1,7 @@
 <script lang="ts">
 import { hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
+import NosskeyImageDark from '../../assets/nosskey-dark.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { initAccounts } from '../../store/accounts.js';
@@ -227,8 +228,10 @@ $effect(() => {
 
 <div class="auth-container">
   <div class="hero-section">
-    <!-- 装飾の透かし（ロゴ名は見出しで読み上げられるので代替テキストは空） -->
-    <img src={NosskeyImage} alt="" aria-hidden="true" width="80" height="80" />
+    <!-- 装飾の透かし（ロゴ名は見出しで読み上げられるので代替テキストは空）。
+         ライトはタイル付きの高コントラスト版、ダークはタイルなしの反転版を出し分ける。 -->
+    <img class="watermark watermark--light" src={NosskeyImage} alt="" aria-hidden="true" width="80" height="80" />
+    <img class="watermark watermark--dark" src={NosskeyImageDark} alt="" aria-hidden="true" width="80" height="80" />
     <h1 class="screen-title">{$i18n.t.auth.title}</h1>
     <p class="subtitle">{$i18n.t.auth.subtitle}</p>
   </div>
@@ -378,18 +381,32 @@ $effect(() => {
     margin-bottom: 32px;
   }
 
-  /* ロゴは装飾の透かしとして右上に大きく敷く */
-  .hero-section img {
+  /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。 */
+  .watermark {
     position: absolute;
-    top: -24px;
+    /* モバイルではサブタイトルに重ならない大きさ・位置に収め、本文のコントラストを保つ */
+    top: -28px;
     right: -16px;
-    width: 160px;
-    height: 160px;
-    border-radius: 40px;
-    opacity: 0.05;
+    width: 132px;
+    height: 132px;
+    border-radius: 32px;
+    opacity: 0.12;
     pointer-events: none;
     user-select: none;
     z-index: -1;
+  }
+
+  .watermark--dark {
+    display: none;
+    opacity: 0.14;
+  }
+
+  :global([data-color-scheme="dark"]) .watermark--light {
+    display: none;
+  }
+
+  :global([data-color-scheme="dark"]) .watermark--dark {
+    display: block;
   }
 
   .screen-title {
@@ -423,13 +440,17 @@ $effect(() => {
       margin-bottom: 40px;
     }
 
-    .hero-section img {
+    .watermark {
       top: 32px;
       right: 40px;
       width: 440px;
       height: 440px;
       border-radius: 96px;
-      opacity: 0.07;
+      opacity: 0.15;
+    }
+
+    .watermark--dark {
+      opacity: 0.18;
     }
 
     .screen-title {

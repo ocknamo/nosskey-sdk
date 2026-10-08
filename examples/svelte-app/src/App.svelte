@@ -13,7 +13,7 @@ import {
   restoreLoginState,
   type ThemeMode,
 } from './store/app-state.js';
-import { resolveTheme, THEME_PALETTES } from './theme/palettes.js';
+import { isDarkTheme, resolveTheme, THEME_PALETTES } from './theme/palettes.js';
 import { buildHashForScreen, screenNameFromHash } from './utils/app-navigation.js';
 
 let screen = $state('account');
@@ -147,6 +147,9 @@ function applyTheme(theme: ThemeMode) {
   for (const [key, value] of Object.entries(palette)) {
     root.style.setProperty(key, value);
   }
+
+  // ロゴなど、テーマの明暗で画像自体を差し替える箇所が CSS で参照する。
+  root.dataset.colorScheme = isDarkTheme(resolved) ? 'dark' : 'light';
 }
 
 // アプリの初期化
