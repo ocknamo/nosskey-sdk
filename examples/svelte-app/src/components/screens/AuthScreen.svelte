@@ -244,14 +244,12 @@ $effect(() => {
       <TabButton
         active={activeTab === "login"}
         onclick={() => selectTab("login")}
-        className="auth-tab"
       >
         {$i18n.t.auth.tabLogin}
       </TabButton>
       <TabButton
         active={activeTab === "register"}
         onclick={() => selectTab("register")}
-        className="auth-tab"
       >
         {$i18n.t.auth.tabRegister}
       </TabButton>
@@ -274,7 +272,7 @@ $effect(() => {
             <div class="method-link-row">
               <button
                 type="button"
-                class="method-link method-link--forward"
+                class="method-link"
                 onclick={deriveFromPasskey}
                 disabled={isLoading}
               >
@@ -371,8 +369,6 @@ $effect(() => {
     position: relative;
     /* 透かしロゴ（z-index: -1）をこの要素の背面・ページ背景の前面に収める */
     isolation: isolate;
-    /* 透かしロゴが右へはみ出しても横スクロールを出さない（縦方向は HelpTip 等のため可視のまま） */
-    overflow-x: clip;
     margin: 0;
     padding: 24px 0 0;
     text-align: left;
@@ -385,12 +381,12 @@ $effect(() => {
   /* ロゴは装飾の透かしとして右上に大きく敷く */
   .hero-section img {
     position: absolute;
-    top: -8px;
+    top: -24px;
     right: -16px;
-    width: 200px;
-    height: 200px;
-    border-radius: 48px;
-    opacity: 0.07;
+    width: 160px;
+    height: 160px;
+    border-radius: 40px;
+    opacity: 0.05;
     pointer-events: none;
     user-select: none;
     z-index: -1;
@@ -433,6 +429,7 @@ $effect(() => {
       width: 440px;
       height: 440px;
       border-radius: 96px;
+      opacity: 0.07;
     }
 
     .screen-title {
@@ -449,7 +446,7 @@ $effect(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
-    padding: 40px 20px;
+    padding: 40px 0;
   }
 
   .loading-spinner {
@@ -508,6 +505,11 @@ $effect(() => {
 
   .method-link-row {
     text-align: left;
+  }
+
+  /* 左端を他の項目と揃える */
+  .tab-panel > .method-link-row .method-link {
+    padding: 0;
   }
 
   /* 主ボタン直後の補助リンクは、ボタンとひとまとまりに見えるよう少し寄せる */
@@ -573,6 +575,14 @@ $effect(() => {
     color: var(--color-text-primary);
   }
 
+  /* 文字に密着しないよう、余白を取った不透明なアウトラインでフォーカスを示す */
+  .method-link:focus-visible {
+    outline: 2px solid var(--color-button-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+    box-shadow: none;
+  }
+
   /* 次の手順へ進むリンクは下線なしのアクセント色 + 矢印 */
   .method-link--forward {
     padding: 0;
@@ -582,7 +592,8 @@ $effect(() => {
   }
 
   .method-link--forward::after {
-    content: " →";
+    /* 矢印は装飾なので読み上げない */
+    content: " →" / "";
   }
 
   .method-link--forward:hover:not(:disabled) {
@@ -600,8 +611,7 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 0 0 20px 0;
-    text-align: left;
+        text-align: left;
   }
 
   .nsec-label-row {
@@ -633,8 +643,7 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 0 0 20px 0;
-    text-align: left;
+        text-align: left;
   }
 
   .username-label-row {

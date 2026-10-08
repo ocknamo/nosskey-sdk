@@ -139,7 +139,8 @@ function copyNpubToClipboard() {
 
   .npub {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 1.3rem;
+    /* 320px 幅でも短縮 npub が 1 行に収まるよう、狭い画面では縮める */
+    font-size: clamp(1rem, 5.6vw, 1.3rem);
     color: var(--color-titles);
     margin: 0;
     word-break: break-all;

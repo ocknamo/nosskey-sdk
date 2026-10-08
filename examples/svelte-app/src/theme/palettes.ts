@@ -43,8 +43,6 @@ const PURPLE_DARK: Record<string, string> = {
   '--color-overlay': '#1F1F27',
   '--color-surface-alt': '#1C1C24',
   '--color-surface-light': '#2C2C36',
-  // セグメントコントロールのアクティブ面など、周囲より一段浮かせたい面。
-  '--color-elevated': '#2A2A34',
 
   // テキスト色バリエーション（ダーク）
   '--color-text-primary': '#FAFAFC',
@@ -147,8 +145,6 @@ const PURPLE_LIGHT: Record<string, string> = {
   '--color-overlay': '#F3F3F7',
   '--color-surface-alt': '#F7F7FA',
   '--color-surface-light': '#FAFAFC',
-  // セグメントコントロールのアクティブ面など、周囲より一段浮かせたい面。
-  '--color-elevated': '#FFFFFF',
 
   // テキスト色バリエーション（ライト）
   '--color-text-primary': '#14141F',
@@ -252,7 +248,6 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-surface-light': '#2C2C2C',
   '--color-surface': '#1A1A1A',
   '--color-surface-alt': '#1E1E1E',
-  '--color-elevated': '#2C2C2C',
   '--color-surface-hover': '#262626',
   '--color-border-strong': '#3A3A3A',
   '--color-border-light': '#2A2A2A',

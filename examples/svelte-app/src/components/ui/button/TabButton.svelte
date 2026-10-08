@@ -52,10 +52,10 @@ function handleClick() {
     outline: none;
   }
 
+  /* 文字や下線に密着しないよう、余白を取ったアウトラインでフォーカスを示す */
   .btn:focus-visible {
-    outline: none;
-    border-radius: 4px;
-    box-shadow: 0 0 0 2px var(--color-button-primary);
+    outline: 2px solid var(--color-button-primary);
+    outline-offset: 4px;
   }
 
   .btn:disabled {
