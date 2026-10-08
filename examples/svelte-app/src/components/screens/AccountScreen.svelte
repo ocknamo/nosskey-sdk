@@ -35,8 +35,8 @@ onMount(() => {
   .account-screen {
     max-width: 700px;
     margin: 0 auto;
+    /* フッター分の下余白は .app-container 側で確保済みなので、ここでは足さない */
     padding: 20px;
-    padding-bottom: 64px;
     display: flex;
     flex-direction: column;
     gap: 40px;
@@ -46,7 +46,7 @@ onMount(() => {
   @media (min-width: 960px) {
     .account-screen {
       max-width: 1120px;
-      padding: 8px 88px 48px;
+      padding: 8px 88px 16px;
       gap: 48px;
     }
   }

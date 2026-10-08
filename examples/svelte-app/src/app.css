@@ -30,6 +30,14 @@ body {
     background-color 0.3s ease;
 }
 
+/* モバイルではアドレスバー分を除いた実際の表示高さに合わせ、内容が収まるときに縦スクロールを出さない
+   （100vh はアドレスバーを隠したときの高さになり、その分だけ常にスクロールできてしまう） */
+@supports (min-height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+}
+
 a {
   font-weight: 500;
   color: var(--color-primary);

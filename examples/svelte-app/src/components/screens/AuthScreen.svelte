@@ -229,9 +229,13 @@ $effect(() => {
 <div class="auth-container">
   <div class="hero-section">
     <!-- 装飾の透かし（ロゴ名は見出しで読み上げられるので代替テキストは空）。
-         ライトはタイル付きの高コントラスト版、ダークはタイルなしの反転版を出し分ける。 -->
-    <img class="watermark watermark--light" src={NosskeyImage} alt="" aria-hidden="true" width="80" height="80" />
-    <img class="watermark watermark--dark" src={NosskeyImageDark} alt="" aria-hidden="true" width="80" height="80" />
+         ライトはタイル付きの高コントラスト版、ダークはタイルなしの反転版を出し分ける。
+         モバイルでは画面の右端で見切れさせるため、はみ出しを切り取る専用レイヤーに入れる
+         （フォーム側を overflow で切るとフォーカスリング等まで欠けるため分離している）。 -->
+    <div class="watermark-layer" aria-hidden="true">
+      <img class="watermark watermark--light" src={NosskeyImage} alt="" width="80" height="80" />
+      <img class="watermark watermark--dark" src={NosskeyImageDark} alt="" width="80" height="80" />
+    </div>
     <h1 class="screen-title">{$i18n.t.auth.title}</h1>
     <p class="subtitle">{$i18n.t.auth.subtitle}</p>
   </div>
@@ -381,19 +385,31 @@ $effect(() => {
     margin-bottom: 32px;
   }
 
-  /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。 */
-  .watermark {
+  /* 透かしを収めるレイヤー。モバイルでは画面右端（.account-screen の左右 padding 20px 分外側）
+     まで広げ、そこからはみ出した部分を切り取って「見切れ」にする。 */
+  .watermark-layer {
     position: absolute;
-    /* モバイルではサブタイトルに重ならない大きさ・位置に収め、本文のコントラストを保つ */
-    top: -28px;
-    right: -16px;
-    width: 132px;
-    height: 132px;
-    border-radius: 32px;
-    opacity: 0.12;
+    top: -20px;
+    left: 0;
+    right: -20px;
+    bottom: 0;
+    overflow: hidden;
     pointer-events: none;
     user-select: none;
     z-index: -1;
+  }
+
+  /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。
+     モバイルは大きめにして右側を約 2 割見切れさせる（鍵が読める程度に留める）。 */
+  .watermark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: clamp(240px, 72vw, 320px);
+    height: clamp(240px, 72vw, 320px);
+    border-radius: 22%;
+    transform: translateX(18%);
+    opacity: 0.12;
   }
 
   .watermark--dark {
@@ -421,7 +437,8 @@ $effect(() => {
 
   .subtitle {
     font-size: 1.15rem;
-    color: var(--color-text-secondary);
+    /* モバイルでは透かしロゴが背後に重なるため、本文色でコントラストを確保する（PC は副次色） */
+    color: var(--color-text);
     margin: 0;
     line-height: 1.5;
     text-align: left;
@@ -429,6 +446,20 @@ $effect(() => {
 
   .auth-main {
     max-width: 420px;
+  }
+
+  /* タブレット幅では本文列（最大 700px）が中央寄せで画面端と一致しないため、見切れさせずに収める */
+  @media (min-width: 700px) and (max-width: 959px) {
+    .watermark-layer {
+      right: 0;
+      overflow: visible;
+    }
+
+    .watermark {
+      width: 240px;
+      height: 240px;
+      transform: none;
+    }
   }
 
   @media (min-width: 960px) {
@@ -440,13 +471,20 @@ $effect(() => {
       margin-bottom: 40px;
     }
 
+    /* PC では見切れさせず、レイヤーは本文と同じ範囲に戻す */
+    .watermark-layer {
+      top: 0;
+      right: 0;
+      overflow: visible;
+    }
+
     .watermark {
       top: 32px;
       right: 40px;
       /* 960〜1120px では画面幅に合わせて縮め、左端を本文（見出し・入力欄）の右側に保つ */
       width: clamp(260px, calc(100vw - 680px), 440px);
       height: clamp(260px, calc(100vw - 680px), 440px);
-      border-radius: 96px;
+      transform: none;
       opacity: 0.15;
     }
 
@@ -460,6 +498,7 @@ $effect(() => {
 
     .subtitle {
       font-size: 1.6rem;
+      color: var(--color-text-secondary);
     }
   }
 
