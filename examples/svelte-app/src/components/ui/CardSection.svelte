@@ -30,7 +30,7 @@ const { title, compact = false, children, titleAside }: Props = $props();
     border: var(--border-width, 1px) solid var(--color-border);
     box-shadow:
       0 1px 2px var(--color-shadow),
-      0 8px 24px -12px var(--color-shadow-strong);
+      0 4px 12px -6px var(--color-shadow);
     margin-bottom: 20px;
     transition:
       background-color 0.3s ease,

@@ -49,32 +49,72 @@ const tocItems = $derived.by<TocItem[]>(() => {
   ] as TocItem[];
 });
 
+// PC レイアウト（目次を表示する幅）か。CSS の @media (min-width: 960px) と揃えること。
+const DESKTOP_QUERY = '(min-width: 960px)';
+
+// biome-ignore lint: svelte
 let activeId = $state<SectionId | ''>('');
+// 実際にハイライトする項目。未計算の間やモード切替で項目が消えた直後も、
+// 先頭項目へフォールバックしてハイライトが空にならないようにする。
+const currentId = $derived(
+  tocItems.some((item) => item.id === activeId) ? activeId : (tocItems[0]?.id ?? '')
+);
+// 末尾のセクションも目次から「先頭」へスクロールできるよう、内容の下に足す余白（px）。
+// biome-ignore lint: svelte
+let tailSpacerHeight = $state(0);
+// biome-ignore lint: svelte
+let contentEl = $state<HTMLElement | undefined>();
 
 // 目次クリックによるスムーススクロール中は、スクロール連動のハイライト更新を止める
 // （途中のセクションを経由してハイライトがちらつくのを防ぐ）。クリックごとに番号を
 // 振り、古いクリックの解除処理が新しいクリックのロックを外さないようにする。
 let scrollLockToken = 0;
 let scrollLocked = false;
+// 直前のクリックで仕掛けた scrollend リスナーとタイマーの後始末。
+let cancelPendingRelease: (() => void) | null = null;
 
+let frame = 0;
+
+// セクション要素の id（ハッシュルーティングと衝突しないよう、リンクではなく id 参照で使う）。
 function sectionElementId(id: SectionId): string {
   return `settings-section-${id}`;
 }
 
+// 次のフレームで目次のハイライトと末尾余白を計算し直す（同一フレーム内の多重要求はまとめる）。
+function scheduleUpdate() {
+  if (frame) return;
+  frame = requestAnimationFrame(() => {
+    frame = 0;
+    updateTailSpacer();
+    updateActiveFromScroll();
+  });
+}
+
+// 最後のセクションの上端が固定ヘッダー直下（SECTION_TOP_OFFSET）まで届くだけの余白を足す。
+// これにより、末尾の短いセクションもクリック・スクロールの両方で正しくハイライトされる。
+function updateTailSpacer() {
+  const items = tocItems;
+  if (!window.matchMedia(DESKTOP_QUERY).matches || items.length === 0) {
+    tailSpacerHeight = 0;
+    return;
+  }
+  const last = document.getElementById(sectionElementId(items[items.length - 1].id));
+  if (!last) return;
+  const doc = document.documentElement;
+  const heightWithoutSpacer = doc.scrollHeight - tailSpacerHeight;
+  const lastTopInDoc = last.getBoundingClientRect().top + window.scrollY;
+  const needed = lastTopInDoc - SECTION_TOP_OFFSET + window.innerHeight - heightWithoutSpacer;
+  tailSpacerHeight = Math.max(0, Math.ceil(needed));
+}
+
 // 現在のスクロール位置から、目次でハイライトするセクションを決める。
+// 上端が固定ヘッダー直下を越えた最後のセクションを「現在地」とする。
 function updateActiveFromScroll() {
   if (scrollLocked) return;
   const items = tocItems;
   if (items.length === 0) return;
-
-  const doc = document.documentElement;
-  const atBottom =
-    window.scrollY > 0 && window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
-  if (atBottom) {
-    // 末尾付近の短いセクションは先頭まで到達できないため、最下部では最後を選ぶ。
-    activeId = items[items.length - 1].id;
-    return;
-  }
+  // 目次を表示しない幅では計算しない。
+  if (!window.matchMedia(DESKTOP_QUERY).matches) return;
 
   let current: SectionId = items[0].id;
   for (const item of items) {
@@ -91,40 +131,58 @@ function scrollToSection(id: SectionId) {
   const el = document.getElementById(sectionElementId(id));
   if (!el) return;
 
+  cancelPendingRelease?.();
   activeId = id;
   scrollLocked = true;
   const token = ++scrollLockToken;
+
+  let timer = 0;
   const release = () => {
-    if (token === scrollLockToken) scrollLocked = false;
+    cleanup();
+    if (token !== scrollLockToken) return;
+    scrollLocked = false;
+    // ロック中のスクロールで読み飛ばした分を反映する（ユーザーが途中で動かした場合など）。
+    scheduleUpdate();
   };
-  window.addEventListener('scrollend', release, { once: true });
+  const cleanup = () => {
+    window.removeEventListener('scrollend', release);
+    clearTimeout(timer);
+    if (cancelPendingRelease === cleanup) cancelPendingRelease = null;
+  };
+  window.addEventListener('scrollend', release);
   // scrollend 非対応ブラウザや、スクロール量 0 で scrollend が来ない場合の保険。
-  setTimeout(release, 1000);
+  timer = window.setTimeout(release, 1000);
+  cancelPendingRelease = cleanup;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   el.focus({ preventScroll: true });
 }
 
-// スクロール・リサイズに合わせて目次のハイライトを更新する。モード切替で
-// セクション構成が変わったときも再計算する（tocItems を依存に含める）。
+// スクロール・リサイズ・内容の高さ変化に合わせて目次のハイライトと末尾余白を更新する。
+// モード切替でセクション構成が変わったときも再計算する（tocItems を依存に含める）。
 $effect(() => {
   void tocItems;
-  let frame = 0;
-  const schedule = () => {
-    if (frame) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
-      updateActiveFromScroll();
-    });
-  };
-  schedule();
-  window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule);
+  const target = contentEl;
+  scheduleUpdate();
+  window.addEventListener('scroll', scheduleUpdate, { passive: true });
+  window.addEventListener('resize', scheduleUpdate);
+  // 開発者向けセクションの展開やリレー追加など、内容の高さが変わったときも追従する。
+  const observer = target ? new ResizeObserver(scheduleUpdate) : null;
+  if (target) observer?.observe(target);
   return () => {
     if (frame) cancelAnimationFrame(frame);
-    window.removeEventListener('scroll', schedule);
-    window.removeEventListener('resize', schedule);
+    frame = 0;
+    window.removeEventListener('scroll', scheduleUpdate);
+    window.removeEventListener('resize', scheduleUpdate);
+    observer?.disconnect();
+  };
+});
+
+// 画面を離れるときに、目次クリックで仕掛けたリスナーとタイマーを片付ける。
+$effect(() => {
+  return () => {
+    cancelPendingRelease?.();
   };
 });
 </script>
@@ -141,8 +199,8 @@ $effect(() => {
           <button
             type="button"
             class="settings-toc__item"
-            class:active={activeId === item.id}
-            aria-current={activeId === item.id ? "true" : undefined}
+            class:active={currentId === item.id}
+            aria-current={currentId === item.id ? "location" : undefined}
             onclick={() => scrollToSection(item.id)}
           >
             {item.label}
@@ -152,7 +210,7 @@ $effect(() => {
     </ul>
   </nav>
 
-  <div class="settings-content">
+  <div class="settings-content" bind:this={contentEl}>
     {#if isStandard}
       <section id={sectionElementId("relays")} class="settings-section" tabindex="-1">
         <RelaySettings />
@@ -181,6 +239,7 @@ $effect(() => {
         <DeveloperSection />
       </section>
     {/if}
+    <div class="settings-tail-spacer" style:height="{tailSpacerHeight}px" aria-hidden="true"></div>
   </div>
 </div>
 
@@ -206,12 +265,12 @@ $effect(() => {
   }
 
   @media (min-width: 960px) {
+    /* 左端をヘッダーのロゴ・他画面（max-width 1120px）と揃える */
     .settings-container {
-      max-width: 1040px;
+      max-width: 1120px;
       padding: 8px 24px 24px;
       display: grid;
-      grid-template-columns: 220px minmax(0, 720px);
-      justify-content: center;
+      grid-template-columns: 240px minmax(0, 1fr);
       gap: 32px;
       align-items: start;
     }

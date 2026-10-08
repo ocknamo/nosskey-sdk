@@ -405,7 +405,7 @@ $effect(() => {
 
   .hero-section img {
     border-radius: 20px;
-    box-shadow: 0 10px 30px -10px var(--color-shadow-strong);
+    box-shadow: 0 4px 14px -6px var(--color-shadow-strong);
   }
 
   .screen-title {
