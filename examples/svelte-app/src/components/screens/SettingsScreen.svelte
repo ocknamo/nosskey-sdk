@@ -1,3 +1,10 @@
+<script lang="ts" module>
+// 直前に計算した末尾余白の高さ。画面を離れて戻ったとき、App.svelte のスクロール位置
+// 復元（tick 直後）より前に余白を効かせ、深い位置の復元が文書の高さ不足で切り詰め
+// られないようにするため、再マウントをまたいで保持する。
+let lastTailSpacerHeight = 0;
+</script>
+
 <script lang="ts">
 import { i18n, termMode } from '../../i18n/i18n-store.js';
 import AppInfo from '../settings/AppInfo.svelte';
@@ -52,7 +59,6 @@ const tocItems = $derived.by<TocItem[]>(() => {
 // PC レイアウト（目次を表示する幅）か。CSS の @media (min-width: 960px) と揃えること。
 const DESKTOP_QUERY = '(min-width: 960px)';
 
-// biome-ignore lint: svelte
 let activeId = $state<SectionId | ''>('');
 // 実際にハイライトする項目。未計算の間やモード切替で項目が消えた直後も、
 // 先頭項目へフォールバックしてハイライトが空にならないようにする。
@@ -60,9 +66,7 @@ const currentId = $derived(
   tocItems.some((item) => item.id === activeId) ? activeId : (tocItems[0]?.id ?? '')
 );
 // 末尾のセクションも目次から「先頭」へスクロールできるよう、内容の下に足す余白（px）。
-// biome-ignore lint: svelte
-let tailSpacerHeight = $state(0);
-// biome-ignore lint: svelte
+let tailSpacerHeight = $state(lastTailSpacerHeight);
 let contentEl = $state<HTMLElement | undefined>();
 
 // 目次クリックによるスムーススクロール中は、スクロール連動のハイライト更新を止める
@@ -95,7 +99,7 @@ function scheduleUpdate() {
 function updateTailSpacer() {
   const items = tocItems;
   if (!window.matchMedia(DESKTOP_QUERY).matches || items.length === 0) {
-    tailSpacerHeight = 0;
+    tailSpacerHeight = lastTailSpacerHeight = 0;
     return;
   }
   const last = document.getElementById(sectionElementId(items[items.length - 1].id));
@@ -104,7 +108,7 @@ function updateTailSpacer() {
   const heightWithoutSpacer = doc.scrollHeight - tailSpacerHeight;
   const lastTopInDoc = last.getBoundingClientRect().top + window.scrollY;
   const needed = lastTopInDoc - SECTION_TOP_OFFSET + window.innerHeight - heightWithoutSpacer;
-  tailSpacerHeight = Math.max(0, Math.ceil(needed));
+  tailSpacerHeight = lastTailSpacerHeight = Math.max(0, Math.ceil(needed));
 }
 
 // 現在のスクロール位置から、目次でハイライトするセクションを決める。
