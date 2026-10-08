@@ -443,8 +443,9 @@ $effect(() => {
     .watermark {
       top: 32px;
       right: 40px;
-      width: 440px;
-      height: 440px;
+      /* 960〜1120px では画面幅に合わせて縮め、左端を本文（見出し・入力欄）の右側に保つ */
+      width: clamp(260px, calc(100vw - 680px), 440px);
+      height: clamp(260px, calc(100vw - 680px), 440px);
       border-radius: 96px;
       opacity: 0.15;
     }
