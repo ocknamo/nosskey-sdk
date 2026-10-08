@@ -33,8 +33,9 @@ examples/svelte-app/
 ├── src/
 │   ├── components/
 │   │   ├── ConsentDialog.svelte        # iframe モードの同意ダイアログ
-│   │   ├── FooterMenu.svelte           # フッターナビゲーション
-│   │   ├── HeaderBar.svelte            # ヘッダーバー
+│   │   ├── FooterMenu.svelte           # フッターナビゲーション（モバイル）
+│   │   ├── HeaderBar.svelte            # ヘッダーバー（PC ではナビも表示）
+│   │   ├── nav-items.ts                # ナビ項目定義（フッター / ヘッダーで共有）
 │   │   ├── PublicKeyDisplay.svelte     # 公開鍵表示
 │   │   ├── screens/                    # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
@@ -190,8 +191,8 @@ examples/svelte-app/
 
 ### 3.5 共通コンポーネント
 
-- **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示
-- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）
+- **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示。PC（幅 960px 以上）では画面タイトルの代わりにナビゲーションを表示
+- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）。モバイルのみ表示し、PC ではヘッダーのナビに置き換わる。項目は `nav-items.ts` を共有
 - **PublicKeyDisplay** - 公開鍵を短縮形式と npub 形式で表示、npub のクリップボードコピー
 - **ConsentDialog** - iframe モードの同意要求モーダル（[7. iframe ホストモード](#7-iframe-ホストモード)）
 
@@ -276,7 +277,9 @@ graph TD
 
 ### 6.2 画面状態と遷移
 
-通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、`FooterMenu` で切り替えます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
+通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、モバイルでは `FooterMenu`、PC では `HeaderBar` のナビで切り替えます。
+
+PC（幅 960px 以上）では各画面が 2 カラムになります。`key` / `settings` は `app.css` の `.screen-columns` / `.screen-column` でカードを左右に振り分け、モバイルでは列ラッパーを `display: contents` にして各カードの `order` で従来の縦並びを保ちます。未ログインの `account` は左にヒーロー、右にフォームを置きます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
 
 ```mermaid
 graph LR

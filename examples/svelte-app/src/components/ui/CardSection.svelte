@@ -25,28 +25,30 @@ const { title, compact = false, children, titleAside }: Props = $props();
 <style>
   .card-section {
     background-color: var(--color-card);
-    padding: 12px 60px;
-    border-radius: 12px;
+    padding: 20px 24px 24px;
+    border-radius: 16px;
     border: var(--border-width, 1px) solid var(--color-border);
-    box-shadow: 0 2px 4px var(--color-shadow);
+    box-shadow:
+      0 1px 2px var(--color-shadow),
+      0 8px 24px -12px var(--color-shadow-strong);
     margin-bottom: 20px;
     transition:
       background-color 0.3s ease,
       border-color 0.3s ease;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 600px) {
     .card-section {
-      padding: 12px 20px;
+      padding: 16px 18px 20px;
     }
   }
 
   .card-section.compact {
-    padding: 12px 16px;
+    padding: 14px 16px;
     margin-bottom: 16px;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 600px) {
     .card-section.compact {
       padding: 12px;
     }
@@ -57,7 +59,7 @@ const { title, compact = false, children, titleAside }: Props = $props();
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .card-section.compact .card-section__header {
@@ -73,13 +75,16 @@ const { title, compact = false, children, titleAside }: Props = $props();
   h2 {
     margin: 0;
     min-width: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Hiragino Sans",
-      "Yu Gothic UI", Meiryo, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--color-text-secondary);
+    font-family: var(--font-family);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-titles);
     text-align: left;
     transition: color 0.3s ease;
+  }
+
+  .card-section.compact h2 {
+    font-size: 0.9rem;
   }
 </style>

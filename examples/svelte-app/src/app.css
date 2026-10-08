@@ -8,6 +8,9 @@
   line-height: 1.5;
   font-weight: 400;
 
+  /* ラジオ / チェックボックス等のネイティブ部品をテーマのアクセント色に揃える。 */
+  accent-color: var(--color-button-primary);
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -36,6 +39,8 @@ a {
 
 a:hover {
   color: var(--color-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 h1,
@@ -52,28 +57,21 @@ h1 {
   font-size: 1.8rem;
   margin-bottom: 20px;
   text-align: center;
-}
-
-.card {
-  padding: 2em;
-  background-color: var(--color-card);
-  border: var(--border-width, 1px) solid var(--color-border);
-  border-radius: 12px;
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
+  letter-spacing: -0.02em;
 }
 
 #app {
-  max-width: 800px;
+  /* 中身の幅は各画面（App.svelte の .app-container 等）が決める。PC の 2 カラム
+     レイアウトを収めるため、ここでは上限だけを広めに取る。 */
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   text-align: center;
 }
 
 button {
-  border-radius: 8px;
-  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  border: 1px solid var(--color-border-strong);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -81,31 +79,26 @@ button {
   background-color: var(--color-card);
   color: var(--color-text);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 button:hover {
   border-color: var(--color-primary);
-  background-color: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background-color: var(--color-primary-alpha-08);
 }
 
-button:focus,
+button:focus {
+  outline: none;
+}
+
 button:focus-visible {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
-}
-
-button.primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-on-primary);
-  border-color: var(--color-primary);
-}
-
-button.primary:hover {
-  background-color: var(--color-secondary);
-  border-color: var(--color-secondary);
 }
 
 p {
@@ -120,12 +113,26 @@ textarea,
 select {
   background-color: var(--color-card);
   color: var(--color-text);
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
   padding: 12px 16px;
   font-family: inherit;
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+input:hover:not(:disabled):not(:focus),
+textarea:hover:not(:disabled):not(:focus),
+select:hover:not(:disabled):not(:focus) {
+  border-color: var(--color-text-disabled);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-disabled);
 }
 
 input:focus,
@@ -162,10 +169,41 @@ ol li {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--color-border-strong);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary);
+  background: var(--color-text-disabled);
+}
+
+/*
+ * 画面の 2 カラムレイアウト。
+ * - PC (>= 960px): .screen-column を左右 2 列に並べ、各列はカードを縦に積む。
+ * - モバイル: 列のラッパーを display: contents で消し、各カードのラッパーに付けた
+ *   `order` で 1 列に並べる。これにより PC で左右に振り分けても、モバイルでは
+ *   従来どおりの並び順を保てる（列ごとの order は DOM 順に昇順で振ること）。
+ */
+.screen-columns {
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-column {
+  display: contents;
+}
+
+@media (min-width: 960px) {
+  .screen-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+    align-items: start;
+  }
+
+  .screen-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
 }

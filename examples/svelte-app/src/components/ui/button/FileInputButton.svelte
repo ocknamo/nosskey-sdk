@@ -48,22 +48,24 @@ function handleChange(event: Event) {
   }
 
   .btn {
-    border: none;
-    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
     font-family: inherit;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     text-decoration: none;
-    line-height: 1;
+    line-height: 1.2;
   }
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   .btn.disabled {
@@ -71,30 +73,31 @@ function handleChange(event: Event) {
     opacity: 0.6;
   }
 
-  /* File Input Button */
+  /* File Input Button: secondary ボタンと同じ面ボタン */
   .btn-file {
-    background-color: var(--color-info);
-    color: white;
+    background-color: var(--color-button-secondary);
+    color: var(--color-button-secondary-text);
   }
 
   .btn-file:hover:not(.disabled) {
-    opacity: 0.9;
+    background-color: var(--color-button-secondary-hover);
+    border-color: var(--color-border-strong);
   }
 
   /* Sizes */
   .btn-small {
-    padding: 8px 16px;
+    padding: 7px 14px;
     font-size: 0.875rem;
-    border-radius: 4px;
+    border-radius: 10px;
   }
 
   .btn-medium {
-    padding: 12px 20px;
+    padding: 11px 20px;
     font-size: 0.95rem;
   }
 
   .btn-large {
-    padding: 16px 24px;
-    font-size: 1.125rem;
+    padding: 14px 24px;
+    font-size: 1.05rem;
   }
 </style>

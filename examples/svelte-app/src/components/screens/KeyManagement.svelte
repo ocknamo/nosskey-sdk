@@ -9,26 +9,46 @@ import LogoutSection from '../settings/LogoutSection.svelte';
 import SecretCacheSettings from '../settings/SecretCacheSettings.svelte';
 </script>
 
-<div class="settings-container">
-  {#if $isLoggedIn}
-    {#if $termMode === "standard"}
-      <SecretCacheSettings />
-    {/if}
-    <ExportKeyInfoComponent />
-    <ExportSecretKey />
-    <LogoutSection />
-    {#if $termMode === "standard"}
-      <LocalStorageSection />
-    {/if}
-  {:else}
+<!-- ログイン中は PC で 2 カラム。左: キャッシュ設定・鍵情報バックアップ / 右: 秘密鍵
+     エクスポート・ログアウト・ストレージ消去。style:order はモバイル 1 列時の並び順。 -->
+{#if $isLoggedIn}
+  <div class="settings-container screen-columns">
+    <div class="screen-column">
+      {#if $termMode === "standard"}
+        <div style:order="1"><SecretCacheSettings /></div>
+      {/if}
+      <div style:order="2"><ExportKeyInfoComponent /></div>
+    </div>
+    <div class="screen-column">
+      <div style:order="3"><ExportSecretKey /></div>
+      <div style:order="4"><LogoutSection /></div>
+      {#if $termMode === "standard"}
+        <div style:order="5"><LocalStorageSection /></div>
+      {/if}
+    </div>
+  </div>
+{:else}
+  <div class="settings-container single">
     <ImportKeyInfo />
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .settings-container {
     max-width: 700px;
     margin: 0 auto;
     padding: 20px;
+  }
+
+  @media (min-width: 960px) {
+    .settings-container {
+      max-width: 1120px;
+      padding: 8px 24px 24px;
+    }
+
+    /* カード 1 枚だけの画面は 2 カラムにせず、読みやすい幅で中央に置く。 */
+    .settings-container.single {
+      max-width: 640px;
+    }
   }
 </style>

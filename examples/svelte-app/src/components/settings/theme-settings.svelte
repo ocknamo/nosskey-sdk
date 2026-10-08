@@ -62,6 +62,7 @@ const handleThemeChange = (event: Event) => {
   }
 
   .theme-selection label {
+    text-align: left;
     font-weight: 500;
     color: var(--color-text);
     font-size: 14px;
@@ -69,8 +70,8 @@ const handleThemeChange = (event: Event) => {
 
   .theme-select {
     padding: 12px 16px;
-    border: 2px solid var(--color-border);
-    border-radius: 8px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 12px;
     background: var(--color-card);
     color: var(--color-text);
     font-size: 14px;

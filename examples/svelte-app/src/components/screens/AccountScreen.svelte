@@ -41,11 +41,18 @@ onMount(() => {
     gap: 20px;
   }
 
+  @media (min-width: 960px) {
+    .account-screen {
+      max-width: 1120px;
+      padding: 8px 24px 24px;
+    }
+  }
+
   .warning-bar {
     background-color: var(--color-warning-bg);
     border: 1px solid var(--color-warning-border);
     border-left: 4px solid var(--color-warning);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px 14px;
     display: flex;
     flex-direction: column;
@@ -68,5 +75,15 @@ onMount(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+
+  /* プロフィールカード 1 枚なので、PC でも横に引き伸ばさず読みやすい幅で中央に置く。 */
+  @media (min-width: 960px) {
+    .account-info {
+      width: 100%;
+      max-width: 560px;
+      align-self: center;
+      padding-top: 24px;
+    }
   }
 </style>

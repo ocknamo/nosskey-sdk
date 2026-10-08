@@ -88,9 +88,16 @@ function copyNpubToClipboard() {
 
 <style>
   .pubkey-container {
-    background-color: var(--color-surface-alt);
-    padding: 24px 15px;
-    border-radius: 5px;
+    /* 上部にアクセント色のグラデーション帯を敷いたプロフィールカード */
+    background:
+      linear-gradient(180deg, var(--color-primary-alpha-20) 0, transparent 120px),
+      var(--color-card);
+    border: var(--border-width, 1px) solid var(--color-border);
+    box-shadow:
+      0 1px 2px var(--color-shadow),
+      0 8px 24px -12px var(--color-shadow-strong);
+    padding: 32px 20px 28px;
+    border-radius: 20px;
     margin-bottom: 20px;
     display: flex;
     flex-direction: column;
@@ -126,10 +133,16 @@ function copyNpubToClipboard() {
     display: flex;
     align-items: center;
     gap: 8px;
+    max-width: 100%;
+    padding: 4px 4px 4px 14px;
+    border-radius: 999px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
   }
 
   .npub {
-    font-size: 0.9rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
     margin: 0;
     word-break: break-all;

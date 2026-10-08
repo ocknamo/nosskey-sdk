@@ -28,24 +28,30 @@ function handleClick() {
 </button>
 
 <style>
+  /* セグメントコントロールの 1 セグメント。アクティブは一段浮いた面 + 影で示す。 */
   .btn {
-    padding: 8px 16px;
+    padding: 9px 16px;
     background: none;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
     font-family: inherit;
-    font-weight: 400;
+    font-weight: 500;
   }
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-primary-alpha-20);
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-button-primary);
   }
 
   .btn:disabled {
@@ -55,12 +61,16 @@ function handleClick() {
 
   /* Tab Button */
   .btn-tab.active {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-primary);
-    font-weight: bold;
+    background-color: var(--color-elevated);
+    color: var(--color-titles);
+    font-weight: 600;
+    box-shadow:
+      0 1px 2px var(--color-shadow-strong),
+      0 0 0 1px var(--color-border);
   }
 
   .btn-tab:hover:not(:disabled):not(.active) {
     background-color: var(--color-surface-hover);
+    color: var(--color-text);
   }
 </style>

@@ -210,10 +210,18 @@ onMount(() => {
 
 <style>
   .app-container {
-    max-width: 800px;
+    max-width: 1120px;
     margin: 0 auto;
     padding-top: 56px; /* 固定ヘッダーの高さ分の余白を追加 */
     padding-bottom: 64px; /* フッターの高さ分の余白を追加 */
+  }
+
+  /* PC ではフッターナビを出さない（ヘッダーへ移す）ため、下余白は控えめでよい。 */
+  @media (min-width: 960px) {
+    .app-container {
+      padding-top: 72px;
+      padding-bottom: 32px;
+    }
   }
 
   :global(body) {

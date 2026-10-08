@@ -33,29 +33,48 @@ function handleClick() {
 
 <style>
   .btn {
-    border: none;
-    border-radius: 8px;
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: 12px;
     font-family: inherit;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      filter 0.2s ease,
+      transform 0.1s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     text-decoration: none;
-    line-height: 1;
+    line-height: 1.2;
     width: 100%;
     max-width: 360px;
   }
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-card),
+      0 0 0 4px var(--color-button-primary);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   .btn:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.55;
+    box-shadow: none;
   }
 
   .btn-auto-width {
@@ -63,38 +82,44 @@ function handleClick() {
     max-width: none;
   }
 
-  /* Primary Button */
+  /* Primary Button: グラデーション塗り + アクセント色の柔らかい影 */
   .btn-primary {
-    background-color: var(--color-button-primary);
+    background: var(--gradient-primary, var(--color-button-primary));
     color: var(--color-text-on-primary);
+    box-shadow:
+      0 1px 2px var(--color-shadow),
+      0 6px 16px -6px var(--color-button-primary);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-button-primary-hover);
+    filter: brightness(1.08);
+    box-shadow:
+      0 1px 2px var(--color-shadow),
+      0 10px 22px -8px var(--color-button-primary);
   }
 
   .btn-primary:disabled {
-    background-color: var(--color-button-disabled);
+    background: var(--color-button-disabled);
+    color: var(--color-text-disabled);
   }
 
-  /* Secondary Button */
+  /* Secondary Button: 落ち着いた面ボタン */
   .btn-secondary {
     background-color: var(--color-button-secondary);
-    color: var(--color-text-on-primary);
+    border-color: var(--color-border);
+    color: var(--color-button-secondary-text);
   }
 
   .btn-secondary:hover:not(:disabled) {
     background-color: var(--color-button-secondary-hover);
-  }
-
-  .btn-secondary:disabled {
-    background-color: var(--color-button-disabled);
+    border-color: var(--color-border-strong);
   }
 
   /* Danger Button */
   .btn-danger {
-    background-color: var(--color-error);
-    color: var(--color-text-on-primary);
+    background-color: var(--color-button-danger);
+    color: #ffffff;
+    box-shadow: 0 1px 2px var(--color-shadow);
   }
 
   .btn-danger:hover:not(:disabled) {
@@ -108,46 +133,45 @@ function handleClick() {
   /* Success Button */
   .btn-success {
     background-color: var(--color-button-success);
-    color: var(--color-text-on-primary);
+    color: #ffffff;
+    box-shadow: 0 1px 2px var(--color-shadow);
   }
 
   .btn-success:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px);
+    background-color: var(--color-button-success-hover);
   }
 
   .btn-success:disabled {
     background-color: var(--color-button-disabled);
   }
 
-  /* Warning Button */
+  /* Warning Button: 注意喚起はトーナル（淡い塗り + 色文字 + 色枠）で控えめに */
   .btn-warning {
-    background-color: var(--color-warning);
-    color: var(--color-text-inverse);
+    background-color: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning);
   }
 
   .btn-warning:hover:not(:disabled) {
-    background-color: var(--color-button-warning-hover);
-  }
-
-  .btn-warning:disabled {
-    background-color: var(--color-button-disabled);
+    border-color: var(--color-warning);
+    background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
   }
 
   /* Sizes */
   .btn-small {
-    padding: 6px 12px;
+    padding: 7px 14px;
     font-size: 0.875rem;
-    border-radius: 6px;
+    border-radius: 10px;
   }
 
   .btn-medium {
-    padding: 10px 20px;
-    font-size: 1rem;
+    padding: 11px 20px;
+    font-size: 0.95rem;
   }
 
   .btn-large {
-    padding: 12px 24px;
-    font-size: 1.125rem;
+    padding: 14px 24px;
+    font-size: 1.05rem;
+    border-radius: 14px;
   }
 </style>

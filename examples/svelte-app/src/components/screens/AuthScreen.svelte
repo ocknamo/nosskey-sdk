@@ -232,6 +232,7 @@ $effect(() => {
     <p class="subtitle">{$i18n.t.auth.subtitle}</p>
   </div>
 
+  <div class="auth-main">
   {#if isLoading}
     <div class="loading-section">
       <div class="loading-spinner"></div>
@@ -359,6 +360,7 @@ $effect(() => {
       {errorMessage}
     </div>
   {/if}
+  </div>
 </div>
 
 <style>
@@ -378,18 +380,86 @@ $effect(() => {
   }
 
   .hero-section {
+    position: relative;
     margin-bottom: 32px;
   }
 
+  /* ロゴの背後にアクセント色のぼかしを敷き、ヒーローに奥行きを出す。 */
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    width: 220px;
+    height: 160px;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      closest-side,
+      var(--color-primary-alpha-20),
+      transparent
+    );
+    filter: blur(8px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
   .hero-section img {
-    border-radius: 16px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px -10px var(--color-shadow-strong);
   }
 
   .screen-title {
     font-size: 2.2rem;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     margin: 16px 0 8px 0;
     color: var(--color-text-primary);
+  }
+
+  /* PC: 左にヒーロー、右にフォームの 2 カラム */
+  @media (min-width: 960px) {
+    .auth-container {
+      max-width: none;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 64px;
+      align-items: center;
+      padding: 72px 24px 48px;
+    }
+
+    .hero-section {
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    .hero-section::before {
+      left: 0;
+      width: 360px;
+      height: 260px;
+      transform: translate(-25%, -10%);
+    }
+
+    .hero-section img {
+      width: 96px;
+      height: 96px;
+    }
+
+    /* 後続の基本ルール（text-align: center）より優先させるため hero 配下で詳細度を上げる */
+    .hero-section .screen-title {
+      font-size: 3rem;
+      margin: 24px 0 12px 0;
+      text-align: left;
+    }
+
+    .hero-section .subtitle {
+      font-size: 1.2rem;
+      text-align: left;
+    }
+
+    .auth-main {
+      width: 100%;
+      max-width: 460px;
+    }
   }
 
   .subtitle {
@@ -432,7 +502,7 @@ $effect(() => {
     padding: 4px;
     background-color: var(--color-surface);
     border: var(--border-width, 1px) solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     margin: 0 auto 20px;
   }
 
@@ -455,7 +525,7 @@ $effect(() => {
     margin-top: 20px;
     padding: 16px;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--color-surface);
     text-align: left;
   }
@@ -514,9 +584,9 @@ $effect(() => {
   }
 
   .nsec-input input {
-    padding: 12px;
-    border-radius: 6px;
-    border: 2px solid var(--color-border-medium);
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     transition: border-color 0.2s ease;
@@ -525,6 +595,7 @@ $effect(() => {
   .nsec-input input:focus {
     outline: none;
     border-color: var(--color-button-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   .username-input {
@@ -546,9 +617,9 @@ $effect(() => {
   }
 
   .username-input input {
-    padding: 12px;
-    border-radius: 6px;
-    border: 2px solid var(--color-border-medium);
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     transition: border-color 0.2s ease;
   }
@@ -556,14 +627,15 @@ $effect(() => {
   .username-input input:focus {
     outline: none;
     border-color: var(--color-button-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   .error-message {
     padding: 12px 16px;
     background-color: var(--color-error-bg);
     color: var(--color-error);
-    border: 1px solid var(--color-error);
-    border-radius: 6px;
+    border: 1px solid var(--color-error-border);
+    border-radius: 12px;
     margin: 12px 0;
     font-size: 0.9rem;
     text-align: left;
