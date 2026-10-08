@@ -28,19 +28,22 @@ function handleClick() {
 </button>
 
 <style>
-  /* セグメントコントロールの 1 セグメント。アクティブは一段浮いた面 + 影で示す。 */
+  /* 下線タブの 1 項目。アクティブはアクセント色の下線と濃い文字で示す。
+     親の下罫線（1px）に下線を重ねるため margin-bottom: -1px にしている。 */
   .btn {
-    padding: 9px 16px;
+    flex: 0 0 auto;
+    padding: 0 0 12px;
+    margin-bottom: -1px;
     background: none;
     border: none;
-    border-radius: 8px;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 1rem;
     color: var(--color-text-secondary);
     transition:
-      background-color 0.2s ease,
       color 0.2s ease,
-      box-shadow 0.2s ease;
+      border-color 0.2s ease;
     font-family: inherit;
     font-weight: 500;
   }
@@ -51,6 +54,7 @@ function handleClick() {
 
   .btn:focus-visible {
     outline: none;
+    border-radius: 4px;
     box-shadow: 0 0 0 2px var(--color-button-primary);
   }
 
@@ -61,23 +65,13 @@ function handleClick() {
 
   /* Tab Button */
   .btn-tab.active {
-    background-color: var(--color-elevated);
     color: var(--color-titles);
     font-weight: 600;
-    box-shadow:
-      0 1px 2px var(--color-shadow-strong),
-      0 0 0 1px var(--color-border);
-  }
-
-  /* アクティブ面の浮き影より後ろに置き、キーボードフォーカス時はリングを併記する */
-  .btn-tab.active:focus-visible {
-    box-shadow:
-      0 1px 2px var(--color-shadow-strong),
-      0 0 0 2px var(--color-button-primary);
+    border-bottom-color: var(--color-primary);
   }
 
   .btn-tab:hover:not(:disabled):not(.active) {
-    background-color: var(--color-surface-hover);
+    background: none;
     color: var(--color-text);
   }
 </style>

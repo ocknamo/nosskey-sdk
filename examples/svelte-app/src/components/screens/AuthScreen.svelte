@@ -227,7 +227,8 @@ $effect(() => {
 
 <div class="auth-container">
   <div class="hero-section">
-    <img src={NosskeyImage} alt="Nosskey hero" width="80" height="80" />
+    <!-- 装飾の透かし（ロゴ名は見出しで読み上げられるので代替テキストは空） -->
+    <img src={NosskeyImage} alt="" aria-hidden="true" width="80" height="80" />
     <h1 class="screen-title">{$i18n.t.auth.title}</h1>
     <p class="subtitle">{$i18n.t.auth.subtitle}</p>
   </div>
@@ -273,7 +274,7 @@ $effect(() => {
             <div class="method-link-row">
               <button
                 type="button"
-                class="method-link"
+                class="method-link method-link--forward"
                 onclick={deriveFromPasskey}
                 disabled={isLoading}
               >
@@ -306,7 +307,7 @@ $effect(() => {
           <div class="method-link-row">
             <button
               type="button"
-              class="method-link"
+              class="method-link method-link--forward"
               onclick={showImport}
               disabled={isLoading}
             >
@@ -364,116 +365,89 @@ $effect(() => {
 </div>
 
 <style>
+  /* タイポグラフィ主体のレイアウト: 大きな見出しとフォームを左寄せで縦に並べ、
+     ロゴは右側に大きな透かしとして置く。 */
   .auth-container {
-    max-width: 700px;
-    /* 親 .account-screen は flex column のため、cross-axis に auto margin を置くと
-       free space を吸収して shrink-to-fit になる。stretch に任せるため 0 にする。 */
+    position: relative;
+    /* 透かしロゴ（z-index: -1）をこの要素の背面・ページ背景の前面に収める */
+    isolation: isolate;
+    /* 透かしロゴが右へはみ出しても横スクロールを出さない（縦方向は HelpTip 等のため可視のまま） */
+    overflow-x: clip;
     margin: 0;
-    padding: 20px;
-    text-align: center;
-  }
-
-  @media (max-width: 600px) {
-    .auth-container {
-      padding: 12px 8px;
-    }
+    padding: 24px 0 0;
+    text-align: left;
   }
 
   .hero-section {
-    position: relative;
     margin-bottom: 32px;
   }
 
-  /* ロゴの背後にアクセント色のぼかしを敷き、ヒーローに奥行きを出す。 */
-  .hero-section::before {
-    content: "";
+  /* ロゴは装飾の透かしとして右上に大きく敷く */
+  .hero-section img {
     position: absolute;
-    top: -24px;
-    left: 50%;
-    width: 220px;
-    height: 160px;
-    transform: translateX(-50%);
-    background: radial-gradient(
-      closest-side,
-      var(--color-primary-alpha-20),
-      transparent
-    );
-    filter: blur(8px);
+    top: -8px;
+    right: -16px;
+    width: 200px;
+    height: 200px;
+    border-radius: 48px;
+    opacity: 0.07;
     pointer-events: none;
+    user-select: none;
     z-index: -1;
   }
 
-  .hero-section img {
-    border-radius: 20px;
-    box-shadow: 0 4px 14px -6px var(--color-shadow-strong);
-  }
-
   .screen-title {
-    font-size: 2.2rem;
+    font-size: 3.2rem;
     font-weight: 800;
-    letter-spacing: -0.03em;
-    margin: 16px 0 8px 0;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 24px 0 12px;
+    text-align: left;
     color: var(--color-text-primary);
   }
 
-  /* PC: 左にヒーロー、右にフォームの 2 カラム */
+  .subtitle {
+    font-size: 1.15rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .auth-main {
+    max-width: 420px;
+  }
+
   @media (min-width: 960px) {
     .auth-container {
-      max-width: none;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 64px;
-      align-items: center;
-      padding: 72px 24px 48px;
+      padding: 48px 0 0;
     }
 
     .hero-section {
-      margin-bottom: 0;
-      text-align: left;
-    }
-
-    .hero-section::before {
-      left: 0;
-      width: 360px;
-      height: 260px;
-      transform: translate(-25%, -10%);
+      margin-bottom: 40px;
     }
 
     .hero-section img {
-      width: 96px;
-      height: 96px;
+      top: 32px;
+      right: 40px;
+      width: 440px;
+      height: 440px;
+      border-radius: 96px;
     }
 
-    /* 後続の基本ルール（text-align: center）より優先させるため hero 配下で詳細度を上げる */
-    .hero-section .screen-title {
-      font-size: 3rem;
-      margin: 24px 0 12px 0;
-      text-align: left;
+    .screen-title {
+      font-size: 6rem;
     }
 
-    .hero-section .subtitle {
-      font-size: 1.2rem;
-      text-align: left;
+    .subtitle {
+      font-size: 1.6rem;
     }
-
-    .auth-main {
-      width: 100%;
-      max-width: 460px;
-    }
-  }
-
-  .subtitle {
-    font-size: 1.1rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 0;
-    line-height: 1.5;
-    text-align: center;
   }
 
   .loading-section {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     padding: 40px 20px;
   }
@@ -496,33 +470,72 @@ $effect(() => {
     }
   }
 
+  /* 下線タブ */
   .auth-tabs {
     display: flex;
-    gap: 4px;
-    padding: 4px;
-    background-color: var(--color-surface);
-    border: var(--border-width, 1px) solid var(--color-border);
-    border-radius: 12px;
-    margin: 0 auto 20px;
+    gap: 24px;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0 0 40px;
   }
 
-  .auth-tabs :global(.auth-tab) {
-    flex: 1;
-  }
-
+  /* 項目の間をたっぷり空け、ボタンは左寄せ・内容幅 */
   .tab-panel {
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 40px;
+    text-align: left;
+  }
+
+  .tab-panel > :global(*) {
+    margin: 0;
+  }
+
+  /* 入力欄・注意カードは列の幅いっぱいに広げる */
+  .tab-panel > .username-input,
+  .tab-panel > .nsec-input,
+  .tab-panel > .no-key-notice {
+    align-self: stretch;
+  }
+
+  /* 主ボタンは左寄せのピル型（Button 側のサイズ指定より詳細度を上げて上書き） */
+  .tab-panel > :global(.btn.btn-large) {
+    width: auto;
+    max-width: none;
+    border-radius: 999px;
+    padding: 18px 48px;
   }
 
   .method-link-row {
-    margin-top: 16px;
-    text-align: center;
+    text-align: left;
+  }
+
+  /* 主ボタン直後の補助リンクは、ボタンとひとまとまりに見えるよう少し寄せる */
+  .tab-panel > .method-link-row {
+    margin-top: -16px;
+  }
+
+  .no-key-notice .method-link-row {
+    margin-top: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .auth-tabs {
+      margin-bottom: 32px;
+    }
+
+    .tab-panel {
+      gap: 32px;
+    }
+
+    .tab-panel > .method-link-row {
+      margin-top: -12px;
+    }
   }
 
   /* 鍵情報が見つからなかったときの注意カード。導出ログインは事故（別アカウント生成）を
      招きうるため、主ボタンより一段控えめな見た目にして意図的な操作にとどめる。 */
   .no-key-notice {
-    margin-top: 20px;
     padding: 16px;
     border: 1px solid var(--color-border);
     border-radius: 12px;
@@ -558,6 +571,24 @@ $effect(() => {
 
   .method-link:hover:not(:disabled) {
     color: var(--color-text-primary);
+  }
+
+  /* 次の手順へ進むリンクは下線なしのアクセント色 + 矢印 */
+  .method-link--forward {
+    padding: 0;
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .method-link--forward::after {
+    content: " →";
+  }
+
+  .method-link--forward:hover:not(:disabled) {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .method-link:disabled {
@@ -645,18 +676,11 @@ $effect(() => {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 24px 0;
-    text-align: center;
-    justify-content: center;
+    margin: 32px 0 0;
   }
 
   .error-icon {
     font-size: 1.1rem;
   }
 
-  @media (max-width: 480px) {
-    .screen-title {
-      font-size: 1.8rem;
-    }
-  }
 </style>

@@ -15,12 +15,8 @@ onMount(() => {
 });
 </script>
 
+<!-- 主役（見出しとフォーム / 公開鍵）を先に、注意書きは控えめな一行として後ろに置く。 -->
 <div class="account-screen">
-  <div class="warning-bar" role="note">
-    <strong class="warning-bar__title">{$i18n.t.appWarning.title}</strong>
-    <span class="warning-bar__text">{$i18n.t.appWarning.prfCompatibility}</span>
-  </div>
-
   {#if !login}
     <AuthScreen />
   {:else}
@@ -28,6 +24,11 @@ onMount(() => {
       <PublicKeyDisplay />
     </div>
   {/if}
+
+  <div class="warning-bar" role="note">
+    <strong class="warning-bar__title">{$i18n.t.appWarning.title}</strong>
+    <span class="warning-bar__text">{$i18n.t.appWarning.prfCompatibility}</span>
+  </div>
 </div>
 
 <style>
@@ -38,29 +39,28 @@ onMount(() => {
     padding-bottom: 64px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 40px;
+    text-align: left;
   }
 
   @media (min-width: 960px) {
     .account-screen {
       max-width: 1120px;
-      padding: 8px 24px 24px;
+      padding: 8px 88px 48px;
+      gap: 48px;
     }
   }
 
+  /* 枠で囲まず、左の縦線だけで示す控えめな注意書き */
   .warning-bar {
-    background-color: var(--color-warning-bg);
-    border: 1px solid var(--color-warning-border);
-    border-left: 4px solid var(--color-warning);
-    border-radius: 12px;
-    padding: 10px 14px;
+    max-width: 520px;
+    border-left: 3px solid var(--color-warning);
+    padding: 2px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     font-size: 0.8rem;
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease;
+    transition: border-color 0.3s ease;
   }
 
   .warning-bar__title {
@@ -75,15 +75,12 @@ onMount(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding-top: 24px;
   }
 
-  /* プロフィールカード 1 枚なので、PC でも横に引き伸ばさず読みやすい幅で中央に置く。 */
   @media (min-width: 960px) {
     .account-info {
-      width: 100%;
-      max-width: 560px;
-      align-self: center;
-      padding-top: 24px;
+      padding-top: 64px;
     }
   }
 </style>
