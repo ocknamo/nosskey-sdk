@@ -71,7 +71,7 @@ const PURPLE_DARK: Record<string, string> = {
   // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
   '--gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)',
   // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
-  '--color-primary-glow': 'rgba(124, 58, 237, 0.55)',
+  '--color-primary-glow': 'rgba(124, 58, 237, 0.18)',
 
   // ボタンホバー色（ダーク）
   '--color-button-primary-hover': '#8D70FF',
@@ -175,7 +175,7 @@ const PURPLE_LIGHT: Record<string, string> = {
   // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
   '--gradient-primary': 'linear-gradient(135deg, #6E56CF 0%, #4F46E5 100%)',
   // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
-  '--color-primary-glow': 'rgba(110, 86, 207, 0.45)',
+  '--color-primary-glow': 'rgba(110, 86, 207, 0.16)',
 
   // ボタンホバー色（ライト）
   '--color-button-primary-hover': '#5B46B8',

@@ -227,6 +227,7 @@ export const ja: TranslationData = {
     key: '鍵管理',
     settings: '設定',
     mainNav: 'メインナビゲーション',
+    settingsToc: '設定の目次',
   },
   consent: {
     title: '署名リクエストの確認',

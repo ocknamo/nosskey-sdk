@@ -223,6 +223,8 @@ export interface TranslationData {
     settings: string;
     // ナビゲーションランドマークの aria-label
     mainNav: string;
+    // 設定画面（PC）の目次ナビの aria-label
+    settingsToc: string;
   };
   consent: {
     title: string;
