@@ -79,7 +79,13 @@ async function runDetectionOnce(): Promise<void> {
   try {
     await runInitialDetection();
   } catch (err) {
-    console.error('[nosskey] storage access detection failed', err);
+    // 例外オブジェクトを丸ごと console へ出さない。console のログは不具合報告で
+    // 全文が共有されるため、メッセージに値が載る実装（bech32 など）が将来この経路を
+    // 通ると秘密値の持ち出しになる。docs/todo.md の棚卸し項目と方針を揃える。
+    console.error(
+      '[nosskey] storage access detection failed',
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    );
     // 再判定の失敗で確定済みの状態を `denied` に格下げしない。`partitioned` は
     // 「許可すれば読める」でカードに導線があるのに対し、`denied` はエラー表示に
     // なる。タブ復帰のたびに走る再判定が一度でもコケると、以後ずっとエラー表示の
