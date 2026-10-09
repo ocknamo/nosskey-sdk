@@ -452,6 +452,23 @@ $effect(() => {
     max-width: 420px;
   }
 
+  /* モバイル: キャッチコピーとタブの間を広めに取り、キャッチコピーは小さめにして透かしとの重なりを減らす。
+     透かしはダチョウの足（画像高さの約 85% の位置）がタブの下線より上で止まる大きさに抑える。 */
+  @media (max-width: 699px) {
+    .hero-section {
+      margin-bottom: 56px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+    }
+
+    .watermark {
+      width: clamp(230px, 66vw, 260px);
+      height: clamp(230px, 66vw, 260px);
+    }
+  }
+
   /* タブレット幅では本文列（最大 700px）が中央寄せで画面端と一致しないため、見切れさせずに収める */
   @media (min-width: 700px) and (max-width: 959px) {
     .watermark-layer {
