@@ -5,6 +5,13 @@ import { i18n } from '../i18n/i18n-store.js';
 import { currentScreen, type ScreenName } from '../store/app-state.js';
 import { NAV_ITEMS } from './nav-items.js';
 
+interface Props {
+  // モバイル（700px 未満）でヘッダーを非表示にする（未ログインのアカウント画面など）
+  hideOnMobile?: boolean;
+}
+
+const { hideOnMobile = false }: Props = $props();
+
 // 現在の画面を監視
 let screen = $state('account');
 
@@ -32,7 +39,7 @@ function navigateTo(target: ScreenName) {
 }
 </script>
 
-<header class="header-bar">
+<header class="header-bar" class:hide-on-mobile={hideOnMobile}>
   <div class="header-content">
     <div class="header-left">
       <!-- テーマの明暗でロゴを差し替える（<html data-color-scheme> を CSS で参照） -->
@@ -212,6 +219,12 @@ function navigateTo(target: ScreenName) {
 
     .header-nav__item.active img {
       filter: var(--icon-filter-primary);
+    }
+  }
+
+  @media (max-width: 699.98px) {
+    .header-bar.hide-on-mobile {
+      display: none;
     }
   }
 

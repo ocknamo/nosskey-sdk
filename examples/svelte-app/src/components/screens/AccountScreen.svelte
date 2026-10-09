@@ -16,7 +16,7 @@ onMount(() => {
 </script>
 
 <!-- 主役（見出しとフォーム / 公開鍵）を先に、注意書きは控えめな一行として後ろに置く。 -->
-<div class="account-screen">
+<div class="account-screen" class:logged-out={!login}>
   {#if !login}
     <AuthScreen />
   {:else}
@@ -43,6 +43,14 @@ onMount(() => {
     flex-direction: column;
     gap: 40px;
     text-align: left;
+  }
+
+  /* 未ログインのモバイル（ヘッダー非表示）では、フォームと注意書き・フッターの間もゆったり取る */
+  @media (max-width: 699.98px) {
+    .account-screen.logged-out {
+      gap: 48px;
+      padding-bottom: 40px;
+    }
   }
 
   @media (min-width: 960px) {

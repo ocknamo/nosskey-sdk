@@ -9,6 +9,7 @@ import SettingsScreen from './components/screens/SettingsScreen.svelte';
 import {
   currentScreen,
   currentTheme,
+  isLoggedIn,
   isScreenName,
   restoreLoginState,
   type ThemeMode,
@@ -17,6 +18,10 @@ import { isDarkTheme, resolveTheme, THEME_PALETTES } from './theme/palettes.js';
 import { buildHashForScreen, screenNameFromHash } from './utils/app-navigation.js';
 
 let screen = $state('account');
+
+// 未ログインのアカウント画面（ログイン / 新規登録フォーム）では、モバイルでヘッダーを出さない。
+// 大きな見出しとロゴの透かしがヘッダーの役割を兼ねるため、その分を上下の余白に回す。
+const hideHeaderOnMobile = $derived(screen === 'account' && !$isLoggedIn);
 
 // URLのハッシュからページを初期化
 // screen の更新は updateHash に集約するため、ここでは直接代入せず
@@ -195,9 +200,9 @@ onMount(() => {
   <IframeHostScreen />
 {:else}
   <!-- ヘッダーバー -->
-  <HeaderBar />
+  <HeaderBar hideOnMobile={hideHeaderOnMobile} />
 
-  <div class="app-container">
+  <div class="app-container" class:no-mobile-header={hideHeaderOnMobile}>
     {#if screen === "account"}
       <AccountScreen />
     {:else if screen === "key"}
@@ -217,6 +222,13 @@ onMount(() => {
     margin: 0 auto;
     padding-top: 56px; /* 固定ヘッダーの高さ分の余白を追加 */
     padding-bottom: 64px; /* フッターの高さ分の余白を追加 */
+  }
+
+  /* モバイルでヘッダーを出さない画面では、ヘッダー分の上余白も取らない */
+  @media (max-width: 699.98px) {
+    .app-container.no-mobile-header {
+      padding-top: 0;
+    }
   }
 
   /* PC ではフッターナビを出さない（ヘッダーへ移す）ため、下余白は控えめでよい。 */

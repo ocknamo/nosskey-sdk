@@ -387,7 +387,7 @@ $effect(() => {
 
   /* 透かしを収めるレイヤー。モバイルでは画面右端（.account-screen の左右 padding 20px 分外側）
      まで広げ、そこからはみ出した部分を切り取って「見切れ」にする。top: -20px は同じく上 padding 分で、
-     固定ヘッダーの下端に揃える。
+     レイヤーの上端をコンテンツ領域の上端（モバイルはヘッダーを出さないので画面の上端）に揃える。
      ※ AccountScreen.svelte の .account-screen（padding 20px / max-width 700px）と値を合わせている。 */
   .watermark-layer {
     position: absolute;
@@ -457,6 +457,11 @@ $effect(() => {
   /* モバイル: キャッチコピーとタブの間を広めに取り、キャッチコピーは小さめにして透かしとの重なりを減らす。
      （小数幅のビューポートでタブレット側との間にすき間ができないよう 699.98px で区切る） */
   @media (max-width: 699.98px) {
+    /* モバイルではヘッダーを出さないため、その分ゆったりと上余白を取る */
+    .auth-container {
+      padding-top: 56px;
+    }
+
     .hero-section {
       margin-bottom: 56px;
     }
