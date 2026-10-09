@@ -8,8 +8,10 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* ラジオ / チェックボックス等のネイティブ部品をテーマのアクセント色に揃える。 */
-  accent-color: var(--color-button-primary);
+  /* ラジオ / チェックボックス等のネイティブ部品をテーマのアクセント色に揃える。
+     フォーカスリングや枠線などの非塗り用途は --color-primary を使い、--color-button-primary
+     （白文字を載せるため暗めにしている塗り色）は primary ボタンの塗り専用にする。 */
+  accent-color: var(--color-primary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

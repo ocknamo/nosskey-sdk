@@ -184,7 +184,7 @@ async function loginWithKeyInfoData(keyInfoJsonText: string) {
 
   .key-info-textarea:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
   }
 
   .error-message {

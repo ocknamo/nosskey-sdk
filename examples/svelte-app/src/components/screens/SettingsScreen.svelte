@@ -335,7 +335,7 @@ $effect(() => {
     }
 
     .settings-toc__item:focus-visible {
-      box-shadow: 0 0 0 2px var(--color-button-primary);
+      box-shadow: 0 0 0 2px var(--color-primary);
     }
 
     .settings-toc__item.active {

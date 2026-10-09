@@ -646,7 +646,7 @@ onDestroy(() => {
   }
 
   .setup-link:hover {
-    color: var(--color-button-primary-hover);
+    color: var(--color-secondary);
   }
 
   .setup-link:focus-visible {

@@ -54,7 +54,7 @@ function handleClick() {
 
   /* 文字や下線に密着しないよう、余白を取ったアウトラインでフォーカスを示す */
   .btn:focus-visible {
-    outline: 2px solid var(--color-button-primary);
+    outline: 2px solid var(--color-primary);
     outline-offset: 4px;
     /* 全体共通の button:focus-visible の淡い box-shadow を打ち消し、二重枠にしない */
     box-shadow: none;

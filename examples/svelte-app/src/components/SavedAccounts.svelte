@@ -214,14 +214,14 @@ onDestroy(() => {
   }
 
   .account-relogin:hover:not(:disabled) {
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
   }
 
   /* タップ/クリックの押下フィードバック。即ログインで見えなくならないよう
      reloginTo() が少し遅延を入れ、その間 .pressed を付与して見せる。 */
   .account-relogin.pressed:not(:disabled),
   .account-relogin:active:not(:disabled) {
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
     background-color: var(--color-border-light);
   }
 

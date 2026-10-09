@@ -534,7 +534,7 @@ $effect(() => {
     width: 32px;
     height: 32px;
     border: 3px solid var(--color-border-light);
-    border-top: 3px solid var(--color-button-primary);
+    border-top: 3px solid var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -654,7 +654,7 @@ $effect(() => {
 
   /* 文字に密着しないよう、余白を取った不透明なアウトラインでフォーカスを示す */
   .method-link:focus-visible {
-    outline: 2px solid var(--color-button-primary);
+    outline: 2px solid var(--color-primary);
     outline-offset: 3px;
     border-radius: 4px;
     box-shadow: none;
@@ -713,7 +713,7 @@ $effect(() => {
 
   .nsec-input input:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
@@ -744,7 +744,7 @@ $effect(() => {
 
   .username-input input:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 

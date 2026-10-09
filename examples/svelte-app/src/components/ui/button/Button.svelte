@@ -63,7 +63,7 @@ function handleClick() {
     outline: none;
     box-shadow:
       0 0 0 2px var(--color-card),
-      0 0 0 4px var(--color-button-primary);
+      0 0 0 4px var(--color-primary);
   }
 
   .btn:active:not(:disabled) {

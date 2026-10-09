@@ -54,7 +54,7 @@ function handleClick() {
 
   .btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-button-primary);
+    box-shadow: 0 0 0 2px var(--color-primary);
   }
 
   .btn:disabled {

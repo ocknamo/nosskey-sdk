@@ -192,7 +192,7 @@ function navigateTo(target: ScreenName) {
 
     .header-nav__item:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 2px var(--color-button-primary);
+      box-shadow: 0 0 0 2px var(--color-primary);
     }
 
     .header-nav__item.active {
