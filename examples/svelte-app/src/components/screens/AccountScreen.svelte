@@ -15,12 +15,8 @@ onMount(() => {
 });
 </script>
 
-<div class="account-screen">
-  <div class="warning-bar" role="note">
-    <strong class="warning-bar__title">{$i18n.t.appWarning.title}</strong>
-    <span class="warning-bar__text">{$i18n.t.appWarning.prfCompatibility}</span>
-  </div>
-
+<!-- 主役（見出しとフォーム / 公開鍵）を先に、注意書きは控えめな一行として後ろに置く。 -->
+<div class="account-screen" class:logged-out={!login}>
   {#if !login}
     <AuthScreen />
   {:else}
@@ -28,32 +24,56 @@ onMount(() => {
       <PublicKeyDisplay />
     </div>
   {/if}
+
+  <div class="warning-bar" role="note">
+    <strong class="warning-bar__title">{$i18n.t.appWarning.title}</strong>
+    <span class="warning-bar__text">{$i18n.t.appWarning.prfCompatibility}</span>
+  </div>
 </div>
 
 <style>
   .account-screen {
     max-width: 700px;
     margin: 0 auto;
+    /* フッター分の下余白は .app-container 側で確保済みなので、ここでは足さない。
+       padding 20px と max-width 700px は AuthScreen.svelte の .watermark-layer（画面端までの見切れ）と
+       値を合わせているので、変えるときは両方を直すこと。 */
     padding: 20px;
-    padding-bottom: 64px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 40px;
+    text-align: left;
   }
 
+  /* 未ログインのモバイル（ヘッダー非表示）では、フォームと注意書き・フッターの間もゆったり取る */
+  @media (max-width: 699.98px) {
+    .account-screen.logged-out {
+      gap: 48px;
+      padding-bottom: 40px;
+    }
+  }
+
+  @media (min-width: 960px) {
+    .account-screen {
+      max-width: 1120px;
+      padding: 8px 88px 16px;
+      gap: 48px;
+    }
+  }
+
+  /* 枠で囲まず、左の縦線だけで示す控えめな注意書き。
+     ログインタブなどフォームが短いとき、AuthScreen の透かし（isolation で前面側に描かれる）が
+     下へはみ出して重なることがあるため、position を与えて DOM 順どおり透かしより手前に描く。 */
   .warning-bar {
-    background-color: var(--color-warning-bg);
-    border: 1px solid var(--color-warning-border);
-    border-left: 4px solid var(--color-warning);
-    border-radius: 8px;
-    padding: 10px 14px;
+    position: relative;
+    max-width: 520px;
+    border-left: 3px solid var(--color-warning);
+    padding: 2px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     font-size: 0.8rem;
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease;
+    transition: border-color 0.3s ease;
   }
 
   .warning-bar__title {
@@ -68,5 +88,12 @@ onMount(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding-top: 24px;
+  }
+
+  @media (min-width: 960px) {
+    .account-info {
+      padding-top: 64px;
+    }
   }
 </style>

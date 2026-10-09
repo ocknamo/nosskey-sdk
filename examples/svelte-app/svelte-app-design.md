@@ -29,12 +29,13 @@
 examples/svelte-app/
 ├── public/
 │   ├── _headers                   # Cloudflare Pages 用ヘッダ (Permissions-Policy 等)
-│   └── nosskey.svg                # アプリアイコン
+│   └── nosskey.svg                # アプリアイコン（ファビコン）
 ├── src/
 │   ├── components/
 │   │   ├── ConsentDialog.svelte        # iframe モードの同意ダイアログ
-│   │   ├── FooterMenu.svelte           # フッターナビゲーション
-│   │   ├── HeaderBar.svelte            # ヘッダーバー
+│   │   ├── FooterMenu.svelte           # フッターナビゲーション（モバイル）
+│   │   ├── HeaderBar.svelte            # ヘッダーバー（PC ではナビも表示）
+│   │   ├── nav-items.ts                # ナビ項目定義（フッター / ヘッダーで共有）
 │   │   ├── PublicKeyDisplay.svelte     # 公開鍵表示
 │   │   ├── screens/                    # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
@@ -63,7 +64,7 @@ examples/svelte-app/
 │   │           ├── NavButton.svelte
 │   │           ├── TabButton.svelte
 │   │           └── ToggleButton.svelte
-│   ├── assets/                     # SVG アイコンなど
+│   ├── assets/                     # SVG アイコンなど（ロゴはライト用 nosskey.svg / ダーク用 nosskey-dark.svg を <html data-color-scheme> で出し分け）
 │   ├── i18n/                       # 多言語対応
 │   │   ├── i18n-store.ts           # 言語ストア
 │   │   └── translations.ts         # 翻訳データ
@@ -190,8 +191,8 @@ examples/svelte-app/
 
 ### 3.5 共通コンポーネント
 
-- **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示
-- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）
+- **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示。PC（幅 960px 以上）では画面タイトルの代わりにナビゲーションを表示
+- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）。モバイルのみ表示し、PC ではヘッダーのナビに置き換わる。項目は `nav-items.ts` を共有
 - **PublicKeyDisplay** - 公開鍵を短縮形式と npub 形式で表示、npub のクリップボードコピー
 - **ConsentDialog** - iframe モードの同意要求モーダル（[7. iframe ホストモード](#7-iframe-ホストモード)）
 
@@ -276,7 +277,9 @@ graph TD
 
 ### 6.2 画面状態と遷移
 
-通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、`FooterMenu` で切り替えます。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
+通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、モバイルでは `FooterMenu`、PC では `HeaderBar` のナビで切り替えます。
+
+PC（幅 960px 以上）では `settings` と `key` が 2 カラムになります。`settings` は左に目次のサイドパネル（追従表示）、右に設定カードを 1 列に並べ、目次を選ぶと該当セクションへスクロールし、スクロール位置に応じて目次のハイライトが追従します（モバイルでは目次を出しません）。`key` は `app.css` の `.screen-columns` / `.screen-column` でカードを左右に振り分け、モバイルでは列ラッパーを `display: contents` にして左列 → 右列の DOM 順で 1 列に並べます（表示順とフォーカス順を一致させるため、従来の縦並びになるよう列へ振り分けています）。`account` は大きな見出しとフォームを左寄せで縦に並べ、ロゴを右側に大きな透かしとして敷くタイポグラフィ主体の構成です（下線タブ・左寄せのピル型ボタン・控えめな一行の注意書き）。ログイン後は小さなアバターと大きな npub を左寄せで表示します。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
 
 ```mermaid
 graph LR
@@ -311,7 +314,7 @@ graph LR
 ### 8.2 UI / UX の設計
 
 - 通常 UI は 3 画面のシンプルなナビゲーション
-- フッターメニューによる直感的な画面切り替え
+- ナビゲーションによる直感的な画面切り替え（モバイルはフッター、PC はヘッダー）
 - テーマは CSS variables で管理し、ライト／ダーク／自動に対応
 
 ## 9. 開発・実行方法

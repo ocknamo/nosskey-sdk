@@ -28,24 +28,36 @@ function handleClick() {
 </button>
 
 <style>
+  /* 下線タブの 1 項目。アクティブはアクセント色の下線と濃い文字で示す。
+     親の下罫線（1px）に下線を重ねるため margin-bottom: -1px にしている。 */
   .btn {
-    padding: 8px 16px;
+    flex: 0 0 auto;
+    padding: 0 0 12px;
+    margin-bottom: -1px;
     background: none;
     border: none;
-    border-radius: 8px;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     cursor: pointer;
-    font-size: 14px;
-    color: var(--color-text);
+    font-size: 1rem;
+    color: var(--color-text-secondary);
     transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
+      color 0.2s ease,
+      border-color 0.2s ease;
     font-family: inherit;
-    font-weight: 400;
+    font-weight: 500;
   }
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-primary-alpha-20);
+  }
+
+  /* 文字や下線に密着しないよう、余白を取ったアウトラインでフォーカスを示す */
+  .btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+    /* 全体共通の button:focus-visible の淡い box-shadow を打ち消し、二重枠にしない */
+    box-shadow: none;
   }
 
   .btn:disabled {
@@ -55,12 +67,13 @@ function handleClick() {
 
   /* Tab Button */
   .btn-tab.active {
-    background-color: var(--color-primary);
-    color: var(--color-text-on-primary);
-    font-weight: bold;
+    color: var(--color-titles);
+    font-weight: 600;
+    border-bottom-color: var(--color-primary);
   }
 
   .btn-tab:hover:not(:disabled):not(.active) {
-    background-color: var(--color-surface-hover);
+    background: none;
+    color: var(--color-text);
   }
 </style>

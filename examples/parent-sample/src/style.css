@@ -207,7 +207,8 @@ body.parent-theme-dark {
 }
 
 body.parent-theme-dark .iframe-modal__card {
-  background: #111111;
+  /* svelte-app の purple-dark の --color-card と揃える */
+  background: #131318;
 }
 
 body.parent-theme-light .iframe-modal__card {

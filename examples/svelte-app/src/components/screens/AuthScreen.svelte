@@ -1,6 +1,7 @@
 <script lang="ts">
 import { hexToBytes } from 'nosskey-sdk';
 import NosskeyImage from '../../assets/nosskey.svg';
+import NosskeyImageDark from '../../assets/nosskey-dark.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { getNosskeyManager } from '../../services/nosskey-manager.service.js';
 import { initAccounts } from '../../store/accounts.js';
@@ -227,11 +228,19 @@ $effect(() => {
 
 <div class="auth-container">
   <div class="hero-section">
-    <img src={NosskeyImage} alt="Nosskey hero" width="80" height="80" />
+    <!-- 装飾の透かし（ロゴ名は見出しで読み上げられるので代替テキストは空）。
+         ライトはタイル付きの高コントラスト版、ダークはタイルなしの反転版を出し分ける。
+         モバイルでは画面の右端で見切れさせるため、はみ出しを切り取る専用レイヤーに入れる
+         （フォーム側を overflow で切るとフォーカスリング等まで欠けるため分離している）。 -->
+    <div class="watermark-layer" aria-hidden="true">
+      <img class="watermark watermark--light" src={NosskeyImage} alt="" width="80" height="80" />
+      <img class="watermark watermark--dark" src={NosskeyImageDark} alt="" width="80" height="80" />
+    </div>
     <h1 class="screen-title">{$i18n.t.auth.title}</h1>
     <p class="subtitle">{$i18n.t.auth.subtitle}</p>
   </div>
 
+  <div class="auth-main">
   {#if isLoading}
     <div class="loading-section">
       <div class="loading-spinner"></div>
@@ -242,14 +251,12 @@ $effect(() => {
       <TabButton
         active={activeTab === "login"}
         onclick={() => selectTab("login")}
-        className="auth-tab"
       >
         {$i18n.t.auth.tabLogin}
       </TabButton>
       <TabButton
         active={activeTab === "register"}
         onclick={() => selectTab("register")}
-        className="auth-tab"
       >
         {$i18n.t.auth.tabRegister}
       </TabButton>
@@ -305,7 +312,7 @@ $effect(() => {
           <div class="method-link-row">
             <button
               type="button"
-              class="method-link"
+              class="method-link method-link--forward"
               onclick={showImport}
               disabled={isLoading}
             >
@@ -359,60 +366,188 @@ $effect(() => {
       {errorMessage}
     </div>
   {/if}
+  </div>
 </div>
 
 <style>
+  /* タイポグラフィ主体のレイアウト: 大きな見出しとフォームを左寄せで縦に並べ、
+     ロゴは右側に大きな透かしとして置く。 */
   .auth-container {
-    max-width: 700px;
-    /* 親 .account-screen は flex column のため、cross-axis に auto margin を置くと
-       free space を吸収して shrink-to-fit になる。stretch に任せるため 0 にする。 */
+    position: relative;
+    /* 透かしロゴ（z-index: -1）をこの要素の背面・ページ背景の前面に収める */
+    isolation: isolate;
     margin: 0;
-    padding: 20px;
-    text-align: center;
-  }
-
-  @media (max-width: 600px) {
-    .auth-container {
-      padding: 12px 8px;
-    }
+    padding: 24px 0 0;
+    text-align: left;
   }
 
   .hero-section {
     margin-bottom: 32px;
   }
 
-  .hero-section img {
-    border-radius: 16px;
+  /* 透かしを収めるレイヤー。モバイルでは画面右端（.account-screen の左右 padding 20px 分外側）
+     まで広げ、そこからはみ出した部分を切り取って「見切れ」にする。top: -20px は同じく上 padding 分で、
+     レイヤーの上端をコンテンツ領域の上端（モバイルはヘッダーを出さないので画面の上端）に揃える。
+     ※ AccountScreen.svelte の .account-screen（padding 20px / max-width 700px）と値を合わせている。 */
+  .watermark-layer {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: -20px;
+    bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    z-index: -1;
+  }
+
+  /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。
+     モバイルは右側を約 2 割見切れさせ、ダチョウの足がタブの下線より上で止まる最大 300px に抑える。
+     タブレットは見切れなしで最大 400px、PC は本文に重ならない範囲で最大 440px。
+     ※ 足の位置（画像の高さの約 85%）は nosskey.svg / nosskey-dark.svg の描画範囲を実測した値。
+        アセットを差し替えたときは、モバイルの大きさとタブまでの余白を再確認すること。 */
+  .watermark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: clamp(250px, 74vw, 300px);
+    height: clamp(250px, 74vw, 300px);
+    border-radius: 22%;
+    transform: translateX(18%);
+    opacity: 0.12;
+  }
+
+  .watermark--dark {
+    display: none;
+    opacity: 0.14;
+  }
+
+  :global([data-color-scheme="dark"]) .watermark--light {
+    display: none;
+  }
+
+  :global([data-color-scheme="dark"]) .watermark--dark {
+    display: block;
   }
 
   .screen-title {
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin: 16px 0 8px 0;
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 24px 0 12px;
+    text-align: left;
     color: var(--color-text-primary);
   }
 
   .subtitle {
-    font-size: 1.1rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 0;
+    font-size: 1.15rem;
+    /* モバイル（700px 未満）では透かしロゴが背後に重なるため、本文色でコントラストを確保する。
+       タブレット幅も同じ色にそろえ、PC のみ副次色にする。 */
+    color: var(--color-text);
+    margin: 0;
     line-height: 1.5;
-    text-align: center;
+    text-align: left;
+  }
+
+  .auth-main {
+    max-width: 420px;
+  }
+
+  /* モバイル: キャッチコピーとタブの間を広めに取り、キャッチコピーは小さめにして透かしとの重なりを減らす。
+     （小数幅のビューポートでタブレット側との間にすき間ができないよう 699.98px で区切る） */
+  @media (max-width: 699.98px) {
+    /* モバイルではヘッダーを出さないため、その分ゆったりと上余白を取る。
+       ※ ヘッダーを隠す条件は App.svelte の hideHeaderOnMobile（未ログインのアカウント画面）。
+          AuthScreen をほかの場所で使う・条件を変えるときは、この余白も見直すこと。 */
+    .auth-container {
+      padding-top: 72px;
+    }
+
+    .hero-section {
+      margin-bottom: 68px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+    }
+
+    /* 透かしの上にも余白を取り、画面の上端に接しないようにする。
+       この値も「ダチョウの足がタブの下線より上で止まる」計算に含まれる（大きさ・上余白と合わせて調整）。 */
+    .watermark {
+      top: 24px;
+    }
+  }
+
+  /* タブレット幅では本文列（最大 700px）が中央寄せで画面端と一致しないため、見切れさせずに収める */
+  @media (min-width: 700px) and (max-width: 959px) {
+    .watermark-layer {
+      right: 0;
+      overflow: visible;
+    }
+
+    /* 存在感を優先して大きめ（約 320〜400px）にする。フォーム列の右端（入力欄・タブの下線）には
+       少し重なるが、入力欄は不透明な背景で覆われ文字のコントラストには影響しない。 */
+    .watermark {
+      width: min(46vw, 400px);
+      height: min(46vw, 400px);
+      transform: none;
+    }
+  }
+
+  @media (min-width: 960px) {
+    .auth-container {
+      padding: 48px 0 0;
+    }
+
+    .hero-section {
+      margin-bottom: 40px;
+    }
+
+    /* PC では見切れさせず、レイヤーは本文と同じ範囲に戻す */
+    .watermark-layer {
+      top: 0;
+      right: 0;
+      overflow: visible;
+    }
+
+    .watermark {
+      top: 32px;
+      right: 40px;
+      /* 960〜1120px では画面幅に合わせて縮め、左端を本文（見出し・入力欄）の右側に保つ */
+      width: clamp(260px, calc(100vw - 680px), 440px);
+      height: clamp(260px, calc(100vw - 680px), 440px);
+      transform: none;
+      opacity: 0.15;
+    }
+
+    .watermark--dark {
+      opacity: 0.18;
+    }
+
+    .screen-title {
+      font-size: 6rem;
+    }
+
+    .subtitle {
+      font-size: 1.6rem;
+      color: var(--color-text-secondary);
+    }
   }
 
   .loading-section {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
-    padding: 40px 20px;
+    padding: 40px 0;
   }
 
   .loading-spinner {
     width: 32px;
     height: 32px;
     border: 3px solid var(--color-border-light);
-    border-top: 3px solid var(--color-button-primary);
+    border-top: 3px solid var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -426,36 +561,76 @@ $effect(() => {
     }
   }
 
+  /* 下線タブ */
   .auth-tabs {
     display: flex;
-    gap: 4px;
-    padding: 4px;
-    background-color: var(--color-surface);
-    border: var(--border-width, 1px) solid var(--color-border);
-    border-radius: 10px;
-    margin: 0 auto 20px;
+    gap: 24px;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0 0 40px;
   }
 
-  .auth-tabs :global(.auth-tab) {
-    flex: 1;
-  }
-
+  /* 項目の間をたっぷり空け、ボタンは左寄せ・内容幅 */
   .tab-panel {
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 40px;
+    text-align: left;
+  }
+
+  /* 入力欄・注意カードは列の幅いっぱいに広げる */
+  .tab-panel > .username-input,
+  .tab-panel > .nsec-input,
+  .tab-panel > .no-key-notice {
+    align-self: stretch;
+  }
+
+  /* 主ボタンは左寄せのピル型（Button 側のサイズ指定より詳細度を上げて上書き） */
+  .tab-panel > :global(.btn.btn-large) {
+    width: auto;
+    max-width: none;
+    border-radius: 999px;
+    padding: 18px 48px;
   }
 
   .method-link-row {
-    margin-top: 16px;
-    text-align: center;
+    text-align: left;
+  }
+
+  /* 左端を他の項目と揃える */
+  .tab-panel > .method-link-row .method-link {
+    padding: 0;
+  }
+
+  /* 主ボタン直後の補助リンクは、ボタンとひとまとまりに見えるよう少し寄せる */
+  .tab-panel > .method-link-row {
+    margin-top: -16px;
+  }
+
+  .no-key-notice .method-link-row {
+    margin-top: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .auth-tabs {
+      margin-bottom: 32px;
+    }
+
+    .tab-panel {
+      gap: 32px;
+    }
+
+    .tab-panel > .method-link-row {
+      margin-top: -12px;
+    }
   }
 
   /* 鍵情報が見つからなかったときの注意カード。導出ログインは事故（別アカウント生成）を
      招きうるため、主ボタンより一段控えめな見た目にして意図的な操作にとどめる。 */
   .no-key-notice {
-    margin-top: 20px;
     padding: 16px;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--color-surface);
     text-align: left;
   }
@@ -490,6 +665,34 @@ $effect(() => {
     color: var(--color-text-primary);
   }
 
+  /* 文字に密着しないよう、余白を取った不透明なアウトラインでフォーカスを示す */
+  .method-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+    box-shadow: none;
+  }
+
+  /* 次の手順へ進むリンクは下線なしのアクセント色 + 矢印 */
+  .method-link--forward {
+    padding: 0;
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .method-link--forward::after {
+    /* 矢印は装飾なので読み上げない（代替テキスト構文の非対応ブラウザ向けに先に素の指定を置く） */
+    content: " →";
+    content: " →" / "";
+  }
+
+  .method-link--forward:hover:not(:disabled) {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   .method-link:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -499,7 +702,6 @@ $effect(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 0 0 20px 0;
     text-align: left;
   }
 
@@ -514,9 +716,9 @@ $effect(() => {
   }
 
   .nsec-input input {
-    padding: 12px;
-    border-radius: 6px;
-    border: 2px solid var(--color-border-medium);
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     transition: border-color 0.2s ease;
@@ -524,14 +726,14 @@ $effect(() => {
 
   .nsec-input input:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   .username-input {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 0 0 20px 0;
     text-align: left;
   }
 
@@ -546,24 +748,25 @@ $effect(() => {
   }
 
   .username-input input {
-    padding: 12px;
-    border-radius: 6px;
-    border: 2px solid var(--color-border-medium);
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     transition: border-color 0.2s ease;
   }
 
   .username-input input:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 
   .error-message {
     padding: 12px 16px;
     background-color: var(--color-error-bg);
     color: var(--color-error);
-    border: 1px solid var(--color-error);
-    border-radius: 6px;
+    border: 1px solid var(--color-error-border);
+    border-radius: 12px;
     margin: 12px 0;
     font-size: 0.9rem;
     text-align: left;
@@ -573,18 +776,11 @@ $effect(() => {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 24px 0;
-    text-align: center;
-    justify-content: center;
+    margin: 32px 0 0;
   }
 
   .error-icon {
     font-size: 1.1rem;
   }
 
-  @media (max-width: 480px) {
-    .screen-title {
-      font-size: 1.8rem;
-    }
-  }
 </style>

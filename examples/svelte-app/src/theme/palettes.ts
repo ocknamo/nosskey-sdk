@@ -5,7 +5,7 @@
 // - `ThemeMode` はユーザーが選択・永続化する値（4 カラーテーマ + `auto`）。
 // - `ResolvedTheme` は実際に適用される 4 テーマ。`auto` は OS の prefers-color-scheme で
 //   パープル系（既定ファミリ）の dark/light に解決される。
-// - ニュートラル系は dark/light をベースにアクセント（primary 系）のみグレー無彩色へ置換。
+// - ニュートラル系は dark/light をベースにアクセント（primary 系）と面の色味をグレー無彩色へ置換。
 //   status 色（success/warning/error/info）は意味色のため据え置く。
 
 export type ThemeMode = 'purple-dark' | 'purple-light' | 'neutral-dark' | 'neutral-light' | 'auto';
@@ -18,89 +18,91 @@ const SYSTEM_FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif';
 const ROUNDED_FONT_STACK = `"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", ${SYSTEM_FONT_STACK}`;
 
-// パープルダーク（旧 'dark'）。現行ダークテーマの値をそのまま移植（見た目不変）。
+// パープルダーク（旧 'dark'）。わずかに紫みを帯びたダークグレーを基調に、
+// アクセントは明るめのバイオレット、塗りボタンは白文字のコントラストを確保した濃いめのバイオレット。
 const PURPLE_DARK: Record<string, string> = {
-  '--color-text': '#FFFFFF',
-  '--color-titles': '#FFFFFF',
-  '--color-primary': '#9E7EF9',
-  '--color-secondary': '#383838',
-  '--color-tertiary': '#2a2a2a',
-  '--color-border': '#222222',
-  '--color-card': '#111111',
-  '--color-background': '#000000',
-  '--color-text-secondary': '#AAAAAA',
+  '--color-text': '#E9E9F0',
+  '--color-titles': '#FAFAFC',
+  '--color-primary': '#A78BFA',
+  '--color-secondary': '#C4B5FD',
+  '--color-tertiary': '#22222B',
+  '--color-border': '#26262F',
+  '--color-card': '#131318',
+  '--color-background': '#0A0A0D',
+  '--color-text-secondary': '#A1A1AE',
   '--color-text-on-primary': '#FFFFFF',
 
   // 状態色（ダーク）
-  '--color-success': '#52c41a',
-  '--color-warning': '#faad14',
-  '--color-error': '#ff4d4f',
-  '--color-info': '#40a9ff',
+  '--color-success': '#4ADE80',
+  '--color-warning': '#FBBF24',
+  '--color-error': '#F87171',
+  '--color-info': '#60A5FA',
 
   // 背景色バリエーション（ダーク）
-  '--color-surface': '#1a1a1a',
-  '--color-overlay': '#2a2a2a',
-  '--color-surface-alt': '#333333',
-  '--color-surface-light': '#444444',
+  '--color-surface': '#18181F',
+  '--color-overlay': '#1F1F27',
 
   // テキスト色バリエーション（ダーク）
-  '--color-text-primary': '#FFFFFF',
-  '--color-text-disabled': '#666666',
-  '--color-text-muted': '#AAAAAA',
-  '--color-text-inverse': '#000000',
-  '--color-text-dark': '#CCCCCC',
+  '--color-text-primary': '#FAFAFC',
+  '--color-text-disabled': '#5F5F6B',
+  '--color-text-muted': '#9A9AA8',
+  '--color-text-dark': '#D4D4DE',
 
   // ボーダー色バリエーション（ダーク）
-  '--color-border-strong': '#444444',
-  '--color-border-light': '#333333',
-  '--color-border-medium': '#555555',
+  '--color-border-strong': '#3A3A46',
+  '--color-border-light': '#2A2A33',
+  '--color-border-medium': '#4A4A55',
 
   // ボタン色（ダーク）
-  '--color-button-primary': '#9E7EF9',
-  '--color-button-secondary': '#555555',
-  '--color-button-success': '#52c41a',
-  '--color-button-warning': '#faad14',
-  '--color-button-danger': '#ff4d4f',
-  '--color-button-info': '#40a9ff',
+  // 白文字とのコントラスト比 4.5 以上を確保する濃さ（#7C3AED は 5.7:1）。
+  '--color-button-primary': '#7C3AED',
+  '--color-button-secondary': '#24242D',
+  '--color-button-success': '#15803D',
+  '--color-button-warning': '#FBBF24',
+  '--color-button-danger': '#DC2626',
+  '--color-button-info': '#3B82F6',
+  // 塗りボタン（primary 以外の面ボタン）の文字色。
+  '--color-button-secondary-text': '#E9E9F0',
+  // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
+  '--color-primary-glow': 'rgba(124, 58, 237, 0.18)',
 
   // ボタンホバー色（ダーク）
-  '--color-button-primary-hover': '#b794f6',
-  '--color-button-secondary-hover': '#666666',
-  '--color-button-success-hover': '#73d13d',
-  '--color-button-warning-hover': '#ffc53d',
-  '--color-button-danger-hover': '#ff7875',
-  '--color-button-info-hover': '#69c0ff',
+  '--color-button-primary-hover': '#6D28D9',
+  '--color-button-secondary-hover': '#2E2E39',
+  '--color-button-success-hover': '#166534',
+  '--color-button-danger-hover': '#B91C1C',
+  '--color-button-info-hover': '#60A5FA',
 
   // ボタン無効化色（ダーク）
-  '--color-button-disabled': '#434343',
-  '--color-button-danger-disabled': '#5a2d2d',
+  '--color-button-disabled': '#2A2A33',
+  '--color-button-danger-disabled': '#4A2328',
 
   // 透明度付き色（ダーク）
-  '--color-primary-alpha-20': 'rgba(158, 126, 249, 0.2)',
-  '--color-primary-alpha-08': 'rgba(158, 126, 249, 0.08)',
-  '--color-shadow': 'rgba(255, 255, 255, 0.1)',
-  '--color-shadow-strong': 'rgba(255, 255, 255, 0.15)',
+  '--color-primary-alpha-20': 'rgba(167, 139, 250, 0.2)',
+  '--color-primary-alpha-08': 'rgba(167, 139, 250, 0.08)',
+  '--color-shadow': 'rgba(0, 0, 0, 0.35)',
+  '--color-shadow-strong': 'rgba(0, 0, 0, 0.55)',
 
   // 特殊背景色（ダーク）
-  '--color-success-bg': '#162312',
-  '--color-warning-bg': '#2b2111',
-  '--color-error-bg': '#2a1215',
-  '--color-info-bg': '#111b26',
-  '--color-surface-hover': '#333333',
+  '--color-success-bg': 'rgba(74, 222, 128, 0.1)',
+  '--color-warning-bg': 'rgba(251, 191, 36, 0.1)',
+  '--color-error-bg': 'rgba(248, 113, 113, 0.1)',
+  '--color-info-bg': 'rgba(96, 165, 250, 0.1)',
+  '--color-surface-hover': '#24242D',
 
   // ボーダー特殊色（ダーク）
-  '--color-success-border': '#52c41a',
-  '--color-warning-border': '#faad14',
-  '--color-error-border': '#ff4d4f',
-  '--color-info-border': '#40a9ff',
+  '--color-success-border': 'rgba(74, 222, 128, 0.35)',
+  '--color-warning-border': 'rgba(251, 191, 36, 0.35)',
+  '--color-error-border': 'rgba(248, 113, 113, 0.35)',
+  '--color-info-border': 'rgba(96, 165, 250, 0.35)',
 
   // アイコンフィルター（ダーク）
   '--icon-filter': 'invert(1) brightness(1)',
 
   // primary 色へ着色する SVG アイコン用フィルター（アクティブな nav アイコン等）。
-  // 黒 SVG をパープルアクセント (#9E7EF9 相当) へ変換する。
+  // 黒 SVG をパープルアクセント (#A78BFA 相当) へ変換する。
   '--icon-filter-primary':
-    'brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%) hue-rotate(225deg) brightness(94%) contrast(89%)',
+    'brightness(0) saturate(100%) invert(62%) sepia(48%) saturate(2400%) hue-rotate(218deg) brightness(101%) contrast(96%)',
 
   // ボーダー幅（ダーク）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
   '--border-width': '1px',
@@ -113,89 +115,89 @@ const PURPLE_DARK: Record<string, string> = {
     'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.3) 100%)',
 };
 
-// パープルライト（旧 'light'）。現行ライトテーマ (Purple Breeze) の値をそのまま移植（見た目不変）。
+// パープルライト（旧 'light'）。ごく淡いラベンダーグレーの背景に白カード、バイオレットのアクセント。
 const PURPLE_LIGHT: Record<string, string> = {
-  '--color-text': '#535465',
-  '--color-titles': '#11142D',
-  '--color-primary': '#6C5DD3',
-  '--color-secondary': '#1B1D21',
-  '--color-tertiary': '#B8DCE9',
-  '--color-border': '#E4E4E4',
+  '--color-text': '#3F3F4E',
+  '--color-titles': '#14141F',
+  '--color-primary': '#6E56CF',
+  '--color-secondary': '#4C3BA8',
+  '--color-tertiary': '#F5F3FF',
+  '--color-border': '#E6E6EE',
   '--color-card': '#FFFFFF',
-  '--color-background': '#F6F6F8',
-  '--color-text-secondary': '#7A7A85',
+  '--color-background': '#F5F5F9',
+  '--color-text-secondary': '#6B6B7B',
   '--color-text-on-primary': '#FFFFFF',
 
   // 状態色（ライト）
-  '--color-success': '#28a745',
-  '--color-warning': '#ffc107',
-  '--color-error': '#dc3545',
-  '--color-info': '#1890ff',
+  '--color-success': '#15803D',
+  '--color-warning': '#B45309',
+  '--color-error': '#DC2626',
+  '--color-info': '#2563EB',
 
   // 背景色バリエーション（ライト）
-  '--color-surface': '#f8f9fa',
-  '--color-overlay': '#f9f9f9',
-  '--color-surface-alt': '#f5f5f5',
-  '--color-surface-light': '#fafafa',
+  '--color-surface': '#F7F7FA',
+  '--color-overlay': '#F3F3F7',
 
   // テキスト色バリエーション（ライト）
-  '--color-text-primary': '#535465',
-  '--color-text-disabled': '#999999',
-  '--color-text-muted': '#666666',
-  '--color-text-inverse': '#ffffff',
-  '--color-text-dark': '#333333',
+  '--color-text-primary': '#14141F',
+  '--color-text-disabled': '#A1A1AE',
+  '--color-text-muted': '#6B6B7B',
+  '--color-text-dark': '#2B2B36',
 
   // ボーダー色バリエーション（ライト）
-  '--color-border-strong': '#dddddd',
-  '--color-border-light': '#eeeeee',
-  '--color-border-medium': '#cccccc',
+  '--color-border-strong': '#D6D6E0',
+  '--color-border-light': '#ECECF2',
+  '--color-border-medium': '#D6D6E0',
 
   // ボタン色（ライト）
-  '--color-button-primary': '#5755d9',
-  '--color-button-secondary': '#6c757d',
-  '--color-button-success': '#52c41a',
-  '--color-button-warning': '#ff9800',
-  '--color-button-danger': '#dc3545',
-  '--color-button-info': '#1890ff',
+  '--color-button-primary': '#6E56CF',
+  '--color-button-secondary': '#EEEEF3',
+  '--color-button-success': '#15803D',
+  '--color-button-warning': '#D97706',
+  '--color-button-danger': '#DC2626',
+  '--color-button-info': '#2563EB',
+  // 塗りボタン（primary 以外の面ボタン）の文字色。
+  '--color-button-secondary-text': '#2B2B36',
+  // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
+  '--color-primary-glow': 'rgba(110, 86, 207, 0.16)',
 
   // ボタンホバー色（ライト）
-  '--color-button-primary-hover': '#4240b3',
-  '--color-button-secondary-hover': '#5a6268',
-  '--color-button-success-hover': '#449516',
-  '--color-button-warning-hover': '#e68900',
-  '--color-button-danger-hover': '#c82333',
-  '--color-button-info-hover': '#0d7adb',
+  '--color-button-primary-hover': '#5B46B8',
+  '--color-button-secondary-hover': '#E4E4EB',
+  '--color-button-success-hover': '#166534',
+  '--color-button-danger-hover': '#B91C1C',
+  '--color-button-info-hover': '#1D4ED8',
 
   // ボタン無効化色（ライト）
-  '--color-button-disabled': '#cccccc',
-  '--color-button-danger-disabled': '#e9acb1',
+  '--color-button-disabled': '#D6D6E0',
+  '--color-button-danger-disabled': '#F3B4B4',
 
   // 透明度付き色（ライト）
-  '--color-primary-alpha-20': 'rgba(108, 93, 211, 0.2)',
-  '--color-primary-alpha-08': 'rgba(108, 93, 211, 0.08)',
-  '--color-shadow': 'rgba(0, 0, 0, 0.1)',
-  '--color-shadow-strong': 'rgba(0, 0, 0, 0.15)',
+  '--color-primary-alpha-20': 'rgba(110, 86, 207, 0.18)',
+  '--color-primary-alpha-08': 'rgba(110, 86, 207, 0.07)',
+  '--color-shadow': 'rgba(20, 20, 40, 0.06)',
+  '--color-shadow-strong': 'rgba(20, 20, 40, 0.14)',
 
   // 特殊背景色（ライト）
-  '--color-success-bg': '#e6ffed',
-  '--color-warning-bg': '#fff3cd',
-  '--color-error-bg': '#ffdddd',
-  '--color-info-bg': '#e6f7ff',
-  '--color-surface-hover': '#eeeeee',
+  '--color-success-bg': '#ECFDF3',
+  '--color-warning-bg': '#FFF8EB',
+  '--color-error-bg': '#FEF2F2',
+  '--color-info-bg': '#EFF6FF',
+  '--color-surface-hover': '#EFEFF4',
 
   // ボーダー特殊色（ライト）
-  '--color-success-border': '#52c41a',
-  '--color-warning-border': '#ffc107',
-  '--color-error-border': '#dc3545',
-  '--color-info-border': '#1890ff',
+  '--color-success-border': '#A7E3BD',
+  '--color-warning-border': '#F8D8A0',
+  '--color-error-border': '#F5B5B5',
+  '--color-info-border': '#BCD4FB',
 
   // アイコンフィルター（ライト）
   '--icon-filter': 'none',
 
   // primary 色へ着色する SVG アイコン用フィルター（アクティブな nav アイコン等）。
-  // パープル系はライト/ダークで同一フィルターを共有する。
+  // 黒 SVG をパープルアクセント (#6E56CF 相当) へ変換する。
   '--icon-filter-primary':
-    'brightness(0) saturate(100%) invert(44%) sepia(74%) saturate(647%) hue-rotate(225deg) brightness(94%) contrast(89%)',
+    'brightness(0) saturate(100%) invert(36%) sepia(62%) saturate(1900%) hue-rotate(236deg) brightness(88%) contrast(90%)',
 
   // ボーダー幅（ライト）。カード・フレーム類で使う。ニュートラル系はこれを太くして差別化する。
   '--border-width': '1px',
@@ -208,15 +210,34 @@ const PURPLE_LIGHT: Record<string, string> = {
     'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%)',
 };
 
-// ニュートラルダーク。パープルダークをベースに primary 系アクセントをグレー無彩色へ置換。
+// ニュートラルダーク。パープルダークをベースに primary 系アクセントと面の色味をグレー無彩色へ置換。
 const NEUTRAL_DARK: Record<string, string> = {
   ...PURPLE_DARK,
   '--color-primary': '#A0A0A8',
+  '--color-secondary': '#C4C4CC',
   '--color-button-primary': '#A0A0A8',
   '--color-button-primary-hover': '#C4C4CC',
+  '--color-primary-glow': 'transparent',
   '--color-text-on-primary': '#000000',
+  // 塗りボタンの文字が黒（text-on-primary）なので、黒文字で読める明るさの塗りにする。
+  '--color-button-success': '#16A34A',
+  '--color-button-success-hover': '#22C55E',
+  '--color-button-danger': '#E5484D',
+  '--color-button-danger-hover': '#EF6B6E',
   '--color-primary-alpha-20': 'rgba(160, 160, 168, 0.2)',
   '--color-primary-alpha-08': 'rgba(160, 160, 168, 0.08)',
+  // 面はパープル系の紫みを抜いた純グレーにする。
+  '--color-background': '#0A0A0A',
+  '--color-card': '#141414',
+  '--color-tertiary': '#222222',
+  '--color-overlay': '#1F1F1F',
+  '--color-surface': '#1A1A1A',
+  '--color-surface-hover': '#262626',
+  '--color-border-strong': '#3A3A3A',
+  '--color-border-light': '#2A2A2A',
+  '--color-border-medium': '#4A4A4A',
+  '--color-button-secondary': '#262626',
+  '--color-button-secondary-hover': '#303030',
   // 黒 SVG を明るいグレー (#A0A0A8 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(70%)',
   // 差別化: 太いボーダー + 影なし + 丸ゴシック。太線が見えるようカード枠の border 色も強める。
@@ -227,14 +248,27 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--font-family': ROUNDED_FONT_STACK,
 };
 
-// ニュートラルライト。パープルライトをベースに primary 系アクセントをグレー無彩色へ置換。
+// ニュートラルライト。パープルライトをベースに primary 系アクセントと面の色味をグレー無彩色へ置換。
 const NEUTRAL_LIGHT: Record<string, string> = {
   ...PURPLE_LIGHT,
   '--color-primary': '#5A5A66',
+  '--color-secondary': '#42424D',
+  '--color-tertiary': '#F2F2F4',
   '--color-button-primary': '#5A5A66',
   '--color-button-primary-hover': '#42424D',
+  '--color-primary-glow': 'transparent',
   '--color-primary-alpha-20': 'rgba(90, 90, 102, 0.2)',
   '--color-primary-alpha-08': 'rgba(90, 90, 102, 0.08)',
+  // 面はパープル系の紫みを抜いた純グレーにする。
+  '--color-background': '#F5F5F5',
+  '--color-surface': '#F7F7F7',
+  '--color-overlay': '#F3F3F3',
+  '--color-surface-hover': '#EEEEEE',
+  '--color-border-strong': '#D6D6D6',
+  '--color-border-light': '#ECECEC',
+  '--color-border-medium': '#D6D6D6',
+  '--color-button-secondary': '#EEEEEE',
+  '--color-button-secondary-hover': '#E4E4E4',
   // 黒 SVG を濃いグレー (#5A5A66 相当) へ着色（hue なし、明度のみ）。
   '--icon-filter-primary': 'brightness(0) saturate(100%) invert(38%)',
   // 差別化: 太いボーダー + 影なし + 丸ゴシック。太線が見えるようカード枠の border 色も強める。
@@ -287,4 +321,12 @@ export function resolveTheme(mode: ThemeMode, prefersDark: boolean): ResolvedThe
     return prefersDark ? 'purple-dark' : 'purple-light';
   }
   return mode;
+}
+
+/**
+ * 解決済みテーマが暗色系か。ロゴのようにテーマで画像そのものを差し替えたい箇所向けに、
+ * `App.svelte` が `<html data-color-scheme="dark|light">` を設定するのに使う。
+ */
+export function isDarkTheme(resolved: ResolvedTheme): boolean {
+  return resolved === 'purple-dark' || resolved === 'neutral-dark';
 }

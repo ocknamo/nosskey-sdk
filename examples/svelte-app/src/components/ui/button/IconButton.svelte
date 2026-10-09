@@ -28,10 +28,10 @@ function handleClick() {
 <style>
   .btn {
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-family: inherit;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -42,7 +42,11 @@ function handleClick() {
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-primary-alpha-20);
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary);
   }
 
   .btn:disabled {
@@ -52,17 +56,17 @@ function handleClick() {
 
   /* Icon Button */
   .btn-icon {
-    padding: 4px;
+    padding: 6px;
     color: var(--color-text);
     background-color: transparent;
   }
 
   .btn-icon:hover:not(:disabled) {
-    background-color: var(--color-border-light);
+    background-color: var(--color-surface-hover);
   }
 
   .btn-icon:active:not(:disabled) {
-    background-color: var(--color-border-medium);
+    background-color: var(--color-border-strong);
   }
 
   .btn-icon:disabled {

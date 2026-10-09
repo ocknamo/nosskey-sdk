@@ -226,6 +226,8 @@ export const en: TranslationData = {
     account: 'Account',
     key: 'Key',
     settings: 'Settings',
+    mainNav: 'Main navigation',
+    settingsToc: 'Settings sections',
   },
   consent: {
     title: 'Signing request',

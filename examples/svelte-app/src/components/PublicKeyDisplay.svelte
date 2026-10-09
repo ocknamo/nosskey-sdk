@@ -87,22 +87,30 @@ function copyNpubToClipboard() {
 </div>
 
 <style>
+  /* カードで囲まず、小さなアバターと大きな npub を左寄せで見せる */
   .pubkey-container {
-    background-color: var(--color-surface-alt);
-    padding: 24px 15px;
-    border-radius: 5px;
-    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
     gap: 6px;
   }
 
+  .pubkey-container :global(.avatar) {
+    width: 72px;
+    height: 72px;
+  }
+
+  .pubkey-container :global(.avatar-fallback) {
+    font-size: 1.5rem;
+  }
+
   .display-name {
-    margin: 10px 0 0;
-    font-size: 1.3rem;
-    font-weight: 700;
+    margin: 16px 0 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-align: left;
     word-break: break-word;
   }
 
@@ -116,9 +124,9 @@ function copyNpubToClipboard() {
   .npub-section {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 20px;
     max-width: 100%;
   }
 
@@ -126,11 +134,14 @@ function copyNpubToClipboard() {
     display: flex;
     align-items: center;
     gap: 8px;
+    max-width: 100%;
   }
 
   .npub {
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    /* 320px 幅でも短縮 npub が 1 行に収まるよう、狭い画面では縮める */
+    font-size: clamp(1rem, 5.6vw, 1.3rem);
+    color: var(--color-titles);
     margin: 0;
     word-break: break-all;
   }
@@ -143,6 +154,17 @@ function copyNpubToClipboard() {
 
   h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-secondary);
+  }
+
+  @media (min-width: 960px) {
+    .npub {
+      font-size: 2.6rem;
+      letter-spacing: -0.02em;
+    }
   }
 </style>

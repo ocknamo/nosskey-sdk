@@ -174,7 +174,7 @@ async function loginWithKeyInfoData(keyInfoJsonText: string) {
     height: 120px;
     padding: 12px;
     border: 2px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: 8px;
     font-family: ui-monospace, "Courier New", monospace;
     font-size: 0.85rem;
     resize: vertical;
@@ -184,7 +184,7 @@ async function loginWithKeyInfoData(keyInfoJsonText: string) {
 
   .key-info-textarea:focus {
     outline: none;
-    border-color: var(--color-button-primary);
+    border-color: var(--color-primary);
   }
 
   .error-message {

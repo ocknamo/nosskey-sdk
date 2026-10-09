@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isDarkTheme,
   normalizeThemeMode,
   type ResolvedTheme,
   resolveTheme,
@@ -29,6 +30,15 @@ describe('normalizeThemeMode', () => {
     expect(normalizeThemeMode('')).toBeNull();
     expect(normalizeThemeMode('blue')).toBeNull();
     expect(normalizeThemeMode('PURPLE-DARK')).toBeNull();
+  });
+});
+
+describe('isDarkTheme', () => {
+  it('treats only the dark variants as dark', () => {
+    expect(isDarkTheme('purple-dark')).toBe(true);
+    expect(isDarkTheme('neutral-dark')).toBe(true);
+    expect(isDarkTheme('purple-light')).toBe(false);
+    expect(isDarkTheme('neutral-light')).toBe(false);
   });
 });
 

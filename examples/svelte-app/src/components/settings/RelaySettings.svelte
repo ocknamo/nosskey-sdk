@@ -107,7 +107,7 @@ function relayEntries(map: RelayMap): Array<[string, { read: boolean; write: boo
       placeholder={$i18n.t.settings.relays.addPlaceholder}
       bind:value={newRelayUrl}
     />
-    <Button variant="primary" onclick={addRelay}>
+    <Button variant="primary" fullWidth={false} onclick={addRelay}>
       {$i18n.t.settings.relays.addButton}
     </Button>
   </div>

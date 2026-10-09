@@ -33,7 +33,7 @@ function handleClick() {
 <style>
   .btn {
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     font-family: inherit;
     font-weight: 500;
     cursor: pointer;
@@ -50,7 +50,11 @@ function handleClick() {
 
   .btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary);
   }
 
   .btn:disabled {
@@ -60,13 +64,14 @@ function handleClick() {
 
   /* Toggle Button */
   .btn-toggle {
-    background-color: var(--color-surface-hover);
+    background-color: var(--color-surface);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid var(--color-border);
   }
 
   .btn-toggle:hover:not(:disabled) {
-    background-color: var(--color-surface-light);
+    background-color: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 
   .btn-toggle.small {
@@ -86,7 +91,7 @@ function handleClick() {
   .btn-small {
     padding: 12px;
     font-size: 0.9rem;
-    border-radius: 6px;
+    border-radius: 10px;
   }
 
   .btn-medium {
