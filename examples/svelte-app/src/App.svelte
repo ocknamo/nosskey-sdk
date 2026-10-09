@@ -15,7 +15,7 @@ import {
   type ThemeMode,
 } from './store/app-state.js';
 import { isDarkTheme, resolveTheme, THEME_PALETTES } from './theme/palettes.js';
-import { buildHashForScreen, screenNameFromHash } from './utils/app-navigation.js';
+import { screenNameFromHash } from './utils/app-navigation.js';
 
 let screen = $state('account');
 
@@ -80,9 +80,8 @@ function updateHash(value: string) {
     savedScrollPositions.set(previousScreen, getScrollY());
   }
 
-  // URLハッシュの変更によるループを防ぐ。ハッシュ内クエリ（?debug=1 など）は
-  // buildHashForScreen が引き継ぐので、書き戻しで消えることはない。
-  const nextHash = buildHashForScreen(window.location.hash, value);
+  // URLハッシュの変更によるループを防ぐ。
+  const nextHash = `#/${value}`;
   if (window.location.hash !== nextHash) {
     window.location.hash = nextHash;
   }

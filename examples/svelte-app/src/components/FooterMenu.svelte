@@ -54,13 +54,6 @@ function navigateTo(target: ScreenName) {
       border-color 0.3s ease;
   }
 
-  /* 計測モード (?debug=1): console-daijin のパネルが画面下部に固定され、
-     body の padding-bottom は fixed 要素を動かさないため、そのままだと
-     フッターナビがパネルの下敷きになりタップできない。パネル分持ち上げる。 */
-  :global(body.nosskey-debug-console) .footer-menu {
-    bottom: var(--nosskey-debug-panel-height, 0px);
-  }
-
   /* PC ではナビをヘッダー（HeaderBar）へ移すため、フッターは出さない。 */
   @media (min-width: 960px) {
     .footer-menu {

@@ -1,11 +1,5 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
-import {
-  debugLog,
-  describeError,
-  isDebugEnabled,
-  logStorageDiagnostics,
-} from '../../debug/debug-console.js';
 import { i18n } from '../../i18n/i18n-store.js';
 import { isEmbeddedIframeMode, pendingConsent, startIframeHost } from '../../iframe-mode.js';
 import { getCookieStorage, getNosskeyManager } from '../../services/nosskey-manager.service.js';
@@ -50,10 +44,6 @@ let detectionSettledOnce = false;
  * 回復待ちには入らない。
  */
 let recoveryWaiters: Array<(recovered: boolean) => void> = [];
-// 調査用。`?debug=1` のときだけ true。パネルを見せるために iframe を自動表示し、
-// 判定の分岐をログに出す。起動時に解決済みの値を使う（location を読み直すと
-// `updateHash` の書き戻し後のハッシュを読んでしまう）。
-const debugMode = isDebugEnabled();
 let uiState: UiState = $state('running');
 let errorMessage = $state('');
 let working = $state(false);
@@ -89,7 +79,13 @@ async function runDetectionOnce(): Promise<void> {
   try {
     await runInitialDetection();
   } catch (err) {
-    console.error('[nosskey] storage access detection failed', describeError(err));
+    // 例外オブジェクトを丸ごと console へ出さない。console のログは不具合報告で
+    // 全文が共有されるため、メッセージに値が載る実装（bech32 など）が将来この経路を
+    // 通ると秘密値の持ち出しになる。docs/todo.md の棚卸し項目と方針を揃える。
+    console.error(
+      '[nosskey] storage access detection failed',
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    );
     // 再判定の失敗で確定済みの状態を `denied` に格下げしない。`partitioned` は
     // 「許可すれば読める」でカードに導線があるのに対し、`denied` はエラー表示に
     // なる。タブ復帰のたびに走る再判定が一度でもコケると、以後ずっとエラー表示の
@@ -97,8 +93,6 @@ async function runDetectionOnce(): Promise<void> {
     if (firstRun) {
       uiState = 'denied';
       errorMessage = err instanceof Error ? err.message : String(err);
-    } else {
-      debugLog('SAA: recheck failed; keeping the settled state', { uiState });
     }
   }
   detectionSettledOnce = true;
@@ -110,20 +104,13 @@ async function runDetectionOnce(): Promise<void> {
 
 async function runInitialDetection(): Promise<void> {
   const manager = getNosskeyManager();
-  logStorageDiagnostics('iframe: detectInitialState enter');
   if (typeof document.requestStorageAccess !== 'function') {
     // No Storage Access API: partitioned localStorage is all we can see.
-    // debugLog の引数は計測が無効でも評価されるので、副作用のある `hasKeyInfo()` を
-    // ここには置かない。この分岐は applyStorageGrant へ到達せず後続ログも無いため、
-    // 確定した uiState をここで明示的に出す。
-    debugLog('SAA: requestStorageAccess is not a function');
     if (manager.hasKeyInfo()) {
       uiState = 'running';
-      debugLog('SAA: no API; using partitioned key info (uiState=running)');
       return;
     }
     uiState = 'unsupported';
-    debugLog('SAA: no API and no key info (uiState=unsupported)');
     return;
   }
   // Try silently first: browsers that remember a prior grant for this
@@ -136,9 +123,7 @@ async function runInitialDetection(): Promise<void> {
   let handle: StorageAccessHandle | null;
   try {
     handle = await callRequestStorageAccess();
-    debugLog('SAA: silent grant resolved', { handle: handle === null ? 'null' : 'handle' });
   } catch (err) {
-    debugLog('SAA: silent grant rejected', describeError(err));
     if (err instanceof DOMException && err.name === 'NotAllowedError') {
       // No silent grant. Fall back to partitioned key info if available so the
       // user can still sign with their cached key; first-party data (relays,
@@ -182,12 +167,8 @@ async function waitForKeyRecovery(): Promise<boolean> {
   await initialDetection;
   const decision = decideKeyRecovery(getNosskeyManager().hasKeyInfo(), uiState);
   if (decision === 'available') return true;
-  if (decision === 'unrecoverable') {
-    debugLog('recovery: no key to recover', { uiState });
-    return false;
-  }
+  if (decision === 'unrecoverable') return false;
   // iframe の可視化は host が `onKeyUnavailable` を呼ぶ前に済ませている。
-  debugLog('recovery: waiting for the user to grant storage access', { uiState });
   return new Promise<boolean>((resolve) => {
     recoveryWaiters.push(resolve);
   });
@@ -212,18 +193,12 @@ async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
   }
   try {
     const result = await fn.call(document, { all: true });
-    debugLog('SAA: requestStorageAccess({all:true}) returned', {
-      type: typeof result,
-      keys: result && typeof result === 'object' ? Object.keys(result) : null,
-      isHandle: isStorageAccessHandle(result),
-    });
     return isStorageAccessHandle(result) ? result : null;
   } catch (err) {
     // Older implementations reject the `{ all: true }` argument with a
     // TypeError. Fall back to the zero-arg form which at least grants cookie
     // access; Firefox's zero-arg form also unpartitions localStorage.
     if (err instanceof TypeError) {
-      debugLog('SAA: {all:true} rejected with TypeError; retrying zero-arg form');
       await fn.call(document);
       return null;
     }
@@ -233,10 +208,6 @@ async function callRequestStorageAccess(): Promise<StorageAccessHandle | null> {
 
 function applyStorageGrant(handle: StorageAccessHandle | null): void {
   const manager = getNosskeyManager();
-  debugLog('SAA: applyStorageGrant', {
-    branch: handle ? 'handle' : isLikelyWebKit() ? 'webkit-cookie' : 'none',
-    userAgent: navigator.userAgent,
-  });
   if (handle) {
     // Chrome: window.localStorage remains partitioned after the grant —
     // only handle.localStorage points at unpartitioned storage. Thread it
@@ -265,7 +236,6 @@ function applyStorageGrant(handle: StorageAccessHandle | null): void {
   } else {
     uiState = 'noKeyExists';
   }
-  logStorageDiagnostics(`iframe: applyStorageGrant done (uiState=${uiState})`);
   // グラントの成否に関わらず、ここが保留中リクエストの答えになる。鍵が無いまま
   // （`noKeyExists`）でも決着させること。放置すると「待たない」はずの状態で待ち
   // 続け、親がタイムアウトするまで iframe が出たままになる。
@@ -279,22 +249,11 @@ async function requestAccess(): Promise<void> {
     const handle = await callRequestStorageAccess();
     applyStorageGrant(handle);
   } catch (err) {
-    debugLog('SAA: manual grant rejected', describeError(err));
     uiState = 'denied';
     errorMessage = err instanceof Error ? err.message : String(err);
   } finally {
     working = false;
   }
-}
-
-/**
- * フォーカスの出入りを記録する。WebKit は `credentials.get()` を
- * 「ドキュメントがフォーカスされていること」で門前払いする（`The document is not
- * focused.`）ため、署名の直前に iframe がフォーカスを持てていたかが決定的になる。
- * 計測モードでのみ記録する。
- */
-function logFocus(event: Event): void {
-  debugLog(`focus: ${event.type}`, { hasFocus: document.hasFocus() });
 }
 
 function handleClose(): void {
@@ -323,11 +282,7 @@ function handleClose(): void {
 // する前に、まずその 2 点だけのために `noopener` を外す価値があるかを
 // 検討すること。
 function openSetup(): void {
-  window.open(
-    buildScreenUrl(window.location, 'account', { debug: debugMode }),
-    '_blank',
-    'noopener'
-  );
+  window.open(buildScreenUrl(window.location, 'account'), '_blank', 'noopener');
 }
 
 // Re-run the SAA / hasKeyInfo gate when the iframe becomes visible again
@@ -345,7 +300,6 @@ function handleVisibilityRecheck(): void {
   if (typeof document === 'undefined') return;
   if (document.visibilityState !== 'visible') return;
   if (uiState === 'running' || uiState === 'granted') return;
-  debugLog('iframe: visibility recheck', { uiState });
   void detectInitialState();
 }
 
@@ -440,17 +394,8 @@ onMount(() => {
     storageReady: initialDetection,
     onKeyUnavailable: waitForKeyRecovery,
   });
-  if (debugMode) {
-    // パネルは iframe の中に描画されるが、親は `nosskey:visibility` を受け取るまで
-    // iframe を display:none にしている。調査時だけ自動で開かせる。
-    postVisibility(true);
-  }
   document.addEventListener('visibilitychange', handleVisibilityRecheck);
   window.addEventListener('pageshow', handleVisibilityRecheck);
-  if (debugMode) {
-    window.addEventListener('focus', logFocus);
-    window.addEventListener('blur', logFocus);
-  }
 });
 
 onDestroy(() => {
@@ -461,8 +406,6 @@ onDestroy(() => {
   stopHost = null;
   document.removeEventListener('visibilitychange', handleVisibilityRecheck);
   window.removeEventListener('pageshow', handleVisibilityRecheck);
-  window.removeEventListener('focus', logFocus);
-  window.removeEventListener('blur', logFocus);
 });
 </script>
 
@@ -676,13 +619,6 @@ onDestroy(() => {
   :global(body.nosskey-embedded) .iframe-host {
     background: transparent;
     padding: 12px;
-  }
-
-  /* 計測モード (?debug=1): console-daijin のパネルが下部に固定されるため、
-     カードを上へ逃がしてボタンが隠れないようにする。高さは debug-console.ts が
-     実際に渡した値（iframe 内 120px / それ以外 200px）を変数で公開している。 */
-  :global(body.nosskey-debug-console) .iframe-host {
-    padding-bottom: calc(var(--nosskey-debug-panel-height, 0px) + 12px);
   }
 
   :global(body.nosskey-embedded) .card {
