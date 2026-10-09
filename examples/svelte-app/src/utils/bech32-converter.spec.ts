@@ -136,9 +136,9 @@ describe('bech32Converter', () => {
 });
 
 // 回帰ガード: bech32@2 は失敗メッセージへ**入力文字列そのもの**を連結する
-// （`Invalid checksum for <入力>` 等）。計測モード（?debug=1）のパネルは console を
-// 全取り込みしてログ全文が共有されるため、ここで入力を出すと打ち間違えた nsec が
-// 外部へ持ち出される。分類名だけを出す不変条件を固定する。
+// （`Invalid checksum for <入力>` 等）。ここで入力を出すと、打ち間違えた nsec が
+// console に流れ、ログの共有や収集を通じて外部へ持ち出される。分類名だけを出す
+// 不変条件を固定する。
 describe('変換エラーのログに入力文字列を出さない', () => {
   const HEX = '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa';
   const validNsec = hexToNsec(HEX) as string;

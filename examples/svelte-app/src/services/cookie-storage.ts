@@ -33,8 +33,8 @@ interface ResolvedOptions {
 }
 
 /**
- * cookie 名のデフォルトプレフィクス。計測用の診断ログが「どの cookie が
- * Nosskey のものか」を判別するのにも使うため公開する。
+ * cookie 名のデフォルトプレフィクス。「どの cookie が Nosskey のものか」を
+ * 呼び出し側でも判別できるよう公開する。
  */
 export const DEFAULT_COOKIE_PREFIX = 'nosskey:';
 const DEFAULT_MAX_AGE_SECONDS = 31_536_000; // 1 year

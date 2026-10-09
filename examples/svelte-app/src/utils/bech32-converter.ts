@@ -76,8 +76,8 @@ export function hexToNsec(hexPrivkey: string): string {
  *
  * `bech32@2` は失敗メッセージへ**入力文字列そのもの**を連結する
  * （`Invalid checksum for <入力>` / `<入力> too short` 等）。そのまま
- * `console.error` へ渡すと、打ち間違えた nsec が console に流れ、計測モード
- * （`?debug=1`）のパネル経由で外部へ持ち出されうる。一方で `e.name` は常に
+ * `console.error` へ渡すと、打ち間違えた nsec が console に流れ、ログの共有や
+ * 収集を通じて外部へ持ち出されうる。一方で `e.name` は常に
  * `'Error'` で切り分けの役に立たないため、既知の失敗理由だけを既定の語に
  * 対応付けて返す。未知のメッセージは入力が混ざっている可能性があるので出さない。
  */
@@ -94,7 +94,7 @@ function describeBech32Error(e: unknown): string {
     'Unknown character',
     'Data too short',
     // 本モジュール自身が投げるもの。入力を含まない定数なのでそのまま通す。
-    // prefix 違いは実運用で最も起きる失敗であり、計測モードで見たい情報そのもの。
+    // prefix 違いは実運用で最も起きる失敗であり、切り分けに要る情報そのもの。
     'Not an npub format',
     'Not an nsec format',
   ];
