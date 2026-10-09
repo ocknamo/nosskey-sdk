@@ -402,14 +402,16 @@ $effect(() => {
   }
 
   /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。
-     モバイルは大きめにして右側を約 2 割見切れさせる（鍵が読める程度に留める）。
-     タブレットは見切れなしで最大 400px、PC は本文に重ならない範囲で最大 440px。 */
+     モバイルは右側を約 2 割見切れさせ、ダチョウの足がタブの下線より上で止まる最大 260px に抑える。
+     タブレットは見切れなしで最大 400px、PC は本文に重ならない範囲で最大 440px。
+     ※ 足の位置（画像の高さの約 85%）は nosskey.svg / nosskey-dark.svg の描画範囲を実測した値。
+        アセットを差し替えたときは、モバイルの大きさとタブまでの余白を再確認すること。 */
   .watermark {
     position: absolute;
     top: 0;
     right: 0;
-    width: clamp(240px, 72vw, 320px);
-    height: clamp(240px, 72vw, 320px);
+    width: clamp(230px, 66vw, 260px);
+    height: clamp(230px, 66vw, 260px);
     border-radius: 22%;
     transform: translateX(18%);
     opacity: 0.12;
@@ -453,19 +455,14 @@ $effect(() => {
   }
 
   /* モバイル: キャッチコピーとタブの間を広めに取り、キャッチコピーは小さめにして透かしとの重なりを減らす。
-     透かしはダチョウの足（画像高さの約 85% の位置）がタブの下線より上で止まる大きさに抑える。 */
-  @media (max-width: 699px) {
+     （小数幅のビューポートでタブレット側との間にすき間ができないよう 699.98px で区切る） */
+  @media (max-width: 699.98px) {
     .hero-section {
       margin-bottom: 56px;
     }
 
     .subtitle {
       font-size: 1rem;
-    }
-
-    .watermark {
-      width: clamp(230px, 66vw, 260px);
-      height: clamp(230px, 66vw, 260px);
     }
   }
 
