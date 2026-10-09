@@ -159,6 +159,16 @@ The iframe host automatically recovers from this via the Storage Access API:
 
 This flow is handled automatically by the host and `NosskeyIframeClient`, but **you must place the iframe somewhere visible so the user can click the "Grant storage access" button** (see the previous section). The iframe host's status card also includes a link to open `nosskey.app` in a separate tab. This is a path for the user to create a passkey (Nosskey identity) or sign in at first-party scope, primarily for the case where no key exists yet. Note that if the browser partitions storage and the Storage Access API permission cannot be obtained, the user needs to grant the permission again.
 
+### Never remount the iframe
+
+Mount the iframe once and leave it mounted for the life of the page. **Do not `destroy()` and remount it on `visibilitychange`, focus, or route changes.**
+
+Browsers scope a Storage Access grant to the **document**. A live iframe keeps its grant across tab switches; a remounted one starts over, so the user is asked to grant storage access every single time they come back to your tab. On iOS Safari this is the difference between one prompt and a prompt on every tab switch.
+
+Remounting used to be the only way to notice that the user had switched accounts in the signing app, because the iframe read the account once at mount. It is no longer needed: the host re-reads the stored account before serving each request, so **a long-lived iframe picks up both account switches and sign-outs on the next call**. You do **not** need to call anything to check for a change — the next call you actually need answers for whatever account is current then.
+
+> Avoid polling `getPublicKey()` on every `visibilitychange`. When the user is signed out, or storage access has not been granted, a host with `onKeyUnavailable` (the reference implementation has it) does **not** answer `NO_KEY` right away: it reveals the iframe and waits up to 60 seconds for the user. Calls that end without recovery also count toward the per-origin rate limiter, which blocks with `RATE_LIMITED` after five consecutive ones by default.
+
 See [`iframe-host.en.md`](./iframe-host.en.md#storage-partitioning--storage-access-api) for details.
 
 ## Error handling
@@ -193,6 +203,8 @@ try {
 
 In addition, a request that exceeds `timeout` (default 60 seconds) rejects with a plain `Error`.
 
+An `INTERNAL` whose message reads `The document is not focused.` is WebKit refusing `navigator.credentials.get()` for one reason only: the calling document is not the focused one. Hosts built on `NosskeyIframeHost` pull focus into their own document right before signing, so you should not normally see it. If you are talking to a hand-rolled host, pass the constraint along ([`iframe-host.en.md`](./iframe-host.en.md#webauthn-and-document-focus-webkit)).
+
 ## Cleanup
 
 Call `destroy()` when the client is no longer needed. It removes the iframe element, detaches the `message` listener, and rejects any pending requests.
@@ -201,6 +213,8 @@ Call `destroy()` when the client is no longer needed. It removes the iframe elem
 client.destroy();
 window.nostr = undefined;
 ```
+
+Use `destroy()` only when you are **actually done** (leaving the page, tearing the app down). Calling it to refresh the account state costs you the Storage Access grant and makes the user grant it again — see "Never remount the iframe" above.
 
 ## Full example
 
