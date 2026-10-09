@@ -402,7 +402,7 @@ $effect(() => {
   }
 
   /* ロゴは装飾の透かしとして右上に大きく敷く。濃さはライト 12% / ダーク 14%（PC は 15% / 18%）。
-     モバイルは右側を約 2 割見切れさせ、ダチョウの足がタブの下線より上で止まる最大 260px に抑える。
+     モバイルは右側を約 2 割見切れさせ、ダチョウの足がタブの下線より上で止まる最大 300px に抑える。
      タブレットは見切れなしで最大 400px、PC は本文に重ならない範囲で最大 440px。
      ※ 足の位置（画像の高さの約 85%）は nosskey.svg / nosskey-dark.svg の描画範囲を実測した値。
         アセットを差し替えたときは、モバイルの大きさとタブまでの余白を再確認すること。 */
@@ -410,8 +410,8 @@ $effect(() => {
     position: absolute;
     top: 0;
     right: 0;
-    width: clamp(230px, 66vw, 260px);
-    height: clamp(230px, 66vw, 260px);
+    width: clamp(250px, 74vw, 300px);
+    height: clamp(250px, 74vw, 300px);
     border-radius: 22%;
     transform: translateX(18%);
     opacity: 0.12;
@@ -461,15 +461,20 @@ $effect(() => {
        ※ ヘッダーを隠す条件は App.svelte の hideHeaderOnMobile（未ログインのアカウント画面）。
           AuthScreen をほかの場所で使う・条件を変えるときは、この余白も見直すこと。 */
     .auth-container {
-      padding-top: 56px;
+      padding-top: 72px;
     }
 
     .hero-section {
-      margin-bottom: 56px;
+      margin-bottom: 68px;
     }
 
     .subtitle {
       font-size: 1rem;
+    }
+
+    /* 透かしの上にも余白を取り、画面の上端に接しないようにする */
+    .watermark {
+      top: 24px;
     }
   }
 
