@@ -44,7 +44,6 @@ function handleClick() {
       background-color 0.2s ease,
       border-color 0.2s ease,
       box-shadow 0.2s ease,
-      filter 0.2s ease,
       transform 0.1s ease;
     display: inline-flex;
     align-items: center;
@@ -82,9 +81,9 @@ function handleClick() {
     max-width: none;
   }
 
-  /* Primary Button: グラデーション塗り + アクセント色の柔らかい影 */
+  /* Primary Button: 単色の塗り + アクセント色の柔らかい影 */
   .btn-primary {
-    background: var(--gradient-primary, var(--color-button-primary));
+    background-color: var(--color-button-primary);
     color: var(--color-text-on-primary);
     box-shadow:
       0 1px 2px var(--color-shadow),
@@ -92,14 +91,14 @@ function handleClick() {
   }
 
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.08);
+    background-color: var(--color-button-primary-hover);
     box-shadow:
       0 1px 2px var(--color-shadow),
       0 4px 10px -2px var(--color-primary-glow);
   }
 
   .btn-primary:disabled {
-    background: var(--color-button-disabled);
+    background-color: var(--color-button-disabled);
     color: var(--color-text-disabled);
   }
 

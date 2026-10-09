@@ -704,7 +704,7 @@ $effect(() => {
 
   .nsec-input input {
     padding: 12px 14px;
-    border-radius: 12px;
+    border-radius: 8px;
     border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -736,7 +736,7 @@ $effect(() => {
 
   .username-input input {
     padding: 12px 14px;
-    border-radius: 12px;
+    border-radius: 8px;
     border: 1px solid var(--color-border-strong);
     font-size: 1rem;
     transition: border-color 0.2s ease;

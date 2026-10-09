@@ -122,7 +122,7 @@ select {
   background-color: var(--color-card);
   color: var(--color-text);
   border: 1px solid var(--color-border-strong);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 16px;
   font-family: inherit;
   font-size: 14px;

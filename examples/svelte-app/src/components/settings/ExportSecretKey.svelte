@@ -156,7 +156,7 @@ function copyToClipboard(text: string) {
     padding: 8px;
     font-family: monospace;
     border: 1px solid var(--color-border-medium);
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;

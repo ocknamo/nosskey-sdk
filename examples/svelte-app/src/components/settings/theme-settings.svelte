@@ -71,7 +71,7 @@ const handleThemeChange = (event: Event) => {
   .theme-select {
     padding: 12px 16px;
     border: 1px solid var(--color-border-strong);
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--color-card);
     color: var(--color-text);
     font-size: 14px;

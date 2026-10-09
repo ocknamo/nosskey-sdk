@@ -54,7 +54,8 @@ const PURPLE_DARK: Record<string, string> = {
   '--color-border-medium': '#4A4A55',
 
   // ボタン色（ダーク）
-  '--color-button-primary': '#7C5CFA',
+  // 白文字とのコントラスト比 4.5 以上を確保する濃さ（#7C3AED は 5.7:1）。
+  '--color-button-primary': '#7C3AED',
   '--color-button-secondary': '#24242D',
   '--color-button-success': '#15803D',
   '--color-button-warning': '#FBBF24',
@@ -62,14 +63,11 @@ const PURPLE_DARK: Record<string, string> = {
   '--color-button-info': '#3B82F6',
   // 塗りボタン（primary 以外の面ボタン）の文字色。
   '--color-button-secondary-text': '#E9E9F0',
-  // primary ボタンの塗り。パープル系はバイオレット→インディゴのグラデーション。
-  // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
-  '--gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)',
   // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
   '--color-primary-glow': 'rgba(124, 58, 237, 0.18)',
 
   // ボタンホバー色（ダーク）
-  '--color-button-primary-hover': '#8D70FF',
+  '--color-button-primary-hover': '#6D28D9',
   '--color-button-secondary-hover': '#2E2E39',
   '--color-button-success-hover': '#166534',
   '--color-button-danger-hover': '#B91C1C',
@@ -160,9 +158,6 @@ const PURPLE_LIGHT: Record<string, string> = {
   '--color-button-info': '#2563EB',
   // 塗りボタン（primary 以外の面ボタン）の文字色。
   '--color-button-secondary-text': '#2B2B36',
-  // primary ボタンの塗り。パープル系はバイオレット→インディゴのグラデーション。
-  // 白文字とのコントラスト比 4.5 以上を両端で確保する濃さにしている。
-  '--gradient-primary': 'linear-gradient(135deg, #6E56CF 0%, #4F46E5 100%)',
   // primary ボタンの色付きシャドウ。ニュートラル系は影なし方針のため transparent。
   '--color-primary-glow': 'rgba(110, 86, 207, 0.16)',
 
@@ -222,7 +217,6 @@ const NEUTRAL_DARK: Record<string, string> = {
   '--color-secondary': '#C4C4CC',
   '--color-button-primary': '#A0A0A8',
   '--color-button-primary-hover': '#C4C4CC',
-  '--gradient-primary': 'linear-gradient(135deg, #A0A0A8 0%, #A0A0A8 100%)',
   '--color-primary-glow': 'transparent',
   '--color-text-on-primary': '#000000',
   // 塗りボタンの文字が黒（text-on-primary）なので、黒文字で読める明るさの塗りにする。
@@ -262,7 +256,6 @@ const NEUTRAL_LIGHT: Record<string, string> = {
   '--color-tertiary': '#F2F2F4',
   '--color-button-primary': '#5A5A66',
   '--color-button-primary-hover': '#42424D',
-  '--gradient-primary': 'linear-gradient(135deg, #5A5A66 0%, #5A5A66 100%)',
   '--color-primary-glow': 'transparent',
   '--color-primary-alpha-20': 'rgba(90, 90, 102, 0.2)',
   '--color-primary-alpha-08': 'rgba(90, 90, 102, 0.08)',
