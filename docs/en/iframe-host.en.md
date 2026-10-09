@@ -333,6 +333,87 @@ another tab, which always exceeds the parent's request timeout (60s by
 default). The reference implementation draws that line in
 `decideKeyRecovery()` (`utils/key-recovery.ts`) and returns `false` right away.
 
+### The grant is scoped to the document — never remount the iframe
+
+Browsers scope a Storage Access grant to the **document**. As long as the same
+iframe document stays alive, the grant survives the user leaving the tab and
+coming back. Remount the iframe and you get a new document, so the grant starts
+over from nothing.
+
+Parents commonly remount the iframe on every `visibilitychange`, to notice an
+account switched in the standalone app. On iOS Safari that shows up as **a
+storage-access prompt on every single tab switch**.
+
+The host re-reads the stored account via `manager.reloadCurrentKeyInfo?.()`
+right before serving a request. A long-lived iframe therefore picks up both
+account switches and sign-outs on the next call, so **the parent does not need
+to remount**.
+
+- Only while **nothing is in flight**: swapping the account underneath a request
+  that already took the user's consent would run it for a different account
+  than the one they agreed to.
+- A successful read is applied as-is (empty storage clears the in-memory
+  account too — that is how a sign-out propagates). If storage could not be
+  consulted at all (none configured, `getItem` threw) the current account is
+  kept. See `reloadCurrentKeyInfo()` in
+  [`nosskey-sdk-interface.en.md`](./nosskey-sdk-interface.en.md#reloadcurrentkeyinfo).
+- It is optional on `NosskeyManagerLike`. A host that passes a manager without
+  it behaves as before (it keeps answering with the account read at mount).
+
+The initial detection (steps 1–2 above) re-runs on every return to the tab
+whenever the key is not readable yet (any state **other than** `running` /
+`granted`), so **posting `nosskey:visibility` there puts the card back on
+screen every time, remount or no remount**. The reference implementation draws the line in
+`shouldRevealOnDetection()` (`utils/key-recovery.ts`): it reveals itself only
+for states that waiting cannot resolve (`noKeyExists` / `unsupported`).
+`partitioned` / `denied` are left to the host, which opens the iframe at the
+moment the key is actually needed, right before `onKeyUnavailable`.
+
+## WebAuthn and document focus (WebKit)
+
+WebKit refuses `navigator.credentials.get()` for one reason that has nothing to
+do with the credential: **the calling document is not the focused one**.
+
+```
+NosskeyIframeError: The document is not focused.
+```
+
+An embedded host hits this by default. The user taps a button in the **parent**
+page, so focus lands there; when consent is auto-approved (a trusted origin, or
+an `always` policy) **nothing is ever tapped inside the iframe**, and every
+signature fails on that check.
+
+How it presents:
+
+| Symptom | Why |
+|---------|-----|
+| Login works | `getPublicKey()` does not call WebAuthn |
+| Only signing / encryption fails | `credentials.get()` fails the focus check |
+| It occasionally works | The user had just tapped something inside the iframe (the storage-access button, say) |
+| It is not reproducible | It depends on which document received the last tap |
+
+`NosskeyIframeHost` pulls focus into its own document right before `run()`:
+
+```
+(no-op if already focused) → window.focus() → (if that was not enough) focus() on a hidden element
+```
+
+The element is needed because a cross-origin frame's `window.focus()` can be
+refused; focusing an element is a same-document operation and far more
+reliable. Removing the element right after focusing hands focus back, so it is
+reused rather than removed, and torn down in `stop()`.
+
+**Only for operations that derive the key.** `getPublicKey` / `getRelays` just
+read storage, and taking focus for those would **pull it off whatever the
+parent page had focused** — a text field the user was typing in, for instance.
+
+**Best-effort.** If focus cannot be taken the operation still runs and reports
+its real error; focus is a hint, and failing to take it must not mask the
+actual failure. There is no option to turn this off — it is always on.
+
+> If you implement your own host, this is a constraint you **have to handle
+> yourself** unless you use `NosskeyIframeHost`.
+
 ## Theme, language & embedded mode
 
 A parent app can pass display preferences via URL query parameters that
