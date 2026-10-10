@@ -10,7 +10,7 @@ import {
   DEFAULT_CACHE_TTL_SECONDS,
 } from './secret-cache-settings.js';
 
-export type ScreenName = 'account' | 'settings' | 'key' | 'iframe';
+export type ScreenName = 'account' | 'settings' | 'key' | 'apps' | 'iframe';
 
 export type ConsentDecision = 'ask' | 'always' | 'deny';
 
@@ -59,7 +59,7 @@ function isPolicyKey(value: unknown): value is PolicyKey {
 }
 
 export function isScreenName(hash: string): hash is ScreenName {
-  return new Set<string>(['account', 'settings', 'key', 'iframe']).has(hash);
+  return new Set<string>(['account', 'settings', 'key', 'apps', 'iframe']).has(hash);
 }
 
 // 画面状態

@@ -32,6 +32,8 @@ examples/svelte-app/
 │   └── nosskey.svg                # アプリアイコン（ファビコン）
 ├── src/
 │   ├── components/
+│   │   ├── apps/
+│   │   │   └── nosskey-apps.ts         # Nosskey でログインできるアプリの一覧（apps 画面）
 │   │   ├── ConsentDialog.svelte        # iframe モードの同意ダイアログ
 │   │   ├── FooterMenu.svelte           # フッターナビゲーション（モバイル）
 │   │   ├── HeaderBar.svelte            # ヘッダーバー（PC ではナビも表示）
@@ -39,6 +41,7 @@ examples/svelte-app/
 │   │   ├── PublicKeyDisplay.svelte     # 公開鍵表示
 │   │   ├── screens/                    # 画面コンポーネント
 │   │   │   ├── AccountScreen.svelte    # アカウント画面
+│   │   │   ├── AppsScreen.svelte       # Nosskey 対応アプリの紹介画面
 │   │   │   ├── AuthScreen.svelte       # 認証画面
 │   │   │   ├── IframeHostScreen.svelte # iframe ホストモード画面
 │   │   │   ├── KeyManagement.svelte    # 鍵管理画面
@@ -160,6 +163,13 @@ examples/svelte-app/
 - 高度なオプション: `KeyInfo`（PWK データ）のファイル／テキストインポート
 - 開発者向けセクション: PRF 拡張対応確認
 
+#### AppsScreen.svelte（`apps` 画面）
+Nosskey（`nosskey-iframe` 経由）でログインできるアプリの紹介画面：
+
+- 一覧データは `components/apps/nosskey-apps.ts` の `NOSSKEY_APPS`（アプリ名・URL・リポジトリ URL・アイコン・説明文の i18n キー）
+- アイコンは `src/assets/apps/` に同梱（combine / Yakitofu は各リポジトリの画像を 128px に縮小。X落ちてる速報は X の公式ロゴを避けるため独自の SVG）
+- カードはモバイル 1 列、PC（幅 960px 以上）3 列。「開く」ボタンと GitHub アイコンのリンクは新しいタブで開く
+
 #### KeyManagement.svelte（`key` 画面）
 鍵関連の操作をまとめた画面：
 
@@ -192,14 +202,14 @@ examples/svelte-app/
 ### 3.5 共通コンポーネント
 
 - **HeaderBar** - アプリタイトルとロゴ、現在の画面タイトルを表示。PC（幅 960px 以上）では画面タイトルの代わりにナビゲーションを表示
-- **FooterMenu** - `account` / `key` / `settings` の 3 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）。モバイルのみ表示し、PC ではヘッダーのナビに置き換わる。項目は `nav-items.ts` を共有
+- **FooterMenu** - `account` / `key` / `apps` / `settings` の 4 画面間ナビゲーション（`iframe` はルート専用でメニューに出ない）。モバイルのみ表示し、PC ではヘッダーのナビに置き換わる。項目は `nav-items.ts` を共有
 - **PublicKeyDisplay** - 公開鍵を短縮形式と npub 形式で表示、npub のクリップボードコピー
 - **ConsentDialog** - iframe モードの同意要求モーダル（[7. iframe ホストモード](#7-iframe-ホストモード)）
 
 ### 3.6 UI コンポーネント（`ui/`）
 
 - **CardSection** - カード型セクションの共通レイアウト
-- **ui/button/** - `Button` / `FileInputButton` / `IconButton` / `NavButton` / `TabButton` / `ToggleButton`
+- **ui/button/** - `Button` / `FileInputButton` / `IconButton` / `NavButton` / `TabButton` / `ToggleButton`（`Button` は `href` を渡すと同じ見た目の `<a>` リンクとして描画する）
 
 ### 3.7 ユーティリティ（`utils/`）
 
@@ -277,7 +287,7 @@ graph TD
 
 ### 6.2 画面状態と遷移
 
-通常 UI は 3 画面（`account` / `key` / `settings`）を持ち、モバイルでは `FooterMenu`、PC では `HeaderBar` のナビで切り替えます。
+通常 UI は 4 画面（`account` / `key` / `apps` / `settings`）を持ち、モバイルでは `FooterMenu`、PC では `HeaderBar` のナビで切り替えます。
 
 PC（幅 960px 以上）では `settings` と `key` が 2 カラムになります。`settings` は左に目次のサイドパネル（追従表示）、右に設定カードを 1 列に並べ、目次を選ぶと該当セクションへスクロールし、スクロール位置に応じて目次のハイライトが追従します（モバイルでは目次を出しません）。`key` は `app.css` の `.screen-columns` / `.screen-column` でカードを左右に振り分け、モバイルでは列ラッパーを `display: contents` にして左列 → 右列の DOM 順で 1 列に並べます（表示順とフォーカス順を一致させるため、従来の縦並びになるよう列へ振り分けています）。`account` は大きな見出しとフォームを左寄せで縦に並べ、ロゴを右側に大きな透かしとして敷くタイポグラフィ主体の構成です（下線タブ・左寄せのピル型ボタン・控えめな一行の注意書き）。ログイン後は小さなアバターと大きな npub を左寄せで表示します。`iframe` は URL ハッシュ専用のルートで、メニューには現れません。画面状態は `app-state.ts` の `currentScreen` ストアで管理され、URL ハッシュと連動します。
 
@@ -286,6 +296,9 @@ graph LR
     Account((アカウント)) <--> Key((鍵管理))
     Account <--> Settings((設定))
     Key <--> Settings
+    Apps((アプリ紹介)) <--> Account
+    Apps <--> Key
+    Apps <--> Settings
     Iframe((iframe ホスト))
 ```
 
@@ -313,7 +326,7 @@ graph LR
 
 ### 8.2 UI / UX の設計
 
-- 通常 UI は 3 画面のシンプルなナビゲーション
+- 通常 UI は 4 画面のシンプルなナビゲーション
 - ナビゲーションによる直感的な画面切り替え（モバイルはフッター、PC はヘッダー）
 - テーマは CSS variables で管理し、ライト／ダーク／自動に対応
 

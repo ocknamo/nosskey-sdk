@@ -3,6 +3,7 @@ import { onMount, tick } from 'svelte';
 import FooterMenu from './components/FooterMenu.svelte';
 import HeaderBar from './components/HeaderBar.svelte';
 import AccountScreen from './components/screens/AccountScreen.svelte';
+import AppsScreen from './components/screens/AppsScreen.svelte';
 import IframeHostScreen from './components/screens/IframeHostScreen.svelte';
 import KeyManagementScreen from './components/screens/KeyManagement.svelte';
 import SettingsScreen from './components/screens/SettingsScreen.svelte';
@@ -206,6 +207,8 @@ onMount(() => {
       <AccountScreen />
     {:else if screen === "key"}
       <KeyManagementScreen />
+    {:else if screen === "apps"}
+      <AppsScreen />
     {:else if screen === "settings"}
       <SettingsScreen />
     {/if}

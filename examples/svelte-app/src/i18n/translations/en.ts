@@ -226,8 +226,24 @@ export const en: TranslationData = {
     account: 'Account',
     key: 'Key',
     settings: 'Settings',
+    apps: 'Apps',
     mainNav: 'Main navigation',
     settingsToc: 'Settings sections',
+  },
+  apps: {
+    title: 'Apps you can log in to with Nosskey',
+    lead: 'These apps let you log in with the passkey account you created here.',
+    howToLogin:
+      'Choose "Nosskey" on the app\'s login screen to log in through nosskey.app (a confirmation dialog appears when needed). Your secret key is never handed to the app.',
+    open: 'Open',
+    source: 'Source code on GitHub',
+    opensInNewTab: 'opens in a new tab',
+    descriptions: {
+      combine: 'A simple Nostr client built by combining several Nostr services.',
+      xIsDown:
+        'An emergency bulletin board for sharing #xisdown posts in real time when X (formerly Twitter) is down.',
+      yakitofu: 'An app for creating Nostr badges (NIP-58) and awarding them to other users.',
+    },
   },
   consent: {
     title: 'Signing request',

@@ -13,23 +13,29 @@ interface Props {
 const { hideOnMobile = false }: Props = $props();
 
 // 現在の画面を監視
-let screen = $state('account');
+let screen = $state<ScreenName>('account');
 
 currentScreen.subscribe((value) => {
   screen = value;
 });
 
-// 画面名に応じたタイトルを取得
-function getPageTitle(screenName: string): string {
+// 画面名に応じたタイトルを取得。ScreenName を増やしたときに漏れないよう、default で網羅性を型検査する。
+function getPageTitle(screenName: ScreenName): string {
   switch (screenName) {
     case 'account':
       return $i18n.t.navigation.account;
     case 'key':
       return $i18n.t.navigation.key;
+    case 'apps':
+      return $i18n.t.navigation.apps;
     case 'settings':
       return $i18n.t.navigation.settings;
-    default:
+    case 'iframe':
       return 'Nosskey';
+    default: {
+      const unreachable: never = screenName;
+      return unreachable;
+    }
   }
 }
 
