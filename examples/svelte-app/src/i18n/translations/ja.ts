@@ -226,8 +226,25 @@ export const ja: TranslationData = {
     account: 'アカウント',
     key: '鍵管理',
     settings: '設定',
+    apps: 'アプリ',
     mainNav: 'メインナビゲーション',
     settingsToc: '設定の目次',
+  },
+  apps: {
+    title: 'Nosskey でログインできるアプリ',
+    lead: 'ここで作ったパスキーのアカウントで、そのままログインできる Nostr アプリです。',
+    howToLogin:
+      '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app の確認ダイアログが開きます。秘密鍵がアプリに渡ることはありません。',
+    open: 'アプリを開く',
+    source: 'ソースコード',
+    descriptions: {
+      combine:
+        '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアント。タイムライン・通知・投稿・プロフィール編集ができます。',
+      xIsDown:
+        'X（旧Twitter）が落ちたときの緊急掲示板。#xisdown タグの投稿をリアルタイムで共有できます。',
+      yakitofu:
+        'Nostr のバッジ（NIP-58）を作成して、ほかのユーザーに贈れるアプリ。受け取ったバッジをプロフィールに飾れます。',
+    },
   },
   consent: {
     title: '署名リクエストの確認',

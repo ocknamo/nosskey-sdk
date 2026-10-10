@@ -26,6 +26,8 @@ function getPageTitle(screenName: string): string {
       return $i18n.t.navigation.account;
     case 'key':
       return $i18n.t.navigation.key;
+    case 'apps':
+      return $i18n.t.navigation.apps;
     case 'settings':
       return $i18n.t.navigation.settings;
     default:

@@ -221,10 +221,24 @@ export interface TranslationData {
     account: string;
     key: string;
     settings: string;
+    apps: string;
     // ナビゲーションランドマークの aria-label
     mainNav: string;
     // 設定画面（PC）の目次ナビの aria-label
     settingsToc: string;
+  };
+  // Nosskey でログインできるサービスの紹介画面
+  apps: {
+    title: string;
+    lead: string;
+    howToLogin: string;
+    open: string;
+    source: string;
+    descriptions: {
+      combine: string;
+      xIsDown: string;
+      yakitofu: string;
+    };
   };
   consent: {
     title: string;

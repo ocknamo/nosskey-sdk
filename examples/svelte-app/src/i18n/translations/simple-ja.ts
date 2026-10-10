@@ -100,6 +100,14 @@ export const simpleJa: DeepPartial<TranslationData> = {
   navigation: {
     key: 'バックアップ',
   },
+  apps: {
+    howToLogin:
+      '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app の確認画面が開きます。リカバリーキーがアプリに渡ることはありません。',
+    descriptions: {
+      yakitofu:
+        'バッジを作って、ほかのユーザーに贈れるアプリ。受け取ったバッジをプロフィールに飾れます。',
+    },
+  },
   consent: {
     title: 'このサイトからのリクエスト',
     titleConnect: 'このサイトからの接続リクエスト',

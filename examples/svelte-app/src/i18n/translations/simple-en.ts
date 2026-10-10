@@ -99,6 +99,14 @@ export const simpleEn: DeepPartial<TranslationData> = {
   navigation: {
     key: 'Backup',
   },
+  apps: {
+    howToLogin:
+      'Choose "Nosskey" on the app\'s login screen and a nosskey.app confirmation screen opens. Your recovery key is never handed to the app.',
+    descriptions: {
+      yakitofu:
+        'Create badges and award them to other users. Show off the badges you receive on your profile.',
+    },
+  },
   consent: {
     title: 'Request from this site',
     titleConnect: 'Connection request from this site',

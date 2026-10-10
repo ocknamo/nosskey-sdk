@@ -8,6 +8,7 @@ import {
   currentScreen,
   hasLoggedInBefore,
   isLoggedIn,
+  isScreenName,
   loginWith,
   publicKey,
   reloadSettings,
@@ -57,6 +58,19 @@ beforeEach(() => {
   consentPolicy.set({ connect: 'ask', signEvent: 'ask', nip44: 'ask', nip04: 'ask' });
   cacheSecrets.set(true);
   cacheTimeout.set(300);
+});
+
+describe('isScreenName', () => {
+  it('accepts every routed screen including the apps showcase', () => {
+    for (const name of ['account', 'key', 'apps', 'settings', 'iframe']) {
+      expect(isScreenName(name)).toBe(true);
+    }
+  });
+
+  it('rejects unknown screen names', () => {
+    expect(isScreenName('')).toBe(false);
+    expect(isScreenName('unknown')).toBe(false);
+  });
 });
 
 describe('reloadSettings', () => {
