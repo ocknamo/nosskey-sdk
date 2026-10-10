@@ -11,8 +11,19 @@ const {
   buttonType = 'button' as 'button' | 'submit' | 'reset',
   title = undefined,
   className = '',
+  // href を渡すと <a> として描画する（見た目は同じ）。外部リンクなら target="_blank" を併用する
+  href = undefined as string | undefined,
+  target = undefined as string | undefined,
+  rel = undefined as string | undefined,
+  ariaLabel = undefined as string | undefined,
   children,
 } = $props();
+
+// 新しいタブで開くリンクは、rel 未指定でも opener / referrer を渡さない
+const linkRel = $derived(rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined));
+const classes = $derived(
+  `btn btn-${variant} btn-${size} ${fullWidth ? '' : 'btn-auto-width'} ${className}`
+);
 
 function handleClick() {
   if (!disabled && onclick) {
@@ -21,18 +32,27 @@ function handleClick() {
 }
 </script>
 
-<button
-  type={buttonType as "button" | "submit" | "reset"}
-  {disabled}
-  {title}
-  class={`btn btn-${variant} btn-${size} ${fullWidth ? '' : 'btn-auto-width'} ${className}`}
-  onclick={handleClick}
->
-  {@render children?.()}
-</button>
+{#if href}
+  <a {href} {target} rel={linkRel} {title} aria-label={ariaLabel} class={classes}>
+    {@render children?.()}
+  </a>
+{:else}
+  <button
+    type={buttonType as "button" | "submit" | "reset"}
+    {disabled}
+    {title}
+    aria-label={ariaLabel}
+    class={classes}
+    onclick={handleClick}
+  >
+    {@render children?.()}
+  </button>
+{/if}
 
 <style>
   .btn {
+    /* <a> で描画したときも <button> と同じ寸法になるよう揃える */
+    box-sizing: border-box;
     position: relative;
     border: 1px solid transparent;
     border-radius: 12px;

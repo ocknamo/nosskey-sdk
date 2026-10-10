@@ -1,6 +1,7 @@
 <script lang="ts">
 import { i18n } from '../../i18n/i18n-store.js';
 import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
+import Button from '../ui/button/Button.svelte';
 </script>
 
 <!-- Nosskey でログインできるアプリの紹介。モバイルは 1 列、PC はカードを 3 列に並べる。 -->
@@ -20,15 +21,15 @@ import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
         <p class="app-card__description">{$i18n.t.apps.descriptions[app.descriptionKey]}</p>
         <div class="app-card__actions">
           <!-- 同じ文言のリンクがカードごとに並ぶので、読み上げではアプリ名と新しいタブで開く旨を添える -->
-          <a
-            class="app-card__open"
+          <Button
             href={app.url}
             target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${app.name}: ${$i18n.t.apps.open} (${$i18n.t.apps.opensInNewTab})`}
+            fullWidth={false}
+            className="app-card__open"
+            ariaLabel={`${app.name}: ${$i18n.t.apps.open} (${$i18n.t.apps.opensInNewTab})`}
           >
             {$i18n.t.apps.open}
-          </a>
+          </Button>
           <a
             class="app-card__source"
             href={app.repositoryUrl}
@@ -162,34 +163,11 @@ import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
     gap: 8px 12px;
   }
 
-  /* Button.svelte の primary と同じ見た目のリンク */
-  .app-card__open {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
+  /* 「開く」は共通の Button（primary）。カード内では幅だけ広めに取る */
+  .app-card__actions :global(.app-card__open) {
     min-width: 120px;
-    padding: 10px 28px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    line-height: 1.2;
-    text-decoration: none;
-    background-color: var(--color-button-primary);
-    color: var(--color-text-on-primary);
-    box-shadow:
-      0 1px 2px var(--color-shadow),
-      0 2px 8px -2px var(--color-primary-glow);
-    transition:
-      background-color 0.2s ease,
-      box-shadow 0.2s ease;
   }
 
-  .app-card__open:hover {
-    background-color: var(--color-button-primary-hover);
-  }
-
-  .app-card__open:focus-visible,
   .app-card__source:focus-visible {
     outline: none;
     box-shadow:

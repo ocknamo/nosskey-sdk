@@ -209,7 +209,7 @@ Nosskey（`nosskey-iframe` 経由）でログインできるアプリの紹介�
 ### 3.6 UI コンポーネント（`ui/`）
 
 - **CardSection** - カード型セクションの共通レイアウト
-- **ui/button/** - `Button` / `FileInputButton` / `IconButton` / `NavButton` / `TabButton` / `ToggleButton`
+- **ui/button/** - `Button` / `FileInputButton` / `IconButton` / `NavButton` / `TabButton` / `ToggleButton`（`Button` は `href` を渡すと同じ見た目の `<a>` リンクとして描画する）
 
 ### 3.7 ユーティリティ（`utils/`）
 
