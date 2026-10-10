@@ -234,6 +234,8 @@ export interface TranslationData {
     howToLogin: string;
     open: string;
     source: string;
+    // 新しいタブで開くリンクの aria-label に添える補足
+    opensInNewTab: string;
     descriptions: {
       combine: string;
       xIsDown: string;

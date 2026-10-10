@@ -234,9 +234,10 @@ export const ja: TranslationData = {
     title: 'Nosskey でログインできるアプリ',
     lead: 'ここで作ったパスキーのアカウントで、そのままログインできる Nostr アプリです。',
     howToLogin:
-      '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app の確認ダイアログが開きます。秘密鍵がアプリに渡ることはありません。',
+      '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app を通してログインします（必要に応じて確認ダイアログが表示されます）。秘密鍵がアプリに渡ることはありません。',
     open: 'アプリを開く',
     source: 'ソースコード',
+    opensInNewTab: '新しいタブで開きます',
     descriptions: {
       combine:
         '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアント。タイムライン・通知・投稿・プロフィール編集ができます。',

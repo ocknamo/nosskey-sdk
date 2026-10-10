@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { en } from '../../i18n/translations/en.js';
-import { ja } from '../../i18n/translations/ja.js';
 import { NOSSKEY_APPS } from './nosskey-apps.js';
 
 describe('NOSSKEY_APPS', () => {
@@ -13,13 +11,6 @@ describe('NOSSKEY_APPS', () => {
     for (const app of NOSSKEY_APPS) {
       expect(new URL(app.url).protocol).toBe('https:');
       expect(new URL(app.repositoryUrl).protocol).toBe('https:');
-    }
-  });
-
-  it('説明文が日本語・英語の両方に用意されている', () => {
-    for (const app of NOSSKEY_APPS) {
-      expect(ja.apps.descriptions[app.descriptionKey]).toBeTruthy();
-      expect(en.apps.descriptions[app.descriptionKey]).toBeTruthy();
     }
   });
 

@@ -19,7 +19,14 @@ import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
         </div>
         <p class="app-card__description">{$i18n.t.apps.descriptions[app.descriptionKey]}</p>
         <div class="app-card__actions">
-          <a class="app-card__open" href={app.url} target="_blank" rel="noopener noreferrer">
+          <!-- 同じ文言のリンクがカードごとに並ぶので、読み上げではアプリ名と新しいタブで開く旨を添える -->
+          <a
+            class="app-card__open"
+            href={app.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${app.name}: ${$i18n.t.apps.open} (${$i18n.t.apps.opensInNewTab})`}
+          >
             {$i18n.t.apps.open}
           </a>
           <a
@@ -27,6 +34,7 @@ import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
             href={app.repositoryUrl}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`${app.name}: ${$i18n.t.apps.source} (${$i18n.t.apps.opensInNewTab})`}
           >
             {$i18n.t.apps.source}
           </a>

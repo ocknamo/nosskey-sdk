@@ -1,7 +1,7 @@
 // Nosskey（nosskey-iframe 経由）でログインできるアプリの一覧。紹介画面（AppsScreen）で表示する。
 // アプリ名は固有名なので翻訳しない。説明文は `$i18n.t.apps.descriptions[descriptionKey]` で引く。
 import CombineIcon from '../../assets/apps/combine.png';
-import XIsDownIcon from '../../assets/apps/x-is-down.png';
+import XIsDownIcon from '../../assets/apps/x-is-down.svg';
 import YakitofuIcon from '../../assets/apps/yakitofu.png';
 import type { TranslationData } from '../../i18n/translations/types.js';
 

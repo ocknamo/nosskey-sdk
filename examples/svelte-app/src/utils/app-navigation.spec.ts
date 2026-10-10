@@ -34,6 +34,7 @@ describe('screenNameFromHash', () => {
   it('extracts the screen name from a plain hash route', () => {
     expect(screenNameFromHash('#/iframe')).toBe('iframe');
     expect(screenNameFromHash('#/account')).toBe('account');
+    expect(screenNameFromHash('#/apps')).toBe('apps');
   });
 
   it('drops a hash query so #/key?tab=2 still resolves to the key route', () => {

@@ -234,9 +234,10 @@ export const en: TranslationData = {
     title: 'Apps you can log in to with Nosskey',
     lead: 'These Nostr apps let you log in with the passkey account you created here.',
     howToLogin:
-      'Choose "Nosskey" on the app\'s login screen and a nosskey.app confirmation dialog opens. Your secret key is never handed to the app.',
+      'Choose "Nosskey" on the app\'s login screen to log in through nosskey.app (a confirmation dialog appears when needed). Your secret key is never handed to the app.',
     open: 'Open app',
     source: 'Source code',
+    opensInNewTab: 'opens in a new tab',
     descriptions: {
       combine:
         'A simple Nostr client built by combining several Nostr services. Read timelines and notifications, post, and edit your profile.',
