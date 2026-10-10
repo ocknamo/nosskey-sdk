@@ -11,7 +11,9 @@ const {
   buttonType = 'button' as 'button' | 'submit' | 'reset',
   title = undefined,
   className = '',
-  // href を渡すと <a> として描画する（見た目は同じ）。外部リンクなら target="_blank" を併用する
+  // href を渡すと <a> として描画する（見た目は同じ）。外部リンクなら target="_blank" を併用する。
+  // href はそのまま出力するので、ユーザー入力由来の URL を渡す場合は呼び出し側でスキームを検証すること。
+  // disabled のときはリンクにせず、無効な <button> として描画する（<a> には disabled が効かないため）。
   href = undefined as string | undefined,
   target = undefined as string | undefined,
   rel = undefined as string | undefined,
@@ -32,7 +34,7 @@ function handleClick() {
 }
 </script>
 
-{#if href}
+{#if href && !disabled}
   <a {href} {target} rel={linkRel} {title} aria-label={ariaLabel} class={classes}>
     {@render children?.()}
   </a>
