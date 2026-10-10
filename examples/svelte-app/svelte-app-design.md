@@ -167,7 +167,7 @@ examples/svelte-app/
 Nosskey（`nosskey-iframe` 経由）でログインできるアプリの紹介画面：
 
 - 一覧データは `components/apps/nosskey-apps.ts` の `NOSSKEY_APPS`（アプリ名・URL・リポジトリ URL・アイコン・説明文の i18n キー）
-- アイコンは `src/assets/apps/` に同梱（各アプリのリポジトリの画像を 128px に縮小）
+- アイコンは `src/assets/apps/` に同梱（combine / Yakitofu は各リポジトリの画像を 128px に縮小。X落ちてる速報は X の公式ロゴを避けるため独自の SVG）
 - カードはモバイル 1 列、PC（幅 960px 以上）3 列。リンクは新しいタブで開く
 
 #### KeyManagement.svelte（`key` 画面）
