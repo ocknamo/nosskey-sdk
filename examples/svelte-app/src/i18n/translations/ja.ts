@@ -237,7 +237,7 @@ export const ja: TranslationData = {
       '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app を通してログインします（必要に応じて確認ダイアログが表示されます）。秘密鍵がアプリに渡ることはありません。',
     open: '開く',
     source: 'GitHub のソースコード',
-    opensInNewTab: '新しいタブで開きます',
+    opensInNewTab: '新しいタブ',
     descriptions: {
       combine: '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアントです。',
       xIsDown:
