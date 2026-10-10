@@ -232,11 +232,11 @@ export const en: TranslationData = {
   },
   apps: {
     title: 'Apps you can log in to with Nosskey',
-    lead: 'These Nostr apps let you log in with the passkey account you created here.',
+    lead: 'These apps let you log in with the passkey account you created here.',
     howToLogin:
       'Choose "Nosskey" on the app\'s login screen to log in through nosskey.app (a confirmation dialog appears when needed). Your secret key is never handed to the app.',
-    open: 'Open app',
-    source: 'Source code',
+    open: 'Open',
+    source: 'Source code on GitHub',
     opensInNewTab: 'opens in a new tab',
     descriptions: {
       combine: 'A simple Nostr client built by combining several Nostr services.',

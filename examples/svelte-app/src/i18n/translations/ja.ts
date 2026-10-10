@@ -232,11 +232,11 @@ export const ja: TranslationData = {
   },
   apps: {
     title: 'Nosskey でログインできるアプリ',
-    lead: 'ここで作ったパスキーのアカウントで、そのままログインできる Nostr アプリです。',
+    lead: 'ここで作ったパスキーのアカウントで、そのままログインできるアプリです。',
     howToLogin:
       '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app を通してログインします（必要に応じて確認ダイアログが表示されます）。秘密鍵がアプリに渡ることはありません。',
-    open: 'アプリを開く',
-    source: 'ソースコード',
+    open: '開く',
+    source: 'GitHub のソースコード',
     opensInNewTab: '新しいタブで開きます',
     descriptions: {
       combine: '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアントです。',
