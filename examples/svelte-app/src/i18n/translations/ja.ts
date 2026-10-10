@@ -239,12 +239,10 @@ export const ja: TranslationData = {
     source: 'ソースコード',
     opensInNewTab: '新しいタブで開きます',
     descriptions: {
-      combine:
-        '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアント。タイムライン・通知・投稿・プロフィール編集ができます。',
+      combine: '複数の Nostr サービスを組み合わせて作られた、シンプルな Nostr クライアントです。',
       xIsDown:
-        'X（旧Twitter）が落ちたときの緊急掲示板。#xisdown タグの投稿をリアルタイムで共有できます。',
-      yakitofu:
-        'Nostr のバッジ（NIP-58）を作成して、ほかのユーザーに贈れるアプリ。受け取ったバッジをプロフィールに飾れます。',
+        'X（旧Twitter）が落ちたときに、#xisdown タグの投稿をリアルタイムで共有できる緊急掲示板です。',
+      yakitofu: 'Nostr のバッジ（NIP-58）を作成して、ほかのユーザーに贈れるアプリです。',
     },
   },
   consent: {

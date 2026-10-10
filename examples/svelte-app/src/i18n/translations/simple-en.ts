@@ -103,8 +103,7 @@ export const simpleEn: DeepPartial<TranslationData> = {
     howToLogin:
       'Choose "Nosskey" on the app\'s login screen to log in through nosskey.app (a confirmation screen appears when needed). Your recovery key is never handed to the app.',
     descriptions: {
-      yakitofu:
-        'Create badges and award them to other users. Show off the badges you receive on your profile.',
+      yakitofu: 'An app for creating badges and awarding them to other users.',
     },
   },
   consent: {

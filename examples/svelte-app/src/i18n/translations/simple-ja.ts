@@ -104,8 +104,7 @@ export const simpleJa: DeepPartial<TranslationData> = {
     howToLogin:
       '各アプリのログイン画面で「Nosskey」を選ぶと、nosskey.app を通してログインします（必要に応じて確認画面が表示されます）。リカバリーキーがアプリに渡ることはありません。',
     descriptions: {
-      yakitofu:
-        'バッジを作って、ほかのユーザーに贈れるアプリ。受け取ったバッジをプロフィールに飾れます。',
+      yakitofu: 'バッジを作成して、ほかのユーザーに贈れるアプリです。',
     },
   },
   consent: {

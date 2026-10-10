@@ -239,12 +239,10 @@ export const en: TranslationData = {
     source: 'Source code',
     opensInNewTab: 'opens in a new tab',
     descriptions: {
-      combine:
-        'A simple Nostr client built by combining several Nostr services. Read timelines and notifications, post, and edit your profile.',
+      combine: 'A simple Nostr client built by combining several Nostr services.',
       xIsDown:
-        'An emergency bulletin board for when X (formerly Twitter) is down. Share #xisdown posts in real time.',
-      yakitofu:
-        'Create Nostr badges (NIP-58) and award them to other users. Show off the badges you receive on your profile.',
+        'An emergency bulletin board for sharing #xisdown posts in real time when X (formerly Twitter) is down.',
+      yakitofu: 'An app for creating Nostr badges (NIP-58) and awarding them to other users.',
     },
   },
   consent: {
