@@ -185,15 +185,9 @@ import Button from '../ui/button/Button.svelte';
     background-color: var(--color-button-secondary-hover);
   }
 
-  /* アイコンは <img> なので色は SVG 側（中間グレー）で固定し、ホバーでは濃さで反応させる */
+  /* アイコンは <img> なので色は SVG 側（中間グレー）で固定。背景とのコントラスト 3:1 を保つため透過させない */
   .app-card__source-icon {
     display: block;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-  }
-
-  .app-card__source:hover .app-card__source-icon {
-    opacity: 1;
   }
 
   .apps-note {
