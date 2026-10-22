@@ -23,6 +23,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+          check-latest: true
 
       # SDK の本番依存は深刻度を問わず失敗させる
       - name: Audit production dependencies

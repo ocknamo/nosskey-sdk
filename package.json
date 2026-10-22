@@ -41,7 +41,7 @@
     "ws": "^8.21.0"
   },
   "volta": {
-    "node": "22.22.2"
+    "node": "22.23.4"
   },
   "directories": {
     "doc": "docs",
