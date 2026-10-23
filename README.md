@@ -15,7 +15,7 @@ This SDK inherits the concept from the previously developed [nosskey](https://gi
 Traditional Nostr private key management methods, such as plaintext storage or password-protected format (NIP-49), have presented challenges in terms of security and convenience. Using WebAuthn offers the following benefits:
 
 - **Phishing Resistance**: Domain validation prevents authentication on fraudulent sites
-- **Automatic Backup**: Entrusting private key management to the platform's passkey synchronization function enables secure cloud backup
+- **Passkey Synchronization**: Compatible providers can sync the credential. Wrapped keys additionally require a backup of their encrypted `NostrKeyInfo`; passkey sync alone does not back up that payload.
 - **Cross-Device Support**: OS passkey synchronization features provide the same experience across multiple devices
 
 ## Key Features
@@ -61,6 +61,12 @@ const event = {
 };
 const signedEvent = await keyMgr.signEvent(event);
 ```
+
+### Returning to an existing account
+
+Use `loginWithPasskey()` for sign-in, not `createNostrKey()`. Handle `restored` by selecting `result.keyInfo`, `ambiguous` by letting the user choose from `result.candidates`, and `unknown` by offering recovery of saved key information or an explicit new-account action. An unknown credential is not evidence that it was created in direct mode: deriving from a wrapped-key credential opens a different identity.
+
+For ordinary sign-out, use `clearCurrentKeyInfo()` to retain the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads. Before deleting it, preserve `backupKeyInfo()` output or another recovery route. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
 
 ### Encrypting and Decrypting Messages (NIP-44)
 
