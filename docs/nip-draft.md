@@ -32,7 +32,7 @@ Reference: [PRF Support Status](https://github.com/ocknamo/nosskey-sdk/blob/main
 ### Conditions for Using PRF Values as Nostr Private Keys
 
 For a 32-byte value obtained from the PRF extension to be used as a Nostr private key, it must be within the valid private key range of secp256k1 (from 1 to n-1, where n is the order of the curve).
-It is recommended to perform range checking and regenerate or adjust if out of range, but since the theoretical probability of being out of range is approximately 2^-224, which is extremely low, range checking can be omitted in practice.
+The probability that a uniformly random 32-byte value falls outside this range is approximately 2^-128, which is negligible in practice. Implementations should still reject an out-of-range value rather than regenerating or adjusting it, because a different derivation would produce a different identity.
 
 ## PRF Direct Usage Method
 

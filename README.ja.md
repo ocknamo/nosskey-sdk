@@ -67,25 +67,31 @@ const signedEvent = await keyMgr.signEvent(event);
 ログインには `createNostrKey()` ではなく `loginWithPasskey()` を使います。`loginWithPasskey()` は current の鍵を設定しないため、選んだ鍵情報を `setCurrentKeyInfo()` に渡してください。
 
 ```javascript
-import { hexToBytes } from 'nosskey-sdk';
+import { hexToBytes, isNostrKeyInfo } from 'nosskey-sdk';
 
+// chooseAccount / askForSavedKeyInfo / confirmDerive はアプリ側の UI
 const result = await keyMgr.loginWithPasskey();
 if (result.status === 'restored') {
   keyMgr.setCurrentKeyInfo(result.keyInfo);
 } else if (result.status === 'ambiguous') {
-  // このパスキーに複数のアカウントが紐づいている: ユーザーに選ばせる（chooseAccount はアプリ側の UI）
+  // このパスキーに複数のアカウントが紐づいている: ユーザーに選ばせる
   keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
 } else {
-  // 'unknown': この端末にこのパスキーの鍵情報が無い。
-  // 保存済み鍵情報からの復元を案内するか、ユーザーの確認を得てから導出する。
-  const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
-  keyMgr.setCurrentKeyInfo(keyInfo);
+  // 'unknown': この端末にこのパスキーの鍵情報が無い
+  const saved = await askForSavedKeyInfo(); // 例: ユーザーが選んだバックアップファイル
+  if (isNostrKeyInfo(saved)) {
+    keyMgr.setCurrentKeyInfo(saved);
+  } else if (await confirmDerive()) {
+    // 直接モードのアカウントは復元されるが、wrap モードの鍵用パスキーでは別のアカウントになる
+    const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
+    keyMgr.setCurrentKeyInfo(keyInfo);
+  }
 }
 ```
 
 `unknown` は、そのパスキーが直接モードで使われていたことを意味しません。`createNostrKey()` で導出すると、直接モードのアカウントであれば元のアカウントが復元されます（例: 同期されたパスキーで新しい端末からログインする場合）。しかし wrap モードの鍵にしか使っていないパスキーでは別のアカウントになるため、導出の前にユーザーに確認してください。保存済みの鍵情報から復元する場合は、`isNostrKeyInfo()` で形式を確認してから `setCurrentKeyInfo()` に渡します。
 
-通常のログアウトには、登録簿を残す `clearCurrentKeyInfo()` を使います。`clearStoredKeyInfo()` は wrap モードのペイロードを含む登録簿ごと削除し、`setStorageOptions({ enabled: false })` も同様です。`registryEnabled: false` の場合は登録簿が無いため、`clearCurrentKeyInfo()` でも wrap モードのペイロードの唯一の保存コピーが消えます。削除する前に `listKeyInfos()`（登録簿の全アカウント）か `backupKeyInfo()`（current のアカウント）の結果を保存するか、元の秘密鍵など別の復元手段を確保してください。wrap モードのペイロードの復号には元のパスキーが必要です。バックアップにはアカウントとクレデンシャルの情報が含まれるため、非公開で保管してください。
+通常のログアウトには、登録簿を残す `clearCurrentKeyInfo()` を使います。`clearStoredKeyInfo()` は wrap モードのペイロードを含む登録簿ごと削除し、`setStorageOptions({ enabled: false })` も同様です。`registryEnabled: false` の場合は登録簿が無いため、`clearCurrentKeyInfo()` でも wrap モードのペイロードの唯一の保存コピーが消えます（別のアカウントを設定した場合も上書きで消えます）。削除する前に `listKeyInfos()`（登録簿の全アカウント。登録簿が無効な場合は空）か `backupKeyInfo()`（current のアカウント）の結果を保存するか、元の秘密鍵など別の復元手段を確保してください。wrap モードのペイロードの復号には元のパスキーが必要です。バックアップにはアカウントとクレデンシャルの情報が含まれるため、非公開で保管してください。
 
 ### メッセージの暗号化と復号（NIP-44）
 
@@ -146,12 +152,12 @@ const keyMgr = new NosskeyManager({
 - `exportNostrKey(keyInfo, credentialId?)` - 秘密鍵を16進数形式でエクスポート
 
 #### 鍵情報管理
-- `setCurrentKeyInfo(keyInfo)` - 現在のNostrKeyInfoを設定し、有効な場合はストレージに保存（登録簿にも追加）
+- `setCurrentKeyInfo(keyInfo)` - 現在のNostrKeyInfoを設定し、有効な場合はストレージに保存（登録簿が有効なら登録簿にも追加）
 - `getCurrentKeyInfo()` - メモリまたはストレージから現在のNostrKeyInfoを取得
 - `reloadCurrentKeyInfo()` - 現在のNostrKeyInfoをストレージから読み直す
 - `hasKeyInfo()` - メモリまたはストレージにNostrKeyInfoが存在するか確認
 - `listKeyInfos()` - 登録簿にある全NostrKeyInfoの一覧を取得
-- `findKeyInfosByCredentialId(credentialId)` - クレデンシャルIDに紐づく保存済みNostrKeyInfoを検索
+- `findKeyInfosByCredentialId(credentialId)` - クレデンシャルIDに紐づく保存済みNostrKeyInfoをすべて検索
 - `backupKeyInfo(pubkey?, credentialId?)` - バックアップ用にNostrKeyInfo（`wrapped.payload` を含む）のコピーを取得
 - `removeKeyInfo(pubkey, credentialId)` - 登録簿からアカウントを削除
 - `clearCurrentKeyInfo()` - ログアウト: current の鍵を消去し、登録簿は残す
@@ -175,7 +181,7 @@ const keyMgr = new NosskeyManager({
 - `clearAllCachedKeys()` - すべてのキャッシュをクリア
 
 #### ストレージ管理
-- `setStorageOptions(options)` - NostrKeyInfoのストレージ設定を更新
+- `setStorageOptions(options)` - NostrKeyInfoのストレージ設定を更新（`enabled: false` にすると登録簿を含む保存済みの鍵情報をすべて削除）
 - `getStorageOptions()` - 現在のストレージ設定を取得
 
 #### ユーティリティメソッド

@@ -305,7 +305,7 @@ async importNostrKey(
 セキュリティメモ:
 - 入力された `seckey` バッファ（`Uint8Array`）は関数完了時に SDK 内部で `.fill(0)` されます。呼び出し側でも前後でゼロ化することを推奨します。
 - 戻り値の `NostrKeyInfo` を `setCurrentKeyInfo()` でセットすれば、以降の `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` が wrap モードで透過的に動作します（API は PRF 直接モードと完全に同一）。
-- **wrap 鍵は復元不能・PRF 直接モードとの非対称性**: 戻り値の `wrapped.payload` はインポートした nsec の唯一のコピーであり、パスキーから再導出できません。登録簿が有効（既定）なら `setCurrentKeyInfo()` は current 上書きを跨いで保持し、`clearCurrentKeyInfo()` によるログアウトでも残ります。ただし `clearStoredKeyInfo()`（完全ワイプ）・`removeKeyInfo()`・`registryEnabled=false` では**永久に失われます**。元 nsec のバックアップ保持を推奨し、`NostrKeyInfo`（`wrapped.payload` 含む）のエクスポートには `backupKeyInfo()` を使ってください。
+- **wrap 鍵は復元不能・PRF 直接モードとの非対称性**: 戻り値の `wrapped.payload` はインポートした nsec の唯一のコピーであり、パスキーから再導出できません。登録簿が有効（既定）なら `setCurrentKeyInfo()` は current 上書きを跨いで保持し、`clearCurrentKeyInfo()` によるログアウトでも残ります。ただし `clearStoredKeyInfo()`（完全ワイプ）・それを呼ぶ `setStorageOptions({ enabled: false })`・`removeKeyInfo()`・`registryEnabled=false` では**永久に失われます**。元 nsec のバックアップ保持を推奨し、`NostrKeyInfo`（`wrapped.payload` 含む）のエクスポートには `backupKeyInfo()` を使ってください。
 - **メモリゼロ化の制約**: SDK 内部で秘密鍵を `seckeySigner` 渡しや NIP-44 平文経路に通すため、一時的に hex 文字列（`string`）化されます。JS の `string` は immutable で書き戻し API が無いため、`Uint8Array.fill(0)` 相当のゼロ化は不可能で、**GC タイミングまでヒープに残存します**。`importNostrKey` / `exportNostrKey` / 復号後の `signEvent` などで発生します。ブラウザヒープに直接アクセスできる攻撃者を想定する場合は、この制約を理解した上で利用してください。
 
 ### 署名メソッド
@@ -371,6 +371,9 @@ NostrKeyInfoストレージの設定を更新します。
 ```typescript
 setStorageOptions(options: Partial<NostrKeyStorageOptions>): void
 ```
+
+> ⚠️ `enabled: false` を渡すと `clearStoredKeyInfo()` が呼ばれ、current スロットと登録簿
+> （wrap モードの `wrapped.payload` を含む）が削除されます。必要なら先にバックアップしてください。
 
 #### getStorageOptions()
 現在のNostrKeyInfoストレージ設定を取得します。
@@ -477,6 +480,19 @@ function getPrfSecret(
 function bytesToHex(bytes: Uint8Array): string
 
 function hexToBytes(hex: string): Uint8Array
+
+// 16進数以外の文字・奇数長・expectedBytes と異なる長さの場合は例外を投げる
+function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
+```
+
+### 登録簿ヘルパー
+
+```typescript
+// NostrKeyInfo の形式チェック（ファイルからバックアップを復元するときなど）
+function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
+
+// 登録簿の既定ストレージキー（"nosskey_accounts"）
+const DEFAULT_REGISTRY_STORAGE_KEY: string
 ```
 
 ### テスト用ユーティリティ
@@ -544,7 +560,7 @@ const signedEvent2 = await nosskey.signEvent(event2);
 
 ## セキュリティ上の利点
 
-1. **平文の秘密鍵を保存しない**: 直接モードの鍵は保存されず、wrap モードの鍵も NIP-44 の暗号文としてのみ保存される。平文の鍵がメモリに存在するのは使用中か、鍵キャッシュの有効期限までに限られる
+1. **平文の秘密鍵を保存しない**: 直接モードの鍵は保存されず、wrap モードの鍵も NIP-44 の暗号文としてのみ保存される。平文の鍵はメモリ上にのみ存在する（どれだけ残るかは、鍵キャッシュ、未消費 PRF の TTL、`clearMemory`、`importNostrKey()` の項で説明したメモリゼロ化の制限による）
 2. **リレーへの依存なし**: 暗号化された秘密鍵をリレーに保存する必要がない
 3. **復元の容易さ（直接モード）**: 同じパスキーがあれば、どのデバイスでも同じ直接モードの鍵を再導出できる。wrap モードの鍵は、保存した `NostrKeyInfo`（`wrapped.payload`）も必要
 4. **漏洩リスクの軽減**: 平文の秘密鍵が永続化されないため、データ漏洩のリスクが大幅に軽減
@@ -556,5 +572,5 @@ const signedEvent2 = await nosskey.signEvent(event2);
 |------|------|
 | PRF拡張サポート | すべての認証器がPRF拡張をサポートしているわけではありません。使用前に`isPrfSupported()`でチェックしてください。 |
 | メモリクリア | Web Cryptoバッファはガベージコレクションによってデタッチされますが、Uint8Arrayの明示的なfill(0)は慎重に行う必要があります。 |
-| PRF値の有効性 | PRF値を直接秘密鍵として使用する場合、secp256k1の有効範囲外になる可能性が（約 2^-128 と極めて低いですが）あります。その場合はエラーとして拒否されます。 |
+| PRF値の有効性 | PRF値を秘密鍵として使用する場合（直接、または wrap モードの KEK として）、secp256k1の有効範囲外になる可能性が（約 2^-128 と極めて低いですが）あります。その場合はエラーとして拒否されます。 |
 | デバイス間同期 | パスキーのクラウド同期により、直接モードのアカウントは他のデバイスでも利用できます。wrap モードの鍵は各デバイスに `NostrKeyInfo`（`wrapped.payload` を含む）も必要で、パスキー同期ではコピーされません。 |

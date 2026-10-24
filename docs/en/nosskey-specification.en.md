@@ -154,7 +154,7 @@ WebAuthn and PRF extension compatibility varies by environment. See the [PRF Com
 
 2. **NIP-49 Compatibility**:
    - PRF values are already high-entropy, making NIP-49's scrypt processing redundant
-   - The PRF output can be used directly as the encryption key; this SDK uses NIP-44 v2 self-encryption (see [Encryption/Decryption Approach](#encryptiondecryption-approach-alternative-method))
+   - No password-stretching step is needed; this SDK uses the PRF output as the private key for NIP-44 v2 self-encryption (see [Encryption/Decryption Approach](#encryptiondecryption-approach-alternative-method))
 
 3. **Security Best Practices**:
    - Mandatory User Verification (UV): `userVerification: "required"`
@@ -176,4 +176,4 @@ With this implementation approach, even general users can participate in the Nos
 
 The [Passkey-Held Keys draft](https://github.com/nostr-wot/nips/blob/proposal/passkey-held-keys/XX.md) builds on Nosskey's direct/wrapped model and proposes optional credential-level mode discovery and shared recovery records. It is not an adopted NIP or a format currently implemented by this SDK. Its HKDF-derived keys and AES-GCM records must not be substituted for existing Nosskey derivation or wrapped payloads.
 
-For integrations that only need NIP-07 operations (signing and NIP-44/NIP-04 encryption), [nosskey-iframe](../../packages/nosskey-iframe/README.md) keeps signing with the original provider instead of importing its key into the parent application. Recovery-format interoperability and provider-hosted signing solve different problems. Existing accounts do not need migration merely to use the latter.
+For integrations that only need NIP-07 operations (signing and NIP-44/NIP-04 encryption and decryption), [nosskey-iframe](../../packages/nosskey-iframe/README.md) keeps these operations with the original provider instead of importing its key into the parent application. Recovery-format interoperability and provider-hosted signing solve different problems. Existing accounts do not need migration merely to use the latter.

@@ -316,7 +316,7 @@ Validation rules:
 Security notes:
 - The input `seckey` buffer (`Uint8Array`) is zeroed (`.fill(0)`) inside the SDK on completion. Callers are still encouraged to zero their own buffers before and after.
 - Once you call `setCurrentKeyInfo()` with the returned `NostrKeyInfo`, subsequent `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` operate transparently in wrap mode (API is identical to PRF direct mode).
-- **Wrap keys are unrecoverable / asymmetric vs. PRF direct mode**: the returned `wrapped.payload` is the only copy of the imported nsec and cannot be re-derived from the passkey. With the registry enabled (default), `setCurrentKeyInfo()` preserves it across current-slot overwrites, and logout via `clearCurrentKeyInfo()` keeps it. However it is **permanently lost** via `clearStoredKeyInfo()` (full wipe), `removeKeyInfo()`, or when `registryEnabled` is `false`. Keep a backup of the original nsec, and use `backupKeyInfo()` to export the `NostrKeyInfo` (including `wrapped.payload`).
+- **Wrap keys are unrecoverable / asymmetric vs. PRF direct mode**: the returned `wrapped.payload` is the only copy of the imported nsec and cannot be re-derived from the passkey. With the registry enabled (default), `setCurrentKeyInfo()` preserves it across current-slot overwrites, and logout via `clearCurrentKeyInfo()` keeps it. However it is **permanently lost** via `clearStoredKeyInfo()` (full wipe), `setStorageOptions({ enabled: false })` (which calls it), `removeKeyInfo()`, or when `registryEnabled` is `false`. Keep a backup of the original nsec, and use `backupKeyInfo()` to export the `NostrKeyInfo` (including `wrapped.payload`).
 - **Memory zeroing limitation**: The SDK internally hex-encodes the private key (`string`) when handing it to `seckeySigner` or routing it through the NIP-44 plaintext path. JavaScript `string` primitives are immutable and lack any write-back API, so an equivalent of `Uint8Array.fill(0)` is not possible — those hex strings **remain on the heap until garbage collection**. This applies to `importNostrKey`, `exportNostrKey`, and post-decrypt `signEvent` paths. If your threat model includes attackers with direct browser-heap access, take this caveat into account.
 
 ### Signing Methods
@@ -382,6 +382,9 @@ Updates NostrKeyInfo storage settings.
 ```typescript
 setStorageOptions(options: Partial<NostrKeyStorageOptions>): void
 ```
+
+> ⚠️ Passing `enabled: false` calls `clearStoredKeyInfo()`, which deletes the current slot
+> and the registry (including wrap-mode `wrapped.payload`). Back up first if needed.
 
 #### getStorageOptions()
 Gets current NostrKeyInfo storage settings.
@@ -488,6 +491,19 @@ function getPrfSecret(
 function bytesToHex(bytes: Uint8Array): string
 
 function hexToBytes(hex: string): Uint8Array
+
+// Throws on non-hex characters, odd length, or a length other than expectedBytes
+function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
+```
+
+### Registry Helpers
+
+```typescript
+// Shape check for a NostrKeyInfo, e.g. when restoring a backup from a file
+function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
+
+// Default storage key of the account registry ("nosskey_accounts")
+const DEFAULT_REGISTRY_STORAGE_KEY: string
 ```
 
 ### Test Utility
@@ -555,7 +571,7 @@ const signedEvent2 = await nosskey.signEvent(event2);
 
 ## Security Benefits
 
-1. **No plaintext private key storage**: Direct-mode keys are never stored, and wrapped keys are stored only as NIP-44 ciphertext. A plaintext key exists in memory only while it is used, or until the key cache expires
+1. **No plaintext private key storage**: Direct-mode keys are never stored, and wrapped keys are stored only as NIP-44 ciphertext. Plaintext keys exist only in memory (how long they stay there depends on the key cache, the pending PRF TTL, `clearMemory`, and the memory zeroing limitation described under `importNostrKey()`)
 2. **No relay dependency**: No need to store encrypted private keys on relays
 3. **Easy restoration (direct mode)**: The same direct-mode key can be re-derived on any device with the same passkey. Wrapped keys also need their saved `NostrKeyInfo` (`wrapped.payload`)
 4. **Reduced leakage risk**: No plaintext private key is persisted, which significantly reduces the risk of data leakage
@@ -567,5 +583,5 @@ const signedEvent2 = await nosskey.signEvent(event2);
 |------|-------------|
 | PRF Extension Support | Not all authenticators support PRF extension. Check with `isPrfSupported()` before use. |
 | Memory Clearance | Web Crypto buffers are detached by garbage collection, but explicit fill(0) for Uint8Arrays should still be done carefully. |
-| PRF Value Validity | When using PRF values directly as secret keys, there is a possibility (albeit extremely low, about 2^-128) that they may not fall within the valid range of secp256k1. Such output is rejected with an error. |
+| PRF Value Validity | When using PRF values as secret keys (directly, or as the wrap-mode KEK), there is a possibility (albeit extremely low, about 2^-128) that they may not fall within the valid range of secp256k1. Such output is rejected with an error. |
 | Cross-device Sync | Passkey cloud sync makes direct-mode accounts available on other devices. Wrapped keys also need their `NostrKeyInfo` (including `wrapped.payload`) on each device; passkey sync does not copy it. |

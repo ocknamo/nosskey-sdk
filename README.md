@@ -67,25 +67,31 @@ const signedEvent = await keyMgr.signEvent(event);
 Use `loginWithPasskey()` for sign-in, not `createNostrKey()`. It does not set the current key, so pass the key info you pick to `setCurrentKeyInfo()`:
 
 ```javascript
-import { hexToBytes } from 'nosskey-sdk';
+import { hexToBytes, isNostrKeyInfo } from 'nosskey-sdk';
 
+// chooseAccount, askForSavedKeyInfo and confirmDerive are your app's UI.
 const result = await keyMgr.loginWithPasskey();
 if (result.status === 'restored') {
   keyMgr.setCurrentKeyInfo(result.keyInfo);
 } else if (result.status === 'ambiguous') {
-  // Several accounts use this passkey: let the user pick one (chooseAccount is your UI)
+  // Several accounts use this passkey: let the user pick one
   keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
 } else {
-  // 'unknown': no key info for this passkey on this device.
-  // Offer to restore saved key info, or derive only after the user confirms.
-  const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
-  keyMgr.setCurrentKeyInfo(keyInfo);
+  // 'unknown': no key info for this passkey on this device
+  const saved = await askForSavedKeyInfo(); // e.g. a backup file the user selects
+  if (isNostrKeyInfo(saved)) {
+    keyMgr.setCurrentKeyInfo(saved);
+  } else if (await confirmDerive()) {
+    // Restores a direct-mode account, but a wrapped-key passkey gets a different identity
+    const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
+    keyMgr.setCurrentKeyInfo(keyInfo);
+  }
 }
 ```
 
 An `unknown` result is not evidence that the passkey was used in direct mode. Deriving with `createNostrKey()` restores a direct-mode account (for example, a synced passkey on a new device), but yields a different identity if the passkey was used only for a wrapped key, so ask the user before deriving. To restore saved key info instead, check its shape with `isNostrKeyInfo()` and pass it to `setCurrentKeyInfo()`.
 
-For ordinary sign-out, use `clearCurrentKeyInfo()`, which keeps the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads, and so does `setStorageOptions({ enabled: false })`. With `registryEnabled: false` there is no registry, so `clearCurrentKeyInfo()` also discards the only stored copy of a wrapped payload. Before deleting, save `listKeyInfos()` (all registry accounts) or `backupKeyInfo()` (the current account), or keep another recovery route such as the original private key. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
+For ordinary sign-out, use `clearCurrentKeyInfo()`, which keeps the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads, and so does `setStorageOptions({ enabled: false })`. With `registryEnabled: false` there is no registry, so `clearCurrentKeyInfo()` also discards the only stored copy of a wrapped payload (and setting another account overwrites it). Before deleting, save `listKeyInfos()` (all registry accounts; empty when the registry is disabled) or `backupKeyInfo()` (the current account), or keep another recovery route such as the original private key. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
 
 ### Encrypting and Decrypting Messages (NIP-44)
 
@@ -146,12 +152,12 @@ const keyMgr = new NosskeyManager({
 - `exportNostrKey(keyInfo, credentialId?)` - Export the private key in hexadecimal format
 
 #### Key Information Management
-- `setCurrentKeyInfo(keyInfo)` - Set the current NostrKeyInfo and save to storage if enabled (also added to the account registry)
+- `setCurrentKeyInfo(keyInfo)` - Set the current NostrKeyInfo and save to storage if enabled (also added to the account registry when enabled)
 - `getCurrentKeyInfo()` - Get the current NostrKeyInfo from memory or storage
 - `reloadCurrentKeyInfo()` - Re-read the current NostrKeyInfo from storage
 - `hasKeyInfo()` - Check if NostrKeyInfo exists in memory or storage
 - `listKeyInfos()` - List every NostrKeyInfo in the account registry
-- `findKeyInfosByCredentialId(credentialId)` - Find the stored NostrKeyInfo linked to a credential ID
+- `findKeyInfosByCredentialId(credentialId)` - Find all stored NostrKeyInfo entries linked to a credential ID
 - `backupKeyInfo(pubkey?, credentialId?)` - Return a copy of a NostrKeyInfo (including `wrapped.payload`) for backup
 - `removeKeyInfo(pubkey, credentialId)` - Remove an account from the registry
 - `clearCurrentKeyInfo()` - Sign out: clear the current key but keep the account registry
@@ -175,7 +181,7 @@ const keyMgr = new NosskeyManager({
 - `clearAllCachedKeys()` - Clear all cached keys
 
 #### Storage Management
-- `setStorageOptions(options)` - Update storage configuration for NostrKeyInfo
+- `setStorageOptions(options)` - Update storage configuration for NostrKeyInfo (`enabled: false` deletes all stored key info, including the registry)
 - `getStorageOptions()` - Get current storage configuration
 
 #### Utility Methods
