@@ -261,7 +261,9 @@ type PasskeyLoginResult =
 - `unknown`: no key info on this device. **After confirming with the user**, calling
   `createNostrKey(hexToBytes(credentialId))` derives a PRF direct-mode key with no extra
   UV, because the PRF from the assertion is stashed inside the SDK (60-second TTL; after
-  that it falls back to a fresh assertion automatically).
+  that it falls back to a fresh assertion automatically). This restores the account if the
+  passkey was used in direct mode (e.g. a synced passkey on a new device), but yields a
+  different identity if the passkey was used only for a wrapped key.
 
 UV count:
 - For a direct-mode match, the PRF from the assertion *is* that key's secret key, so it is
@@ -314,7 +316,7 @@ Validation rules:
 Security notes:
 - The input `seckey` buffer (`Uint8Array`) is zeroed (`.fill(0)`) inside the SDK on completion. Callers are still encouraged to zero their own buffers before and after.
 - Once you call `setCurrentKeyInfo()` with the returned `NostrKeyInfo`, subsequent `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` operate transparently in wrap mode (API is identical to PRF direct mode).
-- **Wrap keys are unrecoverable / asymmetric vs. PRF direct mode**: the returned `wrapped.payload` is the only copy of the imported nsec and cannot be re-derived from the passkey. With the registry enabled (default), `setCurrentKeyInfo()` preserves it across current-slot overwrites, and logout via `clearCurrentKeyInfo()` keeps it. However it is **permanently lost** via `clearStoredKeyInfo()` (full wipe), `removeKeyInfo()`, or when `registryEnabled` is `false`. Keep a backup of the original nsec, and use `backupKeyInfo()` to export the `NostrKeyInfo` (including `wrapped.payload`).
+- **Wrap keys are unrecoverable / asymmetric vs. PRF direct mode**: the returned `wrapped.payload` is the only copy of the imported nsec and cannot be re-derived from the passkey. With the registry enabled (default), `setCurrentKeyInfo()` preserves it across current-slot overwrites, and logout via `clearCurrentKeyInfo()` keeps it. However it is **permanently lost** via `clearStoredKeyInfo()` (full wipe), `setStorageOptions({ enabled: false })` (which calls it), `removeKeyInfo()`, or when `registryEnabled` is `false`. Keep a backup of the original nsec, and use `backupKeyInfo()` to export the `NostrKeyInfo` (including `wrapped.payload`).
 - **Memory zeroing limitation**: The SDK internally hex-encodes the private key (`string`) when handing it to `seckeySigner` or routing it through the NIP-44 plaintext path. JavaScript `string` primitives are immutable and lack any write-back API, so an equivalent of `Uint8Array.fill(0)` is not possible — those hex strings **remain on the heap until garbage collection**. This applies to `importNostrKey`, `exportNostrKey`, and post-decrypt `signEvent` paths. If your threat model includes attackers with direct browser-heap access, take this caveat into account.
 
 ### Signing Methods
@@ -381,6 +383,9 @@ Updates NostrKeyInfo storage settings.
 setStorageOptions(options: Partial<NostrKeyStorageOptions>): void
 ```
 
+> ⚠️ Passing `enabled: false` calls `clearStoredKeyInfo()`, which deletes the current slot
+> and the registry (including wrap-mode `wrapped.payload`). Back up first if needed.
+
 #### getStorageOptions()
 Gets current NostrKeyInfo storage settings.
 
@@ -445,7 +450,7 @@ export interface SignOptions {
 
 ## Package Exports
 
-In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions.
+In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions and constant.
 
 ### Low-level NIP-44 Functions
 
@@ -486,6 +491,19 @@ function getPrfSecret(
 function bytesToHex(bytes: Uint8Array): string
 
 function hexToBytes(hex: string): Uint8Array
+
+// Throws on non-hex characters, odd length, or a length other than expectedBytes
+function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
+```
+
+### Registry Helpers
+
+```typescript
+// Shape check for a NostrKeyInfo, e.g. when restoring a backup from a file
+function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
+
+// Default storage key of the account registry ("nosskey_accounts")
+const DEFAULT_REGISTRY_STORAGE_KEY = 'nosskey_accounts'
 ```
 
 ### Test Utility
@@ -553,10 +571,10 @@ const signedEvent2 = await nosskey.signEvent(event2);
 
 ## Security Benefits
 
-1. **No persistent private key storage**: Private keys are generated temporarily only during signing and immediately cleared from memory after use
+1. **No plaintext private key storage**: Direct-mode keys are never stored, and wrapped keys are stored only as NIP-44 ciphertext. Plaintext keys exist only in memory (how long they stay there depends on the key cache, the pending PRF TTL, `clearMemory`, and the memory zeroing limitation described under `importNostrKey()`)
 2. **No relay dependency**: No need to store encrypted private keys on relays
-3. **Easy restoration**: Same Nostr keys can be restored from any device with the same passkey
-4. **Reduced leakage risk**: Significantly reduced risk of data leakage as no persistent private key data exists
+3. **Easy restoration (direct mode)**: The same direct-mode key can be re-derived on any device with the same passkey. Wrapped keys also need their saved `NostrKeyInfo` (`wrapped.payload`)
+4. **Reduced leakage risk**: No plaintext private key is persisted, which significantly reduces the risk of data leakage
 5. **Standardized salt value**: Compatibility ensured through unified salt values across implementations
 
 ## Important Notes
@@ -565,5 +583,5 @@ const signedEvent2 = await nosskey.signEvent(event2);
 |------|-------------|
 | PRF Extension Support | Not all authenticators support PRF extension. Check with `isPrfSupported()` before use. |
 | Memory Clearance | Web Crypto buffers are detached by garbage collection, but explicit fill(0) for Uint8Arrays should still be done carefully. |
-| PRF Value Validity | When using PRF values directly as secret keys, there is a possibility (albeit extremely low) that they may not fall within the valid range of secp256k1. |
-| Cross-device Sync | Passkey cloud sync functionality enables automatic account availability across multiple devices. |
+| PRF Value Validity | When using PRF values as secret keys (directly, or as the wrap-mode KEK), there is a possibility (albeit extremely low, about 2^-128) that they may not fall within the valid range of secp256k1. Such output is rejected with an error. |
+| Cross-device Sync | Passkey cloud sync makes direct-mode accounts available on other devices. Wrapped keys also need their `NostrKeyInfo` (including `wrapped.payload`) on each device; passkey sync does not copy it. |
