@@ -450,7 +450,7 @@ export interface SignOptions {
 
 ## Package Exports
 
-In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions.
+In addition to the `NosskeyManager` class and type definitions, the `nosskey-sdk` entry point (barrel) exposes the following standalone functions and constant.
 
 ### Low-level NIP-44 Functions
 
@@ -503,7 +503,7 @@ function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
 function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
 
 // Default storage key of the account registry ("nosskey_accounts")
-const DEFAULT_REGISTRY_STORAGE_KEY: string
+const DEFAULT_REGISTRY_STORAGE_KEY = 'nosskey_accounts'
 ```
 
 ### Test Utility

@@ -77,19 +77,20 @@ if (result.status === 'restored') {
   // Several accounts use this passkey: let the user pick one
   keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
 } else {
-  // 'unknown': no key info for this passkey on this device
-  const saved = await askForSavedKeyInfo(); // e.g. a backup file the user selects
-  if (isNostrKeyInfo(saved)) {
+  // 'unknown': no key info for this passkey on this device.
+  // e.g. let the user pick an entry from a backup file (backupKeyInfo() / listKeyInfos() output)
+  const saved = await askForSavedKeyInfo(result.credentialId);
+  if (isNostrKeyInfo(saved) && saved.credentialId.toLowerCase() === result.credentialId) {
     keyMgr.setCurrentKeyInfo(saved);
   } else if (await confirmDerive()) {
-    // Restores a direct-mode account, but a wrapped-key passkey gets a different identity
+    // Restores a direct-mode account; a passkey used only for a wrapped key gets a different identity
     const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
     keyMgr.setCurrentKeyInfo(keyInfo);
   }
 }
 ```
 
-An `unknown` result is not evidence that the passkey was used in direct mode. Deriving with `createNostrKey()` restores a direct-mode account (for example, a synced passkey on a new device), but yields a different identity if the passkey was used only for a wrapped key, so ask the user before deriving. To restore saved key info instead, check its shape with `isNostrKeyInfo()` and pass it to `setCurrentKeyInfo()`.
+An `unknown` result is not evidence that the passkey was used in direct mode. Deriving with `createNostrKey()` restores a direct-mode account (for example, a synced passkey on a new device), but yields a different identity if the passkey was used only for a wrapped key, so ask the user before deriving. To restore saved key info instead, pass it to `setCurrentKeyInfo()`. `isNostrKeyInfo()` only checks its shape, so also check that its `credentialId` matches the passkey the user just chose.
 
 For ordinary sign-out, use `clearCurrentKeyInfo()`, which keeps the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads, and so does `setStorageOptions({ enabled: false })`. With `registryEnabled: false` there is no registry, so `clearCurrentKeyInfo()` also discards the only stored copy of a wrapped payload (and setting another account overwrites it). Before deleting, save `listKeyInfos()` (all registry accounts; empty when the registry is disabled) or `backupKeyInfo()` (the current account), or keep another recovery route such as the original private key. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
 

@@ -77,19 +77,20 @@ if (result.status === 'restored') {
   // このパスキーに複数のアカウントが紐づいている: ユーザーに選ばせる
   keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
 } else {
-  // 'unknown': この端末にこのパスキーの鍵情報が無い
-  const saved = await askForSavedKeyInfo(); // 例: ユーザーが選んだバックアップファイル
-  if (isNostrKeyInfo(saved)) {
+  // 'unknown': この端末にこのパスキーの鍵情報が無い。
+  // 例: バックアップファイル（backupKeyInfo() / listKeyInfos() の出力）からユーザーにエントリを選ばせる
+  const saved = await askForSavedKeyInfo(result.credentialId);
+  if (isNostrKeyInfo(saved) && saved.credentialId.toLowerCase() === result.credentialId) {
     keyMgr.setCurrentKeyInfo(saved);
   } else if (await confirmDerive()) {
-    // 直接モードのアカウントは復元されるが、wrap モードの鍵用パスキーでは別のアカウントになる
+    // 直接モードのアカウントは復元される。wrap モードの鍵にしか使っていないパスキーでは別のアカウントになる
     const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
     keyMgr.setCurrentKeyInfo(keyInfo);
   }
 }
 ```
 
-`unknown` は、そのパスキーが直接モードで使われていたことを意味しません。`createNostrKey()` で導出すると、直接モードのアカウントであれば元のアカウントが復元されます（例: 同期されたパスキーで新しい端末からログインする場合）。しかし wrap モードの鍵にしか使っていないパスキーでは別のアカウントになるため、導出の前にユーザーに確認してください。保存済みの鍵情報から復元する場合は、`isNostrKeyInfo()` で形式を確認してから `setCurrentKeyInfo()` に渡します。
+`unknown` は、そのパスキーが直接モードで使われていたことを意味しません。`createNostrKey()` で導出すると、直接モードのアカウントであれば元のアカウントが復元されます（例: 同期されたパスキーで新しい端末からログインする場合）。しかし wrap モードの鍵にしか使っていないパスキーでは別のアカウントになるため、導出の前にユーザーに確認してください。保存済みの鍵情報から復元する場合は `setCurrentKeyInfo()` に渡します。`isNostrKeyInfo()` は形式しか確認しないため、その `credentialId` が直前に選ばれたパスキーと一致することも確認してください。
 
 通常のログアウトには、登録簿を残す `clearCurrentKeyInfo()` を使います。`clearStoredKeyInfo()` は wrap モードのペイロードを含む登録簿ごと削除し、`setStorageOptions({ enabled: false })` も同様です。`registryEnabled: false` の場合は登録簿が無いため、`clearCurrentKeyInfo()` でも wrap モードのペイロードの唯一の保存コピーが消えます（別のアカウントを設定した場合も上書きで消えます）。削除する前に `listKeyInfos()`（登録簿の全アカウント。登録簿が無効な場合は空）か `backupKeyInfo()`（current のアカウント）の結果を保存するか、元の秘密鍵など別の復元手段を確保してください。wrap モードのペイロードの復号には元のパスキーが必要です。バックアップにはアカウントとクレデンシャルの情報が含まれるため、非公開で保管してください。
 

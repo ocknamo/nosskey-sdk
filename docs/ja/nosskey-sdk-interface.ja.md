@@ -439,7 +439,7 @@ export interface SignOptions {
 
 ## パッケージエクスポート
 
-`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数を公開しています。
+`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数と定数を公開しています。
 
 ### 低レベル NIP-44 関数
 
@@ -492,7 +492,7 @@ function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
 function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
 
 // 登録簿の既定ストレージキー（"nosskey_accounts"）
-const DEFAULT_REGISTRY_STORAGE_KEY: string
+const DEFAULT_REGISTRY_STORAGE_KEY = 'nosskey_accounts'
 ```
 
 ### テスト用ユーティリティ
