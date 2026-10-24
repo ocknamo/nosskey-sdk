@@ -2,7 +2,7 @@
 
 ## Overview
 
-Nosskey SDK adopts a method that directly derives Nostr private keys using the PRF extension of WebAuthn passkeys. The PWKBlob concept has been abolished in favor of a simpler and more secure NostrKeyInfo structure.
+Nosskey SDK supports direct PRF-derived keys and existing keys wrapped with a passkey. `NostrKeyInfo` records which mode applies and, for wrapped keys, contains the encrypted payload required for recovery. It replaces the earlier PWKBlob structure.
 
 ## Main Type Definitions
 

@@ -98,22 +98,22 @@ For more detailed implementation examples, refer to the [SDK Interface Details](
 ### Considerations and Limitations
 
 1. **PRF Extension Support Status**: Not all browsers and authenticators support it (see [compatibility table](prf-support-tables.en.md))
-2. **secp256k1 Range Constraint**: Theoretical possibility that PRF output values fall outside the valid private key range of the curve (probability of about 2^-224)
+2. **secp256k1 Range Constraint**: PRF output must be an integer from 1 to n−1, where n is the secp256k1 group order. Reject invalid output; changing the derivation would change the identity.
 3. **Compatibility with Existing Keys**: Cannot import nsec keys
 4. **Backup/Recovery**: Depends on passkey cloud synchronization (platform-dependent)
-5. **Domain Constraint**: WebAuthn is tied to domains, so cannot migrate between apps on different domains
+5. **Domain Constraint**: WebAuthn credentials are scoped to a relying party ID. An unrelated origin cannot request them by choosing that ID. Provider-hosted iframe signing and supported, explicitly authorized related-origin requests are distinct integration routes; neither makes passkeys universally accessible.
 
 ## Encryption/Decryption Approach (Alternative Method)
 
-This approach encrypts existing Nostr private keys (nsec) using PRF values from WebAuthn. By directly using PRF values as encryption keys, additional key derivation (such as scrypt in NIP-49) can be omitted, balancing performance and security.
+The current SDK uses PRF input UTF-8 `nostr-pwk-wrap`, separate from direct mode’s `nostr-pwk`. It encrypts the private-key hex string with NIP-44 v2 using the PRF output as a private key and its corresponding public key as the peer (self-encryption). The encrypted payload is stored in `NostrKeyInfo.wrapped`; the original key is recovered and its public key checked before use.
 
 **Basic Flow**:
 1. Generate or import private key
-2. Obtain PRF value and use it as an AES-GCM key
+2. Obtain the wrap-mode PRF value and use it for NIP-44 self-encryption
 3. Encrypt the private key and store it with metadata
 4. When signing, re-obtain the PRF value, decrypt, sign, and clear
 
-The biggest advantage of this approach is that it can import existing nsec keys. It allows protection of existing identities with passkeys.
+This approach preserves an existing identity. Recovery requires both the original passkey and the saved encrypted payload; syncing the passkey does not itself sync `NostrKeyInfo`. Back up that metadata or the original key before clearing application storage.
 
 ## User Experience and Security Balance
 
@@ -128,7 +128,7 @@ The Nostr signing flow using WebAuthn passkeys greatly improves UX compared to t
 ### Security Strength and Trade-offs
 
 **Security Benefits**:
-- Private keys are stored in the device's secure element, improving resistance to malware and keyloggers
+- The authenticator protects the passkey secret, but the PRF output and recovered Nostr private key enter application memory. A compromised signing application can access them; this is not hardware-isolated Nostr signing.
 - Enhanced security through multi-factor authentication (something you have, something you know, biometric information)
 - Legitimate passkeys cannot be used on phishing sites
 
@@ -170,3 +170,9 @@ Nostr private key management utilizing WebAuthn passkeys and the PRF extension b
 3. Passkeys combine passwordless experience with high security
 
 With this implementation approach, even general users can participate in the Nostr ecosystem while easily achieving high security.
+
+## Interoperability work
+
+The [Passkey-Held Keys draft](https://github.com/nostr-wot/nips/blob/proposal/passkey-held-keys/XX.md) builds on Nosskey's direct/wrapped model and proposes optional credential-level mode discovery and shared recovery records. It is not an adopted NIP or a format currently implemented by this SDK. Its HKDF-derived keys and AES-GCM records must not be substituted for existing Nosskey derivation or wrapped payloads.
+
+For integrations that only need signatures, [nosskey-iframe](../../packages/nosskey-iframe/README.md) keeps signing with the original provider instead of importing its key into the parent application. Recovery-format interoperability and provider-hosted signing solve different problems. Existing accounts do not need migration merely to use the latter.
