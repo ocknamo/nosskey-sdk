@@ -15,15 +15,15 @@ Nosskey（"**Nos**tr"と"pass**key**"を組み合わせた造語）は、WebAuth
 従来のNostr秘密鍵管理では、平文保存やパスワード保護形式（NIP-49）が一般的でしたが、セキュリティと利便性の面で課題がありました。WebAuthnを活用することで以下の利点が得られます：
 
 - **フィッシング耐性**: ドメイン検証により不正サイトでの認証が不可能
-- **自動バックアップ**: 秘密鍵の管理をプラットフォームのパスキー同期機能に任せることで、安全なクラウドバックアップが実現
-- **クロスデバイス**: OSのパスキー同期機能で複数デバイスでも同じ体験
+- **パスキー同期**: 対応するプロバイダではクレデンシャルを同期できる。wrap モードの鍵は、暗号化された `wrapped.payload` を含む `NostrKeyInfo` のバックアップも別途必要（パスキー同期だけではこのペイロードはバックアップされない）
+- **クロスデバイス**: OSのパスキー同期機能で複数デバイスでも同じ体験（wrap モードの鍵は各デバイスに `NostrKeyInfo` も必要）
 
 ## 主な機能と特徴
 
 - 📲 **生体認証連携**: 指紋・顔認証などのパスキー認証と連携
 - 🔐 **フィッシング耐性**: ドメイン検証によりフィッシングサイトでの不正利用を防止
 - ⚡ **高速な処理**: WebAuthn PRF拡張を活用した効率的な実装
-- 🔄 **クロスデバイス対応**: OSのパスキー同期機能で複数デバイスでも利用可能
+- 🔄 **クロスデバイス対応**: OSのパスキー同期機能で複数デバイスでも利用可能（wrap モードの鍵は保存した `NostrKeyInfo` も必要）
 - ✉️ **暗号化メッセージング**: NIP-44 (v2) / NIP-04 (レガシー) のメッセージ暗号化・復号を標準搭載
 
 ## インストール方法
@@ -61,6 +61,31 @@ const event = {
 };
 const signedEvent = await keyMgr.signEvent(event);
 ```
+
+### 既存アカウントへのログイン
+
+ログインには `createNostrKey()` ではなく `loginWithPasskey()` を使います。`loginWithPasskey()` は current の鍵を設定しないため、選んだ鍵情報を `setCurrentKeyInfo()` に渡してください。
+
+```javascript
+import { hexToBytes } from 'nosskey-sdk';
+
+const result = await keyMgr.loginWithPasskey();
+if (result.status === 'restored') {
+  keyMgr.setCurrentKeyInfo(result.keyInfo);
+} else if (result.status === 'ambiguous') {
+  // このパスキーに複数のアカウントが紐づいている: ユーザーに選ばせる（chooseAccount はアプリ側の UI）
+  keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
+} else {
+  // 'unknown': この端末にこのパスキーの鍵情報が無い。
+  // 保存済み鍵情報からの復元を案内するか、ユーザーの確認を得てから導出する。
+  const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
+  keyMgr.setCurrentKeyInfo(keyInfo);
+}
+```
+
+`unknown` は、そのパスキーが直接モードで使われていたことを意味しません。`createNostrKey()` で導出すると、直接モードのアカウントであれば元のアカウントが復元されます（例: 同期されたパスキーで新しい端末からログインする場合）。しかし wrap モードの鍵にしか使っていないパスキーでは別のアカウントになるため、導出の前にユーザーに確認してください。保存済みの鍵情報から復元する場合は、`isNostrKeyInfo()` で形式を確認してから `setCurrentKeyInfo()` に渡します。
+
+通常のログアウトには、登録簿を残す `clearCurrentKeyInfo()` を使います。`clearStoredKeyInfo()` は wrap モードのペイロードを含む登録簿ごと削除し、`setStorageOptions({ enabled: false })` も同様です。`registryEnabled: false` の場合は登録簿が無いため、`clearCurrentKeyInfo()` でも wrap モードのペイロードの唯一の保存コピーが消えます。削除する前に `listKeyInfos()`（登録簿の全アカウント）か `backupKeyInfo()`（current のアカウント）の結果を保存するか、元の秘密鍵など別の復元手段を確保してください。wrap モードのペイロードの復号には元のパスキーが必要です。バックアップにはアカウントとクレデンシャルの情報が含まれるため、非公開で保管してください。
 
 ### メッセージの暗号化と復号（NIP-44）
 
@@ -115,14 +140,22 @@ const keyMgr = new NosskeyManager({
 
 #### 鍵管理
 - `createPasskey(options?)` - PRF拡張を使用した新しいパスキーを作成
-- `createNostrKey(credentialId?, options?)` - PRF値を秘密鍵として使用してNostrKeyInfoを生成
+- `createNostrKey(credentialId?, options?)` - PRF値を秘密鍵として使用してNostrKeyInfoを生成（直接モード）
+- `importNostrKey(seckey, credentialId?, options?)` - 既存の 32 バイト秘密鍵をパスキーで暗号化してNostrKeyInfoを生成（wrap モード）
+- `loginWithPasskey()` - パスキーでログインし、紐づく保存済みNostrKeyInfoを探す（`restored` / `ambiguous` / `unknown`）
 - `exportNostrKey(keyInfo, credentialId?)` - 秘密鍵を16進数形式でエクスポート
 
 #### 鍵情報管理
-- `setCurrentKeyInfo(keyInfo)` - 現在のNostrKeyInfoを設定し、有効な場合はストレージに保存
+- `setCurrentKeyInfo(keyInfo)` - 現在のNostrKeyInfoを設定し、有効な場合はストレージに保存（登録簿にも追加）
 - `getCurrentKeyInfo()` - メモリまたはストレージから現在のNostrKeyInfoを取得
+- `reloadCurrentKeyInfo()` - 現在のNostrKeyInfoをストレージから読み直す
 - `hasKeyInfo()` - メモリまたはストレージにNostrKeyInfoが存在するか確認
-- `clearStoredKeyInfo()` - ストレージとメモリからNostrKeyInfoをクリア
+- `listKeyInfos()` - 登録簿にある全NostrKeyInfoの一覧を取得
+- `findKeyInfosByCredentialId(credentialId)` - クレデンシャルIDに紐づく保存済みNostrKeyInfoを検索
+- `backupKeyInfo(pubkey?, credentialId?)` - バックアップ用にNostrKeyInfo（`wrapped.payload` を含む）のコピーを取得
+- `removeKeyInfo(pubkey, credentialId)` - 登録簿からアカウントを削除
+- `clearCurrentKeyInfo()` - ログアウト: current の鍵を消去し、登録簿は残す
+- `clearStoredKeyInfo()` - 登録簿と wrap モードのペイロードを含む、保存済みの鍵情報をすべて削除
 
 #### NIP-07互換メソッド
 - `getPublicKey()` - 現在のNostrKeyInfoから公開鍵を取得

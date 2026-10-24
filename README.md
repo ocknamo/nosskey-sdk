@@ -15,15 +15,15 @@ This SDK inherits the concept from the previously developed [nosskey](https://gi
 Traditional Nostr private key management methods, such as plaintext storage or password-protected format (NIP-49), have presented challenges in terms of security and convenience. Using WebAuthn offers the following benefits:
 
 - **Phishing Resistance**: Domain validation prevents authentication on fraudulent sites
-- **Passkey Synchronization**: Compatible providers can sync the credential. Wrapped keys additionally require a backup of their encrypted `NostrKeyInfo`; passkey sync alone does not back up that payload.
-- **Cross-Device Support**: OS passkey synchronization features provide the same experience across multiple devices
+- **Passkey Synchronization**: Compatible providers can sync the credential. Wrapped keys additionally require a backup of their `NostrKeyInfo`, which holds the encrypted `wrapped.payload`; passkey sync alone does not back up that payload.
+- **Cross-Device Support**: OS passkey synchronization features provide the same experience across multiple devices (wrapped keys also need their `NostrKeyInfo` on each device)
 
 ## Key Features
 
 - 📲 **Biometric Authentication**: Integration with passkey authentication such as fingerprint and face recognition
 - 🔐 **Phishing Resistance**: Domain validation prevents unauthorized use on phishing sites
 - ⚡ **Fast Processing**: Efficient implementation utilizing WebAuthn PRF extension
-- 🔄 **Cross-Device Support**: Available on multiple devices through OS passkey synchronization
+- 🔄 **Cross-Device Support**: Available on multiple devices through OS passkey synchronization (wrapped keys also need their saved `NostrKeyInfo`)
 - ✉️ **Encrypted Messaging**: Built-in NIP-44 (v2) and NIP-04 (legacy) encrypt/decrypt for direct messages
 
 ## Installation
@@ -64,9 +64,28 @@ const signedEvent = await keyMgr.signEvent(event);
 
 ### Returning to an existing account
 
-Use `loginWithPasskey()` for sign-in, not `createNostrKey()`. Handle `restored` by selecting `result.keyInfo`, `ambiguous` by letting the user choose from `result.candidates`, and `unknown` by offering recovery of saved key information or an explicit new-account action. An unknown credential is not evidence that it was created in direct mode: deriving from a wrapped-key credential opens a different identity.
+Use `loginWithPasskey()` for sign-in, not `createNostrKey()`. It does not set the current key, so pass the key info you pick to `setCurrentKeyInfo()`:
 
-For ordinary sign-out, use `clearCurrentKeyInfo()` to retain the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads. Before deleting it, preserve `backupKeyInfo()` output or another recovery route. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
+```javascript
+import { hexToBytes } from 'nosskey-sdk';
+
+const result = await keyMgr.loginWithPasskey();
+if (result.status === 'restored') {
+  keyMgr.setCurrentKeyInfo(result.keyInfo);
+} else if (result.status === 'ambiguous') {
+  // Several accounts use this passkey: let the user pick one (chooseAccount is your UI)
+  keyMgr.setCurrentKeyInfo(await chooseAccount(result.candidates));
+} else {
+  // 'unknown': no key info for this passkey on this device.
+  // Offer to restore saved key info, or derive only after the user confirms.
+  const keyInfo = await keyMgr.createNostrKey(hexToBytes(result.credentialId));
+  keyMgr.setCurrentKeyInfo(keyInfo);
+}
+```
+
+An `unknown` result is not evidence that the passkey was used in direct mode. Deriving with `createNostrKey()` restores a direct-mode account (for example, a synced passkey on a new device), but yields a different identity if the passkey was used only for a wrapped key, so ask the user before deriving. To restore saved key info instead, check its shape with `isNostrKeyInfo()` and pass it to `setCurrentKeyInfo()`.
+
+For ordinary sign-out, use `clearCurrentKeyInfo()`, which keeps the account registry. `clearStoredKeyInfo()` also deletes the registry, including wrapped payloads, and so does `setStorageOptions({ enabled: false })`. With `registryEnabled: false` there is no registry, so `clearCurrentKeyInfo()` also discards the only stored copy of a wrapped payload. Before deleting, save `listKeyInfos()` (all registry accounts) or `backupKeyInfo()` (the current account), or keep another recovery route such as the original private key. A wrapped payload needs its original passkey to decrypt; keep backups private because they contain account and credential metadata.
 
 ### Encrypting and Decrypting Messages (NIP-44)
 
@@ -121,14 +140,22 @@ const keyMgr = new NosskeyManager({
 
 #### Key Management
 - `createPasskey(options?)` - Create a new passkey with PRF extension
-- `createNostrKey(credentialId?, options?)` - Generate NostrKeyInfo using PRF value as the private key
+- `createNostrKey(credentialId?, options?)` - Generate NostrKeyInfo using PRF value as the private key (direct mode)
+- `importNostrKey(seckey, credentialId?, options?)` - Encrypt an existing 32-byte private key with the passkey and return NostrKeyInfo (wrap mode)
+- `loginWithPasskey()` - Sign in with a passkey and look up the stored NostrKeyInfo linked to it (`restored` / `ambiguous` / `unknown`)
 - `exportNostrKey(keyInfo, credentialId?)` - Export the private key in hexadecimal format
 
 #### Key Information Management
-- `setCurrentKeyInfo(keyInfo)` - Set the current NostrKeyInfo and save to storage if enabled
+- `setCurrentKeyInfo(keyInfo)` - Set the current NostrKeyInfo and save to storage if enabled (also added to the account registry)
 - `getCurrentKeyInfo()` - Get the current NostrKeyInfo from memory or storage
+- `reloadCurrentKeyInfo()` - Re-read the current NostrKeyInfo from storage
 - `hasKeyInfo()` - Check if NostrKeyInfo exists in memory or storage
-- `clearStoredKeyInfo()` - Clear NostrKeyInfo from storage and memory
+- `listKeyInfos()` - List every NostrKeyInfo in the account registry
+- `findKeyInfosByCredentialId(credentialId)` - Find the stored NostrKeyInfo linked to a credential ID
+- `backupKeyInfo(pubkey?, credentialId?)` - Return a copy of a NostrKeyInfo (including `wrapped.payload`) for backup
+- `removeKeyInfo(pubkey, credentialId)` - Remove an account from the registry
+- `clearCurrentKeyInfo()` - Sign out: clear the current key but keep the account registry
+- `clearStoredKeyInfo()` - Delete all stored key info, including the account registry and wrapped payloads
 
 #### NIP-07 Compatible Methods
 - `getPublicKey()` - Get the public key from the current NostrKeyInfo
