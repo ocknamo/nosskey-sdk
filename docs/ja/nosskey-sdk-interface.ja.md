@@ -2,7 +2,7 @@
 
 ## 概要
 
-Nosskey SDKは、WebAuthnパスキーのPRF拡張を使用してNostr秘密鍵を直接導出する方式を採用しています。PWKBlob概念を廃止し、よりシンプルで安全なNostrKeyInfo構造を使用します。
+Nosskey SDK は、PRF から直接導出する鍵と、既存の鍵をパスキーでラップ（暗号化）した鍵の両方をサポートします。`NostrKeyInfo` はどちらのモードかを記録し、wrap モードの場合は復元に必要な暗号化ペイロードを保持します。以前の PWKBlob 構造を置き換えるものです。
 
 ## 主要な型定義
 
@@ -255,6 +255,8 @@ type PasskeyLoginResult =
 - `unknown`: この端末に鍵情報が無い。**ユーザーに確認したうえで** `createNostrKey(hexToBytes(credentialId))`
   を呼べば PRF 直接モードの鍵を導出できます。assertion で得た PRF が SDK 内部に退避されているため
   追加の UV は不要です（TTL 60 秒。超過時は自動で再 assertion にフォールバックします）。
+  パスキーを直接モードで使っていた場合（例: 同期されたパスキーで新しい端末からログインする場合）は
+  元のアカウントが復元されますが、wrap モードの鍵にしか使っていないパスキーでは別のアカウントになります。
 
 UV の回数:
 - 直接モードの鍵が見つかった場合、assertion で得た PRF はその鍵の秘密鍵そのものなので、
@@ -303,7 +305,7 @@ async importNostrKey(
 セキュリティメモ:
 - 入力された `seckey` バッファ（`Uint8Array`）は関数完了時に SDK 内部で `.fill(0)` されます。呼び出し側でも前後でゼロ化することを推奨します。
 - 戻り値の `NostrKeyInfo` を `setCurrentKeyInfo()` でセットすれば、以降の `signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `exportNostrKey` が wrap モードで透過的に動作します（API は PRF 直接モードと完全に同一）。
-- **wrap 鍵は復元不能・PRF 直接モードとの非対称性**: 戻り値の `wrapped.payload` はインポートした nsec の唯一のコピーであり、パスキーから再導出できません。登録簿が有効（既定）なら `setCurrentKeyInfo()` は current 上書きを跨いで保持し、`clearCurrentKeyInfo()` によるログアウトでも残ります。ただし `clearStoredKeyInfo()`（完全ワイプ）・`removeKeyInfo()`・`registryEnabled=false` では**永久に失われます**。元 nsec のバックアップ保持を推奨し、`NostrKeyInfo`（`wrapped.payload` 含む）のエクスポートには `backupKeyInfo()` を使ってください。
+- **wrap 鍵は復元不能・PRF 直接モードとの非対称性**: 戻り値の `wrapped.payload` はインポートした nsec の唯一のコピーであり、パスキーから再導出できません。登録簿が有効（既定）なら `setCurrentKeyInfo()` は current 上書きを跨いで保持し、`clearCurrentKeyInfo()` によるログアウトでも残ります。ただし `clearStoredKeyInfo()`（完全ワイプ）・それを呼ぶ `setStorageOptions({ enabled: false })`・`removeKeyInfo()`・`registryEnabled=false` では**永久に失われます**。元 nsec のバックアップ保持を推奨し、`NostrKeyInfo`（`wrapped.payload` 含む）のエクスポートには `backupKeyInfo()` を使ってください。
 - **メモリゼロ化の制約**: SDK 内部で秘密鍵を `seckeySigner` 渡しや NIP-44 平文経路に通すため、一時的に hex 文字列（`string`）化されます。JS の `string` は immutable で書き戻し API が無いため、`Uint8Array.fill(0)` 相当のゼロ化は不可能で、**GC タイミングまでヒープに残存します**。`importNostrKey` / `exportNostrKey` / 復号後の `signEvent` などで発生します。ブラウザヒープに直接アクセスできる攻撃者を想定する場合は、この制約を理解した上で利用してください。
 
 ### 署名メソッド
@@ -370,6 +372,9 @@ NostrKeyInfoストレージの設定を更新します。
 setStorageOptions(options: Partial<NostrKeyStorageOptions>): void
 ```
 
+> ⚠️ `enabled: false` を渡すと `clearStoredKeyInfo()` が呼ばれ、current スロットと登録簿
+> （wrap モードの `wrapped.payload` を含む）が削除されます。必要なら先にバックアップしてください。
+
 #### getStorageOptions()
 現在のNostrKeyInfoストレージ設定を取得します。
 
@@ -434,7 +439,7 @@ export interface SignOptions {
 
 ## パッケージエクスポート
 
-`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数を公開しています。
+`nosskey-sdk` のエントリポイント（barrel）は、`NosskeyManager` クラスと型定義に加えて以下のスタンドアロン関数と定数を公開しています。
 
 ### 低レベル NIP-44 関数
 
@@ -475,6 +480,19 @@ function getPrfSecret(
 function bytesToHex(bytes: Uint8Array): string
 
 function hexToBytes(hex: string): Uint8Array
+
+// 16進数以外の文字・奇数長・expectedBytes と異なる長さの場合は例外を投げる
+function hexToBytesStrict(hex: string, expectedBytes?: number): Uint8Array
+```
+
+### 登録簿ヘルパー
+
+```typescript
+// NostrKeyInfo の形式チェック（ファイルからバックアップを復元するときなど）
+function isNostrKeyInfo(value: unknown): value is NostrKeyInfo
+
+// 登録簿の既定ストレージキー（"nosskey_accounts"）
+const DEFAULT_REGISTRY_STORAGE_KEY = 'nosskey_accounts'
 ```
 
 ### テスト用ユーティリティ
@@ -542,10 +560,10 @@ const signedEvent2 = await nosskey.signEvent(event2);
 
 ## セキュリティ上の利点
 
-1. **秘密鍵の永続保存が不要**: 秘密鍵は署名時のみ一時的に生成され、使用後は即座にメモリから消去される
+1. **平文の秘密鍵を保存しない**: 直接モードの鍵は保存されず、wrap モードの鍵も NIP-44 の暗号文としてのみ保存される。平文の鍵はメモリ上にのみ存在する（どれだけ残るかは、鍵キャッシュ、未消費 PRF の TTL、`clearMemory`、`importNostrKey()` の項で説明したメモリゼロ化の制限による）
 2. **リレーへの依存なし**: 暗号化された秘密鍵をリレーに保存する必要がない
-3. **復元の容易さ**: 同じパスキーがあれば、どのデバイスからでも同じNostr鍵を復元可能
-4. **漏洩リスクの軽減**: 永続的な秘密鍵データが存在しないため、データ漏洩のリスクが大幅に軽減
+3. **復元の容易さ（直接モード）**: 同じパスキーがあれば、どのデバイスでも同じ直接モードの鍵を再導出できる。wrap モードの鍵は、保存した `NostrKeyInfo`（`wrapped.payload`）も必要
+4. **漏洩リスクの軽減**: 平文の秘密鍵が永続化されないため、データ漏洩のリスクが大幅に軽減
 5. **標準化されたsalt値**: 実装間で統一されたsalt値により、互換性が確保される
 
 ## 注意事項
@@ -554,5 +572,5 @@ const signedEvent2 = await nosskey.signEvent(event2);
 |------|------|
 | PRF拡張サポート | すべての認証器がPRF拡張をサポートしているわけではありません。使用前に`isPrfSupported()`でチェックしてください。 |
 | メモリクリア | Web Cryptoバッファはガベージコレクションによってデタッチされますが、Uint8Arrayの明示的なfill(0)は慎重に行う必要があります。 |
-| PRF値の有効性 | PRF値を直接秘密鍵として使用する場合、secp256k1の有効範囲外になる可能性が（極めて低いですが）あります。 |
-| デバイス間同期 | パスキーのクラウド同期機能により、複数デバイス間で自動的にアカウントが利用可能になります。 |
+| PRF値の有効性 | PRF値を秘密鍵として使用する場合（直接、または wrap モードの KEK として）、secp256k1の有効範囲外になる可能性が（約 2^-128 と極めて低いですが）あります。その場合はエラーとして拒否されます。 |
+| デバイス間同期 | パスキーのクラウド同期により、直接モードのアカウントは他のデバイスでも利用できます。wrap モードの鍵は各デバイスに `NostrKeyInfo`（`wrapped.payload` を含む）も必要で、パスキー同期ではコピーされません。 |

@@ -25,7 +25,7 @@ Nosskey SDK は現在、WebAuthn パスキーの PRF 拡張出力をそのまま
 
 本設計は、ユーザーが手元の nsec を SDK に渡し、それを **WebAuthn PRF 由来の鍵で暗号化して localStorage に保存**する **wrap モード** を追加するためのものである。保存後は PRF 直接モードと**区別なく**既存 API（`signEvent` / `nip44Encrypt` / `nip44Decrypt` / `nip04Encrypt` / `nip04Decrypt` / `getPublicKey` / `exportNostrKey`）で操作できる。
 
-関連既存ドキュメント `docs/ja/nosskey-specification.ja.md` の「代替アプローチ：秘密鍵の暗号化/復号」を**具体実装レベルまで詳細化**する位置付けである。なお、既存仕様書では暗号方式として AES-GCM を例示しているが、本設計書では監査負荷とコード再利用性を優先し **NIP-44 v2 に統一**する（採用根拠は § 13）。既存仕様書側の文言更新は別途行う。
+関連既存ドキュメント `docs/ja/nosskey-specification.ja.md` の「代替アプローチ：秘密鍵の暗号化/復号」を**具体実装レベルまで詳細化**する位置付けである。なお、本設計書の作成時点の既存仕様書では暗号方式として AES-GCM を例示していたが、本設計書では監査負荷とコード再利用性を優先し **NIP-44 v2 に統一**する（採用根拠は § 13）。既存仕様書側の文言も NIP-44 v2 に更新済み。
 
 ---
 
