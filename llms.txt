@@ -18,6 +18,8 @@ To add Nosskey passkey login to a client, read the integration guide below first
 
 ## Reference implementations
 
+These apps are useful for the overlay, the lazy client singleton and the login modal layout. Some of their other patterns break the rules in the integration guide: combine polls `getPublicKey()` on tab switch and always overwrites `window.nostr`, and yakitofu destroys the client on logout. Where they differ, follow the guide.
+
 - [combine auth store](https://raw.githubusercontent.com/ocknamo/combine/main/src/lib/auth.svelte.ts): production Svelte 5 client using the Nosskey iframe (overlay + MutationObserver)
 - [combine window.nostr shim](https://raw.githubusercontent.com/ocknamo/combine/main/src/lib/nip07.ts): exposing a minimal NIP-07 provider for embedded widgets
 - [yakitofu login modal](https://raw.githubusercontent.com/ocknamo/yakitofu/main/yakitofu-app/src/lib/components/LoginModal.svelte): NIP-07 and Nosskey login offered side by side

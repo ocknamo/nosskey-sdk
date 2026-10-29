@@ -57,7 +57,7 @@ sequenceDiagram
 npm install nosskey-iframe
 ```
 
-`nosskey-iframe` は `nosskey-sdk` に依存しており、`NostrEvent` などの型定義もそこから提供されます。
+client 側には `nosskey-sdk` へのランタイム依存がありません。`nosskey-sdk` は、署名 iframe を自前でホストするときだけ必要な optional peer dependency です。`NostrEvent` などの型は `nosskey-iframe` から import できます。
 
 ## 最小構成
 
@@ -89,6 +89,11 @@ window.nostr = {
 
 `NosskeyIframeClient` のコンストラクタは iframe 要素を生成し、`document.body` (または後述の `container`) へ追加します。iframe には WebAuthn に必要な `allow="publickey-credentials-get; publickey-credentials-create"` 属性が自動付与されます。
 
+この例は動作を示すための最小構成で、ページの読み込み時にクライアントを生成し、`window.nostr` を上書きしています。実際のアプリでは次の 2 点を守ってください。
+
+- クライアントは、ユーザーが「Nosskey でログイン」を押したときなど、必要になった時点で初めて生成します。鍵が見つからないブラウザでは、マウントした直後に iframe が自分から開くことがあるためです (「[ストレージ分離への対応](#ストレージ分離-storage-partitioning-への対応)」参照)。
+- NIP-07 ブラウザ拡張でのログインと併用する場合は、`window.nostr` を上書きせず、ログイン方法ごとに署名に使う相手を切り替えます。
+
 ## 対応メソッド
 
 `NosskeyIframeClient` は NIP-07 の全 7 メソッドを提供し、そのすべてがユーザー consent を経由します。
@@ -104,8 +109,9 @@ window.nostr = {
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 復号 |
 
 - `getPublicKey()` / `getRelays()` の consent は NIP-07 ブラウザ拡張の初回接続と同じ**オリジン単位の接続承認 (ペアリング)** です。npub とリレー設定はユーザーを特定できる情報のため、埋め込み先のサイトがユーザーに知られずにそれらを取得することを防いでいます。
-- ダイアログで「このサイトを常に許可」を選ぶと、その選択はオリジンごとに、接続・署名・暗号化の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号は「常に許可」の対象外**で、毎回確認されます。
-- 例外として、鍵が未設定のときの `getRelays()` は consent なしで `{}` を返します。
+- ダイアログで「常に許可」を押すと、その承認はオリジンごとに、接続・署名・NIP-44・NIP-04 の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号のダイアログには「常に許可」が出ず**、毎回確認されます。
+- nosskey.app の設定では種類ごとに、すべてのサイトに対する既定の動作 (毎回確認・常に許可・常に拒否) も選べます。既定は毎回確認です。
+- 例外として、iframe が鍵を読めないとき (ストレージアクセスが未許可の場合を含む) の `getRelays()` は、consent なしで `{}` を返します。`{}` を「リレー設定がない」と解釈しないでください。
 
 `peer` は相手の公開鍵 (32 バイト hex) です。`RelayMap` は `Record<string, { read: boolean; write: boolean }>` 型です。
 
@@ -149,19 +155,30 @@ await client.ready();
 ```
 
 - `client.iframe` で iframe 要素 (`HTMLIFrameElement`) を取得できます。CSS でサイズ・位置・`z-index` を整えてください。
-- 親アプリ側でもバックドロップ等を表示したい場合は、`window.addEventListener('message', ...)` で `nosskey:visibility` メッセージを購読し、モーダル枠の表示を同期させます。
+- 親アプリ側でもバックドロップ等を表示したい場合は、`MutationObserver` で `client.iframe` の `style` 属性を監視し、`display` に合わせてモーダル枠の表示を切り替えます。`window` の `message` イベントを直接購読すると、送信元の検証を自分で書く必要があります。`NosskeyIframeClient` は送信元を検証してから `display` を切り替えるため、こちらを使ってください。
+
+```ts
+const observer = new MutationObserver(() => {
+  modal.classList.toggle('visible', client.iframe.style.display !== 'none');
+});
+observer.observe(client.iframe, { attributes: true, attributeFilter: ['style'] });
+```
+
+- ログインモーダルにネイティブの `<dialog>` の `showModal()` を使う場合は注意してください。モーダル表示の `<dialog>` は最前面の層に置かれるため、`z-index` では iframe をその上に出せません。さらに `<dialog>` の外側は操作できなくなり、iframe も操作できません。通常の要素でモーダルを作るか、Nosskey のログインを始める前に `<dialog>` を閉じてください。
 - `theme` / `lang` を指定して埋め込みモード (`embedded=1`) で起動すると、iframe は body を透過化し、consent モーダルが親の用意したカード枠に馴染むように描画されます。
 
 ## ストレージ分離 (Storage Partitioning) への対応
 
-Chrome 115+ や Firefox の Total Cookie Protection では、**クロスオリジン iframe の `localStorage` が親オリジンごとに分離 (partition)** されます。`nosskey.app` をトップレベルで開いて保存したパスキー情報は、別オリジンの親ページに埋め込まれた iframe からは初期状態では参照できず、最初の `getPublicKey()` / `signEvent()` は `NO_KEY` エラーを返します。
+Chrome 115+ や Firefox の Total Cookie Protection では、**クロスオリジン iframe の `localStorage` が親オリジンごとに分離 (partition)** されます。`nosskey.app` をトップレベルで開いて保存したパスキー情報は、別オリジンの親ページに埋め込まれた iframe からは、初期状態では参照できません。
 
 iframe ホストは Storage Access API でこれを自動的にリカバリします:
 
-1. iframe がストレージ分離を検知し、`nosskey:visibility { visible: true }` を送って自身を表示させます。
+1. 鍵が読めない状態で `getPublicKey()` / `signEvent()` などのリクエストが届くと、iframe は `nosskey:visibility { visible: true }` を送って自身を表示します。`NO_KEY` はすぐには返さず、リクエストを保留します。
 2. ユーザーが iframe 内の「ストレージアクセスを許可」ボタンをクリックします。
-3. ブラウザが許可ダイアログを表示します。承認されると iframe がファーストパーティのストレージから鍵を読み直し、自身を非表示に戻します。
-4. 親アプリは `getPublicKey()` / `signEvent()` を再試行すれば成功します。
+3. ブラウザが許可ダイアログを表示します。承認されると、iframe がファーストパーティのストレージから鍵を読み直し、保留していたリクエストの処理 (consent ダイアログなど) に進みます。親アプリが再試行する必要はありません。
+4. ユーザーがカードを閉じた場合や、許可しても鍵が見つからなかった場合は、`NO_KEY` が返ります。保留は最大 60 秒です。client の timeout (既定 60 秒) が先に切れた場合は、timeout のエラーになります。
+
+鍵が見つからず、待っても回復しない状態 (ストレージアクセスは許可済みだが鍵がない、Storage Access API に対応していないブラウザで鍵が見えない) では、iframe はリクエストを待たずに自分から表示され、`nosskey.app` を開く案内を出します。この判定は iframe のマウント時と、タブが再び表示されるたびに行われます。ユーザーはカードを閉じられます。
 
 このフローはホスト側と `NosskeyIframeClient` が自動処理しますが、**「ストレージアクセスを許可」ボタンをユーザーがクリックできるよう、iframe を見える位置に配置しておく必要があります** (前節参照)。iframe ホストの状態カードには `nosskey.app` を別タブで開くリンクもあります。これはユーザーがファーストパーティのスコープでパスキー (Nosskey アイデンティティ) を作成・ログインするための導線で、主に鍵がまだ存在しないケース向けです。なお、ストレージを分離するブラウザで Storage Access API の許可が得られない場合は、ユーザーに許可を与え直してもらう必要があります。
 

@@ -19,6 +19,16 @@ Reference implementations (production apps by the Nosskey author):
   [`src/lib/services/nosskey.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/nosskey.ts) and
   [`src/lib/services/signer.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/signer.ts).
 
+**Copy only the overlay, the `MutationObserver`, the lazy singleton and the login modal layout from
+these apps.** Both apps break rules in §3, and this guide wins wherever they differ:
+
+- combine calls `getPublicKey()` on every `visibilitychange` (`reconcileSession`), and calls
+  `getRelays()` at startup (`refreshRelays` in `App.svelte`). Both break R3.
+- combine installs its `window.nostr` shim unconditionally. That breaks R5 for apps that also offer
+  NIP-07 login.
+- yakitofu calls `destroy()` on logout, which breaks R2. Its signer also asks the iframe for
+  `getPublicKey()` instead of answering from the session.
+
 ---
 
 ## 1. What you are building
@@ -37,30 +47,42 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 
 ## 2. Facts about the API (do not guess these)
 
-- Package: `nosskey-iframe`. The client side has no runtime dependencies.
+- Package: `nosskey-iframe`. The client side has no runtime dependencies. `nosskey-sdk` is an
+  optional peer dependency that only a self-hosted signer needs. Import types such as `NostrEvent`
+  from `nosskey-iframe`.
 - Iframe URL: `https://nosskey.app/#/iframe`. It accepts any parent origin, so no registration is needed.
 - The client exposes all 7 NIP-07 methods: `getPublicKey`, `getRelays`, `signEvent`,
   `nip44.encrypt/decrypt` and `nip04.encrypt/decrypt`.
 - **All 7 methods require user approval in the iframe, `getPublicKey` included.**
   - `getPublicKey` and `getRelays` count as a per-origin *connection approval*, like the first
     connect in a NIP-07 extension.
-  - The dialog has an "always allow this site" checkbox. It is remembered per origin and per
-    category: connect, sign, or encrypt. Approving "connect" does not approve signing.
-  - Decryption is never auto-approved.
-  - Exception: `getRelays` returns `{}` without a dialog when there is no key.
+  - The dialog has "Approve once", "Always allow" and "Reject" buttons. "Always allow" is
+    remembered per origin and per category. The four categories are connect (`getPublicKey` /
+    `getRelays`), `signEvent`, NIP-44 and NIP-04. Always allowing connect does not allow signing.
+  - Decryption never offers "Always allow" and always shows the dialog.
+  - In nosskey.app's settings, the user can also set a category to "always" or "deny" for every
+    site. The default is to ask, so do not assume either.
+  - Exception: `getRelays` returns `{}` without a dialog when the iframe cannot read a key yet. That
+    includes storage access not being granted, so do not treat `{}` as "the user has no relays".
 - The iframe opens and closes itself. During any request, the host sends `nosskey:visibility`, and
   the client toggles `client.iframe.style.display` between `block` and `none`. This happens even
   when the user ticked "always allow", in which case the iframe flashes briefly. **Your app
   controls where the iframe sits and how large it is.**
-- Request timeout: 60 s by default (`timeout` option). Keep the default, because the host's
-  storage-recovery wait is also capped at 60 s.
+- Request timeout: 60 s by default (`timeout` option). Do not lower it: the host waits up to 60 s
+  for the user to grant storage access, and the user needs time for the dialog and the passkey
+  prompt. Raising it is safe.
+  - The client's timer starts first. If the user lets a storage-access prompt sit, the call can
+    therefore reject with the timeout `Error` instead of `NO_KEY`.
+  - The host's approval dialog has no timeout. After a client timeout it stays open, and approving
+    it later runs the operation, but the result is dropped. Show the timeout as "the request timed
+    out, try again".
 - `client.ready()` resolves once the iframe sends `nosskey:ready`. It has **no timeout of its own**.
 - Errors reject with `NosskeyIframeError` and a `code`:
   | code | meaning | what the app should do |
   |---|---|---|
   | `NO_KEY` | The user has no Nosskey passkey yet, or storage access was not granted | Show a link to `https://nosskey.app` ("create a passkey there, then come back") |
   | `USER_REJECTED` | The user declined in the dialog | Show "request was declined". Do not retry automatically |
-  | `RATE_LIMITED` | 5 declines in a row from your origin; blocked for 60 s | Show "try again later" |
+  | `RATE_LIMITED` | 5 failures in a row from your origin; blocked for 60 s. Declines count, and so does every request that fails because no key could be recovered (for example, clicking "Log in with Nosskey" without a passkey) | Show "try again later". Never retry automatically |
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | Bug or environment problem | Show the message |
   A timeout rejects with a plain `Error`.
 - Browser support: Chromium 118+ works best. Firefox and Safari/iOS have limited PRF support.
@@ -68,12 +90,17 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 - Storage partitioning: in a cross-origin iframe, browsers partition `localStorage`. The host
   recovers the key with the Storage Access API, and the user has to click "Allow" inside the
   iframe once. The browser keeps that grant **for the iframe document**, which is why rules R1 and R2 below exist.
+- The iframe can also open **by itself**, without any request. This happens when it cannot find a
+  key and waiting would not help: storage access was granted but there is no key, or the browser has
+  no Storage Access API. It then shows a card that links to nosskey.app and has a close button. The
+  check runs when the iframe mounts **and every time the tab becomes visible again**. This is
+  expected behaviour, not a bug in your app.
 
 ## 3. Rules (MUST / MUST NOT)
 
 - **R1. Create the client lazily, on the first user action that needs it** (the Nosskey login
   click, or the first signing action of a restored Nosskey session). Do not create it at page
-  load, because a keyless browser may open the iframe on its own right after it mounts.
+  load, because a keyless browser may open the iframe on its own right after it mounts (§2).
 - **R2. Create the client once per page and never recreate it.** Keep it as a module-level
   singleton. Do not call `destroy()` on logout, `visibilitychange`, focus changes or route changes.
   Recreating it throws away the Storage Access grant, and the user has to approve again.
@@ -87,12 +114,22 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   modal, your login modal included. Sync the overlay's backdrop to the iframe's
   `style.display` with a `MutationObserver`. Do not listen to raw `message` events: the client
   already checks the origin and source of messages, and a raw listener would not.
+  - Do not open your login modal with the native `<dialog>.showModal()`. A modal dialog sits in the
+    browser's top layer, so no `z-index` can put the overlay above it, and everything outside the
+    dialog becomes inert, the Nosskey iframe included. Use an ordinary positioned element, or
+    close the `<dialog>` before calling `loginWithNosskey()`.
 - **R5. Do not overwrite `window.nostr`** when you offer NIP-07 login too. Route all signing
   through a small `Signer` abstraction chosen by the login method. See §8 for the one exception.
 - **R6. Browser only.** In SSR frameworks (SvelteKit, Next.js, Nuxt), import and call this code
   only on the client, and check `typeof window !== 'undefined'` first.
 - **R7. Use only the methods you need.** If the app has no DMs, do not wire up `nip04` / `nip44`.
-- **R8.** If the app sets a Content-Security-Policy, add `frame-src https://nosskey.app`.
+- **R8.** If the app sets a Content-Security-Policy, add `frame-src https://nosskey.app`. If it
+  sends a `Permissions-Policy` header, it must allow `publickey-credentials-get` and
+  `publickey-credentials-create` for `https://nosskey.app`, or passkeys will not work in the iframe.
+- **R9. Pass unsigned events to `signEvent()`: no `pubkey`, `id` or `sig`.** The signer keeps
+  any of these fields it receives. A preset `pubkey` produces an invalidly signed event after an
+  account switch, and the check in §7 then cannot catch it. The `getSigner()` code in §7 strips
+  these fields for you.
 
 ## 4. Install
 
@@ -132,9 +169,11 @@ async function createClient(): Promise<NosskeyIframeClient> {
   const client = new NosskeyIframeClient({
     iframeUrl: NOSSKEY_IFRAME_URL,
     container: overlay,
-    // Pick the theme that matches your app: 'neutral-light' | 'neutral-dark'
-    // | 'purple-light' | 'purple-dark' | 'auto'. Applied at load time only.
-    theme: 'auto',
+    // In embedded mode the iframe page is transparent, so the iframe's CSS
+    // background (§6) shows through. Use a fixed theme that matches that
+    // background: 'neutral-light' / 'purple-light' with #fff, 'neutral-dark'
+    // with #141414, 'purple-dark' with #131318. Applied at load time only.
+    theme: 'neutral-light',
     lang: 'auto', // or 'ja' | 'en'
   });
 
@@ -196,13 +235,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   height: min(560px, 90vh); /* the approval dialog needs this much room */
   border: 0;
   border-radius: 12px;
-  background: #fff; /* match the `theme` you passed */
+  background: #fff; /* must match the `theme` you passed (see §5) */
   pointer-events: auto;
 }
 ```
 
 If a framework scopes styles per component (Svelte, Vue, CSS modules), put this CSS in the global
 stylesheet. The overlay is created outside every component.
+
+If the app switches between light and dark, pick the theme when the client is created, and set the
+matching iframe background at the same time. `theme: 'auto'` is resolved inside the iframe, and a
+fixed CSS background will not follow it.
 
 ## 7. Auth and signer — `src/lib/auth.ts`
 
@@ -233,12 +276,13 @@ declare global {
 }
 
 const SESSION_KEY = 'myapp:session'; // rename per app
+const HEX_PUBKEY = /^[0-9a-f]{64}$/;
 
 export function loadSession(): Session | null {
   if (typeof localStorage === 'undefined') return null;
   try {
     const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null');
-    return s && (s.method === 'nip07' || s.method === 'nosskey') && typeof s.pubkey === 'string'
+    return s && (s.method === 'nip07' || s.method === 'nosskey') && HEX_PUBKEY.test(s.pubkey)
       ? s
       : null;
   } catch {
@@ -276,17 +320,27 @@ export function logout(): void {
   saveSession(null);
 }
 
+/** Rule R9: the signer keeps a preset pubkey/id/sig, so never pass them in. */
+function toUnsigned(event: NostrEvent): NostrEvent {
+  const { pubkey: _pubkey, id: _id, sig: _sig, ...unsigned } = event;
+  return unsigned;
+}
+
 export async function getSigner(session: Session): Promise<Signer> {
   if (session.method === 'nosskey') {
     const client = await getNosskeyClient();
     return {
       // Answer from the session: asking the iframe could show a dialog nobody asked for.
       getPublicKey: async () => session.pubkey,
-      signEvent: (event) => client.signEvent(event),
+      signEvent: (event) => client.signEvent(toUnsigned(event)),
     };
   }
-  if (!window.nostr) throw new Error('No NIP-07 extension found');
-  return window.nostr;
+  const nostr = window.nostr;
+  if (!nostr) throw new Error('No NIP-07 extension found');
+  return {
+    getPublicKey: () => nostr.getPublicKey(),
+    signEvent: (event) => nostr.signEvent(toUnsigned(event)),
+  };
 }
 
 /** Map login and signing errors to a message for the user. */
@@ -301,15 +355,19 @@ export function describeError(err: unknown): { message: string; showNosskeyLink:
       case 'USER_REJECTED':
         return { message: 'The request was declined.', showNosskeyLink: false };
       case 'RATE_LIMITED':
-        return { message: 'Too many declined requests. Try again in a minute.', showNosskeyLink: false };
+        return { message: 'Too many failed requests. Try again in a minute.', showNosskeyLink: false };
     }
+  }
+  if (err instanceof Error && err.message.includes('timed out')) {
+    return { message: 'The request timed out. Please try again.', showNosskeyLink: false };
   }
   return { message: err instanceof Error ? err.message : String(err), showNosskeyLink: false };
 }
 ```
 
 When you sign, check that the event came back signed by the logged-in account. This is how the
-app notices that the user switched accounts at nosskey.app, without any polling:
+app notices that the user switched accounts at nosskey.app, without any polling. The check only
+works because `getSigner()` sends the event without a `pubkey` (rule R9):
 
 ```ts
 const signed = await signer.signEvent(unsigned);
@@ -334,7 +392,7 @@ This follows yakitofu's `LoginModal.svelte`. The requirements apply to any frame
   `https://nosskey.app` with `target="_blank" rel="noopener noreferrer"`.
 - On success, store the `Session` in your app state and close the modal.
 
-Svelte 5 example:
+Svelte 5 example. `$lib` is a SvelteKit alias; in a plain Svelte + Vite app, use a relative import.
 
 ```svelte
 <script lang="ts">
@@ -399,14 +457,17 @@ Svelte 5 example:
 
 ### Optional: exposing `window.nostr` for third-party embeds
 
-Do this only if the app hosts embedded widgets that look for `window.nostr` themselves
-(combine does it for an embedded composer). Follow
-[combine's `nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts):
+Do this only if the app hosts embedded widgets that look for `window.nostr` themselves.
+combine does this for an embedded composer in
+[`nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts). combine has no
+NIP-07 login, so it installs the shim unconditionally. An app that also offers NIP-07 login must
+differ from combine as follows:
 
-- Install the shim only for a Nosskey session.
-- Expose only `getPublicKey` (answered from the session), `signEvent` and `getRelays`.
-- When signed out, start a login from `getPublicKey` only if `navigator.userActivation.isActive`.
-- Keep the previous provider and restore it on logout.
+- Install the shim after a Nosskey login, and only then. Keep the provider that was there before,
+  and put it back on logout. While nobody is logged in, or after a NIP-07 login, the extension's
+  own `window.nostr` stays in place.
+- Expose only `getPublicKey` (answered from the session), `signEvent` (through `toUnsigned`, R9)
+  and `getRelays`.
 
 ## 9. Verify
 
@@ -421,8 +482,10 @@ Run the project's own lint, typecheck, tests and build. Then check in a Chromium
    session.
 5. Switch tabs back and forth. No dialog or storage prompt should appear.
 6. Log out, then log in again. Storage access should not be requested a second time.
-7. Use a browser profile with no Nosskey passkey. Login should fail with the "create a passkey at
-   nosskey.app" message, and the overlay should close.
+7. Use a browser profile with no Nosskey passkey. Clicking login opens the iframe with a card
+   that links to nosskey.app. After the user closes the card, login fails with the "create a passkey
+   at nosskey.app" message and the overlay closes. If nobody touches the card, the call ends with
+   the timeout message after 60 s instead.
 
 ## 10. Troubleshooting
 
@@ -431,9 +494,11 @@ Run the project's own lint, typecheck, tests and build. Then check in a Chromium
 | Nothing happens on click and `ready()` never resolves | CSP `frame-src` blocks nosskey.app (R8), or the network fails. The 15 s ready timeout surfaces this |
 | The iframe opens but cannot be clicked, or appears behind your modal | The overlay's `z-index` is too low, or a parent element has `pointer-events: none` (R4) |
 | Storage access is requested every time the user returns to the tab | The client is being destroyed or recreated (R2) |
-| A dialog appears on page load or tab switch | Something calls `getPublicKey()` / `getRelays()` without a user action (R3) |
+| An approval dialog appears on page load or tab switch | Something calls `getPublicKey()` / `getRelays()` without a user action (R3) |
+| A "no key" card (with a link to nosskey.app) appears on its own, also after a tab switch | Expected when the iframe is mounted and cannot find a key (§2). The user can close it. Mounting lazily (R1) keeps it away from users who never chose Nosskey |
+| The overlay opens but the iframe cannot be clicked while your login modal is open | The login modal uses `<dialog>.showModal()` (R4) |
 | `NO_KEY` right after the user created a passkey | The user created it in a different browser or profile, or dismissed the storage-access prompt. Click login again |
-| `RATE_LIMITED` | Too many declined requests. Wait 60 s and stop automatic retries |
+| `RATE_LIMITED` | 5 declines or failed key recoveries in a row, e.g. repeated login clicks without a passkey. Wait 60 s and stop automatic retries |
 | The page shows a white flash on every signature | Expected: the iframe opens for every request. Set the iframe `background` and `theme` to match your app |
 
 ## More detail
