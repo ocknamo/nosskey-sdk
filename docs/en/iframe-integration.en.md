@@ -7,6 +7,8 @@
 This document is a step-by-step guide for **developers who want to embed the Nosskey signing iframe into their own Nostr web app**. Using the production host [`https://nosskey.app/#/iframe`](https://nosskey.app/#/iframe) as the example, it explains how to integrate via the `NosskeyIframeClient` from the [`nosskey-iframe`](../../packages/nosskey-iframe) package.
 
 > For the internal architecture of the iframe host side (the `#/iframe` route of `examples/svelte-app`), see [`iframe-host.en.md`](./iframe-host.en.md).
+>
+> If an AI coding agent will do the integration, give it the [AI integration guide](../llms/nosskey-iframe-login.md), a single file with the rules and copy-paste code.
 
 ## Overview
 
@@ -42,7 +44,7 @@ sequenceDiagram
 Key points:
 
 - **`nosskey:ready` handshake**: wait for the iframe to finish initializing with `client.ready()` before use.
-- **Consent dialogs render inside the iframe**: signing, encryption, and similar operations go through user consent. The dialog is rendered within the iframe.
+- **Consent dialogs render inside the iframe**: signing and encryption, as well as `getPublicKey()` / `getRelays()`, go through user consent (a per-origin connection approval for the latter two). The dialog is rendered within the iframe.
 - **Automatic visibility toggling**: when a dialog or storage permission is needed, the iframe sends a `nosskey:visibility` message to the parent, and `NosskeyIframeClient` automatically shows/hides the iframe element.
 
 ## Prerequisites
@@ -91,17 +93,21 @@ The `NosskeyIframeClient` constructor creates the iframe element and appends it 
 
 ## Supported methods
 
-`NosskeyIframeClient` provides all 7 NIP-07 methods. The 5 methods that handle secret material go through user consent.
+`NosskeyIframeClient` provides all 7 NIP-07 methods, and **all 7 go through user consent**.
 
 | Client API | Return type | Consent | Purpose |
 |------------|-------------|---------|---------|
-| `getPublicKey()` | `Promise<string>` | not required | Returns the public key (hex) |
-| `getRelays()` | `Promise<RelayMap>` | not required | Returns the relay configuration |
+| `getPublicKey()` | `Promise<string>` | required (connection approval) | Returns the public key (hex) |
+| `getRelays()` | `Promise<RelayMap>` | required (connection approval) | Returns the relay configuration |
 | `signEvent(event)` | `Promise<NostrEvent>` | required | Signs a Nostr event |
 | `nip44.encrypt(peer, plaintext)` | `Promise<string>` | required | NIP-44 v2 encryption |
 | `nip44.decrypt(peer, ciphertext)` | `Promise<string>` | required | NIP-44 v2 decryption |
 | `nip04.encrypt(peer, plaintext)` | `Promise<string>` | required | NIP-04 (legacy) encryption |
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | required | NIP-04 (legacy) decryption |
+
+- Consent for `getPublicKey()` / `getRelays()` is a **per-origin connection approval (pairing)**, like the first connect in a NIP-07 browser extension. The npub and relay set identify the user, so this stops embedding sites from reading them silently.
+- Choosing "always allow this site" in the dialog is remembered for that origin **per category (connect / sign / encrypt)**, and later requests are answered without a dialog. Always allowing connect does not allow signing. **Decryption is never auto-approved** and is confirmed every time.
+- Exception: when no key is set, `getRelays()` returns `{}` without consent.
 
 `peer` is the counterparty public key (32-byte hex). `RelayMap` is of type `Record<string, { read: boolean; write: boolean }>`.
 
@@ -124,7 +130,9 @@ The `NosskeyIframeClient` constructor takes `NosskeyIframeClientOptions`.
 
 ## Placing the iframe and visibility control
 
-The iframe created by `NosskeyIframeClient` is initially hidden with `display: none`. When a signing/encryption consent dialog or a storage access permission is needed, the iframe sends a `nosskey:visibility` message (`{ type: 'nosskey:visibility', visible: boolean }`), and `NosskeyIframeClient` automatically toggles the iframe element's `display`.
+The iframe created by `NosskeyIframeClient` is initially hidden with `display: none`. While a request is being handled (a consent dialog for connection approval, signing, encryption, etc.) or when a storage access permission is needed, the iframe sends a `nosskey:visibility` message (`{ type: 'nosskey:visibility', visible: boolean }`), and `NosskeyIframeClient` automatically toggles the iframe element's `display`.
+
+Even a request auto-approved through "always allow" shows the iframe briefly while it is handled. Matching the iframe background to `theme` keeps this unobtrusive.
 
 However, **where and at what size the iframe is placed is the parent app's responsibility**. Place the iframe somewhere visible on screen so the user can interact with the consent dialog. The recommended pattern is a modal / overlay.
 
@@ -167,7 +175,7 @@ Browsers scope a Storage Access grant to the **document**. A live iframe keeps i
 
 Remounting used to be the only way to notice that the user had switched accounts in the signing app, because the iframe read the account once at mount. It is no longer needed: the host re-reads the stored account before serving each request, so **a long-lived iframe picks up both account switches and sign-outs on the next call**. You do **not** need to call anything to check for a change — the next call you actually need answers for whatever account is current then.
 
-> Avoid polling `getPublicKey()` on every `visibilitychange`. When the user is signed out, or storage access has not been granted, a host with `onKeyUnavailable` (the reference implementation has it) does **not** answer `NO_KEY` right away: it reveals the iframe and waits up to 60 seconds for the user. Calls that end without recovery also count toward the per-origin rate limiter, which blocks with `RATE_LIMITED` after five consecutive ones by default.
+> Avoid polling `getPublicKey()` on every `visibilitychange`. `getPublicKey()` is subject to connection approval, so unless the user chose "always allow", **a consent dialog appears every time they return to the tab**. And while storage access has not been granted, a host with `onKeyUnavailable` (the reference implementation has it) does **not** answer `NO_KEY` right away: it reveals the iframe and waits up to 60 seconds for the user. Restore the session from a pubkey the parent app saved itself, and only query the iframe in response to a user action. Calls that end without recovery also count toward the per-origin rate limiter, which blocks with `RATE_LIMITED` after five consecutive ones by default.
 
 See [`iframe-host.en.md`](./iframe-host.en.md#storage-partitioning--storage-access-api) for details.
 

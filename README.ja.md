@@ -227,6 +227,7 @@ window.nostr = {
 を返す必要があります。
 
 自分のアプリへ iframe を埋め込む手順は [docs/ja/iframe-integration.ja.md](docs/ja/iframe-integration.ja.md) で詳しく解説しています。
+AI コーディングエージェントに導入させる場合は、[`llms.txt`](llms.txt) か、それ単体で完結する [AI 向け導入ガイド](docs/llms/nosskey-iframe-login.md) (英語) を渡してください。
 
 参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
 

@@ -227,6 +227,7 @@ server must also return
 `Permissions-Policy: publickey-credentials-get=*, publickey-credentials-create=*`.
 
 For a complete step-by-step guide to embedding the iframe into your own app, see [docs/en/iframe-integration.en.md](docs/en/iframe-integration.en.md).
+If an AI coding agent will do the integration, give it [`llms.txt`](llms.txt) or the self-contained [AI integration guide](docs/llms/nosskey-iframe-login.md).
 
 See [`examples/svelte-app`](examples/svelte-app) (route `#/iframe`) for a reference host implementation. The host architecture is documented in detail at [docs/en/iframe-host.en.md](docs/en/iframe-host.en.md).
 

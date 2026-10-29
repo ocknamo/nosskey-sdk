@@ -94,6 +94,8 @@ call.
 For a complete walk-through (storage partitioning, Storage Access API recovery, error handling, UX modal patterns) see
 [`docs/en/iframe-integration.en.md`](../../docs/en/iframe-integration.en.md).
 A runnable demo lives at [`examples/parent-sample`](../../examples/parent-sample).
+For AI coding agents, a self-contained integration guide (with a NIP-07 + Nosskey login modal) is at
+[`docs/llms/nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md).
 
 ---
 
