@@ -59,14 +59,16 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   - The dialog has "Approve once", "Always allow" and "Reject" buttons. "Always allow" is
     remembered per origin and per category. The four categories are connect (`getPublicKey` /
     `getRelays`), `signEvent`, NIP-44 and NIP-04. Always allowing connect does not allow signing.
-  - Decryption never offers "Always allow" and always shows the dialog.
+  - Decryption never offers "Always allow", so it shows the dialog every time unless the user set
+    that category to "deny" (see the next point).
   - In nosskey.app's settings, the user can also set a category to "always" or "deny" for every
-    site. The default is to ask, so do not assume either.
+    site. The default is to ask, so do not assume either. "Deny" rejects with `USER_REJECTED`
+    without showing a dialog.
   - Exception: `getRelays` returns `{}` without a dialog when the iframe cannot read a key yet. That
     includes storage access not being granted, so do not treat `{}` as "the user has no relays".
 - The iframe opens and closes itself. During any request, the host sends `nosskey:visibility`, and
   the client toggles `client.iframe.style.display` between `block` and `none`. This happens even
-  when the user ticked "always allow", in which case the iframe flashes briefly. **Your app
+  when the request is auto-approved through "Always allow", in which case the iframe flashes briefly. **Your app
   controls where the iframe sits and how large it is.**
 - Request timeout: 60 s by default (`timeout` option). Do not lower it: the host waits up to 60 s
   for the user to grant storage access, and the user needs time for the dialog and the passkey
@@ -75,13 +77,14 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
     therefore reject with the timeout `Error` instead of `NO_KEY`.
   - The host's approval dialog has no timeout. After a client timeout it stays open, and approving
     it later runs the operation, but the result is dropped. Show the timeout as "the request timed
-    out, try again".
+    out, try again". If the old dialog is still open, the user should close it first: a new
+    request waits behind it.
 - `client.ready()` resolves once the iframe sends `nosskey:ready`. It has **no timeout of its own**.
 - Errors reject with `NosskeyIframeError` and a `code`:
   | code | meaning | what the app should do |
   |---|---|---|
   | `NO_KEY` | The user has no Nosskey passkey yet, or storage access was not granted | Show a link to `https://nosskey.app` ("create a passkey there, then come back") |
-  | `USER_REJECTED` | The user declined in the dialog | Show "request was declined". Do not retry automatically |
+  | `USER_REJECTED` | The user declined in the dialog, or set that category to "deny" | Show "request was declined". Do not retry automatically |
   | `RATE_LIMITED` | 5 failures in a row from your origin; blocked for 60 s. Declines count, and so does every request that fails because no key could be recovered (for example, clicking "Log in with Nosskey" without a passkey) | Show "try again later". Never retry automatically |
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | Bug or environment problem | Show the message |
   A timeout rejects with a plain `Error`.
@@ -116,8 +119,8 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   already checks the origin and source of messages, and a raw listener would not.
   - Do not open your login modal with the native `<dialog>.showModal()`. A modal dialog sits in the
     browser's top layer, so no `z-index` can put the overlay above it, and everything outside the
-    dialog becomes inert, the Nosskey iframe included. Use an ordinary positioned element, or
-    close the `<dialog>` before calling `loginWithNosskey()`.
+    dialog becomes inert, the Nosskey iframe included. Build the login modal from an ordinary
+    positioned element, as in §8.
 - **R5. Do not overwrite `window.nostr`** when you offer NIP-07 login too. Route all signing
   through a small `Signer` abstraction chosen by the login method. See §8 for the one exception.
 - **R6. Browser only.** In SSR frameworks (SvelteKit, Next.js, Nuxt), import and call this code
@@ -321,7 +324,7 @@ export function logout(): void {
 }
 
 /** Rule R9: the signer keeps a preset pubkey/id/sig, so never pass them in. */
-function toUnsigned(event: NostrEvent): NostrEvent {
+export function toUnsigned(event: NostrEvent): NostrEvent {
   const { pubkey: _pubkey, id: _id, sig: _sig, ...unsigned } = event;
   return unsigned;
 }
@@ -358,7 +361,9 @@ export function describeError(err: unknown): { message: string; showNosskeyLink:
         return { message: 'Too many failed requests. Try again in a minute.', showNosskeyLink: false };
     }
   }
-  if (err instanceof Error && err.message.includes('timed out')) {
+  // Only the client's own timeout. A cancelled passkey prompt arrives as INTERNAL and its
+  // browser message can also say "timed out", so do not match NosskeyIframeError here.
+  if (err instanceof Error && err.message.startsWith('Nosskey iframe request timed out')) {
     return { message: 'The request timed out. Please try again.', showNosskeyLink: false };
   }
   return { message: err instanceof Error ? err.message : String(err), showNosskeyLink: false };
@@ -482,10 +487,14 @@ Run the project's own lint, typecheck, tests and build. Then check in a Chromium
    session.
 5. Switch tabs back and forth. No dialog or storage prompt should appear.
 6. Log out, then log in again. Storage access should not be requested a second time.
-7. Use a browser profile with no Nosskey passkey. Clicking login opens the iframe with a card
-   that links to nosskey.app. After the user closes the card, login fails with the "create a passkey
-   at nosskey.app" message and the overlay closes. If nobody touches the card, the call ends with
-   the timeout message after 60 s instead.
+7. Use a browser profile with no Nosskey passkey. Login must end with the "create a passkey at
+   nosskey.app" message, and the overlay must close. Depending on the browser state, this happens
+   in one of two ways:
+   - The iframe can tell that waiting will not help (storage access was already granted, or the
+     browser has no Storage Access API). `NO_KEY` comes back at once, and the card only flashes.
+   - Otherwise the iframe shows a storage-access card and waits. Login fails after the user
+     grants access or closes the card. If nobody touches the card, the call ends with the timeout
+     message after 60 s instead.
 
 ## 10. Troubleshooting
 

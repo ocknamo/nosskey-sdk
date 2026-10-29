@@ -111,7 +111,7 @@ This is a minimal example to show how the client works: it creates the client on
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | required | NIP-04 (legacy) decryption |
 
 - Consent for `getPublicKey()` / `getRelays()` is a **per-origin connection approval (pairing)**, like the first connect in a NIP-07 browser extension. The npub and relay set identify the user, so this stops embedding sites from reading them silently.
-- Pressing "Always allow" in the dialog is remembered per origin and per category (connect / sign / NIP-44 / NIP-04), and from then on the iframe answers requests of that category without a dialog. Always allowing connect does not allow signing. **The decryption dialog has no "Always allow" button**, so decryption is confirmed every time.
+- Pressing "Always allow" in the dialog is remembered per origin and per category (connect / sign / NIP-44 / NIP-04), and from then on the iframe answers requests of that category without a dialog. Always allowing connect does not allow signing. **The decryption dialog has no "Always allow" button**, so decryption is confirmed every time (unless the global setting below is "always deny", in which case it is rejected without a dialog).
 - In nosskey.app's settings, the user can also choose a default for all sites per category (ask every time, always allow, always deny). The default is to ask every time.
 - Exception: when the iframe cannot read a key (including when storage access has not been granted), `getRelays()` returns `{}` without consent. Do not read `{}` as "the user has no relays".
 
@@ -145,7 +145,7 @@ However, **where and at what size the iframe is placed is the parent app's respo
 ```ts
 const client = new NosskeyIframeClient({
   iframeUrl: 'https://nosskey.app/#/iframe',
-  theme: 'auto',
+  theme: 'neutral-light', // match the modal card's background (#fff)
   lang: 'auto',
 });
 
@@ -167,7 +167,7 @@ observer.observe(client.iframe, { attributes: true, attributeFilter: ['style'] }
 ```
 
 - Be careful if the login modal uses the native `<dialog>` element's `showModal()`. A modal `<dialog>` is placed in the browser's top layer, so no `z-index` can put the iframe above it. Everything outside the `<dialog>` also becomes inert, the iframe included. Build the modal from ordinary elements, or close the `<dialog>` before starting the Nosskey login.
-- When started in embedded mode (`embedded=1`, by specifying `theme` / `lang`), the iframe makes its body transparent so the consent modal blends into the card frame the parent provides.
+- When started in embedded mode (`embedded=1`, by specifying `theme` / `lang`), the iframe makes its body transparent so the consent modal blends into the card frame the parent provides. The card frame's background shows through the transparent parts, so fix `theme` to match it (`#fff` for `neutral-light` / `purple-light`, `#141414` for `neutral-dark`, `#131318` for `purple-dark`). `'auto'` is resolved inside the iframe and can disagree with the parent's background.
 
 ## Handling storage partitioning
 
@@ -175,7 +175,7 @@ With Chrome 115+ and Firefox's Total Cookie Protection, **a cross-origin iframe'
 
 The iframe host automatically recovers from this via the Storage Access API:
 
-1. When a request such as `getPublicKey()` / `signEvent()` arrives while the key cannot be read, the iframe sends `nosskey:visibility { visible: true }` to show itself. It does not answer `NO_KEY` right away, but holds the request.
+1. When a request such as `getPublicKey()` / `signEvent()` arrives while the key cannot be read, the iframe sends `nosskey:visibility { visible: true }` to show itself. When granting storage access could make the key readable, it does not answer `NO_KEY` right away, but holds the request. When there is no such prospect (see below), it answers `NO_KEY` at once.
 2. The user clicks the "Grant storage access" button inside the iframe.
 3. The browser shows a permission dialog. On approval, the iframe re-reads the key from first-party storage and continues with the held request (the consent dialog, for example). The parent app does not need to retry.
 4. If the user closes the card, or the key is still missing after access is granted, `NO_KEY` is returned. The request is held for at most 60 seconds. If the client's timeout (60 seconds by default) expires first, the call fails with a timeout error.
@@ -220,7 +220,7 @@ try {
 |------------|---------|
 | `NO_KEY` | No passkey is configured in the iframe, or the key is hidden by storage partitioning |
 | `USER_REJECTED` | The user denied the request in the consent dialog |
-| `RATE_LIMITED` | Too many consecutive rejections from this origin; the host is temporarily refusing requests. Back off and retry later |
+| `RATE_LIMITED` | Five rejections, or requests whose key could not be recovered, in a row from this origin; the host is temporarily refusing requests. Back off and retry later |
 | `NOT_AUTHORIZED` | The requesting origin is not allowed |
 | `UNKNOWN_METHOD` | An unsupported method was called |
 | `INVALID_REQUEST` | The parameters are invalid |

@@ -109,7 +109,7 @@ window.nostr = {
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 復号 |
 
 - `getPublicKey()` / `getRelays()` の consent は NIP-07 ブラウザ拡張の初回接続と同じ**オリジン単位の接続承認 (ペアリング)** です。npub とリレー設定はユーザーを特定できる情報のため、埋め込み先のサイトがユーザーに知られずにそれらを取得することを防いでいます。
-- ダイアログで「常に許可」を押すと、その承認はオリジンごとに、接続・署名・NIP-44・NIP-04 の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号のダイアログには「常に許可」が出ず**、毎回確認されます。
+- ダイアログで「常に許可」を押すと、その承認はオリジンごとに、接続・署名・NIP-44・NIP-04 の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号のダイアログには「常に許可」が出ず**、毎回確認されます (下の全体設定で「常に拒否」にした場合は、ダイアログを出さずに拒否されます)。
 - nosskey.app の設定では種類ごとに、すべてのサイトに対する既定の動作 (毎回確認・常に許可・常に拒否) も選べます。既定は毎回確認です。
 - 例外として、iframe が鍵を読めないとき (ストレージアクセスが未許可の場合を含む) の `getRelays()` は、consent なしで `{}` を返します。`{}` を「リレー設定がない」と解釈しないでください。
 
@@ -143,7 +143,7 @@ window.nostr = {
 ```ts
 const client = new NosskeyIframeClient({
   iframeUrl: 'https://nosskey.app/#/iframe',
-  theme: 'auto',
+  theme: 'neutral-light', // モーダルカードの背景色 (#fff) に合わせる
   lang: 'auto',
 });
 
@@ -165,7 +165,7 @@ observer.observe(client.iframe, { attributes: true, attributeFilter: ['style'] }
 ```
 
 - ログインモーダルにネイティブの `<dialog>` の `showModal()` を使う場合は注意してください。モーダル表示の `<dialog>` は最前面の層に置かれるため、`z-index` では iframe をその上に出せません。さらに `<dialog>` の外側は操作できなくなり、iframe も操作できません。通常の要素でモーダルを作るか、Nosskey のログインを始める前に `<dialog>` を閉じてください。
-- `theme` / `lang` を指定して埋め込みモード (`embedded=1`) で起動すると、iframe は body を透過化し、consent モーダルが親の用意したカード枠に馴染むように描画されます。
+- `theme` / `lang` を指定して埋め込みモード (`embedded=1`) で起動すると、iframe は body を透過化し、consent モーダルが親の用意したカード枠に馴染むように描画されます。透過した部分にはカード枠の背景色が見えるため、`theme` は背景色に合わせて固定してください (`neutral-light` / `purple-light` は `#fff`、`neutral-dark` は `#141414`、`purple-dark` は `#131318`)。`'auto'` は iframe の中で解決されるので、親の背景色と食い違うことがあります。
 
 ## ストレージ分離 (Storage Partitioning) への対応
 
@@ -173,7 +173,7 @@ Chrome 115+ や Firefox の Total Cookie Protection では、**クロスオリ�
 
 iframe ホストは Storage Access API でこれを自動的にリカバリします:
 
-1. 鍵が読めない状態で `getPublicKey()` / `signEvent()` などのリクエストが届くと、iframe は `nosskey:visibility { visible: true }` を送って自身を表示します。`NO_KEY` はすぐには返さず、リクエストを保留します。
+1. 鍵が読めない状態で `getPublicKey()` / `signEvent()` などのリクエストが届くと、iframe は `nosskey:visibility { visible: true }` を送って自身を表示します。ストレージアクセスを許可すれば鍵が読める見込みがあるときは、`NO_KEY` をすぐには返さず、リクエストを保留します。見込みがないとき (後述) は、すぐに `NO_KEY` を返します。
 2. ユーザーが iframe 内の「ストレージアクセスを許可」ボタンをクリックします。
 3. ブラウザが許可ダイアログを表示します。承認されると、iframe がファーストパーティのストレージから鍵を読み直し、保留していたリクエストの処理 (consent ダイアログなど) に進みます。親アプリが再試行する必要はありません。
 4. ユーザーがカードを閉じた場合や、許可しても鍵が見つからなかった場合は、`NO_KEY` が返ります。保留は最大 60 秒です。client の timeout (既定 60 秒) が先に切れた場合は、timeout のエラーになります。
@@ -218,7 +218,7 @@ try {
 |-------------|------|
 | `NO_KEY` | iframe にパスキーが設定されていない、またはストレージ分離で鍵が見えていない |
 | `USER_REJECTED` | ユーザーが consent ダイアログで拒否した |
-| `RATE_LIMITED` | 同一オリジンからの連続拒否が多すぎてホストが一時的にリクエストを拒否中。時間を置いて再試行する |
+| `RATE_LIMITED` | 同一オリジンで、拒否か鍵を回復できなかったリクエストが 5 回続いたため、ホストが一時的にリクエストを拒否中。時間を置いて再試行する |
 | `NOT_AUTHORIZED` | リクエスト元オリジンが許可されていない |
 | `UNKNOWN_METHOD` | 未対応のメソッドを呼び出した |
 | `INVALID_REQUEST` | パラメータが不正 |
