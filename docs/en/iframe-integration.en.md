@@ -93,7 +93,7 @@ The `NosskeyIframeClient` constructor creates the iframe element and appends it 
 
 ## Supported methods
 
-`NosskeyIframeClient` provides all 7 NIP-07 methods, and **all 7 go through user consent**.
+`NosskeyIframeClient` provides all 7 NIP-07 methods, and all 7 go through user consent.
 
 | Client API | Return type | Consent | Purpose |
 |------------|-------------|---------|---------|
@@ -106,7 +106,7 @@ The `NosskeyIframeClient` constructor creates the iframe element and appends it 
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | required | NIP-04 (legacy) decryption |
 
 - Consent for `getPublicKey()` / `getRelays()` is a **per-origin connection approval (pairing)**, like the first connect in a NIP-07 browser extension. The npub and relay set identify the user, so this stops embedding sites from reading them silently.
-- Choosing "always allow this site" in the dialog is remembered for that origin **per category (connect / sign / encrypt)**, and later requests are answered without a dialog. Always allowing connect does not allow signing. **Decryption is never auto-approved** and is confirmed every time.
+- Choosing "always allow this site" in the dialog is remembered per origin and per category (connect / sign / encrypt), and from then on the iframe answers requests of that category without a dialog. Always allowing connect does not allow signing. **Decryption is never covered by "always allow"** and is confirmed every time.
 - Exception: when no key is set, `getRelays()` returns `{}` without consent.
 
 `peer` is the counterparty public key (32-byte hex). `RelayMap` is of type `Record<string, { read: boolean; write: boolean }>`.
@@ -175,7 +175,7 @@ Browsers scope a Storage Access grant to the **document**. A live iframe keeps i
 
 Remounting used to be the only way to notice that the user had switched accounts in the signing app, because the iframe read the account once at mount. It is no longer needed: the host re-reads the stored account before serving each request, so **a long-lived iframe picks up both account switches and sign-outs on the next call**. You do **not** need to call anything to check for a change — the next call you actually need answers for whatever account is current then.
 
-> Avoid polling `getPublicKey()` on every `visibilitychange`. `getPublicKey()` is subject to connection approval, so unless the user chose "always allow", **a consent dialog appears every time they return to the tab**. And while storage access has not been granted, a host with `onKeyUnavailable` (the reference implementation has it) does **not** answer `NO_KEY` right away: it reveals the iframe and waits up to 60 seconds for the user. Restore the session from a pubkey the parent app saved itself, and only query the iframe in response to a user action. Calls that end without recovery also count toward the per-origin rate limiter, which blocks with `RATE_LIMITED` after five consecutive ones by default.
+> Avoid polling `getPublicKey()` on every `visibilitychange`. `getPublicKey()` is subject to connection approval, so unless the user chose "always allow", **a consent dialog appears every time they return to the tab**. And while storage access has not been granted, a host with `onKeyUnavailable` (the reference implementation has it) does **not** answer `NO_KEY` right away: it reveals the iframe and waits up to 60 seconds for the user. Calls that end without recovery also count toward the per-origin rate limiter, which blocks with `RATE_LIMITED` after five consecutive ones by default. Restore the session from a pubkey the parent app saved itself, and query the iframe only in response to a user action.
 
 See [`iframe-host.en.md`](./iframe-host.en.md#storage-partitioning--storage-access-api) for details.
 

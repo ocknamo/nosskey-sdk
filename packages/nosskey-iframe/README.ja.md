@@ -92,7 +92,7 @@ iframe はタブを切り替えてもグラントを保持しますが、作り�
 詳細な統合手順 (storage partitioning、Storage Access API による復旧、エラーハンドリング、モーダル UX 等) は
 [`docs/ja/iframe-integration.ja.md`](../../docs/ja/iframe-integration.ja.md) を参照。
 動作可能なデモは [`examples/parent-sample`](../../examples/parent-sample) にあります。
-AI コーディングエージェント向けの導入ガイド (NIP-07 と並べたログインモーダル付き) は
+AI コーディングエージェント向けの導入ガイド (NIP-07 と並べたログインモーダルの例付き) は
 [`docs/llms/nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md) にあります。
 
 ---

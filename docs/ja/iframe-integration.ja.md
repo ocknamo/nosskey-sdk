@@ -6,7 +6,7 @@
 
 > iframe ホスト側 (`examples/svelte-app` の `#/iframe` ルート) の内部構造については [`iframe-host.ja.md`](./iframe-host.ja.md) を参照してください。
 >
-> AI コーディングエージェントに導入させる場合は、規約とコピペ可能なコードを 1 ファイルにまとめた [AI 向け導入ガイド](../llms/nosskey-iframe-login.md) (英語) を渡してください。
+> AI コーディングエージェントに導入させる場合は、ルールと、そのまま貼り付けて使えるコードを 1 ファイルにまとめた [AI 向け導入ガイド](../llms/nosskey-iframe-login.md) (英語) を渡してください。
 
 ## 概要
 
@@ -91,7 +91,7 @@ window.nostr = {
 
 ## 対応メソッド
 
-`NosskeyIframeClient` は NIP-07 の全 7 メソッドを提供し、**7 メソッドすべてがユーザー consent を経由します**。
+`NosskeyIframeClient` は NIP-07 の全 7 メソッドを提供し、そのすべてがユーザー consent を経由します。
 
 | クライアント API | 戻り値 | consent | 用途 |
 |------------------|--------|---------|------|
@@ -103,8 +103,8 @@ window.nostr = {
 | `nip04.encrypt(peer, plaintext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 暗号化 |
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 復号 |
 
-- `getPublicKey()` / `getRelays()` の consent は、NIP-07 ブラウザ拡張の初回接続と同じ**オリジン単位の接続承認 (ペアリング)** です。npub とリレー設定はユーザーを特定できる情報のため、埋め込み先サイトによるサイレント取得を防いでいます。
-- ダイアログで「このサイトを常に許可」を選ぶと、そのオリジンについて **接続 / 署名 / 暗号化 のカテゴリ単位**で記憶され、以後はダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号は常に許可の対象外**で、毎回確認されます。
+- `getPublicKey()` / `getRelays()` の consent は NIP-07 ブラウザ拡張の初回接続と同じ**オリジン単位の接続承認 (ペアリング)** です。npub とリレー設定はユーザーを特定できる情報のため、埋め込み先のサイトがユーザーに知られずにそれらを取得することを防いでいます。
+- ダイアログで「このサイトを常に許可」を選ぶと、その選択はオリジンごとに、接続・署名・暗号化の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号は「常に許可」の対象外**で、毎回確認されます。
 - 例外として、鍵が未設定のときの `getRelays()` は consent なしで `{}` を返します。
 
 `peer` は相手の公開鍵 (32 バイト hex) です。`RelayMap` は `Record<string, { read: boolean; write: boolean }>` 型です。
@@ -128,7 +128,7 @@ window.nostr = {
 
 ## iframe の配置と表示制御
 
-`NosskeyIframeClient` が生成する iframe は、初期状態では `display: none` で非表示です。リクエスト (接続承認・署名・暗号化などの consent ダイアログ) の処理中、あるいはストレージアクセスの許可が必要になると、iframe から `nosskey:visibility` メッセージ (`{ type: 'nosskey:visibility', visible: boolean }`) が送られ、`NosskeyIframeClient` が iframe 要素の `display` を自動で切り替えます。
+`NosskeyIframeClient` が生成する iframe は、初期状態では `display: none` で非表示です。接続承認・署名・暗号化などのリクエストを処理している間や、ストレージアクセスの許可が必要になったときは、iframe から `nosskey:visibility` メッセージ (`{ type: 'nosskey:visibility', visible: boolean }`) が送られ、`NosskeyIframeClient` が iframe 要素の `display` を自動で切り替えます。
 
 「常に許可」で自動承認されるリクエストでも、処理中は iframe が一瞬表示されます。iframe の背景色は `theme` に合わせておくと目立ちません。
 
@@ -173,7 +173,7 @@ iframe はページの寿命のあいだ 1 回だけマウントし、そのま�
 
 以前は、署名アプリ側でのアカウント切り替えに気づく手段が作り直ししかありませんでした (iframe はマウント時に一度だけアカウントを読んでいたため)。現在は host がリクエストごとに保存済みアカウントを読み直すので、**生かしたままの iframe でもアカウント切り替えとログアウトの両方を次の呼び出しで拾えます**。切り替わりを**確認するために呼ぶ必要はありません** — 次に実際に必要になった呼び出しが、その時点のアカウントで応答します。
 
-> `visibilitychange` のたびに `getPublicKey()` を叩くのは避けてください。`getPublicKey()` は接続承認の対象なので、ユーザーが「常に許可」を選んでいなければ**タブに戻るたびに consent ダイアログが出ます**。また、ストレージアクセスが未許可の状態では、`onKeyUnavailable` を備えた host (リファレンス実装がそうです) は `NO_KEY` を即答せず、**iframe を開いて最大 60 秒ユーザーの操作を待ちます**。セッションの復元は親アプリ側で保存した pubkey から行い、iframe への問い合わせはユーザー操作を起点にしてください。さらに回復されなかった呼び出しはオリジン別のレート制限に計上され、既定では 5 回連続で `RATE_LIMITED` になります。
+> `visibilitychange` のたびに `getPublicKey()` を叩くのは避けてください。`getPublicKey()` は接続承認の対象なので、ユーザーが「常に許可」を選んでいなければ**タブに戻るたびに consent ダイアログが出ます**。また、ストレージアクセスが未許可の状態では、`onKeyUnavailable` を備えた host (リファレンス実装がそうです) は `NO_KEY` を即答せず、**iframe を開いて最大 60 秒ユーザーの操作を待ちます**。さらに回復されなかった呼び出しはオリジン別のレート制限に計上され、既定では 5 回連続で `RATE_LIMITED` になります。セッションは親アプリ側で保存した pubkey から復元し、iframe への問い合わせはユーザーの操作をきっかけに行ってください。
 
 詳細は [`iframe-host.ja.md`](./iframe-host.ja.md#storage-partitioning-と-storage-access-api) を参照してください。
 
