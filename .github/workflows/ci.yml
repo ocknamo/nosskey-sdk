@@ -85,3 +85,8 @@ jobs:
       - name: Build (vite)
         run: npm run build
         working-directory: examples/svelte-app
+
+      # nosskey.app/llms.txt はビルド出力に含めて配信する。プラグインが外れても
+      # ビルドは通ってしまうため、出力に入っていることをここで確かめる。
+      - name: Check llms.txt in build output
+        run: cmp llms.txt examples/svelte-app/dist/llms.txt

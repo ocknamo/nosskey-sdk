@@ -39,7 +39,9 @@ const llmsTxtPlugin = (): Plugin => {
   return {
     name: 'nosskey-llms-txt',
     configureServer: (server) => {
-      server.middlewares.use('/llms.txt', (_req, res) => {
+      server.middlewares.use('/llms.txt', (req, res, next) => {
+        // use() は前方一致なので、本番と同じく /llms.txt（クエリ付きを含む）だけに答える。
+        if (req.originalUrl?.split('?')[0] !== '/llms.txt') return next();
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end(readFileSync(source));
       });
