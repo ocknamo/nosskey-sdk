@@ -60,9 +60,10 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 - **All 7 methods require user approval in the iframe, `getPublicKey` included.**
   - `getPublicKey` and `getRelays` count as a per-origin *connection approval*, like the first
     connect in a NIP-07 extension.
-  - The dialog has "Allow once", "Always allow" and "Reject" buttons. "Always allow" is
-    remembered per origin and per category. The four categories are connect (`getPublicKey` /
-    `getRelays`), `signEvent`, NIP-44 and NIP-04. Always allowing connect does not allow signing.
+  - The dialog has "Allow once", "Always allow" and "Reject" buttons (「今回のみ許可」「常に許可」
+    「拒否」 in the Japanese UI). "Always allow" is remembered per origin and per category. The four
+    categories are connect (`getPublicKey` / `getRelays`), `signEvent`, NIP-44 and NIP-04. Always
+    allowing connect does not allow signing.
   - Decryption never offers "Always allow", so it shows the dialog every time unless the user set
     that category to "deny" (see the next point).
   - In nosskey.app's settings, the user can also set a category to "always" or "deny" for every

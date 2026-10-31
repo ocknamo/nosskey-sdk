@@ -8,7 +8,7 @@
 
 <!-- 保守する人へ: 原本は英語版で、このファイルはその翻訳です。先に英語版を直し、そのあとこのファイルを合わせてください。コードブロックは英語版と一字一句同じに保ちます。 -->
 
-参照実装として、Nosskey の作者による本番アプリを 2 つ挙げます。
+参照実装 (Nosskey の作者による本番アプリ) は次のとおりです。
 
 - **combine** (Svelte 5): もっとも使い込まれている導入例です。参照するファイルは [`src/lib/auth.svelte.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/auth.svelte.ts)、[`src/lib/nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts)、[`src/app.css`](https://github.com/ocknamo/combine/blob/main/src/app.css) (`.nosskey-overlay`) です。
 - **yakitofu** (SvelteKit): NIP-07 と Nosskey を並べて選べるログインモーダルがあります。参照するファイルは [`src/lib/components/LoginModal.svelte`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/components/LoginModal.svelte)、[`src/lib/services/nosskey.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/nosskey.ts)、[`src/lib/services/signer.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/signer.ts) です。
