@@ -65,9 +65,10 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
     categories are connect (`getPublicKey` / `getRelays`), `signEvent`, NIP-44 and NIP-04. Always
     allowing connect does not allow signing.
   - Decryption never offers "Always allow", so it shows the dialog every time unless the user set
-    that category to "deny" (see the next point).
-  - In nosskey.app's settings, the user can also set a category to "always" or "deny" for every
-    site. The default is to ask, so do not assume either. "Deny" rejects with `USER_REJECTED`
+    that category to "Deny" (see the next point).
+  - In nosskey.app's settings, the user can also set a category to "Always allow" or "Deny"
+    (「常に許可」「拒否」) for every site. The default is "Ask every time" (「毎回確認」), so do not
+    assume either. "Deny" rejects with `USER_REJECTED`
     without showing a dialog.
   - Exception: `getRelays` returns `{}` without a dialog when the iframe cannot read a key yet. That
     includes storage access not being granted, so do not treat `{}` as "the user has no relays".
@@ -89,15 +90,15 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   | code | meaning | what the app should do |
   |---|---|---|
   | `NO_KEY` | The user has no Nosskey passkey yet, or storage access was not granted | Show a link to `https://nosskey.app` ("create a passkey there, then come back") |
-  | `USER_REJECTED` | The user declined in the dialog, or set that category to "deny" | Show "request was declined". Do not retry automatically |
+  | `USER_REJECTED` | The user declined in the dialog, or set that category to "Deny" | Show "request was declined". Do not retry automatically |
   | `RATE_LIMITED` | 5 failures in a row from your origin; blocked for 60 s. Declines count, and so does every request that fails because no key could be recovered (for example, clicking "Log in with Nosskey" without a passkey) | Show "try again later". Never retry automatically |
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | Bug or environment problem | Show the message |
 
   A timeout rejects with a plain `Error`.
 - Browser support: most browsers support Nosskey login, but always keep another login method available.
 - Storage partitioning: in a cross-origin iframe, browsers partition `localStorage`. The host
-  recovers the key with the Storage Access API, and the user has to click "Allow" inside the
-  iframe once. The browser keeps that grant **for the iframe document**, which is why rules R1 and R2 below exist.
+  recovers the key with the Storage Access API, and the user has to click "Grant storage access"
+  (「ストレージアクセスを許可」) inside the iframe once. The browser keeps that grant **for the iframe document**, which is why rules R1 and R2 below exist.
 - The iframe can also open **by itself**, without any request. This happens when it cannot find a
   key and waiting would not help: storage access was granted but there is no key, or the browser has
   no Storage Access API. It then shows a card that links to nosskey.app and has a close button. The
