@@ -98,8 +98,8 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 - Browser support: most browsers support Nosskey login, but always keep another login method available.
 - Storage partitioning: in a cross-origin iframe, browsers partition `localStorage`. The host
   recovers the key with the Storage Access API, and the user has to click "Grant storage access"
-  (「ストレージアクセスを許可」) inside the iframe once. The browser keeps that grant **for the iframe document**, which is why
-  rule R2 below exists.
+  (「ストレージアクセスを許可」) inside the iframe once. The browser keeps that grant **for the
+  iframe document**, which is why rule R2 below exists.
 - The iframe can also open **by itself**, without any request. This happens when it cannot find a
   key and waiting would not help: storage access was granted but there is no key, or the browser has
   no Storage Access API. It then shows a card that links to nosskey.app and has a close button. The
@@ -117,7 +117,7 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   Call `destroy()` only on full app teardown, or when initialization failed.
 - **R3. Never call `getPublicKey()` / `getRelays()` without a user action.** That means not on
   page load, not on `visibilitychange`, and not on a timer. Each call can open the approval dialog
-  or the storage-access prompt, and declines count toward `RATE_LIMITED`.
+  or the storage-access prompt, and failures count toward `RATE_LIMITED` (§2).
   - Restore sessions from your own storage: save `{ method, pubkey }` at login.
   - The host re-reads the current account on every request, so you never need to poll it.
 - **R4. Mount the iframe in a fixed full-screen overlay** with a `z-index` above every app
@@ -380,8 +380,7 @@ export function describeError(err: unknown): { message: string; showNosskeyLink:
 ```
 
 When you sign, check that the event came back signed by the logged-in account. This is how the
-app notices that the user switched accounts at nosskey.app, without any polling. The check only
-works because `getSigner()` sends the event without a `pubkey` (rule R9):
+app notices that the user switched accounts at nosskey.app, without any polling (R9):
 
 ```ts
 const signed = await signer.signEvent(unsigned);
@@ -393,8 +392,7 @@ if (signed.pubkey !== session.pubkey) {
 
 ## 8. Login modal: NIP-07 and Nosskey side by side
 
-This follows yakitofu's `LoginModal.svelte`. If the app has other login methods, offer them in the
-same modal. The requirements apply to any framework:
+This follows yakitofu's `LoginModal.svelte`. The requirements apply to any framework:
 
 - Add a "Log in with Nosskey (passkey)" button next to the app's existing login buttons. Keep it
   always enabled, with a one-line explanation such as "Uses a passkey stored at nosskey.app."
@@ -512,13 +510,12 @@ example, granting storage access needs a user tap).
 | Symptom | Cause / fix |
 |---|---|
 | Nothing happens on click and `ready()` never resolves | CSP `frame-src` blocks nosskey.app (R8), or the network fails. The 15 s ready timeout surfaces this |
-| The iframe opens but cannot be clicked, or appears behind your modal | The overlay's `z-index` is too low, or a parent element has `pointer-events: none` (R4) |
+| The iframe opens but cannot be clicked, or appears behind your modal | The overlay's `z-index` is too low, a parent element has `pointer-events: none`, or the login modal uses `<dialog>.showModal()` (R4) |
 | Storage access is requested every time the user returns to the tab | The client is being destroyed or recreated (R2) |
 | An approval dialog appears on page load or tab switch | Something calls `getPublicKey()` / `getRelays()` without a user action (R3) |
 | A "no key" card (with a link to nosskey.app) appears on its own, also after a tab switch | Expected when the iframe is mounted and cannot find a key (§2). The user can close it. Mounting lazily (R1) keeps it away from users who never chose Nosskey |
-| The overlay opens but the iframe cannot be clicked while your login modal is open | The login modal uses `<dialog>.showModal()` (R4) |
 | `NO_KEY` right after the user created a passkey | The user created it in a different browser or profile, or dismissed the storage-access prompt. Click login again |
-| The page shows a white flash on every signature | Expected (§2). Match the iframe `background` and `theme` to your app (§6) |
+| The page shows a white flash on every signature | Expected: the iframe opens briefly for every request (§2). Match the iframe `background` and `theme` to your app (§5, §6) |
 
 ## More detail
 
