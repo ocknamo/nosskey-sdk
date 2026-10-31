@@ -28,8 +28,8 @@ these apps.** Both apps break rules in §3, and this guide wins wherever they di
 
 - combine calls `getPublicKey()` on every `visibilitychange` (`reconcileSession`), and calls
   `getRelays()` at startup (`refreshRelays` in `App.svelte`). Both break R3.
-- combine installs its `window.nostr` shim unconditionally. That breaks R5 for apps that also offer
-  NIP-07 login.
+- combine installs its `window.nostr` shim unconditionally, because it has no NIP-07 login. That
+  breaks R5 for apps that also offer NIP-07 login.
 - yakitofu calls `destroy()` on logout, which breaks R2. Its signer also asks the iframe for
   `getPublicKey()` instead of answering from the session.
 
@@ -98,7 +98,8 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 - Browser support: most browsers support Nosskey login, but always keep another login method available.
 - Storage partitioning: in a cross-origin iframe, browsers partition `localStorage`. The host
   recovers the key with the Storage Access API, and the user has to click "Grant storage access"
-  (「ストレージアクセスを許可」) inside the iframe once. The browser keeps that grant **for the iframe document**, which is why rules R1 and R2 below exist.
+  (「ストレージアクセスを許可」) inside the iframe once. The browser keeps that grant **for the iframe document**, which is why
+  rule R2 below exists.
 - The iframe can also open **by itself**, without any request. This happens when it cannot find a
   key and waiting would not help: storage access was granted but there is no key, or the browser has
   no Storage Access API. It then shows a card that links to nosskey.app and has a close button. The
@@ -392,8 +393,8 @@ if (signed.pubkey !== session.pubkey) {
 
 ## 8. Login modal: NIP-07 and Nosskey side by side
 
-This follows yakitofu's `LoginModal.svelte`. The example pairs Nosskey with NIP-07; if the app
-has other login methods, offer them in the same modal. The requirements apply to any framework:
+This follows yakitofu's `LoginModal.svelte`. If the app has other login methods, offer them in the
+same modal. The requirements apply to any framework:
 
 - Add a "Log in with Nosskey (passkey)" button next to the app's existing login buttons. Keep it
   always enabled, with a one-line explanation such as "Uses a passkey stored at nosskey.app."
@@ -474,9 +475,8 @@ Svelte 5 example. `$lib` is a SvelteKit alias; in a plain Svelte + Vite app, use
 
 Do this only if the app hosts embedded widgets that look for `window.nostr` themselves.
 combine does this for an embedded composer in
-[`nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts). combine has no
-NIP-07 login, so it installs the shim unconditionally. An app that also offers NIP-07 login must
-differ from combine as follows:
+[`nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts). An app that also
+offers NIP-07 login must differ from combine as follows:
 
 - Install the shim after a Nosskey login, and only then. Keep the provider that was there before,
   and put it back on logout. While nobody is logged in, or after a NIP-07 login, the extension's
@@ -502,8 +502,7 @@ example, granting storage access needs a user tap).
 7. Use a browser profile with no Nosskey passkey. Login must end with the "create a passkey at
    nosskey.app" message, and the overlay must close. Depending on the browser state, this happens
    in one of two ways:
-   - The iframe can tell that waiting will not help (storage access was already granted, or the
-     browser has no Storage Access API). `NO_KEY` comes back at once, and the card only flashes.
+   - When waiting would not help (§2), `NO_KEY` comes back at once, and the card only flashes.
    - Otherwise the iframe shows a storage-access card and waits. Login fails after the user
      grants access or closes the card. If nobody touches the card, the call ends with the timeout
      message after 60 s instead.
@@ -519,8 +518,7 @@ example, granting storage access needs a user tap).
 | A "no key" card (with a link to nosskey.app) appears on its own, also after a tab switch | Expected when the iframe is mounted and cannot find a key (§2). The user can close it. Mounting lazily (R1) keeps it away from users who never chose Nosskey |
 | The overlay opens but the iframe cannot be clicked while your login modal is open | The login modal uses `<dialog>.showModal()` (R4) |
 | `NO_KEY` right after the user created a passkey | The user created it in a different browser or profile, or dismissed the storage-access prompt. Click login again |
-| `RATE_LIMITED` | 5 declines or failed key recoveries in a row, e.g. repeated login clicks without a passkey. Wait 60 s and stop automatic retries |
-| The page shows a white flash on every signature | Expected: the iframe opens for every request. Set the iframe `background` and `theme` to match your app |
+| The page shows a white flash on every signature | Expected (§2). Match the iframe `background` and `theme` to your app (§6) |
 
 ## More detail
 
