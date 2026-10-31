@@ -7,6 +7,11 @@
 > The private key never reaches the client app.
 >
 > Checked against `nosskey-iframe` 0.2.0 and the reference host running at nosskey.app.
+>
+> A Japanese version with the same content is at [`nosskey-iframe-login.ja.md`](./nosskey-iframe-login.ja.md).
+
+<!-- Maintainers: keep this file and nosskey-iframe-login.ja.md in sync. The code blocks must stay
+identical; `npm run docs:check` (also run in CI) verifies them. -->
 
 Reference implementations (production apps by the Nosskey author):
 

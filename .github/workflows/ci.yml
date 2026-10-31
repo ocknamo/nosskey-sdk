@@ -34,6 +34,9 @@ jobs:
       - name: Format & Lint check (biome)
         run: npm run format:check
 
+      - name: Check AI guide translations are in sync
+        run: npm run docs:check
+
       - name: Build (tsup)
         run: npm run build
 

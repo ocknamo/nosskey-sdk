@@ -93,7 +93,7 @@ iframe はタブを切り替えてもグラントを保持しますが、作り�
 [`docs/ja/iframe-integration.ja.md`](../../docs/ja/iframe-integration.ja.md) を参照。
 動作可能なデモは [`examples/parent-sample`](../../examples/parent-sample) にあります。
 AI コーディングエージェント向けの導入ガイド (NIP-07 と並べたログインモーダルの例付き) は
-[`docs/llms/nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md) にあります。
+[`docs/llms/nosskey-iframe-login.ja.md`](../../docs/llms/nosskey-iframe-login.ja.md) (英語版は [`nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md)) にあります。
 
 ---
 

@@ -6,7 +6,7 @@
 
 > iframe ホスト側 (`examples/svelte-app` の `#/iframe` ルート) の内部構造については [`iframe-host.ja.md`](./iframe-host.ja.md) を参照してください。
 >
-> AI コーディングエージェントに導入させる場合は、ルールと、そのまま貼り付けて使えるコードを 1 ファイルにまとめた [AI 向け導入ガイド](../llms/nosskey-iframe-login.md) (英語) を渡してください。
+> AI コーディングエージェントに導入させる場合は、ルールと、そのまま貼り付けて使えるコードを 1 ファイルにまとめた AI 向け導入ガイド ([日本語](../llms/nosskey-iframe-login.ja.md) / [英語](../llms/nosskey-iframe-login.md)) を渡してください。
 
 ## 概要
 

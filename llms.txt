@@ -7,6 +7,7 @@ To add Nosskey passkey login to a client, read the integration guide below first
 ## Integration guides
 
 - [Nosskey iframe login guide for AI agents](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.md): step-by-step instructions to add "Log in with Nosskey" next to NIP-07 login
+- [Nosskey iframe login guide for AI agents (ja)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.ja.md): Japanese version of the guide above, with identical code blocks
 - [iframe integration guide (en)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/en/iframe-integration.en.md): human-oriented reference for `NosskeyIframeClient` (options, storage partitioning, errors)
 - [iframe integration guide (ja, master)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/ja/iframe-integration.ja.md): Japanese original of the guide above
 

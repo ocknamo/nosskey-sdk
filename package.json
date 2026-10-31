@@ -25,7 +25,8 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "fix": "npm run lint:fix && npm run format",
-    "fix:unsafe": "biome check --fix --unsafe"
+    "fix:unsafe": "biome check --fix --unsafe",
+    "docs:check": "node scripts/check-llms-guide-sync.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
