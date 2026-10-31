@@ -2,9 +2,7 @@
 
 > Instructions for AI coding agents. Follow them to add passkey login to an existing
 > Nostr web client by embedding the hosted Nosskey signing iframe
-> (`https://nosskey.app/#/iframe`) through the `nosskey-iframe` npm package. The
-> result offers "Log in with Nosskey" next to the usual NIP-07 extension login.
-> The private key never reaches the client app.
+> (`https://nosskey.app/#/iframe`) through the `nosskey-iframe` npm package.
 >
 > Checked against `nosskey-iframe` 0.2.0 and the reference host running at nosskey.app.
 >
@@ -95,8 +93,7 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | Bug or environment problem | Show the message |
 
   A timeout rejects with a plain `Error`.
-- Browser support: Chromium 118+ works best. Firefox and Safari/iOS have limited PRF support.
-  Always keep NIP-07 login available as an alternative.
+- Browser support: most browsers support Nosskey login, but always keep another login method available.
 - Storage partitioning: in a cross-origin iframe, browsers partition `localStorage`. The host
   recovers the key with the Storage Access API, and the user has to click "Allow" inside the
   iframe once. The browser keeps that grant **for the iframe document**, which is why rules R1 and R2 below exist.
@@ -391,12 +388,13 @@ if (signed.pubkey !== session.pubkey) {
 
 ## 8. Login modal: NIP-07 and Nosskey side by side
 
-This follows yakitofu's `LoginModal.svelte`. The requirements apply to any framework:
+This follows yakitofu's `LoginModal.svelte`. The example pairs Nosskey with NIP-07; if the app
+has other login methods, offer them in the same modal. The requirements apply to any framework:
 
 - Show two buttons. "Log in with browser extension (NIP-07)" is **disabled** when
   `hasNip07Extension()` returns false, with a short hint underneath. "Log in with Nosskey
   (passkey)" is always enabled, with a one-line explanation such as "Uses a passkey stored at
-  nosskey.app. Your private key never leaves nosskey.app."
+  nosskey.app."
 - Call `loginWithNip07()` / `loginWithNosskey()` **directly in the click handler** (rule R3).
 - While a login is running, disable both buttons and do not close the modal on Escape or on a
   backdrop click. The Nosskey overlay opens on top of your modal; that is expected.
@@ -450,7 +448,7 @@ Svelte 5 example. `$lib` is a SvelteKit alias; in a plain Svelte + Vite app, use
       <button onclick={() => login('nosskey')} disabled={loading !== null}>
         {loading === 'nosskey' ? '…' : 'Log in with Nosskey (passkey)'}
       </button>
-      <p class="hint">Uses a passkey stored at nosskey.app. Your private key never leaves nosskey.app.</p>
+      <p class="hint">Uses a passkey stored at nosskey.app.</p>
 
       {#if error}
         <p class="error" role="alert">

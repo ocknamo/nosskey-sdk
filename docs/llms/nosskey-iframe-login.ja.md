@@ -1,6 +1,6 @@
 # Nostr Web クライアントに「Nosskey でログイン」(パスキー) を追加する
 
-> AI コーディングエージェント向けの手順書です。この手順に従うと、`nosskey-iframe` npm パッケージを使ってホスト型の Nosskey 署名 iframe (`https://nosskey.app/#/iframe`) を埋め込み、既存の Nostr Web クライアントにパスキーでのログインを追加できます。出来上がるのは、通常の NIP-07 拡張機能でのログインと並べて「Nosskey でログイン」を選べる画面です。秘密鍵がクライアントアプリに渡ることはありません。
+> AI コーディングエージェント向けの手順書です。この手順に従うと、`nosskey-iframe` npm パッケージを使ってホスト型の Nosskey 署名 iframe (`https://nosskey.app/#/iframe`) を埋め込み、既存の Nostr Web クライアントにパスキーでのログインを追加できます。
 >
 > `nosskey-iframe` 0.2.0 と、nosskey.app で動いているリファレンスのホストに照らして確認しています。
 >
@@ -55,7 +55,7 @@
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | 不具合か環境の問題 | メッセージをそのまま出す |
 
   timeout のときは、ただの `Error` で reject されます。
-- ブラウザの対応: Chromium 118 以降がもっともよく動きます。Firefox と Safari/iOS は PRF の対応が限られます。代わりの手段として、NIP-07 ログインを必ず残してください。
+- ブラウザの対応: ほとんどのブラウザは対応していますが、代わりのログイン手段を必ず残してください。
 - ストレージ分離: クロスオリジンの iframe では、ブラウザが `localStorage` を分離します。ホストは Storage Access API で鍵を回復し、ユーザーは iframe の中で一度「許可」をクリックする必要があります。ブラウザはこの許可を **iframe のドキュメント単位**で保持します。下のルール R1 と R2 があるのはこのためです。
 - iframe は、リクエストがなくても**自分から**開くことがあります。鍵が見つからず、待っても回復しないときです。具体的には、ストレージアクセスは許可済みだが鍵がない場合と、ブラウザに Storage Access API がない場合です。そのときは、nosskey.app へのリンクと閉じるボタンのあるカードを表示します。この判定は iframe のマウント時と、**タブが再び表示されるたびに**行われます。アプリの不具合ではなく、想定どおりの動作です。
 
@@ -318,9 +318,9 @@ if (signed.pubkey !== session.pubkey) {
 
 ## 8. ログインモーダル: NIP-07 と Nosskey を並べる
 
-yakitofu の `LoginModal.svelte` にならった構成です。次の要件はどのフレームワークにも当てはまります。
+yakitofu の `LoginModal.svelte` にならった構成です。この例では Nosskey と並べる手段として NIP-07 を使っています。ほかのログイン手段があるアプリでは、同じモーダルに並べてください。次の要件はどのフレームワークにも当てはまります。
 
-- ボタンを 2 つ表示します。「ブラウザ拡張機能でログイン (NIP-07)」(下のコードでは `Log in with browser extension (NIP-07)`) は、`hasNip07Extension()` が false のとき**無効**にし、その下に短い説明を添えます。「Nosskey でログイン (パスキー)」(同じく `Log in with Nosskey (passkey)`) は常に有効にし、「nosskey.app に保存したパスキーを使います。秘密鍵が nosskey.app の外に出ることはありません。」のような 1 行の説明を添えます。
+- ボタンを 2 つ表示します。「ブラウザ拡張機能でログイン (NIP-07)」(下のコードでは `Log in with browser extension (NIP-07)`) は、`hasNip07Extension()` が false のとき**無効**にし、その下に短い説明を添えます。「Nosskey でログイン (パスキー)」(同じく `Log in with Nosskey (passkey)`) は常に有効にし、「nosskey.app に保存したパスキーを使います。」のような 1 行の説明を添えます。
 - `loginWithNip07()` / `loginWithNosskey()` は、**クリックハンドラーの中で直接**呼びます (ルール R3)。
 - ログインの処理中は、両方のボタンを無効にし、Escape や背景のクリックでモーダルを閉じないでください。Nosskey のオーバーレイはモーダルの上に開きますが、それで正常です。
 - エラーのときは `describeError(err).message` を表示します。`showNosskeyLink` が true なら、`target="_blank" rel="noopener noreferrer"` を付けた `https://nosskey.app` へのリンクを加えます。
@@ -372,7 +372,7 @@ Svelte 5 の例です。`$lib` は SvelteKit のエイリアスなので、素�
       <button onclick={() => login('nosskey')} disabled={loading !== null}>
         {loading === 'nosskey' ? '…' : 'Log in with Nosskey (passkey)'}
       </button>
-      <p class="hint">Uses a passkey stored at nosskey.app. Your private key never leaves nosskey.app.</p>
+      <p class="hint">Uses a passkey stored at nosskey.app.</p>
 
       {#if error}
         <p class="error" role="alert">

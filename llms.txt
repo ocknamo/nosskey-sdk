@@ -1,12 +1,12 @@
 # Nosskey SDK
 
-> Nosskey derives Nostr keys from passkeys (WebAuthn PRF), so users never handle an nsec. A Nostr web client can add "Log in with Nosskey" without touching private keys by embedding the hosted signing iframe at https://nosskey.app/#/iframe through the `nosskey-iframe` npm package, which exposes a NIP-07 compatible API.
+> Nosskey derives Nostr keys from passkeys (WebAuthn PRF), so users never handle an nsec. A Nostr web client can add "Log in with Nosskey" by embedding the hosted signing iframe at https://nosskey.app/#/iframe through the `nosskey-iframe` npm package, which exposes a NIP-07 compatible API.
 
 To add Nosskey passkey login to a client, read the integration guide below first. It is self-contained: rules, copy-paste code, CSS, a login modal that offers NIP-07 and Nosskey side by side, and a verification checklist.
 
 ## Integration guides
 
-- [Nosskey iframe login guide for AI agents](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.md): step-by-step instructions to add "Log in with Nosskey" next to NIP-07 login
+- [Nosskey iframe login guide for AI agents](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.md): step-by-step instructions to add "Log in with Nosskey" alongside the app's other login methods (the example uses NIP-07)
 - [Nosskey iframe login guide for AI agents (ja)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.ja.md): Japanese version of the guide above, with identical code blocks
 - [iframe integration guide (en)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/en/iframe-integration.en.md): human-oriented reference for `NosskeyIframeClient` (options, storage partitioning, errors)
 - [iframe integration guide (ja, master)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/ja/iframe-integration.ja.md): Japanese original of the guide above
