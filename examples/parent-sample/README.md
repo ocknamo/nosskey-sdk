@@ -133,8 +133,8 @@ iframe so the user's Nosskey never leaves the host origin.
 
 - **Chrome 118+** — fully supported (WebAuthn PRF + iframe).
 - **Firefox (latest)** — partial; PRF support is limited.
-- **Safari / iOS** — not supported at this time. See
-  [`docs/iframe-plan.md`](../../docs/iframe-plan.md) for the rationale.
+- **Safari 18+ / iOS 18+** — supported. Some behaviour differs from Chrome (for example,
+  granting storage access needs a user tap).
 
 ## First-run: storage partitioning
 

@@ -202,7 +202,7 @@ Nosskey を iframe 署名プロバイダとして埋め込むことで、複数�
 |----------|----------|-------------------|------|
 | Chrome 118+ | ✅ | ✅ (Permissions Policy 設定が必要) | サポート |
 | Firefox (最新) | 部分的 | 仕様準拠 | 限定サポート |
-| Safari / iOS | ✅ (Safari 18 以降) | ✅ (Chrome と挙動が一部異なる) | サポート |
+| Safari / iOS | ✅ (Safari 18 以降、macOS 15 / iOS 18 以降) | ✅ (Chrome と挙動が一部異なる) | サポート |
 
 ### 親ページでの利用例
 
@@ -252,7 +252,7 @@ Chrome 115+ や Firefox の Total Cookie Protection では、**サードパー�
 Nosskey SDKはWebAuthnとPRF拡張をサポートするブラウザ環境で動作します。また、パスキーの生成と認証には対応するOS・デバイスの認証器が必要です。主な対応状況は以下の通りです：
 
 - **ChromeおよびChromiumベースのブラウザ**: バージョン118以降でサポート
-- **Safari**: macOS 14.0（Sonoma）以降、iOS 17以降でサポート
+- **Safari**: Safari 18 以降（macOS 15 / iOS・iPadOS 18 以降）でサポート
 - **Firefox**: WebAuthnはサポートしていますが、PRF拡張のサポートは制限的
 
 詳細な対応状況については[PRF対応表](docs/ja/prf-support-tables.ja.md)を参照してください。

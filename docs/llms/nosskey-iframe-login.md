@@ -9,8 +9,8 @@
 > A Japanese version with the same content is at [`nosskey-iframe-login.ja.md`](./nosskey-iframe-login.ja.md).
 
 <!-- Maintainers: this English file is the source of truth, and nosskey-iframe-login.ja.md is its
-translation. Change this file first, then update the Japanese one. The code blocks must stay
-identical; `npm run docs:check` (also run in CI) verifies them. -->
+translation. Change this file first, then update the Japanese one to match. Keep the code blocks identical
+in both files. -->
 
 Reference implementations (production apps by the Nosskey author):
 

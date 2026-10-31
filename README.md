@@ -202,7 +202,7 @@ package on its own, see [`packages/nosskey-iframe/README.md`](packages/nosskey-i
 |---------|---------------|-------------------|--------|
 | Chrome 118+ | ✅ | ✅ (with Permissions Policy) | Supported |
 | Firefox (latest) | partial | spec-compliant | Limited |
-| Safari / iOS | ✅ (Safari 18+) | ✅ (some behaviour differs from Chrome) | Supported |
+| Safari / iOS | ✅ (Safari 18+, macOS 15 / iOS 18+) | ✅ (some behaviour differs from Chrome) | Supported |
 
 ### Parent-side usage
 
@@ -252,7 +252,7 @@ for details. If you build a custom host, implement the same flow.
 Nosskey SDK works in browser environments that support WebAuthn and the PRF extension. Passkey generation and authentication also require authenticators from compatible OS/devices. The main compatibility status is as follows:
 
 - **Chrome and Chromium-based browsers**: Supported in version 118 and later
-- **Safari**: Supported in macOS 14.0 (Sonoma) and later, iOS 17 and later
+- **Safari**: Supported in Safari 18 and later (macOS 15 / iOS and iPadOS 18 and later)
 - **Firefox**: Supports WebAuthn, but PRF extension support is limited
 
 For detailed compatibility information, please refer to the [PRF Support Tables](docs/en/prf-support-tables.en.md).

@@ -183,7 +183,7 @@ Refer to the bundled `.d.ts` for full type signatures.
 ## Compatibility
 
 - **Node**: ≥22 (tooling only; the library itself is a browser package).
-- **Browsers**: Chrome / Edge 118+ ✔, Safari / iOS ✔ (some behaviour differs from Chrome, e.g. storage access needs a user tap), Firefox (latest) — partial PRF support. See the [PRF support tables](../../docs/en/prf-support-tables.en.md).
+- **Browsers**: Chrome / Edge 118+ ✔, Safari 18+ / iOS 18+ ✔ (some behaviour differs from Chrome, e.g. storage access needs a user tap), Firefox (latest) — partial PRF support. See the [PRF support tables](../../docs/en/prf-support-tables.en.md).
 - **Crypto**: WebAuthn PRF extension is required for the host-side key derivation. The client itself has no crypto requirement beyond what the browser ships.
 
 ---

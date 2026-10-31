@@ -181,7 +181,7 @@ host.start();
 ## 動作環境
 
 - **Node**: ≥22 (ツールチェイン用途のみ。本ライブラリ自体はブラウザパッケージ)。
-- **ブラウザ**: Chrome / Edge 118+ ✔、Safari / iOS ✔ (Chrome と挙動が一部異なる。ストレージアクセスの許可にタップが要るなど)、Firefox (最新) は PRF 部分対応。[PRF 対応状況](../../docs/ja/prf-support-tables.ja.md) を参照。
+- **ブラウザ**: Chrome / Edge 118+ ✔、Safari 18+ / iOS 18+ ✔ (Chrome と挙動が一部異なる。ストレージアクセスの許可にタップが要るなど)、Firefox (最新) は PRF 部分対応。[PRF 対応状況](../../docs/ja/prf-support-tables.ja.md) を参照。
 - **暗号**: host 側の鍵導出に WebAuthn PRF 拡張が必要。client 自体はブラウザ標準以外の暗号要件なし。
 
 ---

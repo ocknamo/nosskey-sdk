@@ -48,7 +48,7 @@ Key points:
 
 ## Prerequisites
 
-- **Browser**: works on Chrome 118+ and Safari / iOS (Safari 18+). Safari behaves differently from Chrome in parts (for example, granting storage access needs a user tap). Firefox has limited PRF support.
+- **Browser**: works on Chrome 118+ and Safari / iOS (Safari 18+, macOS 15 / iOS 18+). Safari behaves differently from Chrome in parts (for example, granting storage access needs a user tap). Firefox has limited PRF support.
 - **HTTPS**: the parent page must be served over HTTPS (or `localhost`). This is a WebAuthn requirement.
 - **Passkey created in advance**: the user must first open `https://nosskey.app` directly and create a passkey (Nosskey identity). If none exists, signing-related methods return a `NO_KEY` error.
 
@@ -268,7 +268,7 @@ window.nostr = {
 |---------|---------------|-------------------|--------|
 | Chrome 118+ | ✅ | ✅ (with Permissions-Policy) | Supported |
 | Firefox (latest) | limited | spec-compliant | Limited |
-| Safari / iOS | ✅ (Safari 18+) | ✅ (some behaviour differs from Chrome) | Supported |
+| Safari / iOS | ✅ (Safari 18+, macOS 15 / iOS 18+) | ✅ (some behaviour differs from Chrome) | Supported |
 
 If you want to host the iframe host yourself, [`iframe-host.en.md`](./iframe-host.en.md) explains the host-side architecture (`NosskeyIframeHost`, the consent flow, Permissions-Policy).
 

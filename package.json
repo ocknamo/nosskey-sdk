@@ -21,12 +21,11 @@
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "format": "biome format --write && biome check --write",
-    "format:check": "biome check ./packages ./examples ./scripts",
+    "format:check": "biome check ./packages ./examples",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "fix": "npm run lint:fix && npm run format",
-    "fix:unsafe": "biome check --fix --unsafe",
-    "docs:check": "node scripts/check-llms-guide-sync.mjs"
+    "fix:unsafe": "biome check --fix --unsafe"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
