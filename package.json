@@ -32,7 +32,7 @@
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.5",
     "happy-dom": "^21.0.4",
-    "tsup": "^8.4.0",
+    "tsup": "^9.0.0",
     "typescript": "~5.8.3",
     "vitest": "^5.0.5"
   },
