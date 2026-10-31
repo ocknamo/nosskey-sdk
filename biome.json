@@ -4,6 +4,7 @@
   "files": {
     "includes": [
       "packages/**/*/src/**",
+      "scripts/**",
       "examples/**/*",
       "!examples/**/dist",
       "!**/examples/svelte-app/node_modules",

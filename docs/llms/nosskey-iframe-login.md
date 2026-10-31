@@ -10,7 +10,8 @@
 >
 > A Japanese version with the same content is at [`nosskey-iframe-login.ja.md`](./nosskey-iframe-login.ja.md).
 
-<!-- Maintainers: keep this file and nosskey-iframe-login.ja.md in sync. The code blocks must stay
+<!-- Maintainers: this English file is the source of truth, and nosskey-iframe-login.ja.md is its
+translation. Change this file first, then update the Japanese one. The code blocks must stay
 identical; `npm run docs:check` (also run in CI) verifies them. -->
 
 Reference implementations (production apps by the Nosskey author):
@@ -61,7 +62,7 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
 - **All 7 methods require user approval in the iframe, `getPublicKey` included.**
   - `getPublicKey` and `getRelays` count as a per-origin *connection approval*, like the first
     connect in a NIP-07 extension.
-  - The dialog has "Approve once", "Always allow" and "Reject" buttons. "Always allow" is
+  - The dialog has "Allow once", "Always allow" and "Reject" buttons. "Always allow" is
     remembered per origin and per category. The four categories are connect (`getPublicKey` /
     `getRelays`), `signEvent`, NIP-44 and NIP-04. Always allowing connect does not allow signing.
   - Decryption never offers "Always allow", so it shows the dialog every time unless the user set
@@ -92,6 +93,7 @@ Trade-off to tell the user about: the passkey belongs to `nosskey.app` (the WebA
   | `USER_REJECTED` | The user declined in the dialog, or set that category to "deny" | Show "request was declined". Do not retry automatically |
   | `RATE_LIMITED` | 5 failures in a row from your origin; blocked for 60 s. Declines count, and so does every request that fails because no key could be recovered (for example, clicking "Log in with Nosskey" without a passkey) | Show "try again later". Never retry automatically |
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | Bug or environment problem | Show the message |
+
   A timeout rejects with a plain `Error`.
 - Browser support: Chromium 118+ works best. Firefox and Safari/iOS have limited PRF support.
   Always keep NIP-07 login available as an alternative.

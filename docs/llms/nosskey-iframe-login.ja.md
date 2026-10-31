@@ -6,24 +6,18 @@
 >
 > 英語版 [`nosskey-iframe-login.md`](./nosskey-iframe-login.md) と同じ内容です。コードブロックは英語版と同一で、コメントと画面の文言も英語のままにしています。
 
-<!-- 保守する人へ: 英語版と同期させてください。コードブロックは英語版と一字一句同じに保ちます。`npm run docs:check` (CI でも実行) で確かめられます。 -->
+<!-- 保守する人へ: 原本は英語版で、このファイルはその翻訳です。先に英語版を直し、そのあとこのファイルを合わせてください。コードブロックは英語版と一字一句同じに保ちます。`npm run docs:check` (CI でも実行) で確かめられます。 -->
 
 参照実装として、Nosskey の作者による本番アプリを 2 つ挙げます。
 
-- **combine** (Svelte 5): もっとも使い込まれている導入例です。参照するファイルは
-  [`src/lib/auth.svelte.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/auth.svelte.ts)、
-  [`src/lib/nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts)、
-  [`src/app.css`](https://github.com/ocknamo/combine/blob/main/src/app.css) (`.nosskey-overlay`) です。
-- **yakitofu** (SvelteKit): NIP-07 と Nosskey を並べて選べるログインモーダルがあります。参照するファイルは
-  [`src/lib/components/LoginModal.svelte`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/components/LoginModal.svelte)、
-  [`src/lib/services/nosskey.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/nosskey.ts)、
-  [`src/lib/services/signer.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/signer.ts) です。
+- **combine** (Svelte 5): もっとも使い込まれている導入例です。参照するファイルは [`src/lib/auth.svelte.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/auth.svelte.ts)、[`src/lib/nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts)、[`src/app.css`](https://github.com/ocknamo/combine/blob/main/src/app.css) (`.nosskey-overlay`) です。
+- **yakitofu** (SvelteKit): NIP-07 と Nosskey を並べて選べるログインモーダルがあります。参照するファイルは [`src/lib/components/LoginModal.svelte`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/components/LoginModal.svelte)、[`src/lib/services/nosskey.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/nosskey.ts)、[`src/lib/services/signer.ts`](https://github.com/ocknamo/yakitofu/blob/main/yakitofu-app/src/lib/services/signer.ts) です。
 
 **これらのアプリから写してよいのはオーバーレイ、`MutationObserver`、遅延生成するシングルトン、ログインモーダルの構成だけです。** どちらのアプリにも §3 のルールに反する箇所があり、食い違うところではこのガイドに従ってください。
 
 - combine は `visibilitychange` のたびに `getPublicKey()` を呼び (`reconcileSession`)、起動時に `getRelays()` を呼んでいます (`App.svelte` の `refreshRelays`)。どちらも R3 に反します。
 - combine は `window.nostr` の shim を無条件に組み込んでいます。NIP-07 ログインも提供するアプリでは R5 に反します。
-- yakitofu はログアウト時に `destroy()` を呼んでおり、R2 に反します。また、署名者の `getPublicKey()` がセッションから答えず、iframe に問い合わせています。
+- yakitofu はログアウト時に `destroy()` を呼んでおり、R2 に反します。また、`Signer` の `getPublicKey()` がセッションから答えず、iframe に問い合わせています。
 
 ---
 
@@ -43,7 +37,7 @@
 - client は NIP-07 の 7 メソッドすべて (`getPublicKey`、`getRelays`、`signEvent`、`nip44.encrypt/decrypt`、`nip04.encrypt/decrypt`) を提供します。
 - **7 メソッドすべてで、iframe の中でのユーザーの承認が必要です。`getPublicKey` も例外ではありません。**
   - `getPublicKey` と `getRelays` の承認は NIP-07 拡張機能の初回接続と同じく、オリジン単位の*接続の承認*として扱われます。
-  - ダイアログには「一度だけ承認」「常に許可」「拒否」のボタンがあります。「常に許可」はオリジンごと、種類ごとに記憶されます。種類は接続 (`getPublicKey` / `getRelays`)、`signEvent`、NIP-44、NIP-04 の 4 つです。接続を常に許可しても、署名は許可されません。
+  - ダイアログには「今回のみ許可」「常に許可」「拒否」のボタンがあります (英語の UI では "Allow once"、"Always allow"、"Reject")。「常に許可」はオリジンごと、種類ごとに記憶されます。種類は接続 (`getPublicKey` / `getRelays`)、`signEvent`、NIP-44、NIP-04 の 4 つです。接続を常に許可しても、署名は許可されません。
   - 復号では「常に許可」が出ないため、ユーザーがその種類を「拒否」に設定していない限り (次の項目を参照)、毎回ダイアログが表示されます。
   - nosskey.app の設定では、ユーザーが種類ごとに、すべてのサイトに対して「常に許可」か「拒否」を選ぶこともできます。既定は毎回確認なので、どちらであるとも決めつけないでください。「拒否」のときは、ダイアログを出さずに `USER_REJECTED` で拒否されます。
   - 例外として、iframe がまだ鍵を読めないときの `getRelays` は、ダイアログなしで `{}` を返します。ストレージアクセスが未許可の場合も含むので、`{}` を「ユーザーにリレー設定がない」と扱わないでください。
@@ -57,8 +51,9 @@
   |---|---|---|
   | `NO_KEY` | ユーザーがまだ Nosskey のパスキーを持っていないか、ストレージアクセスが許可されなかった | `https://nosskey.app` へのリンクを出す (「そこでパスキーを作ってから戻ってきてください」) |
   | `USER_REJECTED` | ユーザーがダイアログで拒否したか、その種類を「拒否」に設定している | 「リクエストが拒否されました」と出す。自動で再試行しない |
-  | `RATE_LIMITED` | あなたのオリジンからの失敗が 5 回続いたため、60 秒間ブロックされている。拒否に加え、鍵を回復できずに失敗したリクエストも数える (たとえば、パスキーがないまま「Nosskey でログイン」を押した場合) | 「しばらくしてから試してください」と出す。自動で再試行しない |
+  | `RATE_LIMITED` | 自分のオリジンからの失敗が 5 回続いたため、60 秒間ブロックされている。拒否に加え、鍵を回復できずに失敗したリクエストも数える (たとえば、パスキーがないまま「Nosskey でログイン」を押した場合) | 「しばらくしてから試してください」と出す。決して自動で再試行しない |
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | 不具合か環境の問題 | メッセージをそのまま出す |
+
   timeout のときは、ただの `Error` で reject されます。
 - ブラウザの対応: Chromium 118 以降がもっともよく動きます。Firefox と Safari/iOS は PRF の対応が限られます。代わりの手段として、NIP-07 ログインを必ず残してください。
 - ストレージ分離: クロスオリジンの iframe では、ブラウザが `localStorage` を分離します。ホストは Storage Access API で鍵を回復し、ユーザーは iframe の中で一度「許可」をクリックする必要があります。ブラウザはこの許可を **iframe のドキュメント単位**で保持します。下のルール R1 と R2 があるのはこのためです。
@@ -72,12 +67,12 @@
   - セッションは自前のストレージから復元します。ログイン時に `{ method, pubkey }` を保存してください。
   - ホストはリクエストのたびに現在のアカウントを読み直すので、ポーリングは不要です。
 - **R4. iframe は画面全体を覆う固定のオーバーレイにマウントすること。** `z-index` は、ログインモーダルを含むアプリのどのモーダルよりも上にします。オーバーレイの背景は `MutationObserver` で iframe の `style.display` に合わせて切り替えます。`message` イベントを直接購読しないでください。client はメッセージのオリジンと送信元を検証済みですが、直接の購読ではそれが行われません。
-  - ログインモーダルを、ネイティブの `<dialog>.showModal()` で開かないでください。モーダル表示の dialog はブラウザの最前面の層に置かれるため、どの `z-index` でもオーバーレイをその上に出せません。さらに dialog の外側はすべて操作できなくなり、Nosskey の iframe も操作できません。§8 のように、通常の位置指定した要素でログインモーダルを作ってください。
+  - ログインモーダルを、ネイティブの `<dialog>.showModal()` で開かないでください。モーダル表示の dialog はブラウザのトップレイヤーに置かれるため、どの `z-index` でもオーバーレイをその上に出せません。さらに dialog の外側はすべて操作できなくなり、Nosskey の iframe も操作できません。§8 のように、`position` を指定した通常の要素でログインモーダルを作ってください。
 - **R5. NIP-07 ログインも提供する場合は、`window.nostr` を上書きしないこと。** すべての署名はログイン方法に応じて選ぶ小さな `Signer` の抽象化を通します。唯一の例外は §8 を参照してください。
 - **R6. ブラウザでのみ動かすこと。** SSR のフレームワーク (SvelteKit、Next.js、Nuxt) では、このコードはクライアント側でだけ import して呼び出し、先に `typeof window !== 'undefined'` を確かめます。
 - **R7. 必要なメソッドだけを使うこと。** アプリに DM がなければ、`nip04` / `nip44` はつながないでください。
 - **R8.** アプリが Content-Security-Policy を設定しているなら、`frame-src https://nosskey.app` を加えます。`Permissions-Policy` ヘッダーを送っているなら、`https://nosskey.app` に対して `publickey-credentials-get` と `publickey-credentials-create` を許可する必要があります。許可しないと、iframe の中でパスキーが動きません。
-- **R9. `signEvent()` には、`pubkey`・`id`・`sig` を含まない署名前のイベントを渡すこと。** 署名者は受け取ったこれらのフィールドをそのまま残します。`pubkey` を入れておくと、アカウントの切り替え後に不正な署名のイベントができ、§7 の確認でも見つけられません。§7 の `getSigner()` のコードがこれらのフィールドを取り除きます。
+- **R9. `signEvent()` には、`pubkey`・`id`・`sig` を含まない署名前のイベントを渡すこと。** 署名する側 (signer) は、受け取ったこれらのフィールドをそのまま残します。`pubkey` を入れておくと、アカウントの切り替え後に不正な署名のイベントができ、§7 の確認でも見つけられません。§7 の `getSigner()` のコードがこれらのフィールドを取り除きます。
 
 ## 4. インストール
 
@@ -188,11 +183,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 ```
 
-フレームワークがコンポーネント単位でスタイルを閉じ込める場合 (Svelte、Vue、CSS modules) は、この CSS をグローバルのスタイルシートに置きます。オーバーレイはどのコンポーネントの外側に作られるためです。
+フレームワークがコンポーネント単位でスタイルを閉じ込める場合 (Svelte、Vue、CSS modules) は、この CSS をグローバルのスタイルシートに置きます。オーバーレイはどのコンポーネントにも属さない場所に作られるためです。
 
 アプリがライトとダークを切り替える場合は、client を作るときにテーマを選び、同時に対応する iframe の背景色を設定します。`theme: 'auto'` は iframe の中で解決されるため、固定の CSS の背景色はそれに追従しません。
 
-## 7. 認証と署名者 (`src/lib/auth.ts`)
+## 7. 認証と `Signer` (`src/lib/auth.ts`)
 
 ログインのロジックはフレームワークに依存しません。状態は使っているフレームワークのストアで包んでください (Svelte の `$state` / `writable`、React の context や zustand、Vue の `ref`)。
 
@@ -325,7 +320,7 @@ if (signed.pubkey !== session.pubkey) {
 
 yakitofu の `LoginModal.svelte` にならった構成です。次の要件はどのフレームワークにも当てはまります。
 
-- ボタンを 2 つ表示します。「ブラウザ拡張機能でログイン (NIP-07)」は、`hasNip07Extension()` が false のとき**無効**にし、その下に短い説明を添えます。「Nosskey でログイン (パスキー)」は常に有効にし、「nosskey.app に保存したパスキーを使います。秘密鍵が nosskey.app の外に出ることはありません。」のような 1 行の説明を添えます。
+- ボタンを 2 つ表示します。「ブラウザ拡張機能でログイン (NIP-07)」(下のコードでは `Log in with browser extension (NIP-07)`) は、`hasNip07Extension()` が false のとき**無効**にし、その下に短い説明を添えます。「Nosskey でログイン (パスキー)」(同じく `Log in with Nosskey (passkey)`) は常に有効にし、「nosskey.app に保存したパスキーを使います。秘密鍵が nosskey.app の外に出ることはありません。」のような 1 行の説明を添えます。
 - `loginWithNip07()` / `loginWithNosskey()` は、**クリックハンドラーの中で直接**呼びます (ルール R3)。
 - ログインの処理中は、両方のボタンを無効にし、Escape や背景のクリックでモーダルを閉じないでください。Nosskey のオーバーレイはモーダルの上に開きますが、それで正常です。
 - エラーのときは `describeError(err).message` を表示します。`showNosskeyLink` が true なら、`target="_blank" rel="noopener noreferrer"` を付けた `https://nosskey.app` へのリンクを加えます。
@@ -396,8 +391,7 @@ Svelte 5 の例です。`$lib` は SvelteKit のエイリアスなので、素�
 
 ### 任意: 外部の埋め込み向けに `window.nostr` を公開する
 
-アプリが自分で `window.nostr` を探す埋め込みウィジェットを載せている場合だけ行います。combine は埋め込みの投稿画面のために
-[`nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts) でこれを行っています。combine には NIP-07 ログインがないため、shim を無条件に組み込んでいます。NIP-07 ログインも提供するアプリは、次の点で combine と変える必要があります。
+アプリが自分で `window.nostr` を探す埋め込みウィジェットを載せている場合だけ行います。combine は埋め込みの投稿画面のために [`nip07.ts`](https://github.com/ocknamo/combine/blob/main/src/lib/nip07.ts) でこれを行っています。combine には NIP-07 ログインがないため、shim を無条件に組み込んでいます。NIP-07 ログインも提供するアプリは、次の点で combine と変える必要があります。
 
 - shim は Nosskey でログインした後にだけ組み込みます。それまであった provider は保持しておき、ログアウト時に元に戻します。誰もログインしていない間と、NIP-07 でログインした後は、拡張機能の `window.nostr` がそのまま残ります。
 - 公開するのは、`getPublicKey` (セッションから答える)、`signEvent` (`toUnsigned` を通す、R9)、`getRelays` だけにします。
@@ -412,8 +406,8 @@ Svelte 5 の例です。`$lib` は SvelteKit のエイリアスなので、素�
 4. 何か投稿します。承認ダイアログが出て、公開されたイベントの `pubkey` がセッションと一致するはずです。
 5. タブを何度か切り替えます。ダイアログもストレージアクセスのプロンプトも出ないはずです。
 6. ログアウトしてから、もう一度ログインします。ストレージアクセスを再び求められないはずです。
-7. Nosskey のパスキーがないブラウザプロファイルを使います。ログインは「nosskey.app でパスキーを作ってください」のメッセージで終わり、オーバーレイが閉じる必要があります。ブラウザの状態によって、次のどちらかになります。
-   - 待っても回復しないと iframe が判断できる場合 (ストレージアクセスが許可済みか、ブラウザに Storage Access API がない)。`NO_KEY` がすぐに返り、カードは一瞬表示されるだけです。
+7. Nosskey のパスキーがないブラウザプロファイルを使います。ログインが「nosskey.app でパスキーを作ってください」のメッセージで終わり、オーバーレイが閉じることを確かめます。ブラウザの状態によって、次のどちらかになります。
+   - 待っても回復しないと iframe が判断できる場合 (ストレージアクセスが許可済みか、ブラウザに Storage Access API がない) は、`NO_KEY` がすぐに返り、カードは一瞬表示されるだけです。
    - それ以外の場合は、iframe がストレージアクセスのカードを出して待ちます。ユーザーが許可するかカードを閉じると、ログインは失敗します。誰もカードに触れなければ、60 秒後に timeout のメッセージで終わります。
 
 ## 10. トラブルシューティング
