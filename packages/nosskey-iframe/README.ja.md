@@ -92,6 +92,8 @@ iframe はタブを切り替えてもグラントを保持しますが、作り�
 詳細な統合手順 (storage partitioning、Storage Access API による復旧、エラーハンドリング、モーダル UX 等) は
 [`docs/ja/iframe-integration.ja.md`](../../docs/ja/iframe-integration.ja.md) を参照。
 動作可能なデモは [`examples/parent-sample`](../../examples/parent-sample) にあります。
+AI コーディングエージェント向けの導入ガイド (NIP-07 と並べたログインモーダルの例付き) は
+[`docs/llms/nosskey-iframe-login.ja.md`](../../docs/llms/nosskey-iframe-login.ja.md) (英語版は [`nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md)) にあります。
 
 ---
 
@@ -179,7 +181,7 @@ host.start();
 ## 動作環境
 
 - **Node**: ≥22 (ツールチェイン用途のみ。本ライブラリ自体はブラウザパッケージ)。
-- **ブラウザ**: Chrome / Edge 118+ ✔、Firefox (最新) は PRF 部分対応、Safari は iframe 内では不安定。[PRF 対応状況](../../docs/ja/prf-support-tables.ja.md) を参照。
+- **ブラウザ**: Chrome / Edge 118+ ✔、Safari 18+ / iOS 18+ ✔ (Chrome と挙動が一部異なる。ストレージアクセスの許可にタップが要るなど)、Firefox (最新) は PRF 部分対応。[PRF 対応状況](../../docs/ja/prf-support-tables.ja.md) を参照。
 - **暗号**: host 側の鍵導出に WebAuthn PRF 拡張が必要。client 自体はブラウザ標準以外の暗号要件なし。
 
 ---

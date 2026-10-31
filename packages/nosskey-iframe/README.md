@@ -94,6 +94,8 @@ call.
 For a complete walk-through (storage partitioning, Storage Access API recovery, error handling, UX modal patterns) see
 [`docs/en/iframe-integration.en.md`](../../docs/en/iframe-integration.en.md).
 A runnable demo lives at [`examples/parent-sample`](../../examples/parent-sample).
+For AI coding agents, a self-contained integration guide (with a NIP-07 + Nosskey login modal) is at
+[`docs/llms/nosskey-iframe-login.md`](../../docs/llms/nosskey-iframe-login.md).
 
 ---
 
@@ -181,7 +183,7 @@ Refer to the bundled `.d.ts` for full type signatures.
 ## Compatibility
 
 - **Node**: ≥22 (tooling only; the library itself is a browser package).
-- **Browsers**: Chrome / Edge 118+ ✔, Firefox (latest) — partial PRF support, Safari — unstable inside iframes. See the [PRF support tables](../../docs/en/prf-support-tables.en.md).
+- **Browsers**: Chrome / Edge 118+ ✔, Safari 18+ / iOS 18+ ✔ (some behaviour differs from Chrome, e.g. storage access needs a user tap), Firefox (latest) — partial PRF support. See the [PRF support tables](../../docs/en/prf-support-tables.en.md).
 - **Crypto**: WebAuthn PRF extension is required for the host-side key derivation. The client itself has no crypto requirement beyond what the browser ships.
 
 ---

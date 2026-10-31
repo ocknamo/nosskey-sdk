@@ -5,12 +5,13 @@
 このドキュメントは、**自分の Nostr Web アプリに Nosskey の署名 iframe を埋め込んで利用したい開発者**向けの手順書です。本番ホスト [`https://nosskey.app/#/iframe`](https://nosskey.app/#/iframe) を例に、[`nosskey-iframe`](../../packages/nosskey-iframe) パッケージの `NosskeyIframeClient` を使った統合方法を解説します。
 
 > iframe ホスト側 (`examples/svelte-app` の `#/iframe` ルート) の内部構造については [`iframe-host.ja.md`](./iframe-host.ja.md) を参照してください。
+>
+> AI コーディングエージェントに導入させる場合は、ルールと、そのまま貼り付けて使えるコードを 1 ファイルにまとめた AI 向け導入ガイド ([日本語](../llms/nosskey-iframe-login.ja.md) / [英語](../llms/nosskey-iframe-login.md)) を渡してください。
 
 ## 概要
 
-`nosskey.app/#/iframe` を iframe として埋め込むと、親アプリは**秘密鍵を一切扱わずに** Nostr の署名・暗号化機能を利用できます。
+`nosskey.app/#/iframe` を iframe として埋め込むと、親アプリは Nostr の署名・暗号化機能を利用できます。
 
-- 鍵は `nosskey.app` オリジンに紐づくパスキー (WebAuthn PRF) から導出され、iframe の中だけで使われます。秘密鍵が親アプリへ渡ることはありません。
 - 親アプリは [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md) の `window.nostr` 互換 API を得られます。既存の Nostr クライアントへドロップインで組み込めます。
 - 埋め込んだ全アプリで同じパスキーを共有するため、ユーザーは「Nosskey というアイデンティティ」を複数の Nostr アプリで使い回せます。
 
@@ -40,12 +41,12 @@ sequenceDiagram
 ポイント:
 
 - **`nosskey:ready` ハンドシェイク**: iframe の準備完了を `client.ready()` で待ってから利用します。
-- **consent ダイアログは iframe 内に表示**: 署名・暗号化などの操作はユーザー承認を経ます。ダイアログは iframe の中でレンダリングされます。
+- **consent ダイアログは iframe 内に表示**: 署名・暗号化に加え、`getPublicKey()` / `getRelays()` もユーザー承認 (オリジン単位の接続承認) を経ます。ダイアログは iframe の中でレンダリングされます。
 - **表示の自動切替**: ダイアログやストレージ許可が必要なとき、iframe から親へ `nosskey:visibility` メッセージが送られ、`NosskeyIframeClient` が iframe 要素の表示/非表示を自動で切り替えます。
 
 ## 前提条件
 
-- **ブラウザ**: Chrome 118 以降を推奨。Firefox は PRF サポートが限定的、Safari / iOS は現時点で非対応です。
+- **ブラウザ**: Chrome 118 以降と Safari / iOS (Safari 18 以降、macOS 15 / iOS 18 以降) で動作します。Safari は Chrome と挙動が一部異なります (ストレージアクセスの許可にユーザーのタップが要るなど)。Firefox は PRF サポートが限定的です。
 - **HTTPS**: 親ページは HTTPS (または `localhost`) で配信する必要があります。WebAuthn の要件です。
 - **パスキーの事前作成**: ユーザーは事前に `https://nosskey.app` を直接開いてパスキー (Nosskey アイデンティティ) を作成しておく必要があります。未作成の場合、署名系メソッドは `NO_KEY` エラーを返します。
 
@@ -55,7 +56,7 @@ sequenceDiagram
 npm install nosskey-iframe
 ```
 
-`nosskey-iframe` は `nosskey-sdk` に依存しており、`NostrEvent` などの型定義もそこから提供されます。
+client 側には `nosskey-sdk` へのランタイム依存がありません。`nosskey-sdk` は、署名 iframe を自前でホストするときだけ必要な optional peer dependency です。`NostrEvent` などの型は `nosskey-iframe` から import できます。
 
 ## 最小構成
 
@@ -87,19 +88,29 @@ window.nostr = {
 
 `NosskeyIframeClient` のコンストラクタは iframe 要素を生成し、`document.body` (または後述の `container`) へ追加します。iframe には WebAuthn に必要な `allow="publickey-credentials-get; publickey-credentials-create"` 属性が自動付与されます。
 
+この例は動作を示すための最小構成で、ページの読み込み時にクライアントを生成し、`window.nostr` を上書きしています。実際のアプリでは次の 2 点を守ってください。
+
+- クライアントは、ユーザーが「Nosskey でログイン」を押したときなど、必要になった時点で初めて生成します。鍵が見つからないブラウザでは、マウントした直後に iframe が自分から開くことがあるためです (「[ストレージ分離への対応](#ストレージ分離-storage-partitioning-への対応)」参照)。
+- NIP-07 ブラウザ拡張でのログインと併用する場合は、`window.nostr` を上書きせず、ログイン方法ごとに署名に使う相手を切り替えます。
+
 ## 対応メソッド
 
-`NosskeyIframeClient` は NIP-07 の全 7 メソッドを提供します。秘密情報を扱う 5 メソッドはユーザー consent を経由します。
+`NosskeyIframeClient` は NIP-07 の全 7 メソッドを提供し、そのすべてがユーザー consent を経由します。
 
 | クライアント API | 戻り値 | consent | 用途 |
 |------------------|--------|---------|------|
-| `getPublicKey()` | `Promise<string>` | 不要 | 公開鍵 (hex) を返す |
-| `getRelays()` | `Promise<RelayMap>` | 不要 | リレー設定を返す |
+| `getPublicKey()` | `Promise<string>` | 必要 (接続承認) | 公開鍵 (hex) を返す |
+| `getRelays()` | `Promise<RelayMap>` | 必要 (接続承認) | リレー設定を返す |
 | `signEvent(event)` | `Promise<NostrEvent>` | 必要 | Nostr イベントに署名 |
 | `nip44.encrypt(peer, plaintext)` | `Promise<string>` | 必要 | NIP-44 v2 暗号化 |
 | `nip44.decrypt(peer, ciphertext)` | `Promise<string>` | 必要 | NIP-44 v2 復号 |
 | `nip04.encrypt(peer, plaintext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 暗号化 |
 | `nip04.decrypt(peer, ciphertext)` | `Promise<string>` | 必要 | NIP-04 (レガシー) 復号 |
+
+- `getPublicKey()` / `getRelays()` の consent は NIP-07 ブラウザ拡張の初回接続と同じ**オリジン単位の接続承認 (ペアリング)** です。npub とリレー設定はユーザーを特定できる情報のため、埋め込み先のサイトがユーザーに知られずにそれらを取得することを防いでいます。
+- ダイアログで「常に許可」を押すと、その承認はオリジンごとに、接続・署名・NIP-44・NIP-04 の種類別に記憶されます。以後、iframe は同じ種類のリクエストにダイアログなしで応答します。接続を常に許可しても署名は許可されません。**復号のダイアログには「常に許可」が出ず**、毎回確認されます (下の全体設定で「常に拒否」にした場合は、ダイアログを出さずに拒否されます)。
+- nosskey.app の設定では種類ごとに、すべてのサイトに対する既定の動作 (毎回確認・常に許可・常に拒否) も選べます。既定は毎回確認です。
+- 例外として、iframe が鍵を読めないとき (ストレージアクセスが未許可の場合を含む) の `getRelays()` は、consent なしで `{}` を返します。`{}` を「リレー設定がない」と解釈しないでください。
 
 `peer` は相手の公開鍵 (32 バイト hex) です。`RelayMap` は `Record<string, { read: boolean; write: boolean }>` 型です。
 
@@ -122,14 +133,16 @@ window.nostr = {
 
 ## iframe の配置と表示制御
 
-`NosskeyIframeClient` が生成する iframe は、初期状態では `display: none` で非表示です。署名や暗号化の consent ダイアログ、あるいはストレージアクセスの許可が必要になると、iframe から `nosskey:visibility` メッセージ (`{ type: 'nosskey:visibility', visible: boolean }`) が送られ、`NosskeyIframeClient` が iframe 要素の `display` を自動で切り替えます。
+`NosskeyIframeClient` が生成する iframe は、初期状態では `display: none` で非表示です。接続承認・署名・暗号化などのリクエストを処理している間や、ストレージアクセスの許可が必要になったときは、iframe から `nosskey:visibility` メッセージ (`{ type: 'nosskey:visibility', visible: boolean }`) が送られ、`NosskeyIframeClient` が iframe 要素の `display` を自動で切り替えます。
+
+「常に許可」で自動承認されるリクエストでも、処理中は iframe が一瞬表示されます。iframe の背景色は `theme` に合わせておくと目立ちません。
 
 ただし、**iframe をどこに・どんな大きさで配置するかは親アプリの責任**です。consent ダイアログをユーザーが操作できるよう、iframe を画面内の見える位置に配置してください。推奨パターンはモーダル/オーバーレイです。
 
 ```ts
 const client = new NosskeyIframeClient({
   iframeUrl: 'https://nosskey.app/#/iframe',
-  theme: 'auto',
+  theme: 'neutral-light', // モーダルカードの背景色 (#fff) に合わせる
   lang: 'auto',
 });
 
@@ -141,19 +154,30 @@ await client.ready();
 ```
 
 - `client.iframe` で iframe 要素 (`HTMLIFrameElement`) を取得できます。CSS でサイズ・位置・`z-index` を整えてください。
-- 親アプリ側でもバックドロップ等を表示したい場合は、`window.addEventListener('message', ...)` で `nosskey:visibility` メッセージを購読し、モーダル枠の表示を同期させます。
-- `theme` / `lang` を指定して埋め込みモード (`embedded=1`) で起動すると、iframe は body を透過化し、consent モーダルが親の用意したカード枠に馴染むように描画されます。
+- 親アプリ側でもバックドロップ等を表示したい場合は、`MutationObserver` で `client.iframe` の `style` 属性を監視し、`display` に合わせてモーダル枠の表示を切り替えます。`window` の `message` イベントを直接購読すると、送信元の検証を自分で書く必要があります。`NosskeyIframeClient` は送信元を検証してから `display` を切り替えるため、こちらを使ってください。
+
+```ts
+const observer = new MutationObserver(() => {
+  modal.classList.toggle('visible', client.iframe.style.display !== 'none');
+});
+observer.observe(client.iframe, { attributes: true, attributeFilter: ['style'] });
+```
+
+- ログインモーダルにネイティブの `<dialog>` の `showModal()` を使う場合は注意してください。モーダル表示の `<dialog>` は最前面の層に置かれるため、`z-index` では iframe をその上に出せません。さらに `<dialog>` の外側は操作できなくなり、iframe も操作できません。通常の要素でモーダルを作るか、Nosskey のログインを始める前に `<dialog>` を閉じてください。
+- `theme` / `lang` を指定して埋め込みモード (`embedded=1`) で起動すると、iframe は body を透過化し、consent モーダルが親の用意したカード枠に馴染むように描画されます。透過した部分にはカード枠の背景色が見えるため、`theme` は背景色に合わせて固定してください (`neutral-light` / `purple-light` は `#fff`、`neutral-dark` は `#141414`、`purple-dark` は `#131318`)。`'auto'` は iframe の中で解決されるので、親の背景色と食い違うことがあります。
 
 ## ストレージ分離 (Storage Partitioning) への対応
 
-Chrome 115+ や Firefox の Total Cookie Protection では、**クロスオリジン iframe の `localStorage` が親オリジンごとに分離 (partition)** されます。`nosskey.app` をトップレベルで開いて保存したパスキー情報は、別オリジンの親ページに埋め込まれた iframe からは初期状態では参照できず、最初の `getPublicKey()` / `signEvent()` は `NO_KEY` エラーを返します。
+Chrome 115+ や Firefox の Total Cookie Protection では、**クロスオリジン iframe の `localStorage` が親オリジンごとに分離 (partition)** されます。`nosskey.app` をトップレベルで開いて保存したパスキー情報は、別オリジンの親ページに埋め込まれた iframe からは、初期状態では参照できません。
 
 iframe ホストは Storage Access API でこれを自動的にリカバリします:
 
-1. iframe がストレージ分離を検知し、`nosskey:visibility { visible: true }` を送って自身を表示させます。
+1. 鍵が読めない状態で `getPublicKey()` / `signEvent()` などのリクエストが届くと、iframe は `nosskey:visibility { visible: true }` を送って自身を表示します。ストレージアクセスを許可すれば鍵が読める見込みがあるときは、`NO_KEY` をすぐには返さず、リクエストを保留します。見込みがないとき (後述) は、すぐに `NO_KEY` を返します。
 2. ユーザーが iframe 内の「ストレージアクセスを許可」ボタンをクリックします。
-3. ブラウザが許可ダイアログを表示します。承認されると iframe がファーストパーティのストレージから鍵を読み直し、自身を非表示に戻します。
-4. 親アプリは `getPublicKey()` / `signEvent()` を再試行すれば成功します。
+3. ブラウザが許可ダイアログを表示します。承認されると、iframe がファーストパーティのストレージから鍵を読み直し、保留していたリクエストの処理 (consent ダイアログなど) に進みます。親アプリが再試行する必要はありません。
+4. ユーザーがカードを閉じた場合や、許可しても鍵が見つからなかった場合は、`NO_KEY` が返ります。保留は最大 60 秒です。client の timeout (既定 60 秒) が先に切れた場合は、timeout のエラーになります。
+
+鍵が見つからず、待っても回復しない状態 (ストレージアクセスは許可済みだが鍵がない、Storage Access API に対応していないブラウザで鍵が見えない) では、iframe はリクエストを待たずに自分から表示され、`nosskey.app` を開く案内を出します。この判定は iframe のマウント時と、タブが再び表示されるたびに行われます。ユーザーはカードを閉じられます。
 
 このフローはホスト側と `NosskeyIframeClient` が自動処理しますが、**「ストレージアクセスを許可」ボタンをユーザーがクリックできるよう、iframe を見える位置に配置しておく必要があります** (前節参照)。iframe ホストの状態カードには `nosskey.app` を別タブで開くリンクもあります。これはユーザーがファーストパーティのスコープでパスキー (Nosskey アイデンティティ) を作成・ログインするための導線で、主に鍵がまだ存在しないケース向けです。なお、ストレージを分離するブラウザで Storage Access API の許可が得られない場合は、ユーザーに許可を与え直してもらう必要があります。
 
@@ -165,7 +189,7 @@ iframe はページの寿命のあいだ 1 回だけマウントし、そのま�
 
 以前は、署名アプリ側でのアカウント切り替えに気づく手段が作り直ししかありませんでした (iframe はマウント時に一度だけアカウントを読んでいたため)。現在は host がリクエストごとに保存済みアカウントを読み直すので、**生かしたままの iframe でもアカウント切り替えとログアウトの両方を次の呼び出しで拾えます**。切り替わりを**確認するために呼ぶ必要はありません** — 次に実際に必要になった呼び出しが、その時点のアカウントで応答します。
 
-> `visibilitychange` のたびに `getPublicKey()` を叩くのは避けてください。ログアウト済み・ストレージ未許可の状態では、`onKeyUnavailable` を備えた host (リファレンス実装がそうです) は `NO_KEY` を即答せず、**iframe を開いて最大 60 秒ユーザーの操作を待ちます**。さらに回復されなかった呼び出しはオリジン別のレート制限に計上され、既定では 5 回連続で `RATE_LIMITED` になります。
+> `visibilitychange` のたびに `getPublicKey()` を叩くのは避けてください。`getPublicKey()` は接続承認の対象なので、ユーザーが「常に許可」を選んでいなければ**タブに戻るたびに consent ダイアログが出ます**。また、ストレージアクセスが未許可の状態では、`onKeyUnavailable` を備えた host (リファレンス実装がそうです) は `NO_KEY` を即答せず、**iframe を開いて最大 60 秒ユーザーの操作を待ちます**。さらに回復されなかった呼び出しはオリジン別のレート制限に計上され、既定では 5 回連続で `RATE_LIMITED` になります。セッションは親アプリ側で保存した pubkey から復元し、iframe への問い合わせはユーザーの操作をきっかけに行ってください。
 
 詳細は [`iframe-host.ja.md`](./iframe-host.ja.md#storage-partitioning-と-storage-access-api) を参照してください。
 
@@ -193,7 +217,7 @@ try {
 |-------------|------|
 | `NO_KEY` | iframe にパスキーが設定されていない、またはストレージ分離で鍵が見えていない |
 | `USER_REJECTED` | ユーザーが consent ダイアログで拒否した |
-| `RATE_LIMITED` | 同一オリジンからの連続拒否が多すぎてホストが一時的にリクエストを拒否中。時間を置いて再試行する |
+| `RATE_LIMITED` | 同一オリジンで、拒否か鍵を回復できなかったリクエストが 5 回続いたため、ホストが一時的にリクエストを拒否中。時間を置いて再試行する |
 | `NOT_AUTHORIZED` | リクエスト元オリジンが許可されていない |
 | `UNKNOWN_METHOD` | 未対応のメソッドを呼び出した |
 | `INVALID_REQUEST` | パラメータが不正 |
@@ -242,7 +266,7 @@ window.nostr = {
 |---------|---------|-------------------|------|
 | Chrome 118+ | ✅ | ✅ (Permissions-Policy 必要) | 対応 |
 | Firefox (最新) | 限定的 | 仕様準拠 | 限定的 |
-| Safari / iOS | 限定的 (Safari 18) | iframe 内で不安定 | **非対応** |
+| Safari / iOS | ✅ (Safari 18 以降、macOS 15 / iOS 18 以降) | ✅ (Chrome と挙動が一部異なる) | 対応 |
 
 自前で iframe ホストをホスティングしたい場合は、[`iframe-host.ja.md`](./iframe-host.ja.md) でホスト側の構成 (`NosskeyIframeHost`、consent フロー、Permissions-Policy) を解説しています。
 

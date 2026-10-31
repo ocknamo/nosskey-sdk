@@ -202,7 +202,7 @@ Nosskey を iframe 署名プロバイダとして埋め込むことで、複数�
 |----------|----------|-------------------|------|
 | Chrome 118+ | ✅ | ✅ (Permissions Policy 設定が必要) | サポート |
 | Firefox (最新) | 部分的 | 仕様準拠 | 限定サポート |
-| Safari / iOS | 部分的 (Safari 18) | iframe 内は不安定 | **非サポート** |
+| Safari / iOS | ✅ (Safari 18 以降、macOS 15 / iOS 18 以降) | ✅ (Chrome と挙動が一部異なる) | サポート |
 
 ### 親ページでの利用例
 
@@ -227,6 +227,7 @@ window.nostr = {
 を返す必要があります。
 
 自分のアプリへ iframe を埋め込む手順は [docs/ja/iframe-integration.ja.md](docs/ja/iframe-integration.ja.md) で詳しく解説しています。
+AI コーディングエージェントに導入させる場合は、[`llms.txt`](llms.txt) (https://nosskey.app/llms.txt でも配信) か、1 ファイルで完結する AI 向け導入ガイド ([日本語](docs/llms/nosskey-iframe-login.ja.md) / [英語](docs/llms/nosskey-iframe-login.md)) を渡してください。
 
 参照実装は [`examples/svelte-app`](examples/svelte-app) (ルート `#/iframe`) にあります。ホスト側アーキテクチャの詳細は [docs/ja/iframe-host.ja.md](docs/ja/iframe-host.ja.md) を参照してください。
 
@@ -251,7 +252,7 @@ Chrome 115+ や Firefox の Total Cookie Protection では、**サードパー�
 Nosskey SDKはWebAuthnとPRF拡張をサポートするブラウザ環境で動作します。また、パスキーの生成と認証には対応するOS・デバイスの認証器が必要です。主な対応状況は以下の通りです：
 
 - **ChromeおよびChromiumベースのブラウザ**: バージョン118以降でサポート
-- **Safari**: macOS 14.0（Sonoma）以降、iOS 17以降でサポート
+- **Safari**: Safari 18 以降（macOS 15 / iOS・iPadOS 18 以降）でサポート
 - **Firefox**: WebAuthnはサポートしていますが、PRF拡張のサポートは制限的
 
 詳細な対応状況については[PRF対応表](docs/ja/prf-support-tables.ja.md)を参照してください。
