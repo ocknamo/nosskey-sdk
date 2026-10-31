@@ -257,7 +257,9 @@ fixed CSS background will not follow it.
 ## 7. Auth and signer — `src/lib/auth.ts`
 
 The login logic does not depend on a framework. Wrap the state in your framework's store
-(Svelte `$state` / `writable`, a React context or zustand, Vue `ref`).
+(Svelte `$state` / `writable`, a React context or zustand, Vue `ref`). The code uses NIP-07 as
+the other login method. If the app has no NIP-07 login, drop the `nip07` branches; if it has
+other methods, add their own `Signer` in `getSigner()`.
 
 ```ts
 import { NosskeyIframeError, type NostrEvent } from 'nosskey-iframe';
@@ -391,13 +393,14 @@ if (signed.pubkey !== session.pubkey) {
 This follows yakitofu's `LoginModal.svelte`. The example pairs Nosskey with NIP-07; if the app
 has other login methods, offer them in the same modal. The requirements apply to any framework:
 
-- Show two buttons. "Log in with browser extension (NIP-07)" is **disabled** when
-  `hasNip07Extension()` returns false, with a short hint underneath. "Log in with Nosskey
-  (passkey)" is always enabled, with a one-line explanation such as "Uses a passkey stored at
-  nosskey.app."
-- Call `loginWithNip07()` / `loginWithNosskey()` **directly in the click handler** (rule R3).
-- While a login is running, disable both buttons and do not close the modal on Escape or on a
-  backdrop click. The Nosskey overlay opens on top of your modal; that is expected.
+- Add a "Log in with Nosskey (passkey)" button next to the app's existing login buttons. Keep it
+  always enabled, with a one-line explanation such as "Uses a passkey stored at nosskey.app."
+- In the example, the other button is "Log in with browser extension (NIP-07)". It is
+  **disabled** when `hasNip07Extension()` returns false, with a short hint underneath.
+- Call `loginWithNosskey()` (and the other login functions) **directly in the click handler**
+  (rule R3).
+- While a login is running, disable every login button and do not close the modal on Escape or
+  on a backdrop click. The Nosskey overlay opens on top of your modal; that is expected.
 - On error, show `describeError(err).message`. If `showNosskeyLink` is true, add a link to
   `https://nosskey.app` with `target="_blank" rel="noopener noreferrer"`.
 - On success, store the `Session` in your app state and close the modal.

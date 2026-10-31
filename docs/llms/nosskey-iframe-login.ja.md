@@ -55,7 +55,7 @@
   | `NOT_AUTHORIZED` / `UNKNOWN_METHOD` / `INVALID_REQUEST` / `INTERNAL` | 不具合か環境の問題 | メッセージをそのまま出す |
 
   timeout のときは、ただの `Error` で reject されます。
-- ブラウザの対応: ほとんどのブラウザは対応していますが、代わりのログイン手段を必ず残してください。
+- ブラウザの対応: ほとんどのブラウザは Nosskey でのログインに対応していますが、代わりのログイン手段を必ず残してください。
 - ストレージ分離: クロスオリジンの iframe では、ブラウザが `localStorage` を分離します。ホストは Storage Access API で鍵を回復し、ユーザーは iframe の中で一度「許可」をクリックする必要があります。ブラウザはこの許可を **iframe のドキュメント単位**で保持します。下のルール R1 と R2 があるのはこのためです。
 - iframe は、リクエストがなくても**自分から**開くことがあります。鍵が見つからず、待っても回復しないときです。具体的には、ストレージアクセスは許可済みだが鍵がない場合と、ブラウザに Storage Access API がない場合です。そのときは、nosskey.app へのリンクと閉じるボタンのあるカードを表示します。この判定は iframe のマウント時と、**タブが再び表示されるたびに**行われます。アプリの不具合ではなく、想定どおりの動作です。
 
@@ -189,7 +189,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 ## 7. 認証と `Signer` (`src/lib/auth.ts`)
 
-ログインのロジックはフレームワークに依存しません。状態は使っているフレームワークのストアで包んでください (Svelte の `$state` / `writable`、React の context や zustand、Vue の `ref`)。
+ログインのロジックはフレームワークに依存しません。状態は使っているフレームワークのストアで包んでください (Svelte の `$state` / `writable`、React の context や zustand、Vue の `ref`)。このコードでは Nosskey 以外のログイン手段として NIP-07 を使っています。NIP-07 ログインがないアプリでは `nip07` の分岐を外し、ほかの手段があるアプリではその手段の `Signer` を `getSigner()` に加えてください。
 
 ```ts
 import { NosskeyIframeError, type NostrEvent } from 'nosskey-iframe';
@@ -320,9 +320,10 @@ if (signed.pubkey !== session.pubkey) {
 
 yakitofu の `LoginModal.svelte` にならった構成です。この例では Nosskey と並べる手段として NIP-07 を使っています。ほかのログイン手段があるアプリでは、同じモーダルに並べてください。次の要件はどのフレームワークにも当てはまります。
 
-- ボタンを 2 つ表示します。「ブラウザ拡張機能でログイン (NIP-07)」(下のコードでは `Log in with browser extension (NIP-07)`) は、`hasNip07Extension()` が false のとき**無効**にし、その下に短い説明を添えます。「Nosskey でログイン (パスキー)」(同じく `Log in with Nosskey (passkey)`) は常に有効にし、「nosskey.app に保存したパスキーを使います。」のような 1 行の説明を添えます。
-- `loginWithNip07()` / `loginWithNosskey()` は、**クリックハンドラーの中で直接**呼びます (ルール R3)。
-- ログインの処理中は、両方のボタンを無効にし、Escape や背景のクリックでモーダルを閉じないでください。Nosskey のオーバーレイはモーダルの上に開きますが、それで正常です。
+- アプリの既存のログインボタンと並べて、「Nosskey でログイン (パスキー)」(下のコードでは `Log in with Nosskey (passkey)`) のボタンを置きます。このボタンは常に有効にし、「nosskey.app に保存したパスキーを使います。」のような 1 行の説明を添えます。
+- 例では、もう一方のボタンは「ブラウザ拡張機能でログイン (NIP-07)」(同じく `Log in with browser extension (NIP-07)`) です。`hasNip07Extension()` が false のときは**無効**にし、その下に短い説明を添えます。
+- `loginWithNosskey()` とほかのログイン関数は、**クリックハンドラーの中で直接**呼びます (ルール R3)。
+- ログインの処理中は、すべてのログインボタンを無効にし、Escape や背景のクリックでモーダルを閉じないでください。Nosskey のオーバーレイはモーダルの上に開きますが、それで正常です。
 - エラーのときは `describeError(err).message` を表示します。`showNosskeyLink` が true なら、`target="_blank" rel="noopener noreferrer"` を付けた `https://nosskey.app` へのリンクを加えます。
 - 成功したら、`Session` をアプリの状態に保存し、モーダルを閉じます。
 
