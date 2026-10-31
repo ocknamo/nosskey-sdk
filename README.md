@@ -202,7 +202,7 @@ package on its own, see [`packages/nosskey-iframe/README.md`](packages/nosskey-i
 |---------|---------------|-------------------|--------|
 | Chrome 118+ | ✅ | ✅ (with Permissions Policy) | Supported |
 | Firefox (latest) | partial | spec-compliant | Limited |
-| Safari / iOS | partial (Safari 18) | unstable in iframes | **Not supported** |
+| Safari / iOS | ✅ (Safari 18+) | ✅ (some behaviour differs from Chrome) | Supported |
 
 ### Parent-side usage
 

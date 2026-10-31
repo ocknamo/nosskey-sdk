@@ -10,9 +10,8 @@
 
 ## 概要
 
-`nosskey.app/#/iframe` を iframe として埋め込むと、親アプリは**秘密鍵を一切扱わずに** Nostr の署名・暗号化機能を利用できます。
+`nosskey.app/#/iframe` を iframe として埋め込むと、親アプリは Nostr の署名・暗号化機能を利用できます。
 
-- 鍵は `nosskey.app` オリジンに紐づくパスキー (WebAuthn PRF) から導出され、iframe の中だけで使われます。秘密鍵が親アプリへ渡ることはありません。
 - 親アプリは [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md) の `window.nostr` 互換 API を得られます。既存の Nostr クライアントへドロップインで組み込めます。
 - 埋め込んだ全アプリで同じパスキーを共有するため、ユーザーは「Nosskey というアイデンティティ」を複数の Nostr アプリで使い回せます。
 
@@ -47,7 +46,7 @@ sequenceDiagram
 
 ## 前提条件
 
-- **ブラウザ**: Chrome 118 以降を推奨。Firefox は PRF サポートが限定的、Safari / iOS は現時点で非対応です。
+- **ブラウザ**: Chrome 118 以降と Safari / iOS (Safari 18 以降) で動作します。Safari は Chrome と挙動が一部異なります (ストレージアクセスの許可にユーザーのタップが要るなど)。Firefox は PRF サポートが限定的です。
 - **HTTPS**: 親ページは HTTPS (または `localhost`) で配信する必要があります。WebAuthn の要件です。
 - **パスキーの事前作成**: ユーザーは事前に `https://nosskey.app` を直接開いてパスキー (Nosskey アイデンティティ) を作成しておく必要があります。未作成の場合、署名系メソッドは `NO_KEY` エラーを返します。
 
@@ -267,7 +266,7 @@ window.nostr = {
 |---------|---------|-------------------|------|
 | Chrome 118+ | ✅ | ✅ (Permissions-Policy 必要) | 対応 |
 | Firefox (最新) | 限定的 | 仕様準拠 | 限定的 |
-| Safari / iOS | 限定的 (Safari 18) | iframe 内で不安定 | **非対応** |
+| Safari / iOS | ✅ (Safari 18 以降) | ✅ (Chrome と挙動が一部異なる) | 対応 |
 
 自前で iframe ホストをホスティングしたい場合は、[`iframe-host.ja.md`](./iframe-host.ja.md) でホスト側の構成 (`NosskeyIframeHost`、consent フロー、Permissions-Policy) を解説しています。
 

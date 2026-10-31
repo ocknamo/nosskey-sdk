@@ -1,6 +1,6 @@
 # Nosskey SDK
 
-> Nosskey derives Nostr keys from passkeys (WebAuthn PRF), so users never handle an nsec. A Nostr web client can add "Log in with Nosskey" by embedding the hosted signing iframe at https://nosskey.app/#/iframe through the `nosskey-iframe` npm package, which exposes a NIP-07 compatible API.
+> Nosskey derives Nostr keys from passkeys (WebAuthn PRF). A Nostr web client can add "Log in with Nosskey" by embedding the hosted signing iframe at https://nosskey.app/#/iframe through the `nosskey-iframe` npm package, which exposes a NIP-07 compatible API.
 
 To add Nosskey passkey login to a client, read the integration guide below first. It is self-contained: rules, copy-paste code, CSS, a login modal that offers NIP-07 and Nosskey side by side, and a verification checklist.
 

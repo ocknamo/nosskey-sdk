@@ -484,7 +484,9 @@ differ from combine as follows:
 
 ## 9. Verify
 
-Run the project's own lint, typecheck, tests and build. Then check in a Chromium browser:
+Run the project's own lint, typecheck, tests and build. Then check in a Chromium browser. If you
+can, repeat the steps on Safari / iOS too: it behaves differently from Chromium in parts (for
+example, granting storage access needs a user tap).
 
 1. Create a passkey at `https://nosskey.app` in a separate tab.
 2. In your app, click "Log in with Nosskey". The iframe overlay opens. Approve the connection,

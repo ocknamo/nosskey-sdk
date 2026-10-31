@@ -12,9 +12,8 @@ This document is a step-by-step guide for **developers who want to embed the Nos
 
 ## Overview
 
-Embedding `nosskey.app/#/iframe` as an iframe lets your parent app use Nostr signing and encryption **without ever handling a private key**.
+Embedding `nosskey.app/#/iframe` as an iframe lets your parent app use Nostr signing and encryption.
 
-- The key is derived from a passkey (WebAuthn PRF) bound to the `nosskey.app` origin and is only used inside the iframe. The private key never reaches the parent app.
 - The parent app obtains a [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md) compatible `window.nostr` API. It can be dropped into existing Nostr clients.
 - Every app that embeds it shares the same passkey, so users can reuse a single "Nosskey identity" across multiple Nostr apps.
 
@@ -49,7 +48,7 @@ Key points:
 
 ## Prerequisites
 
-- **Browser**: Chrome 118+ is recommended. Firefox has limited PRF support, and Safari / iOS are not supported at this time.
+- **Browser**: works on Chrome 118+ and Safari / iOS (Safari 18+). Safari behaves differently from Chrome in parts (for example, granting storage access needs a user tap). Firefox has limited PRF support.
 - **HTTPS**: the parent page must be served over HTTPS (or `localhost`). This is a WebAuthn requirement.
 - **Passkey created in advance**: the user must first open `https://nosskey.app` directly and create a passkey (Nosskey identity). If none exists, signing-related methods return a `NO_KEY` error.
 
@@ -269,7 +268,7 @@ window.nostr = {
 |---------|---------------|-------------------|--------|
 | Chrome 118+ | ✅ | ✅ (with Permissions-Policy) | Supported |
 | Firefox (latest) | limited | spec-compliant | Limited |
-| Safari / iOS | limited (Safari 18) | unstable in iframes | **Not supported** |
+| Safari / iOS | ✅ (Safari 18+) | ✅ (some behaviour differs from Chrome) | Supported |
 
 If you want to host the iframe host yourself, [`iframe-host.en.md`](./iframe-host.en.md) explains the host-side architecture (`NosskeyIframeHost`, the consent flow, Permissions-Policy).
 
