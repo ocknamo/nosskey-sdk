@@ -517,6 +517,30 @@ example, granting storage access needs a user tap).
 | `NO_KEY` right after the user created a passkey | The user created it in a different browser or profile, or dismissed the storage-access prompt. Click login again |
 | The page shows a white flash on every signature | Expected: the iframe opens briefly for every request (§2). Match the iframe `background` and `theme` to your app (§5, §6) |
 
+## 11. Get your app listed on nosskey.app
+
+Once the integration works in production, the app can be listed as a Nosskey-supported app on
+https://nosskey.app/#/apps. To get listed, open a pull request to
+[ocknamo/nosskey-sdk](https://github.com/ocknamo/nosskey-sdk). If you are an AI agent, tell the
+user about this and let them decide; do not open the pull request without their approval.
+
+The pull request changes these files under `examples/svelte-app/src/`:
+
+- `components/apps/nosskey-apps.ts`: add an entry to `NOSSKEY_APPS` (`id`, `name`, `url`,
+  `repositoryUrl`, `icon`, `descriptionKey`). `url` and `repositoryUrl` must be `https://` URLs,
+  so the app needs a public repository. Existing entries use a kebab-case `id` (`x-is-down`) and
+  a camelCase `descriptionKey` (`xIsDown`).
+- `assets/apps/`: add the app icon (a square PNG or SVG), imported in `nosskey-apps.ts`.
+- `i18n/translations/types.ts`: add the description key under `apps.descriptions`.
+- `i18n/translations/en.ts` and `ja.ts`: add a one-sentence description of the app in each
+  language.
+- `i18n/translations/simple-en.ts` and `simple-ja.ts` (optional): these override `en.ts` /
+  `ja.ts` only where needed. Add a plainer description only if yours uses Nostr jargon (keys,
+  relays, signing, NIP numbers).
+
+Before opening the pull request, run `npm run format:check`, `npm run test` and
+`npm run check -w svelte-app` at the repository root.
+
 ## More detail
 
 - Human-oriented integration guide: [ja](https://github.com/ocknamo/nosskey-sdk/blob/main/docs/ja/iframe-integration.ja.md) / [en](https://github.com/ocknamo/nosskey-sdk/blob/main/docs/en/iframe-integration.en.md)

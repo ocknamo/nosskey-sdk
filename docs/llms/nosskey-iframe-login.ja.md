@@ -423,6 +423,20 @@ Svelte 5 の例です。`$lib` は SvelteKit のエイリアスなので、素�
 | ユーザーがパスキーを作った直後に `NO_KEY` になる | 別のブラウザやプロファイルで作ったか、ストレージアクセスのプロンプトを閉じた。もう一度ログインをクリックする |
 | 署名のたびに画面が白く光る | 想定どおりの動作。iframe はリクエストのたびに一瞬開く (§2)。iframe の `background` と `theme` をアプリに合わせる (§5、§6) |
 
+## 11. nosskey.app に対応アプリとして掲載する
+
+本番環境で連携が動いたら、そのアプリを Nosskey 対応アプリとして https://nosskey.app/#/apps に掲載できます。掲載するには、[ocknamo/nosskey-sdk](https://github.com/ocknamo/nosskey-sdk) にプルリクエストを作ってください。AI エージェントは、このことをユーザーに伝えて判断を任せます。ユーザーの了承なしにプルリクエストを作らないでください。
+
+プルリクエストでは、`examples/svelte-app/src/` の下の次のファイルを変更します。
+
+- `components/apps/nosskey-apps.ts`: `NOSSKEY_APPS` にエントリを追加します (`id`、`name`、`url`、`repositoryUrl`、`icon`、`descriptionKey`)。`url` と `repositoryUrl` は `https://` の URL にする必要があるので、アプリのリポジトリが公開されていることが前提です。既存のエントリでは、`id` を kebab-case (`x-is-down`)、`descriptionKey` を camelCase (`xIsDown`) にしています。
+- `assets/apps/`: アプリのアイコン (正方形の PNG か SVG) を追加し、`nosskey-apps.ts` で import します。
+- `i18n/translations/types.ts`: `apps.descriptions` に説明文のキーを追加します。
+- `i18n/translations/en.ts` と `ja.ts`: 各言語でアプリの説明を 1 文で追加します。
+- `i18n/translations/simple-en.ts` と `simple-ja.ts` (任意): `en.ts` / `ja.ts` を必要な箇所だけ上書きするファイルです。説明文に Nostr の専門用語 (鍵、リレー、署名、NIP の番号など) が入るときだけ、平易な説明を追加します。
+
+プルリクエストを作る前に、リポジトリのルートで `npm run format:check`、`npm run test`、`npm run check -w svelte-app` を実行してください。
+
 ## さらに詳しく
 
 - 人間向けの統合ガイド: [ja](https://github.com/ocknamo/nosskey-sdk/blob/main/docs/ja/iframe-integration.ja.md) / [en](https://github.com/ocknamo/nosskey-sdk/blob/main/docs/en/iframe-integration.en.md)

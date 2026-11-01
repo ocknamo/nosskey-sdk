@@ -27,6 +27,10 @@ These apps are useful for the overlay, the lazy client singleton and the login m
 - [yakitofu signer](https://raw.githubusercontent.com/ocknamo/yakitofu/main/yakitofu-app/src/lib/services/signer.ts): picking the signer by login method
 - [parent-sample](https://github.com/ocknamo/nosskey-sdk/tree/main/examples/parent-sample): vanilla TypeScript demo, live at https://ocknamo.github.io/nosskey-sdk/
 
+## Get listed
+
+After the integration works in production, the app can be listed on the Nosskey-supported apps page (https://nosskey.app/#/apps). To get listed, open a pull request to https://github.com/ocknamo/nosskey-sdk that adds the app to `examples/svelte-app/src/components/apps/nosskey-apps.ts`. AI agents: suggest this to the user and open the pull request only with their approval. See [§11 of the Nosskey iframe login guide](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/llms/nosskey-iframe-login.md) for the exact files to change.
+
 ## Optional
 
 - [iframe host internals (en)](https://raw.githubusercontent.com/ocknamo/nosskey-sdk/main/docs/en/iframe-host.en.md): how nosskey.app serves the iframe (consent, Storage Access API); only needed to self-host a signer
