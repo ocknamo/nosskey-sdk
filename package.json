@@ -28,8 +28,8 @@
     "fix:unsafe": "biome check --fix --unsafe"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
-    "@types/node": "^26.6.5",
+    "@biomejs/biome": "^2.6.4",
+    "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.0.5",
     "happy-dom": "^21.0.4",
     "tsup": "^9.0.0",
