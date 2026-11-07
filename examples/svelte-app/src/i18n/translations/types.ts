@@ -234,10 +234,13 @@ export interface TranslationData {
     howToLogin: string;
     open: string;
     source: string;
+    // リポジトリ非公開のアプリで、ソースコードの代わりに出す作者プロフィールへのリンク
+    author: string;
     // 新しいタブで開くリンクの aria-label に添える補足
     opensInNewTab: string;
     descriptions: {
       combine: string;
+      nosquerade: string;
       xIsDown: string;
       yakitofu: string;
     };

@@ -527,8 +527,9 @@ user about this and let them decide; do not open the pull request without their 
 The pull request changes these files under `examples/svelte-app/src/`:
 
 - `components/apps/nosskey-apps.ts`: add an entry to `NOSSKEY_APPS` (`id`, `name`, `url`,
-  `repositoryUrl`, `icon`, `descriptionKey`). `url` and `repositoryUrl` must be `https://` URLs,
-  so the app needs a public repository. Existing entries use a kebab-case `id` (`x-is-down`) and
+  `repositoryUrl` or `authorUrl`, `icon`, `descriptionKey`). Set exactly one of them:
+  `repositoryUrl` for a public repository, or, if the source is not public, `authorUrl` pointing
+  to the author's Nostr profile page (e.g. on njump). All URLs must be `https://`. Existing entries use a kebab-case `id` (`x-is-down`) and
   a camelCase `descriptionKey` (`xIsDown`).
 - `assets/apps/`: add the app icon (a square PNG or SVG), imported in `nosskey-apps.ts`.
 - `i18n/translations/types.ts`: add the description key under `apps.descriptions`.

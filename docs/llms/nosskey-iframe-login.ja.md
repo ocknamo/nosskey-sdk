@@ -429,7 +429,7 @@ Svelte 5 の例です。`$lib` は SvelteKit のエイリアスなので、素�
 
 プルリクエストでは、`examples/svelte-app/src/` の下の次のファイルを変更します。
 
-- `components/apps/nosskey-apps.ts`: `NOSSKEY_APPS` にエントリを追加します (`id`、`name`、`url`、`repositoryUrl`、`icon`、`descriptionKey`)。`url` と `repositoryUrl` は `https://` の URL にする必要があるので、アプリのリポジトリが公開されていることが前提です。既存のエントリでは、`id` を kebab-case (`x-is-down`)、`descriptionKey` を camelCase (`xIsDown`) にしています。
+- `components/apps/nosskey-apps.ts`: `NOSSKEY_APPS` にエントリを追加します (`id`、`name`、`url`、`repositoryUrl` か `authorUrl`、`icon`、`descriptionKey`)。リポジトリが公開されていれば `repositoryUrl`、非公開なら代わりに作者の Nostr プロフィールのページ (njump など) を `authorUrl` に設定し、どちらか一方だけを指定します。URL はすべて `https://` にする必要があります。既存のエントリでは、`id` を kebab-case (`x-is-down`)、`descriptionKey` を camelCase (`xIsDown`) にしています。
 - `assets/apps/`: アプリのアイコン (正方形の PNG か SVG) を追加し、`nosskey-apps.ts` で import します。
 - `i18n/translations/types.ts`: `apps.descriptions` に説明文のキーを追加します。
 - `i18n/translations/en.ts` と `ja.ts`: 各言語でアプリの説明を 1 文で追加します。

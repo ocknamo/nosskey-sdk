@@ -1,4 +1,5 @@
 <script lang="ts">
+import AccountIcon from '../../assets/account-icon.svg';
 import GitHubIcon from '../../assets/github-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
@@ -31,16 +32,30 @@ import Button from '../ui/button/Button.svelte';
           >
             {$i18n.t.apps.open}
           </Button>
-          <a
-            class="app-card__source"
-            href={app.repositoryUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={$i18n.t.apps.source}
-            aria-label={`${app.name}: ${$i18n.t.apps.source} (${$i18n.t.apps.opensInNewTab})`}
-          >
-            <img class="app-card__source-icon" src={GitHubIcon} alt="" width="22" height="22" />
-          </a>
+          <!-- ソースコードが公開されていればリポジトリ、非公開なら作者の Nostr プロフィールへ -->
+          {#if app.repositoryUrl}
+            <a
+              class="app-card__source"
+              href={app.repositoryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={$i18n.t.apps.source}
+              aria-label={`${app.name}: ${$i18n.t.apps.source} (${$i18n.t.apps.opensInNewTab})`}
+            >
+              <img class="app-card__source-icon" src={GitHubIcon} alt="" width="22" height="22" />
+            </a>
+          {:else if app.authorUrl}
+            <a
+              class="app-card__source"
+              href={app.authorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={$i18n.t.apps.author}
+              aria-label={`${app.name}: ${$i18n.t.apps.author} (${$i18n.t.apps.opensInNewTab})`}
+            >
+              <img class="app-card__source-icon" src={AccountIcon} alt="" width="24" height="24" />
+            </a>
+          {/if}
         </div>
       </li>
     {/each}
