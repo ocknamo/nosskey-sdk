@@ -1,6 +1,6 @@
 <script lang="ts">
-import AccountIcon from '../../assets/account-icon.svg';
 import GitHubIcon from '../../assets/github-icon.svg';
+import NostrIcon from '../../assets/nostr-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
 import Button from '../ui/button/Button.svelte';
@@ -53,7 +53,7 @@ import Button from '../ui/button/Button.svelte';
               title={$i18n.t.apps.author}
               aria-label={`${app.name}: ${$i18n.t.apps.author} (${$i18n.t.apps.opensInNewTab})`}
             >
-              <img class="app-card__source-icon" src={AccountIcon} alt="" width="24" height="24" />
+              <img class="app-card__source-icon" src={NostrIcon} alt="" width="22" height="22" />
             </a>
           {/if}
         </div>
