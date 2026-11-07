@@ -32,7 +32,7 @@ import Button from '../ui/button/Button.svelte';
           >
             {$i18n.t.apps.open}
           </Button>
-          <!-- ソースコードが公開されていればリポジトリ、非公開なら作者の Nostr プロフィールへ -->
+          <!-- ソースコードのリポジトリと作者の Nostr プロフィールは、設定されているものをすべて並べる -->
           {#if app.repositoryUrl}
             <a
               class="app-card__source"
@@ -44,7 +44,8 @@ import Button from '../ui/button/Button.svelte';
             >
               <img class="app-card__source-icon" src={GitHubIcon} alt="" width="22" height="22" />
             </a>
-          {:else if app.authorUrl}
+          {/if}
+          {#if app.authorUrl}
             <a
               class="app-card__source"
               href={app.authorUrl}

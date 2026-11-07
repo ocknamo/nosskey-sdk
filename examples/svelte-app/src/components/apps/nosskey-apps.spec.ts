@@ -18,9 +18,9 @@ describe('NOSSKEY_APPS', () => {
     }
   });
 
-  it('ソースコードか作者プロフィールのどちらか一方のリンクを持つ', () => {
+  it('ソースコードか作者プロフィールのリンクを少なくとも 1 つ持つ', () => {
     for (const app of NOSSKEY_APPS) {
-      expect([app.repositoryUrl, app.authorUrl].filter(Boolean)).toHaveLength(1);
+      expect([app.repositoryUrl, app.authorUrl].filter(Boolean).length).toBeGreaterThanOrEqual(1);
     }
   });
 

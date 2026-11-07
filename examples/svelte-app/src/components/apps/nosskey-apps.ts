@@ -14,8 +14,8 @@ export interface NosskeyApp {
   url: string;
   // ソースコードの公開リポジトリ。あればカードに GitHub アイコンのリンクを出す。
   repositoryUrl?: string;
-  // リポジトリが非公開のアプリは、代わりに作者の Nostr プロフィール（njump など）へのリンクを出す。
-  // repositoryUrl と authorUrl のどちらか一方は必ず設定する（nosskey-apps.spec.ts で検証）。
+  // 作者の Nostr プロフィール（njump など）。あればカードに Nostr アイコンのリンクを出す。
+  // repositoryUrl と authorUrl は少なくとも一方を設定し、両方あれば両方表示する（nosskey-apps.spec.ts で検証）。
   authorUrl?: string;
   icon: string;
   descriptionKey: AppDescriptionKey;
