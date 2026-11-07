@@ -1,5 +1,6 @@
 <script lang="ts">
 import GitHubIcon from '../../assets/github-icon.svg';
+import NostrIcon from '../../assets/nostr-icon.svg';
 import { i18n } from '../../i18n/i18n-store.js';
 import { NOSSKEY_APPS } from '../apps/nosskey-apps.js';
 import Button from '../ui/button/Button.svelte';
@@ -31,16 +32,31 @@ import Button from '../ui/button/Button.svelte';
           >
             {$i18n.t.apps.open}
           </Button>
-          <a
-            class="app-card__source"
-            href={app.repositoryUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={$i18n.t.apps.source}
-            aria-label={`${app.name}: ${$i18n.t.apps.source} (${$i18n.t.apps.opensInNewTab})`}
-          >
-            <img class="app-card__source-icon" src={GitHubIcon} alt="" width="22" height="22" />
-          </a>
+          <!-- ソースコードのリポジトリと作者の Nostr プロフィールは、設定されているものをすべて並べる -->
+          {#if app.repositoryUrl}
+            <a
+              class="app-card__source"
+              href={app.repositoryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={$i18n.t.apps.source}
+              aria-label={`${app.name}: ${$i18n.t.apps.source} (${$i18n.t.apps.opensInNewTab})`}
+            >
+              <img class="app-card__source-icon" src={GitHubIcon} alt="" width="22" height="22" />
+            </a>
+          {/if}
+          {#if app.authorUrl}
+            <a
+              class="app-card__source"
+              href={app.authorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={$i18n.t.apps.author}
+              aria-label={`${app.name}: ${$i18n.t.apps.author} (${$i18n.t.apps.opensInNewTab})`}
+            >
+              <img class="app-card__source-icon" src={NostrIcon} alt="" width="22" height="22" />
+            </a>
+          {/if}
         </div>
       </li>
     {/each}

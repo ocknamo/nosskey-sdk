@@ -166,9 +166,9 @@ examples/svelte-app/
 #### AppsScreen.svelte（`apps` 画面）
 Nosskey（`nosskey-iframe` 経由）でログインできるアプリの紹介画面：
 
-- 一覧データは `components/apps/nosskey-apps.ts` の `NOSSKEY_APPS`（アプリ名・URL・リポジトリ URL・アイコン・説明文の i18n キー）
-- アイコンは `src/assets/apps/` に同梱（combine / Yakitofu は各リポジトリの画像を 128px に縮小。X落ちてる速報は X の公式ロゴを避けるため独自の SVG）
-- カードはモバイル 1 列、PC（幅 960px 以上）3 列。「開く」ボタンと GitHub アイコンのリンクは新しいタブで開く
+- 一覧データは `components/apps/nosskey-apps.ts` の `NOSSKEY_APPS`（アプリ名・URL・リポジトリ URL と作者プロフィール URL（少なくとも一方）・アイコン・説明文の i18n キー）。作者の Nostr プロフィール（njump）は `authorUrl` に持つ（ソース非公開の nosquerade は `authorUrl` のみ）。`repositoryUrl` と `authorUrl` の少なくとも一方を持つことは `nosskey-apps.spec.ts` で検証する
+- アイコンは `src/assets/apps/` に同梱（combine / Yakitofu は各リポジトリの画像を、nosquerade はサイトの icon-512.png を 128px に縮小。X落ちてる速報は X の公式ロゴを避けるため独自の SVG）
+- カードはモバイル 1 列、PC（幅 960px 以上）3 列。「開く」ボタンの横に `repositoryUrl` があれば GitHub アイコン、`authorUrl` があれば Nostr アイコン（作者の Nostr プロフィール。CC0 の Nostr アイコンを同梱）のリンクを、両方あればこの順に並べて出し、いずれも新しいタブで開く
 
 #### KeyManagement.svelte（`key` 画面）
 鍵関連の操作をまとめた画面：
