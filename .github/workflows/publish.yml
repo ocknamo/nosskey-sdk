@@ -1,0 +1,56 @@
+name: Publish to npm
+
+# npm の trusted publishing（OIDC）で公開する。NPM_TOKEN は使わず provenance も自動で付く。
+# 実行前に npmjs.com の各パッケージ設定で、このリポジトリ・publish.yml・
+# environment "npm" を trusted publisher として登録しておくこと。
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 公開するパッケージ（独立にバージョニングしている）
+        required: true
+        type: choice
+        options:
+          - nosskey-sdk
+          - nosskey-iframe
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          check-latest: true
+          registry-url: https://registry.npmjs.org
+      - name: Use npm 12
+        run: npm install -g npm@12.2.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Publish
+        run: npm publish -w "$PACKAGE"
+        env:
+          PACKAGE: ${{ inputs.package }}
