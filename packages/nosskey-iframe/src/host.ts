@@ -14,6 +14,7 @@ import {
   type NosskeyResponse,
   type NosskeyVisibility,
   type RelayMap,
+  toSignableEvent,
 } from './protocol.js';
 import type { NosskeyManagerLike, NostrEvent } from './types.js';
 
@@ -393,9 +394,14 @@ export class NosskeyIframeHost {
         return this.#withVisibilityAndConsent({ origin, method: 'getRelays' }, () => onGetRelays());
       }
       case 'signEvent': {
-        const event = request.params?.event;
-        if (!event || typeof event !== 'object') {
-          throw new HostError('INVALID_REQUEST', 'signEvent requires params.event.');
+        // The same sanitized object goes to the consent dialog and to the
+        // signer, so what the user approves is exactly what gets signed.
+        const event = toSignableEvent(request.params?.event);
+        if (!event) {
+          throw new HostError(
+            'INVALID_REQUEST',
+            'signEvent requires params.event with kind, content and optional tags / created_at.'
+          );
         }
         return this.#withVisibilityAndConsent({ origin, method: 'signEvent', event }, () =>
           manager.signEvent(event)

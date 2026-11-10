@@ -79,6 +79,8 @@ async getPublicKey(): Promise<string>
 async signEvent(event: NostrEvent): Promise<NostrEvent>
 ```
 
+署名に使うのは `kind` / `content` / `tags` / `created_at` だけです。`id` / `sig` / `pubkey` は渡されても無視し、鍵と内容から計算し直します（`created_at` を省略すると現在時刻）。これらの型が不正な場合は、パスキー認証を求める前にエラーになります。`signEventWithKeyInfo()` も同じです。
+
 ### NIP-44 / NIP-04 暗号化メソッド
 
 現在設定されているNostrKeyInfoの秘密鍵と相手の公開鍵から共有鍵を導出し、ダイレクトメッセージを暗号化・復号します。
