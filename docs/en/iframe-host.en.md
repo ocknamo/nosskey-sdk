@@ -206,8 +206,10 @@ requested method:
   event JSON folded inside a `<details>` element. The host narrows the event
   it received from the parent to `kind` / `content` / `tags` / `created_at`
   before handing it to both the dialog and the signer, so the JSON shown is
-  everything that gets signed (a parent-supplied `id` / `sig` / `pubkey` is
-  dropped; malformed fields are answered with `INVALID_REQUEST`)
+  everything the parent can decide about what gets signed (a parent-supplied
+  `id` / `sig` / `pubkey` is dropped and computed from the key and the content
+  at signing time; an omitted `created_at` becomes the current time; malformed
+  fields are answered with `INVALID_REQUEST`)
 - **For nip44/nip04**: the counterparty pubkey rendered as a shortened `npub`
   (`renderPeerPubkey()`); encrypt requests also preview the plaintext
   (100-char truncation), while decrypt requests show no plaintext preview

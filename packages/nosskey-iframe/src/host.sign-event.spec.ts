@@ -138,8 +138,11 @@ describe('NosskeyIframeHost signEvent payload', () => {
     ['a negative kind', { kind: -1, content: '' }],
     ['an out-of-range kind', { kind: 65536, content: '' }],
     ['a string kind', { kind: '1', content: '' }],
+    ['a NaN kind', { kind: Number.NaN, content: '' }],
     ['a missing content', { kind: 1 }],
     ['a non-string content', { kind: 1, content: 1 }],
+    ['a null content', { kind: 1, content: null }],
+    ['null tags', { kind: 1, content: '', tags: null }],
     ['non-array tags', { kind: 1, content: '', tags: 'tags' }],
     ['a non-array tag', { kind: 1, content: '', tags: ['t'] }],
     ['a non-string tag item', { kind: 1, content: '', tags: [['t', 1]] }],
@@ -155,6 +158,8 @@ describe('NosskeyIframeHost signEvent payload', () => {
     ['a string created_at', { kind: 1, content: '', created_at: '1' }],
     ['a fractional created_at', { kind: 1, content: '', created_at: 1.5 }],
     ['a negative created_at', { kind: 1, content: '', created_at: -1 }],
+    ['a null created_at', { kind: 1, content: '', created_at: null }],
+    ['an infinite created_at', { kind: 1, content: '', created_at: Number.POSITIVE_INFINITY }],
   ])('answers INVALID_REQUEST for %s without asking for consent', async (_label, event) => {
     const { manager, consent, host, sign, response, visibility } = setup();
 
