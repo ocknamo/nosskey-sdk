@@ -12,6 +12,9 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    # .npmrc の min-release-age と揃え、公開から 3 日未満の版は提案しない
+    cooldown:
+      default-days: 3
     # minor / patch はまとめて 1 PR にし、PR 数の増加を抑える。
     # major は個別 PR となり、破壊的変更を単独でレビューできる。
     groups:
