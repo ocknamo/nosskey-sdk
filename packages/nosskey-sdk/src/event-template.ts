@@ -5,11 +5,27 @@ export type UnsignedEventTemplate = Pick<NostrEvent, 'kind' | 'content' | 'tags'
 
 const MAX_KIND = 65535;
 
-function isTags(value: unknown): value is string[][] {
-  return (
-    Array.isArray(value) &&
-    value.every((tag) => Array.isArray(tag) && tag.every((item) => typeof item === 'string'))
-  );
+/**
+ * tags を写し取る。文字列配列の配列でなければ `null`。
+ *
+ * 添字で 1 回ずつ読み、読んだ値をそのまま写す。`every` は配列の穴を飛ばすので
+ * 穴あき配列が検証を通ってしまい、検証と別に読み直すと値を差し替えられる。
+ */
+function copyTags(value: unknown): string[][] | null {
+  if (!Array.isArray(value)) return null;
+  const tags: string[][] = [];
+  for (let i = 0; i < value.length; i++) {
+    const tag: unknown = value[i];
+    if (!Array.isArray(tag)) return null;
+    const copy: string[] = [];
+    for (let j = 0; j < tag.length; j++) {
+      const item: unknown = tag[j];
+      if (typeof item !== 'string') return null;
+      copy.push(item);
+    }
+    tags.push(copy);
+  }
+  return tags;
 }
 
 /**
@@ -32,7 +48,8 @@ export function toUnsignedEventTemplate(event: unknown): UnsignedEventTemplate {
   if (typeof content !== 'string') {
     throw new Error('Invalid event: content must be a string');
   }
-  if (tags !== undefined && !isTags(tags)) {
+  const copiedTags = tags === undefined ? undefined : copyTags(tags);
+  if (copiedTags === null) {
     throw new Error('Invalid event: tags must be an array of string arrays');
   }
   if (
@@ -43,8 +60,7 @@ export function toUnsignedEventTemplate(event: unknown): UnsignedEventTemplate {
   }
 
   const template: UnsignedEventTemplate = { kind, content };
-  // 写しを渡す。署名までの await の間に呼び出し元が配列を書き換えても影響しない。
-  if (tags !== undefined) template.tags = tags.map((tag) => [...tag]);
+  if (copiedTags !== undefined) template.tags = copiedTags;
   if (created_at !== undefined) template.created_at = created_at;
   return template;
 }

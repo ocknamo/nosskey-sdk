@@ -100,6 +100,36 @@ describe('NosskeyIframeHost signEvent payload', () => {
     host.stop();
   });
 
+  it("hands over a copy of the tags, not the caller's arrays", async () => {
+    const { manager, host, sign } = setup();
+    const tags = [['p', 'x']];
+
+    await sign({ kind: 1, content: 'gm', tags });
+    tags[0][1] = 'y';
+
+    const signedInput = vi.mocked(manager.signEvent).mock.calls[0][0];
+    expect(signedInput.tags).not.toBe(tags);
+    expect(signedInput.tags?.[0]).not.toBe(tags[0]);
+    expect(signedInput.tags).toEqual([['p', 'x']]);
+    host.stop();
+  });
+
+  it.each([
+    ['the lowest kind', { kind: 0, content: '' }],
+    ['the highest kind', { kind: 65535, content: '' }],
+    ['a zero created_at', { kind: 1, content: '', created_at: 0 }],
+    ['empty tags', { kind: 1, content: '', tags: [] }],
+    ['an empty tag', { kind: 1, content: '', tags: [[]] }],
+  ])('accepts %s', async (_label, event) => {
+    const { manager, host, sign, response } = setup();
+
+    await sign(event);
+
+    expect(response().error).toBeUndefined();
+    expect(vi.mocked(manager.signEvent).mock.calls[0][0]).toEqual(event);
+    host.stop();
+  });
+
   it.each([
     ['a non-object event', 'event'],
     ['an array event', []],
@@ -113,6 +143,15 @@ describe('NosskeyIframeHost signEvent payload', () => {
     ['non-array tags', { kind: 1, content: '', tags: 'tags' }],
     ['a non-array tag', { kind: 1, content: '', tags: ['t'] }],
     ['a non-string tag item', { kind: 1, content: '', tags: [['t', 1]] }],
+    // Structured clone keeps the holes of a sparse array, so a parent can send one.
+    [
+      'tags with a hole',
+      { kind: 1, content: '', tags: structuredClone(Object.assign(new Array(2), { 1: ['p'] })) },
+    ],
+    [
+      'a tag with a hole',
+      { kind: 1, content: '', tags: [structuredClone(Object.assign(new Array(2), { 0: 't' }))] },
+    ],
     ['a string created_at', { kind: 1, content: '', created_at: '1' }],
     ['a fractional created_at', { kind: 1, content: '', created_at: 1.5 }],
     ['a negative created_at', { kind: 1, content: '', created_at: -1 }],

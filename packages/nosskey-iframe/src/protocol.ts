@@ -153,11 +153,28 @@ function isErrorCode(x: unknown): x is NosskeyErrorCode {
 
 const MAX_EVENT_KIND = 65535;
 
-function isTags(x: unknown): x is string[][] {
-  return (
-    Array.isArray(x) &&
-    x.every((tag) => Array.isArray(tag) && tag.every((item) => typeof item === 'string'))
-  );
+/**
+ * Copy a tag list, or return `null` unless it is an array of string arrays.
+ *
+ * Read by index, once, and keep what was read: `every` skips the holes of a
+ * sparse array (which structured clone preserves), so one would pass the check
+ * and reach the signer as `undefined`.
+ */
+function copyTags(x: unknown): string[][] | null {
+  if (!Array.isArray(x)) return null;
+  const tags: string[][] = [];
+  for (let i = 0; i < x.length; i++) {
+    const tag: unknown = x[i];
+    if (!Array.isArray(tag)) return null;
+    const copy: string[] = [];
+    for (let j = 0; j < tag.length; j++) {
+      const item: unknown = tag[j];
+      if (typeof item !== 'string') return null;
+      copy.push(item);
+    }
+    tags.push(copy);
+  }
+  return tags;
 }
 
 /**
@@ -175,7 +192,8 @@ export function toSignableEvent(value: unknown): NostrEvent | null {
     return null;
   }
   if (typeof content !== 'string') return null;
-  if (tags !== undefined && !isTags(tags)) return null;
+  const copiedTags = tags === undefined ? undefined : copyTags(tags);
+  if (copiedTags === null) return null;
   if (
     created_at !== undefined &&
     (typeof created_at !== 'number' || !Number.isSafeInteger(created_at) || created_at < 0)
@@ -183,7 +201,7 @@ export function toSignableEvent(value: unknown): NostrEvent | null {
     return null;
   }
   const event: NostrEvent = { kind, content };
-  if (tags !== undefined) event.tags = tags.map((tag) => [...tag]);
+  if (copiedTags !== undefined) event.tags = copiedTags;
   if (created_at !== undefined) event.created_at = created_at;
   return event;
 }

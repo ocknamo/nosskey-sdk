@@ -67,11 +67,26 @@ describe('toUnsignedEventTemplate', () => {
   });
 
   it.each([
+    ['kind の下限', { kind: 0, content: '' }],
+    ['kind の上限', { kind: 65535, content: '' }],
+    ['created_at が 0', { kind: 1, content: '', created_at: 0 }],
+    ['空の tags', { kind: 1, content: '', tags: [] }],
+    ['空のタグ', { kind: 1, content: '', tags: [[]] }],
+  ])('境界値（%s）を受け入れる', (_label, event) => {
+    expect(toUnsignedEventTemplate(event)).toEqual(event);
+  });
+
+  it.each([
     ['null', null],
     ['文字列', 'tags'],
     ['配列でない要素', ['t']],
     ['文字列でない要素', [['t', 1]]],
     ['オブジェクトの要素', [['t', {}]]],
+    // biome-ignore lint/suspicious/noSparseArray: 穴あき配列そのものが検証対象
+    ['外側に穴のある配列', [, ['p', 'a']]],
+    // biome-ignore lint/suspicious/noSparseArray: 穴あき配列そのものが検証対象
+    ['内側に穴のある配列', [['t', , 'x']]],
+    ['構造化複製を経た穴あき配列', structuredClone(Object.assign(new Array(2), { 1: ['p', 'a'] }))],
   ])('不正な tags（%s）を拒否する', (_label, tags) => {
     expect(() => toUnsignedEventTemplate({ kind: 1, content: '', tags })).toThrow('tags');
   });
@@ -86,6 +101,25 @@ describe('toUnsignedEventTemplate', () => {
     expect(() => toUnsignedEventTemplate({ kind: 1, content: '', created_at })).toThrow(
       'created_at'
     );
+  });
+
+  it('検証した値と写した値が食い違わない（各要素を 1 回しか読まない）', () => {
+    let reads = 0;
+    const tag = new Proxy(['t', 'ok'], {
+      get(target, key, receiver) {
+        if (key === '1') {
+          reads += 1;
+          // 2 回目以降は文字列でない値を返し、読み直す実装なら写しに紛れ込む。
+          return reads === 1 ? 'ok' : 42;
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+
+    const template = toUnsignedEventTemplate({ kind: 1, content: '', tags: [tag] });
+
+    expect(template.tags).toEqual([['t', 'ok']]);
+    expect(reads).toBe(1);
   });
 
   it('エラーにイベントの内容を含めない', () => {
