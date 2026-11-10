@@ -203,7 +203,11 @@ requested method:
   decrypt)
 - **For `signEvent`**: `event.kind` with a readable label (`kindLabel()`),
   `content` truncated to **100 characters**, the tag list, and the full raw
-  event JSON folded inside a `<details>` element
+  event JSON folded inside a `<details>` element. The host narrows the event
+  it received from the parent to `kind` / `content` / `tags` / `created_at`
+  before handing it to both the dialog and the signer, so the JSON shown is
+  everything that gets signed (a parent-supplied `id` / `sig` / `pubkey` is
+  dropped; malformed fields are answered with `INVALID_REQUEST`)
 - **For nip44/nip04**: the counterparty pubkey rendered as a shortened `npub`
   (`renderPeerPubkey()`); encrypt requests also preview the plaintext
   (100-char truncation), while decrypt requests show no plaintext preview

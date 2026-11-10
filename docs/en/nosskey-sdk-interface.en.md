@@ -79,6 +79,8 @@ Signs an event with the currently set NostrKeyInfo.
 async signEvent(event: NostrEvent): Promise<NostrEvent>
 ```
 
+Only `kind`, `content`, `tags` and `created_at` are used. Any `id`, `sig` or `pubkey` on the input is ignored and recomputed from the key and the content (`created_at` defaults to the current time). An event whose fields have the wrong type is rejected before the passkey prompt. `signEventWithKeyInfo()` behaves the same way.
+
 ### NIP-44 / NIP-04 Encryption Methods
 
 Derives a shared key from the private key of the currently set NostrKeyInfo and a peer's public key to encrypt/decrypt direct messages.

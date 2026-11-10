@@ -151,6 +151,43 @@ function isErrorCode(x: unknown): x is NosskeyErrorCode {
   return typeof x === 'string' && (NOSSKEY_ERROR_CODES as readonly string[]).includes(x);
 }
 
+const MAX_EVENT_KIND = 65535;
+
+function isTags(x: unknown): x is string[][] {
+  return (
+    Array.isArray(x) &&
+    x.every((tag) => Array.isArray(tag) && tag.every((item) => typeof item === 'string'))
+  );
+}
+
+/**
+ * Copy the fields of a `signEvent` payload that decide what gets signed, or
+ * return `null` when they are malformed.
+ *
+ * `id`, `sig` and `pubkey` are dropped on purpose. Signers commonly prefer a
+ * caller-supplied `id` over the hash of the content, so forwarding one would
+ * let the parent have a hash signed that the consent dialog never showed.
+ */
+export function toSignableEvent(value: unknown): NostrEvent | null {
+  if (!isPlainObject(value)) return null;
+  const { kind, content, tags, created_at } = value;
+  if (typeof kind !== 'number' || !Number.isInteger(kind) || kind < 0 || kind > MAX_EVENT_KIND) {
+    return null;
+  }
+  if (typeof content !== 'string') return null;
+  if (tags !== undefined && !isTags(tags)) return null;
+  if (
+    created_at !== undefined &&
+    (typeof created_at !== 'number' || !Number.isSafeInteger(created_at) || created_at < 0)
+  ) {
+    return null;
+  }
+  const event: NostrEvent = { kind, content };
+  if (tags !== undefined) event.tags = tags.map((tag) => [...tag]);
+  if (created_at !== undefined) event.created_at = created_at;
+  return event;
+}
+
 /** Type guard: does the value look like a {@link NosskeyRequest}? */
 export function isNosskeyRequest(value: unknown): value is NosskeyRequest {
   if (!isPlainObject(value)) return false;

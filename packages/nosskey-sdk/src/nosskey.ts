@@ -1,4 +1,5 @@
 import { seckeySigner } from '@rx-nostr/crypto';
+import { toUnsignedEventTemplate } from './event-template.js';
 import { KeyCache } from './key-cache.js';
 import {
   DEFAULT_REGISTRY_STORAGE_KEY,
@@ -781,7 +782,8 @@ export class NosskeyManager implements NosskeyManagerLike {
 
   /**
    * イベントに署名
-   * @param event 署名するNostrイベント
+   * @param event 署名するNostrイベント。使うのは `kind` / `content` / `tags` / `created_at` だけで、
+   *   `id` / `sig` / `pubkey` は渡されても無視し、鍵と内容から計算し直す
    * @param keyInfo NostrKeyInfo
    * @param options 署名オプション
    */
@@ -791,10 +793,12 @@ export class NosskeyManager implements NosskeyManagerLike {
     options: SignOptions = {}
   ): Promise<NostrEvent> {
     const { clearMemory = true, tags } = options;
+    // 鍵の導出（パスキー認証）より前に行い、不正な入力で認証を求めない。
+    const template = toUnsignedEventTemplate(event);
     const sk = await this.#getSecretKey(keyInfo);
     try {
       const signer = seckeySigner(bytesToHex(sk.bytes), { tags });
-      return await signer.signEvent(event);
+      return await signer.signEvent(template);
     } finally {
       // release() が cache 有効時は no-op、無効時のみ #clearKey を実行する。
       // clearMemory=false なら呼ばないので「キャッシュ無効でも残す」も可能。

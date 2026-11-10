@@ -129,7 +129,7 @@ export function startIframeHost(overrides = {}) {
 
 - **origin**: 要求元ページの URL
 - **method**: 人間可読なラベル (`signEvent` / NIP-44・NIP-04 の encrypt・decrypt)
-- **`signEvent` の場合**: `event.kind` を可読ラベル化 (`kindLabel()`)、`content` は **100 文字**で truncate、タグ一覧、raw event JSON 全体を `<details>` で折りたたみ表示
+- **`signEvent` の場合**: `event.kind` を可読ラベル化 (`kindLabel()`)、`content` は **100 文字**で truncate、タグ一覧、raw event JSON 全体を `<details>` で折りたたみ表示。host は親から届いた event を `kind` / `content` / `tags` / `created_at` だけに絞ってからダイアログと署名の両方に渡すため、表示される JSON が署名対象のすべて (`id` / `sig` / `pubkey` は親が付けても捨てる。型が不正なら `INVALID_REQUEST`)
 - **nip44/nip04 の場合**: 相手 pubkey を短縮 `npub` 表示 (`renderPeerPubkey()`)。encrypt 要求では平文も 100 文字プレビュー、decrypt 要求では平文プレビューなし
 - **ボタン**:
   - **拒否** → `rejectConsent()`
