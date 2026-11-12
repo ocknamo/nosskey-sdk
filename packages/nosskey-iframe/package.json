@@ -1,6 +1,6 @@
 {
   "name": "nosskey-iframe",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "iframe signing provider for Nosskey (postMessage bridge for NIP-07 compatible API)",
   "files": [
     "dist",
